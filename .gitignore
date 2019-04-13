@@ -1,0 +1,3 @@
+.terraform/plugins/darwin_amd64/lock.json
+terraform-provider-uptimerobot
+terraform.tfstate
