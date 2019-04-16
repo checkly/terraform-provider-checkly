@@ -1,3 +1,5 @@
-.terraform/plugins/darwin_amd64/lock.json
+.terraform
 terraform-provider-uptimerobot
 terraform.tfstate
+terraform.tfstate.backup
+crash.log
