@@ -1,7 +1,7 @@
 package main
 
 import (
-	uptimerobot "github.com/bitfield/uptimerobot/pkg"
+	"github.com/bitfield/checkly"
 	"github.com/hashicorp/terraform/helper/schema"
 )
 
@@ -12,14 +12,14 @@ func Provider() *schema.Provider {
 			"api_key": &schema.Schema{
 				Type:        schema.TypeString,
 				Required:    true,
-				DefaultFunc: schema.EnvDefaultFunc("UPTIMEROBOT_API_KEY", nil),
+				DefaultFunc: schema.EnvDefaultFunc("CHECKLY_API_KEY", nil),
 			},
 		},
 		ResourcesMap: map[string]*schema.Resource{
-			"uptimerobot_monitor": resourceMonitor(),
+			"checkly_check": resourceCheck(),
 		},
 		ConfigureFunc: func(r *schema.ResourceData) (interface{}, error) {
-			client := uptimerobot.New(r.Get("api_key").(string))
+			client := checkly.NewClient(r.Get("api_key").(string))
 			return &client, nil
 		},
 	}
