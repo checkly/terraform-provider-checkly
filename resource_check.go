@@ -13,6 +13,7 @@ func resourceCheck() *schema.Resource {
 	return &schema.Resource{
 		Create: resourceCheckCreate,
 		Read:   resourceCheckRead,
+		Update: resourceCheckUpdate,
 		Delete: resourceCheckDelete,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
@@ -21,43 +22,19 @@ func resourceCheck() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			"name": &schema.Schema{
 				Type:     schema.TypeString,
-				ForceNew: true,
-				Required: true,
-			},
-			"url": &schema.Schema{
-				Type:     schema.TypeString,
-				ForceNew: true,
 				Required: true,
 			},
 			"type": &schema.Schema{
 				Type:     schema.TypeString,
-				ForceNew: true,
 				Required: true,
-			},
-			"activated": &schema.Schema{
-				Type:     schema.TypeBool,
-				ForceNew: true,
-				Required: true,
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-				},
-			},
-			"locations": &schema.Schema{
-				Type:     schema.TypeSet,
-				ForceNew: true,
-				Required: true,
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-				},
 			},
 			"frequency": &schema.Schema{
 				Type:     schema.TypeInt,
-				ForceNew: true,
 				Required: true,
 				ValidateFunc: func(val interface{}, key string) (warns []string, errs []error) {
 					v := val.(int)
 					valid := false
-					validFreqs := []int{5, 10, 15, 30, 60, 720, 1440}
+					validFreqs := []int{1, 5, 10, 15, 30, 60, 720, 1440}
 					for _, i := range validFreqs {
 						if v == i {
 							valid = true
@@ -68,6 +45,164 @@ func resourceCheck() *schema.Resource {
 					}
 					return warns, errs
 				},
+			},
+			"activated": &schema.Schema{
+				Type:     schema.TypeBool,
+				Required: true,
+			},
+			"muted": &schema.Schema{
+				Type:     schema.TypeBool,
+				Optional: true,
+			},
+			"should_fail": &schema.Schema{
+				Type:     schema.TypeBool,
+				Optional: true,
+			},
+			"locations": &schema.Schema{
+				Type:     schema.TypeSet,
+				Required: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+			"script": &schema.Schema{
+				Type:     schema.TypeString,
+				Optional: true,
+				Default:  "",
+			},
+			"created_at": &schema.Schema{
+				Type:     schema.TypeString,
+				Computed: true,
+			},
+			"updated_at": &schema.Schema{
+				Type:     schema.TypeString,
+				Computed: true,
+			},
+			"environment_variables": &schema.Schema{
+				Type:     schema.TypeMap,
+				Optional: true,
+			},
+			"double_check": &schema.Schema{
+				Type:     schema.TypeBool,
+				Optional: true,
+			},
+			"tags": &schema.Schema{
+				Type:     schema.TypeSet,
+				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+			"ssl_check": &schema.Schema{
+				Type:     schema.TypeBool,
+				Optional: true,
+			},
+			"ssl_check_domain": &schema.Schema{
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+			"setup_snippet_id": &schema.Schema{
+				Type:     schema.TypeInt,
+				Optional: true,
+			},
+			"teardown_snippet_id": &schema.Schema{
+				Type:     schema.TypeInt,
+				Optional: true,
+			},
+			"local_setup_script": &schema.Schema{
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+			"local_teardown_script": &schema.Schema{
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+			"alert_email": &schema.Schema{
+				Type:     schema.TypeSet,
+				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+			"alert_webhook": &schema.Schema{
+				Type:     schema.TypeSet,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"url": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+					},
+				},
+			},
+			"alert_slack": &schema.Schema{
+				Type:     schema.TypeSet,
+				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
+			"alert_sms": &schema.Schema{
+				Type:     schema.TypeSet,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"number": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"name": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+					},
+				},
+			},
+			"alert_escalation_type": &schema.Schema{
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+			"failed_run_threshold": &schema.Schema{
+				Type:     schema.TypeInt,
+				Optional: true,
+				Default:  1,
+			},
+			"minutes_failing_threshold": &schema.Schema{
+				Type:     schema.TypeInt,
+				Optional: true,
+				Default:  5,
+			},
+			"reminders_amount": &schema.Schema{
+				Type:     schema.TypeInt,
+				Optional: true,
+			},
+			"reminders_interval": &schema.Schema{
+				Type:     schema.TypeInt,
+				Optional: true,
+				Default:  5,
+			},
+			"ssl_alerts_enabled": &schema.Schema{
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  false,
+			},
+			"ssl_alerts_threshold": &schema.Schema{
+				Type:     schema.TypeInt,
+				Optional: true,
+				Default:  3,
+			},
+			"follow_redirects": &schema.Schema{
+				Type:     schema.TypeBool,
+				Optional: true,
+			},
+			"url": &schema.Schema{
+				Type:     schema.TypeString,
+				Required: true,
 			},
 		},
 	}
@@ -81,14 +216,16 @@ func resourceCheckCreate(d *schema.ResourceData, client interface{}) error {
 	}
 
 	check := checkly.Check{
-		Name:      d.Get("name").(string),
-		Type:      d.Get("type").(string),
-		Activated: d.Get("activated").(bool),
-		Frequency: d.Get("frequency").(int),
-		Locations: locations,
+		Name:       d.Get("name").(string),
+		Type:       d.Get("type").(string),
+		Activated:  d.Get("activated").(bool),
+		Frequency:  d.Get("frequency").(int),
+		ShouldFail: d.Get("should_fail").(bool),
+		Locations:  locations,
 		Request: checkly.Request{
-			Method: http.MethodGet,
-			URL:    d.Get("url").(string),
+			Method:          http.MethodGet,
+			URL:             d.Get("url").(string),
+			FollowRedirects: d.Get("follow_redirects").(bool),
 		},
 	}
 	debugFile, _ := os.Create("/tmp/checkly.log")
@@ -116,6 +253,10 @@ func resourceCheckRead(d *schema.ResourceData, client interface{}) error {
 	d.Set("frequency", check.Frequency)
 	d.Set("locations", check.Locations)
 	d.SetId(d.Id())
+	return nil
+}
+
+func resourceCheckUpdate(d *schema.ResourceData, client interface{}) error {
 	return nil
 }
 
