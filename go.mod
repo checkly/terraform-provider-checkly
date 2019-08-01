@@ -1,4 +1,4 @@
-module terraform-provider-checkly
+module github.com/bitfield/terraform-provider-checkly
 
 go 1.12
 
