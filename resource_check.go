@@ -2,12 +2,14 @@ package main
 
 import (
 	"fmt"
-	"net/http"
 	"time"
 
 	"github.com/bitfield/checkly"
 	"github.com/hashicorp/terraform/helper/schema"
 )
+
+// tfMap is a shorthand alias for convenience; Terraform uses this type a *lot*.
+type tfMap = map[string]interface{}
 
 func resourceCheck() *schema.Resource {
 	return &schema.Resource{
@@ -18,7 +20,6 @@ func resourceCheck() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
-
 		Schema: map[string]*schema.Schema{
 			"name": &schema.Schema{
 				Type:     schema.TypeString,
@@ -117,139 +118,212 @@ func resourceCheck() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 			},
-			"alert_email": &schema.Schema{
+			"alert_channels": &schema.Schema{
 				Type:     schema.TypeSet,
 				Optional: true,
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-				},
-			},
-			"alert_webhook": &schema.Schema{
-				Type:     schema.TypeSet,
-				Optional: true,
+				MaxItems: 1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"name": {
-							Type:     schema.TypeString,
-							Required: true,
+						"email": {
+							Type:     schema.TypeSet,
+							Optional: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
 						},
-						"url": {
-							Type:     schema.TypeString,
-							Required: true,
+						"webhook": {
+							Type:     schema.TypeSet,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"name": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"url": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+								},
+							},
+						},
+						"slack": {
+							Type:     schema.TypeSet,
+							Optional: true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+						"sms": {
+							Type:     schema.TypeSet,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"number": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"name": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+								},
+							},
 						},
 					},
 				},
 			},
-			"alert_slack": &schema.Schema{
+			"alert_settings": &schema.Schema{
 				Type:     schema.TypeSet,
 				Optional: true,
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-				},
-			},
-			"alert_sms": &schema.Schema{
-				Type:     schema.TypeSet,
-				Optional: true,
+				MaxItems: 1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"number": {
+						"escalation_type": {
 							Type:     schema.TypeString,
-							Required: true,
+							Optional: true,
 						},
-						"name": {
-							Type:     schema.TypeString,
-							Required: true,
+						"run_based_escalation": {
+							Type:     schema.TypeSet,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"failed_run_threshold": {
+										Type:     schema.TypeInt,
+										Optional: true,
+										Default:  1,
+									},
+								},
+							},
+						},
+						"time_based_escalation": {
+							Type:     schema.TypeSet,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"minutes_failing_threshold": {
+										Type:     schema.TypeInt,
+										Optional: true,
+										Default:  5,
+									},
+								},
+							},
+						},
+						"reminders": {
+							Type:     schema.TypeSet,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"amount": {
+										Type:     schema.TypeInt,
+										Optional: true,
+									},
+									"interval": {
+										Type:     schema.TypeInt,
+										Optional: true,
+										Default:  5,
+									},
+								},
+							},
+						},
+						"ssl_certificates": {
+							Type:     schema.TypeSet,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"enabled": {
+										Type:     schema.TypeBool,
+										Optional: true,
+										Default:  false,
+									},
+									"alert_threshold": {
+										Type:     schema.TypeInt,
+										Optional: true,
+										Default:  3,
+										ValidateFunc: func(val interface{}, key string) (warns []string, errs []error) {
+											v := val.(int)
+											valid := false
+											validFreqs := []int{3, 7, 14, 30}
+											for _, i := range validFreqs {
+												if v == i {
+													valid = true
+												}
+											}
+											if !valid {
+												errs = append(errs, fmt.Errorf("%q must be one of %v, got: %d", key, validFreqs, v))
+											}
+											return warns, errs
+										},
+									},
+								},
+							},
 						},
 					},
 				},
-			},
-			"alert_escalation_type": &schema.Schema{
-				Type:     schema.TypeString,
-				Optional: true,
-			},
-			"failed_run_threshold": &schema.Schema{
-				Type:     schema.TypeInt,
-				Optional: true,
-				Default:  1,
-			},
-			"minutes_failing_threshold": &schema.Schema{
-				Type:     schema.TypeInt,
-				Optional: true,
-				Default:  5,
-			},
-			"reminders_amount": &schema.Schema{
-				Type:     schema.TypeInt,
-				Optional: true,
-			},
-			"reminders_interval": &schema.Schema{
-				Type:     schema.TypeInt,
-				Optional: true,
-				Default:  5,
-			},
-			"ssl_alerts_enabled": &schema.Schema{
-				Type:     schema.TypeBool,
-				Optional: true,
-				Default:  false,
-			},
-			"ssl_alerts_threshold": &schema.Schema{
-				Type:     schema.TypeInt,
-				Optional: true,
-				Default:  3,
 			},
 			"use_global_alert_settings": &schema.Schema{
 				Type:     schema.TypeBool,
 				Optional: true,
 			},
-			"request_method": &schema.Schema{
-				Type:     schema.TypeString,
-				Optional: true,
-				Default:  "GET",
-			},
-			"request_url": &schema.Schema{
-				Type:     schema.TypeString,
-				Required: true,
-			},
-			"follow_redirects": &schema.Schema{
-				Type:     schema.TypeBool,
-				Optional: true,
-			},
-			"request_body": &schema.Schema{
-				Type:     schema.TypeString,
-				Optional: true,
-			},
-			"request_body_type": &schema.Schema{
-				Type:     schema.TypeString,
-				Optional: true,
-				Default:  "NONE",
-			},
-			"request_headers": &schema.Schema{
-				Type:     schema.TypeMap,
-				Optional: true,
-			},
-			"query_parameters": &schema.Schema{
-				Type:     schema.TypeMap,
-				Optional: true,
-			},
-			"assertion": &schema.Schema{
+			"request": &schema.Schema{
 				Type:     schema.TypeSet,
 				Optional: true,
+				MaxItems: 1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"source": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"property": {
+						"body": {
 							Type:     schema.TypeString,
 							Optional: true,
 						},
-						"comparison": {
+						"body_type": {
+							Type:     schema.TypeString,
+							Optional: true,
+							Default:  "NONE",
+						},
+						"headers": {
+							Type:     schema.TypeMap,
+							Optional: true,
+						},
+						"query_parameters": {
+							Type:     schema.TypeMap,
+							Optional: true,
+						},
+						"follow_redirects": {
+							Type:     schema.TypeBool,
+							Optional: true,
+						},
+						"method": {
+							Type:     schema.TypeString,
+							Optional: true,
+							Default:  "GET",
+						},
+						"url": {
 							Type:     schema.TypeString,
 							Required: true,
 						},
-						"target": {
-							Type:     schema.TypeString,
-							Required: true,
+						"assertion": &schema.Schema{
+							Type:     schema.TypeSet,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"source": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"property": {
+										Type:     schema.TypeString,
+										Optional: true,
+									},
+									"comparison": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"target": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+								},
+							},
 						},
 					},
 				},
@@ -281,8 +355,16 @@ func resourceCheckRead(d *schema.ResourceData, client interface{}) error {
 }
 
 func resourceCheckUpdate(d *schema.ResourceData, client interface{}) error {
-	// needs checkly.Update to be implemented
-	return nil
+	check, err := checkFromResourceData(d)
+	if err != nil {
+		return fmt.Errorf("translation error: %v", err)
+	}
+	err = client.(*checkly.Client).Update(check.ID, check)
+	if err != nil {
+		return fmt.Errorf("API error: %v", err)
+	}
+	d.SetId(check.ID)
+	return resourceCheckRead(d, client)
 }
 
 func resourceCheckDelete(d *schema.ResourceData, client interface{}) error {
@@ -312,104 +394,157 @@ func resourceDataFromCheck(c *checkly.Check, d *schema.ResourceData) error {
 	d.Set("teardown_snippet_id", c.TearDownSnippetID)
 	d.Set("local_setup_script", c.LocalSetupScript)
 	d.Set("local_teardown_script", c.LocalTearDownScript)
-	d.Set("alert_email", c.AlertChannels.Email)
-	d.Set("alert_webhook", c.AlertChannels.Webhook)
-	d.Set("alert_slack", c.AlertChannels.Slack)
-	d.Set("alert_sms", c.AlertChannels.SMS)
-	d.Set("alert_escalation_type", c.AlertSettings.EscalationType)
-	d.Set("failed_run_threshold", c.AlertSettings.RunBasedEscalation.FailedRunThreshold)
-	d.Set("minutes_failing_threshold", c.AlertSettings.TimeBasedEscalation.MinutesFailingThreshold)
-	d.Set("reminders_amount", c.AlertSettings.Reminders.Amount)
-	d.Set("reminders_interval", c.AlertSettings.Reminders.Interval)
-	d.Set("ssl_alerts_enabled", c.AlertSettings.SSLCertificates.Enabled)
-	d.Set("ssl_alerts_threshold", c.AlertSettings.SSLCertificates.AlertThreshold)
+	d.Set("alert_channels", setFromAlertChannels(c.AlertChannels))
+	d.Set("alert_settings", setFromAlertSettings(c.AlertSettings))
 	d.Set("use_global_alert_settings", c.UseGlobalAlertSettings)
-	d.Set("request_method", c.Request.Method)
-	d.Set("request_url", c.Request.URL)
-	d.Set("follow_redirects", c.Request.FollowRedirects)
-	d.Set("request_body", c.Request.Body)
-	d.Set("request_body_type", c.Request.BodyType)
-	d.Set("request_headers", c.Request.Headers)
-	d.Set("query_parameters", c.Request.QueryParameters)
-	d.Set("assertion", c.Request.Assertions)
+	d.Set("request", setFromRequest(c.Request))
 	d.SetId(d.Id())
 	return nil
 }
 
-func checkFromResourceData(d *schema.ResourceData) (checkly.Check, error) {
-	check := checkly.Check{
-		Name:                 d.Get("name").(string),
-		Type:                 d.Get("type").(string),
-		Frequency:            d.Get("frequency").(int),
-		Activated:            d.Get("activated").(bool),
-		Muted:                d.Get("muted").(bool),
-		ShouldFail:           d.Get("should_fail").(bool),
-		Locations:            stringsFromSet(d.Get("locations").(*schema.Set)),
-		Script:               d.Get("script").(string),
-		CreatedAt:            mustParseRFC3339Time(d.Get("created_at").(string)),
-		UpdatedAt:            mustParseRFC3339Time(d.Get("created_at").(string)),
-		EnvironmentVariables: envVarsFromMap(d.Get("environment_variables").(map[string]interface{})),
-		DoubleCheck:          d.Get("double_check").(bool),
-		Tags:                 stringsFromSet(d.Get("tags").(*schema.Set)),
-		SSLCheck:             d.Get("ssl_check").(bool),
-		SSLCheckDomain:       d.Get("ssl_check_domain").(string),
-		SetupSnippetID:       d.Get("setup_snippet_id").(int64),
-		TearDownSnippetID:    d.Get("teardown_snippet_id").(int64),
-		LocalSetupScript:     d.Get("local_setup_script").(string),
-		LocalTearDownScript:  d.Get("local_teardown_script").(string),
-		AlertChannels: checkly.AlertChannels{
-			Email:   emailsFromSet(d.Get("alert_email").(*schema.Set)),
-			Webhook: webhooksFromSet(d.Get("alert_webhook").(*schema.Set)),
-			Slack:   slacksFromSet(d.Get("alert_slack").(*schema.Set)),
-			SMS:     smssFromSet(d.Get("alert_sms").(*schema.Set)),
-		},
-		AlertSettings: checkly.AlertSettings{
-			EscalationType: d.Get("alert_escalation_type").(string),
-			RunBasedEscalation: checkly.RunBasedEscalation{
-				FailedRunThreshold: d.Get("failed_run_threshold").(int),
-			},
-			TimeBasedEscalation: checkly.TimeBasedEscalation{
-				MinutesFailingThreshold: d.Get("minutes_failing_threshold").(int),
-			},
-			Reminders: checkly.Reminders{
-				Amount:   d.Get("reminders_amount").(int),
-				Interval: d.Get("reminders_interval").(int),
-			},
-			SSLCertificates: checkly.SSLCertificates{
-				Enabled:        d.Get("ssl_alerts_enabled").(bool),
-				AlertThreshold: d.Get("ssl_alerts_threshold").(int),
-			},
-		},
-		UseGlobalAlertSettings: d.Get("use_global_alert_settings").(bool),
-		Request: checkly.Request{
-			Method:          http.MethodGet,
-			URL:             d.Get("request_url").(string),
-			FollowRedirects: d.Get("follow_redirects").(bool),
-			Body:            d.Get("request_body").(string),
-			BodyType:        d.Get("request_body_type").(string),
-			Headers:         keyValuesFromMap(d.Get("request_headers").(map[string]interface{})),
-			QueryParameters: keyValuesFromMap(d.Get("query_parameters").(map[string]interface{})),
-			Assertions:      assertionsFromSet(d.Get("assertion").(*schema.Set)),
+func setFromAlertChannels(alertChannels checkly.AlertChannels) []tfMap {
+	var emails = []string{}
+	for _, e := range alertChannels.Email {
+		emails = append(emails, e.Address)
+	}
+	var webhooks = []tfMap{}
+	for _, w := range alertChannels.Webhook {
+		webhooks = append(webhooks, tfMap{
+			"name": w.Name,
+			"url":  w.URL,
+		})
+	}
+	var slacks = []string{}
+	for _, s := range alertChannels.Slack {
+		slacks = append(slacks, s.URL)
+	}
+	var smss = []tfMap{}
+	for _, s := range alertChannels.SMS {
+		smss = append(smss, tfMap{
+			"number": s.Number,
+			"name":   s.Name,
+		})
+	}
+	return []tfMap{
+		{
+			"email":   emails,
+			"webhook": webhooks,
+			"slack":   slacks,
+			"sms":     smss,
 		},
 	}
+}
 
+func setFromAlertSettings(as checkly.AlertSettings) []tfMap {
+	var result = tfMap{}
+	result["escalation_type"] = as.EscalationType
+	result["run_based_escalation"] = setFromRunBasedEscalation(as.RunBasedEscalation)
+	result["time_based_escalation"] = setFromTimeBasedEscalation(as.TimeBasedEscalation)
+	result["reminders"] = setFromReminders(as.Reminders)
+	result["ssl_certificates"] = setFromSSLCertificates(as.SSLCertificates)
+	return []tfMap{result}
+}
+
+func setFromRunBasedEscalation(r checkly.RunBasedEscalation) []tfMap {
+	return []tfMap{
+		tfMap{
+			"failed_run_threshold": r.FailedRunThreshold,
+		},
+	}
+}
+
+func setFromTimeBasedEscalation(t checkly.TimeBasedEscalation) []tfMap {
+	return []tfMap{
+		tfMap{
+			"minutes_failing_threshold": t.MinutesFailingThreshold,
+		},
+	}
+}
+
+func setFromReminders(r checkly.Reminders) []tfMap {
+	return []tfMap{
+		tfMap{
+			"amount":   r.Amount,
+			"interval": r.Interval,
+		},
+	}
+}
+
+func setFromSSLCertificates(s checkly.SSLCertificates) []tfMap {
+	return []tfMap{
+		tfMap{
+			"enabled":         s.Enabled,
+			"alert_threshold": s.AlertThreshold,
+		},
+	}
+}
+
+func setFromRequest(r checkly.Request) []tfMap {
+	rs := tfMap{}
+	rs["url"] = r.URL
+	rs["body"] = r.Body
+	rs["body_type"] = r.BodyType
+	rs["method"] = r.Method
+	rs["follow_redirects"] = r.FollowRedirects
+	rs["assertion"] = setFromAssertions(r.Assertions)
+	return []tfMap{rs}
+}
+
+func setFromAssertions(assertions []checkly.Assertion) []tfMap {
+	var result = []tfMap{}
+	for _, a := range assertions {
+		as := tfMap{}
+		as["source"] = a.Source
+		as["property"] = a.Property
+		as["comparison"] = a.Comparison
+		as["target"] = a.Target
+		result = append(result, as)
+	}
+	return result
+}
+
+func checkFromResourceData(d *schema.ResourceData) (checkly.Check, error) {
+	check := checkly.Check{
+		ID:                     d.Id(),
+		Name:                   d.Get("name").(string),
+		Type:                   d.Get("type").(string),
+		Frequency:              d.Get("frequency").(int),
+		Activated:              d.Get("activated").(bool),
+		Muted:                  d.Get("muted").(bool),
+		ShouldFail:             d.Get("should_fail").(bool),
+		Locations:              stringsFromSet(d.Get("locations").(*schema.Set)),
+		Script:                 d.Get("script").(string),
+		CreatedAt:              mustParseRFC3339Time(d.Get("created_at").(string)),
+		UpdatedAt:              mustParseRFC3339Time(d.Get("created_at").(string)),
+		EnvironmentVariables:   envVarsFromMap(d.Get("environment_variables").(map[string]interface{})),
+		DoubleCheck:            d.Get("double_check").(bool),
+		Tags:                   stringsFromSet(d.Get("tags").(*schema.Set)),
+		SSLCheck:               d.Get("ssl_check").(bool),
+		SSLCheckDomain:         d.Get("ssl_check_domain").(string),
+		SetupSnippetID:         int64(d.Get("setup_snippet_id").(int)),
+		TearDownSnippetID:      int64(d.Get("teardown_snippet_id").(int)),
+		LocalSetupScript:       d.Get("local_setup_script").(string),
+		LocalTearDownScript:    d.Get("local_teardown_script").(string),
+		AlertChannels:          alertChannelsFromSet(d.Get("alert_channels").(*schema.Set)),
+		AlertSettings:          alertSettingsFromSet(d.Get("alert_settings").(*schema.Set)),
+		UseGlobalAlertSettings: d.Get("use_global_alert_settings").(bool),
+		Request:                requestFromSet(d.Get("request").(*schema.Set)),
+	}
 	return check, nil
 }
 
 func stringsFromSet(s *schema.Set) []string {
-	rawSlice := s.List()
-	result := make([]string, len(rawSlice))
-	for i, item := range rawSlice {
+	result := make([]string, s.Len())
+	for i, item := range s.List() {
 		result[i] = item.(string)
 	}
 	return result
 }
 
 func assertionsFromSet(s *schema.Set) []checkly.Assertion {
-	rawSlice := s.List()
-	result := make([]checkly.Assertion, len(rawSlice))
-	for i, item := range rawSlice {
-		data := item.(map[string]interface{})
+	result := make([]checkly.Assertion, s.Len())
+	for i, item := range s.List() {
+		data := item.(tfMap)
 		result[i] = checkly.Assertion{
 			Source:     data["source"].(string),
 			Property:   data["property"].(string),
@@ -420,11 +555,23 @@ func assertionsFromSet(s *schema.Set) []checkly.Assertion {
 	return result
 }
 
+func alertChannelsFromSet(s *schema.Set) checkly.AlertChannels {
+	if s.Len() == 0 {
+		return checkly.AlertChannels{}
+	}
+	ac := s.List()[0].(tfMap)
+	return checkly.AlertChannels{
+		Email:   emailsFromSet(ac["email"].(*schema.Set)),
+		Webhook: webhooksFromSet(ac["webhook"].(*schema.Set)),
+		Slack:   slacksFromSet(ac["slack"].(*schema.Set)),
+		SMS:     smssFromSet(ac["sms"].(*schema.Set)),
+	}
+}
+
 func emailsFromSet(s *schema.Set) []checkly.AlertEmail {
-	rawSlice := s.List()
-	result := make([]checkly.AlertEmail, len(rawSlice))
-	for i, item := range rawSlice {
-		data := item.(map[string]interface{})
+	result := make([]checkly.AlertEmail, s.Len())
+	for i, item := range s.List() {
+		data := item.(tfMap)
 		result[i] = checkly.AlertEmail{
 			Address: data["address"].(string),
 		}
@@ -433,10 +580,9 @@ func emailsFromSet(s *schema.Set) []checkly.AlertEmail {
 }
 
 func webhooksFromSet(s *schema.Set) []checkly.AlertWebhook {
-	rawSlice := s.List()
-	result := make([]checkly.AlertWebhook, len(rawSlice))
-	for i, item := range rawSlice {
-		data := item.(map[string]interface{})
+	result := make([]checkly.AlertWebhook, s.Len())
+	for i, item := range s.List() {
+		data := item.(tfMap)
 		result[i] = checkly.AlertWebhook{
 			Name: data["name"].(string),
 			URL:  data["url"].(string),
@@ -446,10 +592,9 @@ func webhooksFromSet(s *schema.Set) []checkly.AlertWebhook {
 }
 
 func slacksFromSet(s *schema.Set) []checkly.AlertSlack {
-	rawSlice := s.List()
-	result := make([]checkly.AlertSlack, len(rawSlice))
-	for i, item := range rawSlice {
-		data := item.(map[string]interface{})
+	result := make([]checkly.AlertSlack, s.Len())
+	for i, item := range s.List() {
+		data := item.(tfMap)
 		result[i] = checkly.AlertSlack{
 			URL: data["url"].(string),
 		}
@@ -458,16 +603,93 @@ func slacksFromSet(s *schema.Set) []checkly.AlertSlack {
 }
 
 func smssFromSet(s *schema.Set) []checkly.AlertSMS {
-	rawSlice := s.List()
-	result := make([]checkly.AlertSMS, len(rawSlice))
-	for i, item := range rawSlice {
-		data := item.(map[string]interface{})
+	result := make([]checkly.AlertSMS, s.Len())
+	for i, item := range s.List() {
+		data := item.(tfMap)
 		result[i] = checkly.AlertSMS{
 			Number: data["number"].(string),
 			Name:   data["name"].(string),
 		}
 	}
 	return result
+}
+
+func alertSettingsFromSet(s *schema.Set) checkly.AlertSettings {
+	if s.Len() < 1 {
+		return checkly.AlertSettings{
+			SSLCertificates: checkly.SSLCertificates{
+				AlertThreshold: 3,
+			},
+		}
+	}
+	asm := s.List()[0].(tfMap)
+	return checkly.AlertSettings{
+		EscalationType:     asm["escalation_type"].(string),
+		RunBasedEscalation: runBasedEscalationFromSet(asm["run_based_escalation"].(*schema.Set)),
+
+		TimeBasedEscalation: timeBasedEscalationFromSet(asm["time_based_escalation"].(*schema.Set)),
+		Reminders:           remindersFromSet(asm["reminders"].(*schema.Set)),
+		SSLCertificates:     sslCertificatesFromSet(asm["ssl_certificates"].(*schema.Set)),
+	}
+}
+
+func runBasedEscalationFromSet(s *schema.Set) checkly.RunBasedEscalation {
+	if s.Len() < 1 {
+		return checkly.RunBasedEscalation{}
+	}
+	m := s.List()[0].(tfMap)
+	return checkly.RunBasedEscalation{
+		FailedRunThreshold: m["failed_run_threshold"].(int),
+	}
+}
+
+func timeBasedEscalationFromSet(s *schema.Set) checkly.TimeBasedEscalation {
+	if s.Len() < 1 {
+		return checkly.TimeBasedEscalation{}
+	}
+	m := s.List()[0].(tfMap)
+	return checkly.TimeBasedEscalation{
+		MinutesFailingThreshold: m["minutes_failing_threshold"].(int),
+	}
+}
+
+func remindersFromSet(s *schema.Set) checkly.Reminders {
+	if s.Len() < 1 {
+		return checkly.Reminders{}
+	}
+	m := s.List()[0].(tfMap)
+	return checkly.Reminders{
+		Amount:   m["amount"].(int),
+		Interval: m["interval"].(int),
+	}
+}
+
+func sslCertificatesFromSet(s *schema.Set) checkly.SSLCertificates {
+	if s.Len() < 1 {
+		return checkly.SSLCertificates{}
+	}
+	m := s.List()[0].(tfMap)
+	return checkly.SSLCertificates{
+		Enabled:        m["enabled"].(bool),
+		AlertThreshold: m["alert_threshold"].(int),
+	}
+}
+
+func requestFromSet(s *schema.Set) checkly.Request {
+	if s.Len() < 1 {
+		return checkly.Request{}
+	}
+	rm := s.List()[0].(tfMap)
+	return checkly.Request{
+		Method:          rm["method"].(string),
+		URL:             rm["url"].(string),
+		FollowRedirects: rm["follow_redirects"].(bool),
+		Body:            rm["body"].(string),
+		BodyType:        rm["body_type"].(string),
+		Headers:         keyValuesFromMap(rm["headers"].(tfMap)),
+		QueryParameters: keyValuesFromMap(rm["query_parameters"].(tfMap)),
+		Assertions:      assertionsFromSet(rm["assertion"].(*schema.Set)),
+	}
 }
 
 func mustParseRFC3339Time(s string) time.Time {
