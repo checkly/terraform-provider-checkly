@@ -39,6 +39,8 @@ github.com/bitfield/checkly v0.0.6 h1:oUoNPtlMXT613YVj+NL0XpXnZObiQy8zH31zqyc9oL
 github.com/bitfield/checkly v0.0.6/go.mod h1:f5+OOTqtCwMYBsde5tomn67BcZIhtXDxZc7FFb9Lhqw=
 github.com/bitfield/checkly v0.0.7 h1:viC4nWt/hj9gPgNpXl6iCTN293HFsb5fiqQGqBaFq94=
 github.com/bitfield/checkly v0.0.7/go.mod h1:f5+OOTqtCwMYBsde5tomn67BcZIhtXDxZc7FFb9Lhqw=
+github.com/bitfield/checkly v0.1.0 h1:TWn06DGrc6yUJ59Aztmr5yjNHzus4fDHnovpYM7vJII=
+github.com/bitfield/checkly v0.1.0/go.mod h1:f5+OOTqtCwMYBsde5tomn67BcZIhtXDxZc7FFb9Lhqw=
 github.com/bitfield/uptimerobot v0.10.0 h1:ly59DjOtno4lM2tTk9GsqONPWdXGz9DAL/BTN2CjAoE=
 github.com/bitfield/uptimerobot v0.10.0/go.mod h1:03V8ZacSVCjGekgOppk0PCKaTbaD5sJRdLuUdmfSWGQ=
 github.com/blang/semver v0.0.0-20170202183821-4a1e882c79dc h1:J/iAaGTCZYfT/allw61NfW/CEoflFsNdhQJny4iLU+0=
