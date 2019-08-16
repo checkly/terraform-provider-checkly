@@ -325,6 +325,22 @@ func resourceCheck() *schema.Resource {
 								},
 							},
 						},
+						"basic_auth": &schema.Schema{
+							Type:     schema.TypeSet,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"username": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"password": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+								},
+							},
+						},
 					},
 				},
 			},
@@ -436,13 +452,13 @@ func setFromAlertChannels(alertChannels checkly.AlertChannels) []tfMap {
 }
 
 func setFromAlertSettings(as checkly.AlertSettings) []tfMap {
-	var result = tfMap{}
-	result["escalation_type"] = as.EscalationType
-	result["run_based_escalation"] = setFromRunBasedEscalation(as.RunBasedEscalation)
-	result["time_based_escalation"] = setFromTimeBasedEscalation(as.TimeBasedEscalation)
-	result["reminders"] = setFromReminders(as.Reminders)
-	result["ssl_certificates"] = setFromSSLCertificates(as.SSLCertificates)
-	return []tfMap{result}
+	var s = tfMap{}
+	s["escalation_type"] = as.EscalationType
+	s["run_based_escalation"] = setFromRunBasedEscalation(as.RunBasedEscalation)
+	s["time_based_escalation"] = setFromTimeBasedEscalation(as.TimeBasedEscalation)
+	s["reminders"] = setFromReminders(as.Reminders)
+	s["ssl_certificates"] = setFromSSLCertificates(as.SSLCertificates)
+	return []tfMap{s}
 }
 
 func setFromRunBasedEscalation(r checkly.RunBasedEscalation) []tfMap {
@@ -480,27 +496,35 @@ func setFromSSLCertificates(s checkly.SSLCertificates) []tfMap {
 }
 
 func setFromRequest(r checkly.Request) []tfMap {
-	rs := tfMap{}
-	rs["url"] = r.URL
-	rs["body"] = r.Body
-	rs["body_type"] = r.BodyType
-	rs["method"] = r.Method
-	rs["follow_redirects"] = r.FollowRedirects
-	rs["assertion"] = setFromAssertions(r.Assertions)
-	return []tfMap{rs}
+	s := tfMap{}
+	s["url"] = r.URL
+	s["body"] = r.Body
+	s["body_type"] = r.BodyType
+	s["method"] = r.Method
+	s["follow_redirects"] = r.FollowRedirects
+	s["assertion"] = setFromAssertions(r.Assertions)
+	s["basic_auth"] = setFromBasicAuth(r.BasicAuth)
+	return []tfMap{s}
 }
 
 func setFromAssertions(assertions []checkly.Assertion) []tfMap {
-	var result = []tfMap{}
+	var s = []tfMap{}
 	for _, a := range assertions {
 		as := tfMap{}
 		as["source"] = a.Source
 		as["property"] = a.Property
 		as["comparison"] = a.Comparison
 		as["target"] = a.Target
-		result = append(result, as)
+		s = append(s, as)
 	}
-	return result
+	return s
+}
+
+func setFromBasicAuth(b checkly.BasicAuth) []tfMap {
+	var s = tfMap{}
+	s["username"] = b.Username
+	s["password"] = b.Password
+	return []tfMap{s}
 }
 
 func checkFromResourceData(d *schema.ResourceData) (checkly.Check, error) {
@@ -534,84 +558,95 @@ func checkFromResourceData(d *schema.ResourceData) (checkly.Check, error) {
 }
 
 func stringsFromSet(s *schema.Set) []string {
-	result := make([]string, s.Len())
+	r := make([]string, s.Len())
 	for i, item := range s.List() {
-		result[i] = item.(string)
+		r[i] = item.(string)
 	}
-	return result
+	return r
 }
 
 func assertionsFromSet(s *schema.Set) []checkly.Assertion {
-	result := make([]checkly.Assertion, s.Len())
+	r := make([]checkly.Assertion, s.Len())
 	for i, item := range s.List() {
-		data := item.(tfMap)
-		result[i] = checkly.Assertion{
-			Source:     data["source"].(string),
-			Property:   data["property"].(string),
-			Comparison: data["comparison"].(string),
-			Target:     data["target"].(string),
+		res := item.(tfMap)
+		r[i] = checkly.Assertion{
+			Source:     res["source"].(string),
+			Property:   res["property"].(string),
+			Comparison: res["comparison"].(string),
+			Target:     res["target"].(string),
 		}
 	}
-	return result
+	return r
+}
+
+func basicAuthFromSet(s *schema.Set) checkly.BasicAuth {
+	if s.Len() < 1 {
+		return checkly.BasicAuth{}
+	}
+	res := s.List()[0].(tfMap)
+	return checkly.BasicAuth{
+		Username: res["username"].(string),
+		Password: res["password"].(string),
+	}
 }
 
 func alertChannelsFromSet(s *schema.Set) checkly.AlertChannels {
 	if s.Len() == 0 {
 		return checkly.AlertChannels{}
 	}
-	ac := s.List()[0].(tfMap)
+	res := s.List()[0].(tfMap)
 	return checkly.AlertChannels{
-		Email:   emailsFromSet(ac["email"].(*schema.Set)),
-		Webhook: webhooksFromSet(ac["webhook"].(*schema.Set)),
-		Slack:   slacksFromSet(ac["slack"].(*schema.Set)),
-		SMS:     smssFromSet(ac["sms"].(*schema.Set)),
+		Email:   emailsFromSet(res["email"].(*schema.Set)),
+		Webhook: webhooksFromSet(res["webhook"].(*schema.Set)),
+		Slack:   slacksFromSet(res["slack"].(*schema.Set)),
+		SMS:     smssFromSet(res["sms"].(*schema.Set)),
 	}
 }
 
 func emailsFromSet(s *schema.Set) []checkly.AlertEmail {
-	result := make([]checkly.AlertEmail, s.Len())
+	r := make([]checkly.AlertEmail, s.Len())
 	for i, item := range s.List() {
-		data := item.(tfMap)
-		result[i] = checkly.AlertEmail{
-			Address: data["address"].(string),
+		res := item.(tfMap)
+		r[i] = checkly.AlertEmail{
+			Address: res["address"].(string),
 		}
 	}
-	return result
+	return r
 }
 
 func webhooksFromSet(s *schema.Set) []checkly.AlertWebhook {
-	result := make([]checkly.AlertWebhook, s.Len())
+	r := make([]checkly.AlertWebhook, s.Len())
 	for i, item := range s.List() {
-		data := item.(tfMap)
-		result[i] = checkly.AlertWebhook{
-			Name: data["name"].(string),
-			URL:  data["url"].(string),
+		res := item.(tfMap)
+		r[i] = checkly.AlertWebhook{
+			Name: res["name"].(string),
+			URL:  res["url"].(string),
 		}
 	}
-	return result
+	return r
 }
 
 func slacksFromSet(s *schema.Set) []checkly.AlertSlack {
-	result := make([]checkly.AlertSlack, s.Len())
+	r := make([]checkly.AlertSlack, s.Len())
 	for i, item := range s.List() {
-		data := item.(tfMap)
-		result[i] = checkly.AlertSlack{
-			URL: data["url"].(string),
+		res := item.(tfMap)
+		r[i] = checkly.AlertSlack{
+			URL: res["url"].(string),
 		}
 	}
-	return result
+	return r
 }
 
 func smssFromSet(s *schema.Set) []checkly.AlertSMS {
-	result := make([]checkly.AlertSMS, s.Len())
+	r := make([]checkly.AlertSMS, s.Len())
 	for i, item := range s.List() {
-		data := item.(tfMap)
-		result[i] = checkly.AlertSMS{
-			Number: data["number"].(string),
-			Name:   data["name"].(string),
+		res := item.(tfMap)
+		r[i] = checkly.AlertSMS{
+			Number: res["number"].(string),
+			Name:   res["name"].(string),
 		}
 	}
-	return result
+	return r
 }
 
 func alertSettingsFromSet(s *schema.Set) checkly.AlertSettings {
@@ -622,14 +657,13 @@ func alertSettingsFromSet(s *schema.Set) checkly.AlertSettings {
 			},
 		}
 	}
-	asm := s.List()[0].(tfMap)
+	res := s.List()[0].(tfMap)
 	return checkly.AlertSettings{
-		EscalationType:     asm["escalation_type"].(string),
-		RunBasedEscalation: runBasedEscalationFromSet(asm["run_based_escalation"].(*schema.Set)),
-
-		TimeBasedEscalation: timeBasedEscalationFromSet(asm["time_based_escalation"].(*schema.Set)),
-		Reminders:           remindersFromSet(asm["reminders"].(*schema.Set)),
-		SSLCertificates:     sslCertificatesFromSet(asm["ssl_certificates"].(*schema.Set)),
+		EscalationType:      res["escalation_type"].(string),
+		RunBasedEscalation:  runBasedEscalationFromSet(res["run_based_escalation"].(*schema.Set)),
+		TimeBasedEscalation: timeBasedEscalationFromSet(res["time_based_escalation"].(*schema.Set)),
+		Reminders:           remindersFromSet(res["reminders"].(*schema.Set)),
+		SSLCertificates:     sslCertificatesFromSet(res["ssl_certificates"].(*schema.Set)),
 	}
 }
 
@@ -637,9 +671,9 @@ func runBasedEscalationFromSet(s *schema.Set) checkly.RunBasedEscalation {
 	if s.Len() < 1 {
 		return checkly.RunBasedEscalation{}
 	}
-	m := s.List()[0].(tfMap)
+	res := s.List()[0].(tfMap)
 	return checkly.RunBasedEscalation{
-		FailedRunThreshold: m["failed_run_threshold"].(int),
+		FailedRunThreshold: res["failed_run_threshold"].(int),
 	}
 }
 
@@ -647,9 +681,9 @@ func timeBasedEscalationFromSet(s *schema.Set) checkly.TimeBasedEscalation {
 	if s.Len() < 1 {
 		return checkly.TimeBasedEscalation{}
 	}
-	m := s.List()[0].(tfMap)
+	res := s.List()[0].(tfMap)
 	return checkly.TimeBasedEscalation{
-		MinutesFailingThreshold: m["minutes_failing_threshold"].(int),
+		MinutesFailingThreshold: res["minutes_failing_threshold"].(int),
 	}
 }
 
@@ -657,10 +691,10 @@ func remindersFromSet(s *schema.Set) checkly.Reminders {
 	if s.Len() < 1 {
 		return checkly.Reminders{}
 	}
-	m := s.List()[0].(tfMap)
+	res := s.List()[0].(tfMap)
 	return checkly.Reminders{
-		Amount:   m["amount"].(int),
-		Interval: m["interval"].(int),
+		Amount:   res["amount"].(int),
+		Interval: res["interval"].(int),
 	}
 }
 
@@ -668,10 +702,10 @@ func sslCertificatesFromSet(s *schema.Set) checkly.SSLCertificates {
 	if s.Len() < 1 {
 		return checkly.SSLCertificates{}
 	}
-	m := s.List()[0].(tfMap)
+	res := s.List()[0].(tfMap)
 	return checkly.SSLCertificates{
-		Enabled:        m["enabled"].(bool),
-		AlertThreshold: m["alert_threshold"].(int),
+		Enabled:        res["enabled"].(bool),
+		AlertThreshold: res["alert_threshold"].(int),
 	}
 }
 
@@ -679,16 +713,17 @@ func requestFromSet(s *schema.Set) checkly.Request {
 	if s.Len() < 1 {
 		return checkly.Request{}
 	}
-	rm := s.List()[0].(tfMap)
+	res := s.List()[0].(tfMap)
 	return checkly.Request{
-		Method:          rm["method"].(string),
-		URL:             rm["url"].(string),
-		FollowRedirects: rm["follow_redirects"].(bool),
-		Body:            rm["body"].(string),
-		BodyType:        rm["body_type"].(string),
-		Headers:         keyValuesFromMap(rm["headers"].(tfMap)),
-		QueryParameters: keyValuesFromMap(rm["query_parameters"].(tfMap)),
-		Assertions:      assertionsFromSet(rm["assertion"].(*schema.Set)),
+		Method:          res["method"].(string),
+		URL:             res["url"].(string),
+		FollowRedirects: res["follow_redirects"].(bool),
+		Body:            res["body"].(string),
+		BodyType:        res["body_type"].(string),
+		Headers:         keyValuesFromMap(res["headers"].(tfMap)),
+		QueryParameters: keyValuesFromMap(res["query_parameters"].(tfMap)),
+		Assertions:      assertionsFromSet(res["assertion"].(*schema.Set)),
+		BasicAuth:       basicAuthFromSet(res["basic_auth"].(*schema.Set)),
 	}
 }
 
@@ -704,31 +739,31 @@ func mustParseRFC3339Time(s string) time.Time {
 }
 
 func envVarsFromMap(m map[string]interface{}) []checkly.EnvironmentVariable {
-	result := make([]checkly.EnvironmentVariable, 0, len(m))
+	r := make([]checkly.EnvironmentVariable, 0, len(m))
 	for k, v := range m {
 		s, ok := v.(string)
 		if !ok {
 			panic(fmt.Errorf("could not convert environment variable value %v to string", v))
 		}
-		result = append(result, checkly.EnvironmentVariable{
+		r = append(r, checkly.EnvironmentVariable{
 			Key:   k,
 			Value: s,
 		})
 	}
-	return result
+	return r
 }
 
 func keyValuesFromMap(m map[string]interface{}) []checkly.KeyValue {
-	result := make([]checkly.KeyValue, 0, len(m))
+	r := make([]checkly.KeyValue, 0, len(m))
 	for k, v := range m {
 		s, ok := v.(string)
 		if !ok {
 			panic(fmt.Errorf("could not convert environment variable value %v to string", v))
 		}
-		result = append(result, checkly.KeyValue{
+		r = append(r, checkly.KeyValue{
 			Key:   k,
 			Value: s,
 		})
 	}
-	return result
+	return r
 }
