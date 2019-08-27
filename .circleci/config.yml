@@ -18,7 +18,6 @@ jobs:
       - run: go get -v -t -d ./...
       - run: go get -u github.com/mitchellh/gox
       - run: go get -u github.com/tcnksm/ghr
-      - run: go get -u github.com/stevenmatthewt/semantics
       - run:
           name: cross compile
           command: |
@@ -28,12 +27,8 @@ jobs:
       - run:
           name: create release
           command: |
-            tag=$(semantics --output-tag)
-            if [ "$tag" ]; then
-              ghr -t $GITHUB_TOKEN -u tnolet -r terraform-provider-checkly --replace $tag dist/
-            else
-              echo "The commit message(s) did not indicate a major/minor/patch version."
-            fi
+            ghr -t $GITHUB_TOKEN -u tnolet -r terraform-provider-checkly --replace $CIRCLE_TAG dist/
+        
 workflows:
   version: 2
   build-deploy:
@@ -45,3 +40,5 @@ workflows:
           filters:
             branches:
               only: master
+            tags:
+              only: /^v.*/
