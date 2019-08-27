@@ -27,7 +27,11 @@ jobs:
       - run:
           name: create release
           command: |
-            ghr -t $GITHUB_TOKEN -u tnolet -r terraform-provider-checkly --replace $CIRCLE_TAG dist/
+            if [ "$CIRCLE_TAG" ]; then
+              ghr -t $GITHUB_TOKEN -u tnolet -r terraform-provider-checkly --replace $CIRCLE_TAG dist/
+            else
+              echo "no tagged version to deploy"
+            fi
         
 workflows:
   version: 2
