@@ -6,8 +6,12 @@ jobs:
     working_directory: /go/src/github.com/tnolet/terraform-provider-checkly
     steps:
       - checkout
-
-      # specify any bash command here prefixed with `run: `
+      - run: go get -u github.com/golang/dep/cmd/dep
+      - run:
+          name: run build
+          command: |
+            dep ensure
+            go build -v
       - run: go get -v -t -d ./...
       - run: go test -v ./...
 
@@ -20,7 +24,7 @@ jobs:
       - run: go get -u github.com/mitchellh/gox
       - run: go get -u github.com/tcnksm/ghr
       - run: go get -u github.com/stevenmatthewt/semantics
-      - run: go get -u github.com/bitfield/checkly
+      - run: go get -u github.com/bitfield/
       - run:
           name: cross compile
           command: |
