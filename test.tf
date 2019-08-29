@@ -19,7 +19,15 @@ resource "checkly_check" "test-check2" {
     "ap-south-1",
   ]
 
+  alert_channels {
+    email {
+      address = "alert@example.com"
+    }
+  }
+
   alert_settings {
+    escalation_type = "RUN_BASED"
+
     ssl_certificates {
       enabled         = true
       alert_threshold = 30
@@ -30,8 +38,12 @@ resource "checkly_check" "test-check2" {
     follow_redirects = true
     url              = "http://example.com/"
 
-    query_parameters {
+    query_parameters = {
       search = "foo"
+    }
+
+    headers = {
+      X-Bogus = "bogus"
     }
 
     assertion {

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/bitfield/checkly"
@@ -127,8 +128,13 @@ func resourceCheck() *schema.Resource {
 						"email": {
 							Type:     schema.TypeSet,
 							Optional: true,
-							Elem: &schema.Schema{
-								Type: schema.TypeString,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"address": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+								},
 							},
 						},
 						"webhook": {
@@ -150,8 +156,13 @@ func resourceCheck() *schema.Resource {
 						"slack": {
 							Type:     schema.TypeSet,
 							Optional: true,
-							Elem: &schema.Schema{
-								Type: schema.TypeString,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"url": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+								},
 							},
 						},
 						"sms": {
@@ -401,8 +412,9 @@ func resourceDataFromCheck(c *checkly.Check, d *schema.ResourceData) error {
 	d.Set("script", c.Script)
 	d.Set("created_at", c.CreatedAt.Format(time.RFC3339))
 	d.Set("updated_at", c.UpdatedAt.Format(time.RFC3339))
-	d.Set("environment_variables", c.EnvironmentVariables)
+	d.Set("environment_variables", setFromEnvVars(c.EnvironmentVariables))
 	d.Set("double_check", c.DoubleCheck)
+	sort.Strings(c.Tags)
 	d.Set("tags", c.Tags)
 	d.Set("ssl_check", c.SSLCheck)
 	d.Set("ssl_check_domain", c.SSLCheckDomain)
@@ -418,11 +430,23 @@ func resourceDataFromCheck(c *checkly.Check, d *schema.ResourceData) error {
 	return nil
 }
 
-func setFromAlertChannels(alertChannels checkly.AlertChannels) []tfMap {
-	var emails = []string{}
-	for _, e := range alertChannels.Email {
-		emails = append(emails, e.Address)
+func setFromEnvVars(evs []checkly.EnvironmentVariable) tfMap {
+	var s = tfMap{}
+	for _, ev := range evs {
+		s[ev.Key] = ev.Value
 	}
+	return s
+}
+
+func setFromAlertChannels(alertChannels checkly.AlertChannels) []tfMap {
+	var s = tfMap{}
+	var emails = []tfMap{}
+	for _, e := range alertChannels.Email {
+		emails = append(emails, tfMap{
+			"address": e.Address,
+		})
+	}
+	s["email"] = emails
 	var webhooks = []tfMap{}
 	for _, w := range alertChannels.Webhook {
 		webhooks = append(webhooks, tfMap{
@@ -430,10 +454,14 @@ func setFromAlertChannels(alertChannels checkly.AlertChannels) []tfMap {
 			"url":  w.URL,
 		})
 	}
-	var slacks = []string{}
-	for _, s := range alertChannels.Slack {
-		slacks = append(slacks, s.URL)
+	s["webhook"] = webhooks
+	var slacks = []tfMap{}
+	for _, k := range alertChannels.Slack {
+		slacks = append(slacks, tfMap{
+			"url": k.URL,
+		})
 	}
+	s["slack"] = slacks
 	var smss = []tfMap{}
 	for _, s := range alertChannels.SMS {
 		smss = append(smss, tfMap{
@@ -441,90 +469,82 @@ func setFromAlertChannels(alertChannels checkly.AlertChannels) []tfMap {
 			"name":   s.Name,
 		})
 	}
-	return []tfMap{
-		{
-			"email":   emails,
-			"webhook": webhooks,
-			"slack":   slacks,
-			"sms":     smss,
-		},
-	}
-}
-
-func setFromAlertSettings(as checkly.AlertSettings) []tfMap {
-	var s = tfMap{}
-	s["escalation_type"] = as.EscalationType
-	s["run_based_escalation"] = setFromRunBasedEscalation(as.RunBasedEscalation)
-	s["time_based_escalation"] = setFromTimeBasedEscalation(as.TimeBasedEscalation)
-	s["reminders"] = setFromReminders(as.Reminders)
-	s["ssl_certificates"] = setFromSSLCertificates(as.SSLCertificates)
+	s["sms"] = smss
 	return []tfMap{s}
 }
 
-func setFromRunBasedEscalation(r checkly.RunBasedEscalation) []tfMap {
+func setFromAlertSettings(as checkly.AlertSettings) []tfMap {
 	return []tfMap{
-		tfMap{
-			"failed_run_threshold": r.FailedRunThreshold,
-		},
-	}
-}
-
-func setFromTimeBasedEscalation(t checkly.TimeBasedEscalation) []tfMap {
-	return []tfMap{
-		tfMap{
-			"minutes_failing_threshold": t.MinutesFailingThreshold,
-		},
-	}
-}
-
-func setFromReminders(r checkly.Reminders) []tfMap {
-	return []tfMap{
-		tfMap{
-			"amount":   r.Amount,
-			"interval": r.Interval,
-		},
-	}
-}
-
-func setFromSSLCertificates(s checkly.SSLCertificates) []tfMap {
-	return []tfMap{
-		tfMap{
-			"enabled":         s.Enabled,
-			"alert_threshold": s.AlertThreshold,
+		{
+			"escalation_type": as.EscalationType,
+			"run_based_escalation": []tfMap{
+				{
+					"failed_run_threshold": as.RunBasedEscalation.FailedRunThreshold,
+				},
+			},
+			"time_based_escalation": []tfMap{
+				{
+					"minutes_failing_threshold": as.TimeBasedEscalation.MinutesFailingThreshold,
+				},
+			},
+			"reminders": []tfMap{
+				{
+					"amount":   as.Reminders.Amount,
+					"interval": as.Reminders.Interval,
+				},
+			},
+			"ssl_certificates": []tfMap{
+				{
+					"enabled":         as.SSLCertificates.Enabled,
+					"alert_threshold": as.SSLCertificates.AlertThreshold,
+				},
+			},
 		},
 	}
 }
 
 func setFromRequest(r checkly.Request) []tfMap {
 	s := tfMap{}
+	s["method"] = r.Method
 	s["url"] = r.URL
+	s["follow_redirects"] = r.FollowRedirects
 	s["body"] = r.Body
 	s["body_type"] = r.BodyType
-	s["method"] = r.Method
-	s["follow_redirects"] = r.FollowRedirects
+	s["headers"] = mapFromKeyValues(r.Headers)
+	s["query_parameters"] = mapFromKeyValues(r.QueryParameters)
 	s["assertion"] = setFromAssertions(r.Assertions)
 	s["basic_auth"] = setFromBasicAuth(r.BasicAuth)
 	return []tfMap{s}
 }
 
 func setFromAssertions(assertions []checkly.Assertion) []tfMap {
-	var s = []tfMap{}
-	for _, a := range assertions {
+	s := make([]tfMap, len(assertions))
+	for i, a := range assertions {
 		as := tfMap{}
 		as["source"] = a.Source
 		as["property"] = a.Property
 		as["comparison"] = a.Comparison
 		as["target"] = a.Target
-		s = append(s, as)
+		s[i] = as
+	}
+	return s
+}
+
+func mapFromKeyValues(kvs []checkly.KeyValue) tfMap {
+	var s = tfMap{}
+	for _, item := range kvs {
+		s[item.Key] = item.Value
 	}
 	return s
 }
 
 func setFromBasicAuth(b checkly.BasicAuth) []tfMap {
-	var s = tfMap{}
-	s["username"] = b.Username
-	s["password"] = b.Password
-	return []tfMap{s}
+	return []tfMap{
+		{
+			"username": b.Username,
+			"password": b.Password,
+		},
+	}
 }
 
 func checkFromResourceData(d *schema.ResourceData) (checkly.Check, error) {
@@ -540,7 +560,7 @@ func checkFromResourceData(d *schema.ResourceData) (checkly.Check, error) {
 		Script:                 d.Get("script").(string),
 		CreatedAt:              mustParseRFC3339Time(d.Get("created_at").(string)),
 		UpdatedAt:              mustParseRFC3339Time(d.Get("created_at").(string)),
-		EnvironmentVariables:   envVarsFromMap(d.Get("environment_variables").(map[string]interface{})),
+		EnvironmentVariables:   envVarsFromMap(d.Get("environment_variables").(tfMap)),
 		DoubleCheck:            d.Get("double_check").(bool),
 		Tags:                   stringsFromSet(d.Get("tags").(*schema.Set)),
 		SSLCheck:               d.Get("ssl_check").(bool),
@@ -580,7 +600,7 @@ func assertionsFromSet(s *schema.Set) []checkly.Assertion {
 }
 
 func basicAuthFromSet(s *schema.Set) checkly.BasicAuth {
-	if s.Len() < 1 {
+	if s.Len() == 0 {
 		return checkly.BasicAuth{}
 	}
 	res := s.List()[0].(tfMap)
@@ -650,7 +670,7 @@ func smssFromSet(s *schema.Set) []checkly.AlertSMS {
 }
 
 func alertSettingsFromSet(s *schema.Set) checkly.AlertSettings {
-	if s.Len() < 1 {
+	if s.Len() == 0 {
 		return checkly.AlertSettings{
 			SSLCertificates: checkly.SSLCertificates{
 				AlertThreshold: 3,
@@ -668,7 +688,7 @@ func alertSettingsFromSet(s *schema.Set) checkly.AlertSettings {
 }
 
 func runBasedEscalationFromSet(s *schema.Set) checkly.RunBasedEscalation {
-	if s.Len() < 1 {
+	if s.Len() == 0 {
 		return checkly.RunBasedEscalation{}
 	}
 	res := s.List()[0].(tfMap)
@@ -678,7 +698,7 @@ func runBasedEscalationFromSet(s *schema.Set) checkly.RunBasedEscalation {
 }
 
 func timeBasedEscalationFromSet(s *schema.Set) checkly.TimeBasedEscalation {
-	if s.Len() < 1 {
+	if s.Len() == 0 {
 		return checkly.TimeBasedEscalation{}
 	}
 	res := s.List()[0].(tfMap)
@@ -688,7 +708,7 @@ func timeBasedEscalationFromSet(s *schema.Set) checkly.TimeBasedEscalation {
 }
 
 func remindersFromSet(s *schema.Set) checkly.Reminders {
-	if s.Len() < 1 {
+	if s.Len() == 0 {
 		return checkly.Reminders{}
 	}
 	res := s.List()[0].(tfMap)
@@ -699,7 +719,7 @@ func remindersFromSet(s *schema.Set) checkly.Reminders {
 }
 
 func sslCertificatesFromSet(s *schema.Set) checkly.SSLCertificates {
-	if s.Len() < 1 {
+	if s.Len() == 0 {
 		return checkly.SSLCertificates{}
 	}
 	res := s.List()[0].(tfMap)
@@ -710,7 +730,7 @@ func sslCertificatesFromSet(s *schema.Set) checkly.SSLCertificates {
 }
 
 func requestFromSet(s *schema.Set) checkly.Request {
-	if s.Len() < 1 {
+	if s.Len() == 0 {
 		return checkly.Request{}
 	}
 	res := s.List()[0].(tfMap)

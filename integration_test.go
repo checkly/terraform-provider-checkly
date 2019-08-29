@@ -27,4 +27,13 @@ func TestChecklyTerraformIntegration(t *testing.T) {
 	}
 	defer terraform.Destroy(t, terraformOptions)
 	terraform.InitAndApply(t, terraformOptions)
+	planPath := "./test.plan"
+	exit, err := terraform.GetExitCodeForTerraformCommandE(t, terraformOptions, terraform.FormatArgs(terraformOptions, "plan", "--out="+planPath, "-input=false", "-lock=true", "-detailed-exitcode")...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(planPath)
+	if exit != terraform.DefaultSuccessExitCode {
+		t.Fatalf("want DefaultSuccessExitCode, got %d", exit)
+	}
 }

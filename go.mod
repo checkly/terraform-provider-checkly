@@ -7,7 +7,9 @@ require (
 	github.com/bitfield/checkly v0.1.0
 	github.com/chzyer/logex v1.1.11-0.20160617073814-96a4d311aa9b // indirect
 	github.com/coreos/bbolt v1.3.1-coreos.1 // indirect
+	github.com/davecgh/go-spew v1.1.1
 	github.com/go-ini/ini v1.25.4 // indirect
+	github.com/google/go-cmp v0.3.0
 	github.com/gopherjs/gopherjs v0.0.0-20181103185306-d547d1d9531e // indirect
 	github.com/gruntwork-io/terratest v0.18.3
 	github.com/hashicorp/atlas-go v0.0.0-20161107204910-1792bd8de119 // indirect

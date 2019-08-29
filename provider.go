@@ -30,7 +30,6 @@ func Provider() *schema.Provider {
 					panic(fmt.Sprintf("can't write to debug log file: %v", err))
 				}
 				client.Debug = debugFile
-
 			}
 			return &client, nil
 		},
