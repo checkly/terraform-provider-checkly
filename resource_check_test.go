@@ -89,6 +89,10 @@ func testCheck(name string) checkly.Check {
 			},
 			Body:     "",
 			BodyType: "NONE",
+			BasicAuth: checkly.BasicAuth{
+				Username: "example",
+				Password: "pass",
+			},
 		},
 	}
 }

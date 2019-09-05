@@ -28,9 +28,21 @@ resource "checkly_check" "test-check2" {
   alert_settings {
     escalation_type = "RUN_BASED"
 
+    run_based_escalation {
+      failed_run_threshold = 1
+    }
+
+    time_based_escalation {
+      minutes_failing_threshold = 5
+    }
+
     ssl_certificates {
       enabled         = true
       alert_threshold = 30
+    }
+
+    reminders {
+      amount = 1
     }
   }
 
@@ -55,6 +67,7 @@ resource "checkly_check" "test-check2" {
 
     assertion {
       source     = "STATUS_CODE"
+      property   = ""
       comparison = "EQUALS"
       target     = "401"
     }
