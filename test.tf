@@ -71,5 +71,10 @@ resource "checkly_check" "test-check2" {
       comparison = "EQUALS"
       target     = "401"
     }
+
+    basic_auth {
+      username = ""
+      password = ""
+    }
   }
 }
