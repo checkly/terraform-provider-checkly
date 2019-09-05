@@ -412,7 +412,9 @@ func resourceDataFromCheck(c *checkly.Check, d *schema.ResourceData) error {
 	d.Set("script", c.Script)
 	d.Set("created_at", c.CreatedAt.Format(time.RFC3339))
 	d.Set("updated_at", c.UpdatedAt.Format(time.RFC3339))
-	d.Set("environment_variables", setFromEnvVars(c.EnvironmentVariables))
+	if err := d.Set("environment_variables", setFromEnvVars(c.EnvironmentVariables)); err != nil {
+		return fmt.Errorf("error setting environment variables for resource %s: %s", d.Id(), err)
+	}
 	d.Set("double_check", c.DoubleCheck)
 	sort.Strings(c.Tags)
 	d.Set("tags", c.Tags)
@@ -422,10 +424,16 @@ func resourceDataFromCheck(c *checkly.Check, d *schema.ResourceData) error {
 	d.Set("teardown_snippet_id", c.TearDownSnippetID)
 	d.Set("local_setup_script", c.LocalSetupScript)
 	d.Set("local_teardown_script", c.LocalTearDownScript)
-	d.Set("alert_channels", setFromAlertChannels(c.AlertChannels))
-	d.Set("alert_settings", setFromAlertSettings(c.AlertSettings))
+	if err := d.Set("alert_channels", setFromAlertChannels(c.AlertChannels)); err != nil {
+		return fmt.Errorf("error setting alert channels for resource %s: %s", d.Id(), err)
+	}
+	if err := d.Set("alert_settings", setFromAlertSettings(c.AlertSettings)); err != nil {
+		return fmt.Errorf("error setting alert channels for resource %s: %s", d.Id(), err)
+	}
 	d.Set("use_global_alert_settings", c.UseGlobalAlertSettings)
-	d.Set("request", setFromRequest(c.Request))
+	if err := d.Set("request", setFromRequest(c.Request)); err != nil {
+		return fmt.Errorf("error setting request for resource %s: %s", d.Id(), err)
+	}
 	d.SetId(d.Id())
 	return nil
 }
