@@ -5,13 +5,15 @@ provider "checkly" {
 }
 
 resource "checkly_check" "test-check2" {
-  name             = "My test check 2"
-  type             = "API"
-  activated        = true
-  should_fail      = true
-  frequency        = 1
-  ssl_check_domain = "example.com"
-  double_check     = true
+  name                   = "My test check 2"
+  type                   = "API"
+  activated              = true
+  should_fail            = true
+  frequency              = 1
+  ssl_check_domain       = "example.com"
+  double_check           = true
+  degraded_response_time = 15000
+  max_response_time      = 30000
 
   locations = [
     "us-west-1",

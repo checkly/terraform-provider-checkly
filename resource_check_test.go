@@ -24,14 +24,16 @@ func TestEncodeDecodeResource(t *testing.T) {
 
 func testCheck(name string) checkly.Check {
 	return checkly.Check{
-		Name:       name,
-		Type:       checkly.TypeAPI,
-		Frequency:  1,
-		Activated:  true,
-		Muted:      false,
-		ShouldFail: false,
-		Locations:  []string{"eu-west-1"},
-		Script:     "foo",
+		Name:                 name,
+		Type:                 checkly.TypeAPI,
+		Frequency:            1,
+		Activated:            true,
+		Muted:                false,
+		ShouldFail:           false,
+		Locations:            []string{"eu-west-1"},
+		Script:               "foo",
+		DegradedResponseTime: 15000,
+		MaxResponseTime:      30000,
 		EnvironmentVariables: []checkly.EnvironmentVariable{
 			{
 				Key:   "ENVTEST",
