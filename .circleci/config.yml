@@ -26,6 +26,7 @@ jobs:
           name: create release
           command: |
             if [ "$CIRCLE_TAG" ]; then
+              echo ghr -t $GITHUB_TOKEN -u bitfield -r terraform-provider-checkly --replace $CIRCLE_TAG dist/
               ghr -t $GITHUB_TOKEN -u bitfield -r terraform-provider-checkly --replace $CIRCLE_TAG dist/
             else
               echo "no tagged version to deploy"
