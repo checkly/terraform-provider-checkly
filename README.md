@@ -6,7 +6,7 @@ This Terraform provider enables users to manage [Checkly](https://checklyhq.com)
 
 ## Using the provider
 
-1. Download the binary applicable for your platform from the [latest tagged release](https://github.com/bitfield/terraform-provider-checkly/releases). 
+1. Download the binary applicable for your platform from the [latest tagged release](https://github.com/bitfield/terraform-provider-checkly/releases).
 Then copy the binary to your Terraform plugin folder, unzip it and rename it to just `terraform-provider-checkly`. Lastly, set the correct access rights.
 
 
@@ -44,7 +44,7 @@ export TF_VAR_checkly_api_key=<my_api_key>
 
 ### Usage examples
 
-Add a `checkly_check` resource to your resource file. 
+Add a `checkly_check` resource to your resource file.
 
 This first example is a very minimal API check.
 
@@ -59,7 +59,7 @@ resource "checkly_check" "checkly-public-stats" {
   name                      = "public-stats"
   type                      = "API"
   activated                 = true
-  should_fail               = true
+  should_fail               = false
   frequency                 = 1
   double_check              = true
   ssl_check                 = true
