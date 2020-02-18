@@ -4,6 +4,10 @@
 
 This Terraform provider enables users to manage [Checkly](https://checklyhq.com) resources like checks.
 
+You can read a detailed tutorial and explanation of the Checkly Terraform provider here:
+
+* [Managing Checkly checks with Terraform](https://blog.checklyhq.com/managing-checkly-checks-with-terraform/)
+
 ## Using the provider
 
 1. Download the binary applicable for your platform from the [latest tagged release](https://github.com/bitfield/terraform-provider-checkly/releases).
