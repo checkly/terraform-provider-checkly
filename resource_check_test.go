@@ -47,7 +47,6 @@ func testCheck(name string) checkly.Check {
 		SSLCheckDomain:      "example.com",
 		LocalSetupScript:    "bogus",
 		LocalTearDownScript: "bogus",
-		AlertChannels:       testAlertChannels(),
 		AlertSettings: checkly.AlertSettings{
 			EscalationType: checkly.RunBased,
 			RunBasedEscalation: checkly.RunBasedEscalation{
@@ -92,33 +91,6 @@ func testCheck(name string) checkly.Check {
 			BasicAuth: checkly.BasicAuth{
 				Username: "example",
 				Password: "pass",
-			},
-		},
-	}
-}
-
-func testAlertChannels() checkly.AlertChannels {
-	return checkly.AlertChannels{
-		Email: []checkly.AlertEmail{
-			{
-				Address: "info@example.com",
-			},
-		},
-		Webhook: []checkly.AlertWebhook{
-			{
-				Name: "test webhook",
-				URL:  "http://example.com/webhook",
-			},
-		},
-		Slack: []checkly.AlertSlack{
-			{
-				URL: "http://slack.com/example",
-			},
-		},
-		SMS: []checkly.AlertSMS{
-			{
-				Number: "555-5555",
-				Name:   "test SMS",
 			},
 		},
 	}

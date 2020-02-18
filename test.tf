@@ -19,12 +19,6 @@ resource "checkly_check" "test-check2" {
     "ap-south-1",
   ]
 
-  alert_channels {
-    email {
-      address = "alert@example.com"
-    }
-  }
-
   alert_settings {
     escalation_type = "RUN_BASED"
 
