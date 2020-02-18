@@ -3,7 +3,7 @@ module github.com/bitfield/terraform-provider-checkly
 go 1.13
 
 require (
-	github.com/bitfield/checkly v0.1.0
+	github.com/bitfield/checkly v0.2.0
 	github.com/golang/protobuf v1.3.3 // indirect
 	github.com/google/go-cmp v0.3.0
 	github.com/gruntwork-io/terratest v0.18.3
