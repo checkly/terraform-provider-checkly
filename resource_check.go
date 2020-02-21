@@ -43,7 +43,7 @@ func resourceCheck() *schema.Resource {
 						}
 					}
 					if !valid {
-						errs = append(errs, fmt.Errorf("%q must be one of %v, got: %d", key, validFreqs, v))
+						errs = append(errs, fmt.Errorf("%q must be one of %v, got %d", key, validFreqs, v))
 					}
 					return warns, errs
 				},
@@ -77,15 +77,10 @@ func resourceCheck() *schema.Resource {
 				Optional: true,
 				Default:  15000,
 				ValidateFunc: func(val interface{}, key string) (warns []string, errs []error) {
-					// Response times are hard capped to 30 seconds according to the web UI.
-					// Should/may require degraded response time to be less than max response time.
 					// https://checklyhq.com/docs/api-checks/limits/
 					v := val.(int)
-					if !(v > 0) {
-						errs = append(errs, fmt.Errorf("%q must be larger than 0 ms, got: %d", key, v))
-					}
-					if !(v <= 30000) {
-						errs = append(errs, fmt.Errorf("%q must be at most 30000 ms, got: %d", key, v))
+					if v < 0 || v > 30000 {
+						errs = append(errs, fmt.Errorf("%q must be 0-30000 ms, got %d", key, v))
 					}
 					return warns, errs
 				},
@@ -96,13 +91,9 @@ func resourceCheck() *schema.Resource {
 				Default:  30000,
 				ValidateFunc: func(val interface{}, key string) (warns []string, errs []error) {
 					v := val.(int)
-					// Response times are hard capped to 30 seconds according to the web UI.
 					// https://checklyhq.com/docs/api-checks/limits/
-					if !(v > 0) {
-						errs = append(errs, fmt.Errorf("%q must be larger than 0 ms, got: %d", key, v))
-					}
-					if !(v <= 30000) {
-						errs = append(errs, fmt.Errorf("%q must be at most 30000 ms, got: %d", key, v))
+					if v < 0 || v > 30000 {
+						errs = append(errs, fmt.Errorf("%q must be 0-30000 ms, got: %d", key, v))
 					}
 					return warns, errs
 				},
