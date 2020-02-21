@@ -5,7 +5,7 @@ go 1.13
 require (
 	cloud.google.com/go v0.53.0 // indirect
 	github.com/aws/aws-sdk-go v1.29.4 // indirect
-	github.com/bitfield/checkly v0.2.0
+	github.com/bitfield/checkly v0.2.1
 	github.com/bmatcuk/doublestar v1.2.2 // indirect
 	github.com/fatih/color v1.9.0 // indirect
 	github.com/google/go-cmp v0.4.0
