@@ -59,15 +59,15 @@ provider "checkly" {
   api_key = "${var.checkly_api_key}"
 }
 
-resource "checkly_check" "checkly-public-stats" {
-  name                      = "public-stats"
+resource "checkly_check" "example-check" {
+  name                      = "Example check"
   type                      = "API"
   activated                 = true
   should_fail               = false
   frequency                 = 1
   double_check              = true
   ssl_check                 = true
-  ssl_check_domain          = "api.checklyhq.com"
+  ssl_check_domain          = "api.example.com"
   use_global_alert_settings = true
 
   locations = [
@@ -75,7 +75,7 @@ resource "checkly_check" "checkly-public-stats" {
   ]
 
   request {
-    url              = "https://api.checklyhq.com/public-stats"
+    url              = "https://api.example.com/"
     follow_redirects = true
     assertion {
       source     = "STATUS_CODE"
@@ -86,12 +86,88 @@ resource "checkly_check" "checkly-public-stats" {
 }
 ```
 
+Here's something a little more complicated, to show what you can do:
+
+```terraform
+resource "checkly_check" "example-check2" {
+  name                   = "Example check 2"
+  type                   = "API"
+  activated              = true
+  should_fail            = true
+  frequency              = 1
+  ssl_check_domain       = "api.example.com"
+  double_check           = true
+  degraded_response_time = 5000
+  max_response_time      = 10000
+
+  locations = [
+    "us-west-1",
+    "ap-northeast-1",
+    "ap-south-1",
+  ]
+
+  alert_settings {
+    escalation_type = "RUN_BASED"
+
+    run_based_escalation {
+      failed_run_threshold = 1
+    }
+
+    time_based_escalation {
+      minutes_failing_threshold = 5
+    }
+
+    ssl_certificates {
+      enabled         = true
+      alert_threshold = 30
+    }
+
+    reminders {
+      amount = 1
+    }
+  }
+
+  request {
+    follow_redirects = true
+    url              = "http://api.example.com/"
+
+    query_parameters = {
+      search = "foo"
+    }
+
+    headers = {
+      X-Bogus = "bogus"
+    }
+
+    assertion {
+      source     = "JSON_BODY"
+      property   = "code"
+      comparison = "HAS_VALUE"
+      target     = "authentication.failed"
+    }
+
+    assertion {
+      source     = "STATUS_CODE"
+      property   = ""
+      comparison = "EQUALS"
+      target     = "401"
+    }
+
+    basic_auth {
+      username = ""
+      password = ""
+    }
+  }
+}
+```
+
 ## Developing the provider
 
-Clone the repo, build the project and add it to the Terraform plugins directory. You will need to have Go installed.
+Clone the repo, build the project and add it to your Terraform plugins directory. You will need to have Go installed.
 
 ```bash
 git clone git@github.com:bitfield/terraform-provider-checkly.git
 cd terraform-provider-checkly
-go build
+go test
+go build && CHECKLY_API_KEY=XXX go test -tags=integration
 ```

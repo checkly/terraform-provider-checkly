@@ -43,7 +43,7 @@ func resourceCheck() *schema.Resource {
 						}
 					}
 					if !valid {
-						errs = append(errs, fmt.Errorf("%q must be one of %v, got: %d", key, validFreqs, v))
+						errs = append(errs, fmt.Errorf("%q must be one of %v, got %d", key, validFreqs, v))
 					}
 					return warns, errs
 				},
@@ -71,6 +71,32 @@ func resourceCheck() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 				Default:  "",
+			},
+			"degraded_response_time": &schema.Schema{
+				Type:     schema.TypeInt,
+				Optional: true,
+				Default:  15000,
+				ValidateFunc: func(val interface{}, key string) (warns []string, errs []error) {
+					// https://checklyhq.com/docs/api-checks/limits/
+					v := val.(int)
+					if v < 0 || v > 30000 {
+						errs = append(errs, fmt.Errorf("%q must be 0-30000 ms, got %d", key, v))
+					}
+					return warns, errs
+				},
+			},
+			"max_response_time": &schema.Schema{
+				Type:     schema.TypeInt,
+				Optional: true,
+				Default:  30000,
+				ValidateFunc: func(val interface{}, key string) (warns []string, errs []error) {
+					v := val.(int)
+					// https://checklyhq.com/docs/api-checks/limits/
+					if v < 0 || v > 30000 {
+						errs = append(errs, fmt.Errorf("%q must be 0-30000 ms, got: %d", key, v))
+					}
+					return warns, errs
+				},
 			},
 			"created_at": &schema.Schema{
 				Type:     schema.TypeString,
@@ -345,6 +371,8 @@ func resourceDataFromCheck(c *checkly.Check, d *schema.ResourceData) error {
 	d.Set("should_fail", c.ShouldFail)
 	d.Set("locations", c.Locations)
 	d.Set("script", c.Script)
+	d.Set("degraded_response_time", c.DegradedResponseTime)
+	d.Set("max_response_time", c.MaxResponseTime)
 	d.Set("created_at", c.CreatedAt.Format(time.RFC3339))
 	d.Set("updated_at", c.UpdatedAt.Format(time.RFC3339))
 	if err := d.Set("environment_variables", setFromEnvVars(c.EnvironmentVariables)); err != nil {
@@ -463,6 +491,8 @@ func checkFromResourceData(d *schema.ResourceData) (checkly.Check, error) {
 		ShouldFail:             d.Get("should_fail").(bool),
 		Locations:              stringsFromSet(d.Get("locations").(*schema.Set)),
 		Script:                 d.Get("script").(string),
+		DegradedResponseTime:   d.Get("degraded_response_time").(int),
+		MaxResponseTime:        d.Get("max_response_time").(int),
 		CreatedAt:              mustParseRFC3339Time(d.Get("created_at").(string)),
 		UpdatedAt:              mustParseRFC3339Time(d.Get("created_at").(string)),
 		EnvironmentVariables:   envVarsFromMap(d.Get("environment_variables").(tfMap)),
