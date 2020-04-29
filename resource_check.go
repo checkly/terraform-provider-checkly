@@ -148,6 +148,7 @@ func resourceCheck() *schema.Resource {
 			"alert_settings": &schema.Schema{
 				Type:     schema.TypeSet,
 				Optional: true,
+				Computed: true,
 				MaxItems: 1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -338,8 +339,7 @@ func resourceCheckRead(d *schema.ResourceData, client interface{}) error {
 	if err != nil {
 		return fmt.Errorf("API error: %v", err)
 	}
-	resourceDataFromCheck(&check, d)
-	return nil
+	return resourceDataFromCheck(&check, d)
 }
 
 func resourceCheckUpdate(d *schema.ResourceData, client interface{}) error {
