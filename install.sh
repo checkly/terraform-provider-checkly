@@ -3,26 +3,26 @@ set -x
 
 # Determine architecture
 if [[ $(uname -s) == Darwin ]]
-then	
-	package='terraform-provider-checkly_darwin_amd64.gz'
-	package_unzipped='terraform-provider-checkly_darwin_amd64'
-	directory='darwin_amd64'
-
+then
+	platform='darwin_amd64'
 elif [[ $(uname -s) == Linux ]]
 then
-	package='terraform-provider-checkly_linux_amd64.gz'
-	package_unzipped='terraform-provider-checkly_linux_amd64'
-	directory='linux_amd64'
+	platform='linux_amd64'
 else
 	echo "No supported architecture found"
 	exit 1
 fi
 
-# Download the binary
-curl -OL https://github.com/bitfield/terraform-provider-checkly/releases/latest/download/$package
-
-# Copy the binary to your Terraform plugin folder, unzip it and rename it to just `terraform-provider-checkly`
-cp $package ~/.terraform.d/plugins/$directory
-gunzip ~/.terraform.d/plugins/$directory/$package
-mv ~/.terraform.d/plugins/$directory/$package_unzipped ~/.terraform.d/plugins/$directory/terraform-provider-checkly
-chmod +x ~/.terraform.d/plugins/$directory/terraform-provider-checkly
+jq_cmd=".assets[] | select(.name | endswith(\"${platform}.gz\")).browser_download_url"
+# Find latest binary release URL for this platform
+url="$(curl -s https://api.github.com/repos/bitfield/terraform-provider-checkly/releases/latest | jq -r "${jq_cmd}")"
+# Download the tarball
+curl -OL ${url}
+# Rename and copy to your Terraform plugin folder
+filename=$(basename $url)
+gunzip ${filename}
+filename=${filename%.gz}
+chmod +x ${filename}
+PLUGIN_DIR=~/.terraform.d/plugins/$platform
+mkdir -p $PLUGIN_DIR
+mv $filename ${PLUGIN_DIR}/${filename%_${platform}}

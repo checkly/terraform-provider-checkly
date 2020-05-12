@@ -43,7 +43,7 @@ func resourceCheck() *schema.Resource {
 						}
 					}
 					if !valid {
-						errs = append(errs, fmt.Errorf("%q must be one of %v, got: %d", key, validFreqs, v))
+						errs = append(errs, fmt.Errorf("%q must be one of %v, got %d", key, validFreqs, v))
 					}
 					return warns, errs
 				},
@@ -71,6 +71,32 @@ func resourceCheck() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 				Default:  "",
+			},
+			"degraded_response_time": &schema.Schema{
+				Type:     schema.TypeInt,
+				Optional: true,
+				Default:  15000,
+				ValidateFunc: func(val interface{}, key string) (warns []string, errs []error) {
+					// https://checklyhq.com/docs/api-checks/limits/
+					v := val.(int)
+					if v < 0 || v > 30000 {
+						errs = append(errs, fmt.Errorf("%q must be 0-30000 ms, got %d", key, v))
+					}
+					return warns, errs
+				},
+			},
+			"max_response_time": &schema.Schema{
+				Type:     schema.TypeInt,
+				Optional: true,
+				Default:  30000,
+				ValidateFunc: func(val interface{}, key string) (warns []string, errs []error) {
+					v := val.(int)
+					// https://checklyhq.com/docs/api-checks/limits/
+					if v < 0 || v > 30000 {
+						errs = append(errs, fmt.Errorf("%q must be 0-30000 ms, got: %d", key, v))
+					}
+					return warns, errs
+				},
 			},
 			"created_at": &schema.Schema{
 				Type:     schema.TypeString,
@@ -118,71 +144,6 @@ func resourceCheck() *schema.Resource {
 			"local_teardown_script": &schema.Schema{
 				Type:     schema.TypeString,
 				Optional: true,
-			},
-			"alert_channels": &schema.Schema{
-				Type:     schema.TypeSet,
-				Optional: true,
-				MaxItems: 1,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"email": {
-							Type:     schema.TypeSet,
-							Optional: true,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"address": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-								},
-							},
-						},
-						"webhook": {
-							Type:     schema.TypeSet,
-							Optional: true,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"name": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-									"url": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-								},
-							},
-						},
-						"slack": {
-							Type:     schema.TypeSet,
-							Optional: true,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"url": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-								},
-							},
-						},
-						"sms": {
-							Type:     schema.TypeSet,
-							Optional: true,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"number": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-									"name": {
-										Type:     schema.TypeString,
-										Required: true,
-									},
-								},
-							},
-						},
-					},
-				},
 			},
 			"alert_settings": &schema.Schema{
 				Type:     schema.TypeSet,
@@ -410,6 +371,8 @@ func resourceDataFromCheck(c *checkly.Check, d *schema.ResourceData) error {
 	d.Set("should_fail", c.ShouldFail)
 	d.Set("locations", c.Locations)
 	d.Set("script", c.Script)
+	d.Set("degraded_response_time", c.DegradedResponseTime)
+	d.Set("max_response_time", c.MaxResponseTime)
 	d.Set("created_at", c.CreatedAt.Format(time.RFC3339))
 	d.Set("updated_at", c.UpdatedAt.Format(time.RFC3339))
 	if err := d.Set("environment_variables", setFromEnvVars(c.EnvironmentVariables)); err != nil {
@@ -424,11 +387,8 @@ func resourceDataFromCheck(c *checkly.Check, d *schema.ResourceData) error {
 	d.Set("teardown_snippet_id", c.TearDownSnippetID)
 	d.Set("local_setup_script", c.LocalSetupScript)
 	d.Set("local_teardown_script", c.LocalTearDownScript)
-	if err := d.Set("alert_channels", setFromAlertChannels(c.AlertChannels)); err != nil {
-		return fmt.Errorf("error setting alert channels for resource %s: %s", d.Id(), err)
-	}
 	if err := d.Set("alert_settings", setFromAlertSettings(c.AlertSettings)); err != nil {
-		return fmt.Errorf("error setting alert channels for resource %s: %s", d.Id(), err)
+		return fmt.Errorf("error setting alert settings for resource %s: %s", d.Id(), err)
 	}
 	d.Set("use_global_alert_settings", c.UseGlobalAlertSettings)
 	if err := d.Set("request", setFromRequest(c.Request)); err != nil {
@@ -444,41 +404,6 @@ func setFromEnvVars(evs []checkly.EnvironmentVariable) tfMap {
 		s[ev.Key] = ev.Value
 	}
 	return s
-}
-
-func setFromAlertChannels(alertChannels checkly.AlertChannels) []tfMap {
-	var s = tfMap{}
-	var emails = []tfMap{}
-	for _, e := range alertChannels.Email {
-		emails = append(emails, tfMap{
-			"address": e.Address,
-		})
-	}
-	s["email"] = emails
-	var webhooks = []tfMap{}
-	for _, w := range alertChannels.Webhook {
-		webhooks = append(webhooks, tfMap{
-			"name": w.Name,
-			"url":  w.URL,
-		})
-	}
-	s["webhook"] = webhooks
-	var slacks = []tfMap{}
-	for _, k := range alertChannels.Slack {
-		slacks = append(slacks, tfMap{
-			"url": k.URL,
-		})
-	}
-	s["slack"] = slacks
-	var smss = []tfMap{}
-	for _, s := range alertChannels.SMS {
-		smss = append(smss, tfMap{
-			"number": s.Number,
-			"name":   s.Name,
-		})
-	}
-	s["sms"] = smss
-	return []tfMap{s}
 }
 
 func setFromAlertSettings(as checkly.AlertSettings) []tfMap {
@@ -566,6 +491,8 @@ func checkFromResourceData(d *schema.ResourceData) (checkly.Check, error) {
 		ShouldFail:             d.Get("should_fail").(bool),
 		Locations:              stringsFromSet(d.Get("locations").(*schema.Set)),
 		Script:                 d.Get("script").(string),
+		DegradedResponseTime:   d.Get("degraded_response_time").(int),
+		MaxResponseTime:        d.Get("max_response_time").(int),
 		CreatedAt:              mustParseRFC3339Time(d.Get("created_at").(string)),
 		UpdatedAt:              mustParseRFC3339Time(d.Get("created_at").(string)),
 		EnvironmentVariables:   envVarsFromMap(d.Get("environment_variables").(tfMap)),
@@ -577,7 +504,6 @@ func checkFromResourceData(d *schema.ResourceData) (checkly.Check, error) {
 		TearDownSnippetID:      int64(d.Get("teardown_snippet_id").(int)),
 		LocalSetupScript:       d.Get("local_setup_script").(string),
 		LocalTearDownScript:    d.Get("local_teardown_script").(string),
-		AlertChannels:          alertChannelsFromSet(d.Get("alert_channels").(*schema.Set)),
 		AlertSettings:          alertSettingsFromSet(d.Get("alert_settings").(*schema.Set)),
 		UseGlobalAlertSettings: d.Get("use_global_alert_settings").(bool),
 		Request:                requestFromSet(d.Get("request").(*schema.Set)),
@@ -616,65 +542,6 @@ func basicAuthFromSet(s *schema.Set) checkly.BasicAuth {
 		Username: res["username"].(string),
 		Password: res["password"].(string),
 	}
-}
-
-func alertChannelsFromSet(s *schema.Set) checkly.AlertChannels {
-	if s.Len() == 0 {
-		return checkly.AlertChannels{}
-	}
-	res := s.List()[0].(tfMap)
-	return checkly.AlertChannels{
-		Email:   emailsFromSet(res["email"].(*schema.Set)),
-		Webhook: webhooksFromSet(res["webhook"].(*schema.Set)),
-		Slack:   slacksFromSet(res["slack"].(*schema.Set)),
-		SMS:     smssFromSet(res["sms"].(*schema.Set)),
-	}
-}
-
-func emailsFromSet(s *schema.Set) []checkly.AlertEmail {
-	r := make([]checkly.AlertEmail, s.Len())
-	for i, item := range s.List() {
-		res := item.(tfMap)
-		r[i] = checkly.AlertEmail{
-			Address: res["address"].(string),
-		}
-	}
-	return r
-}
-
-func webhooksFromSet(s *schema.Set) []checkly.AlertWebhook {
-	r := make([]checkly.AlertWebhook, s.Len())
-	for i, item := range s.List() {
-		res := item.(tfMap)
-		r[i] = checkly.AlertWebhook{
-			Name: res["name"].(string),
-			URL:  res["url"].(string),
-		}
-	}
-	return r
-}
-
-func slacksFromSet(s *schema.Set) []checkly.AlertSlack {
-	r := make([]checkly.AlertSlack, s.Len())
-	for i, item := range s.List() {
-		res := item.(tfMap)
-		r[i] = checkly.AlertSlack{
-			URL: res["url"].(string),
-		}
-	}
-	return r
-}
-
-func smssFromSet(s *schema.Set) []checkly.AlertSMS {
-	r := make([]checkly.AlertSMS, s.Len())
-	for i, item := range s.List() {
-		res := item.(tfMap)
-		r[i] = checkly.AlertSMS{
-			Number: res["number"].(string),
-			Name:   res["name"].(string),
-		}
-	}
-	return r
 }
 
 func alertSettingsFromSet(s *schema.Set) checkly.AlertSettings {
