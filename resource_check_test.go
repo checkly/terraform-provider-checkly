@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/bitfield/checkly"
+	"github.com/checkly/checkly-go-sdk"
 	"github.com/google/go-cmp/cmp"
 )
 

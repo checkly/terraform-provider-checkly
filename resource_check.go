@@ -5,7 +5,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/bitfield/checkly"
+	"github.com/checkly/checkly-go-sdk"
 	"github.com/hashicorp/terraform/helper/schema"
 )
 

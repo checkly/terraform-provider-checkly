@@ -1,6 +1,6 @@
 # Checkly Terraform provider
 
-[![CircleCI](https://circleci.com/gh/bitfield/terraform-provider-checkly/tree/master.svg?style=svg)](https://circleci.com/gh/bitfield/terraform-provider-checkly/tree/master)
+[![CircleCI](https://circleci.com/gh/checkly/terraform-provider-checkly/tree/master.svg?style=svg)](https://circleci.com/gh/checkly/terraform-provider-checkly/tree/master)
 
 This Terraform provider enables users to manage [Checkly](https://checklyhq.com) resources like checks.
 
@@ -10,18 +10,17 @@ You can read a detailed tutorial and explanation of the Checkly Terraform provid
 
 ## Using the provider
 
-1. Download the binary applicable for your platform from the [latest tagged release](https://github.com/bitfield/terraform-provider-checkly/releases).
+1. If you're on MacOS, just run the  `install.sh` script:
+
+```bash
+curl https://raw.githubusercontent.com/checkly/terraform-provider-checkly/master/install.sh | sh
+```
+
+Otherwise, download the appropriate binary for your platform from the [latest tagged release](https://github.com/checkly/terraform-provider-checkly/releases).
 Then copy the binary to your Terraform plugin folder, unzip it and rename it to just `terraform-provider-checkly`. Lastly, set the correct access rights.
 
 
-I you're on MacOS, just run the script `install.sh` script
-
-```bash
-curl https://raw.githubusercontent.com/bitfield/terraform-provider-checkly/master/install.sh | sh
-```
-
-
-2. Run `terraform init` and then `terraform providers`. The Checkly plugin should be listed.
+1. Run `terraform init` and then `terraform providers`. The Checkly plugin should be listed.
 
 ```bash
 terraform init
@@ -166,7 +165,7 @@ resource "checkly_check" "example-check2" {
 Clone the repo, build the project and add it to your Terraform plugins directory. You will need to have Go installed.
 
 ```bash
-git clone git@github.com:bitfield/terraform-provider-checkly.git
+git clone git@github.com:checkly/terraform-provider-checkly.git
 cd terraform-provider-checkly
 go test
 go build && CHECKLY_API_KEY=XXX go test -tags=integration

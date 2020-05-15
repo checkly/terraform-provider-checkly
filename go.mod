@@ -1,12 +1,12 @@
-module github.com/bitfield/terraform-provider-checkly
+module github.com/checkly/terraform-provider-checkly
 
-go 1.13
+go 1.14
 
 require (
 	cloud.google.com/go v0.53.0 // indirect
 	github.com/aws/aws-sdk-go v1.29.7 // indirect
-	github.com/bitfield/checkly v0.2.1
 	github.com/bmatcuk/doublestar v1.2.2 // indirect
+	github.com/checkly/checkly-go-sdk v0.3.0
 	github.com/fatih/color v1.9.0 // indirect
 	github.com/google/go-cmp v0.4.0
 	github.com/gruntwork-io/terratest v0.18.3
