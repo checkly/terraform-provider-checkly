@@ -2,7 +2,7 @@ version: 2
 jobs:
   build:
     docker:
-      - image: circleci/golang:1.13
+      - image: circleci/golang:1.14
     steps:
       - checkout
       - run: go get -v -t -d ./...
@@ -10,7 +10,7 @@ jobs:
 
   deploy:
     docker:
-      - image: circleci/golang:1.13
+      - image: circleci/golang:1.14
     steps:
       - checkout
       - run: go get -v -t -d ./...
@@ -26,7 +26,7 @@ jobs:
           name: create release
           command: |
             if [ "$CIRCLE_TAG" ]; then
-              ghr -t $GITHUB_TOKEN -u bitfield -r terraform-provider-checkly --replace $CIRCLE_TAG dist/
+              ghr -t $GITHUB_TOKEN -u checkly -r terraform-provider-checkly --replace $CIRCLE_TAG dist/
             else
               echo "no tagged version to deploy"
             fi
