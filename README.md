@@ -66,7 +66,6 @@ resource "checkly_check" "example-check" {
   frequency                 = 1
   double_check              = true
   ssl_check                 = true
-  ssl_check_domain          = "api.example.com"
   use_global_alert_settings = true
 
   locations = [
@@ -94,7 +93,6 @@ resource "checkly_check" "example-check2" {
   activated              = true
   should_fail            = true
   frequency              = 1
-  ssl_check_domain       = "api.example.com"
   double_check           = true
   degraded_response_time = 5000
   max_response_time      = 10000

@@ -46,7 +46,6 @@ func testCheck(name string) checkly.Check {
 			"bar",
 		},
 		SSLCheck:            true,
-		SSLCheckDomain:      "example.com",
 		LocalSetupScript:    "bogus",
 		LocalTearDownScript: "bogus",
 		AlertSettings: checkly.AlertSettings{

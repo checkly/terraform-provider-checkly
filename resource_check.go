@@ -125,10 +125,6 @@ func resourceCheck() *schema.Resource {
 				Type:     schema.TypeBool,
 				Optional: true,
 			},
-			"ssl_check_domain": &schema.Schema{
-				Type:     schema.TypeString,
-				Optional: true,
-			},
 			"setup_snippet_id": &schema.Schema{
 				Type:     schema.TypeInt,
 				Optional: true,
@@ -382,7 +378,6 @@ func resourceDataFromCheck(c *checkly.Check, d *schema.ResourceData) error {
 	sort.Strings(c.Tags)
 	d.Set("tags", c.Tags)
 	d.Set("ssl_check", c.SSLCheck)
-	d.Set("ssl_check_domain", c.SSLCheckDomain)
 	d.Set("setup_snippet_id", c.SetupSnippetID)
 	d.Set("teardown_snippet_id", c.TearDownSnippetID)
 	d.Set("local_setup_script", c.LocalSetupScript)
@@ -499,7 +494,6 @@ func checkFromResourceData(d *schema.ResourceData) (checkly.Check, error) {
 		DoubleCheck:            d.Get("double_check").(bool),
 		Tags:                   stringsFromSet(d.Get("tags").(*schema.Set)),
 		SSLCheck:               d.Get("ssl_check").(bool),
-		SSLCheckDomain:         d.Get("ssl_check_domain").(string),
 		SetupSnippetID:         int64(d.Get("setup_snippet_id").(int)),
 		TearDownSnippetID:      int64(d.Get("teardown_snippet_id").(int)),
 		LocalSetupScript:       d.Get("local_setup_script").(string),

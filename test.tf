@@ -11,7 +11,6 @@ resource "checkly_check" "test-check1" {
   activated                 = true
   should_fail               = true
   frequency                 = 1
-  ssl_check_domain          = "example.com"
   double_check              = true
   degraded_response_time    = 15000
   max_response_time         = 30000
@@ -83,7 +82,6 @@ resource "checkly_check" "test-check2" {
   activated              = true
   should_fail            = true
   frequency              = 1
-  ssl_check_domain       = "example.com"
   double_check           = true
   degraded_response_time = 15000
   max_response_time      = 30000
