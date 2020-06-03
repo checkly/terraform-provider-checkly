@@ -43,3 +43,5 @@ require (
 	google.golang.org/genproto v0.0.0-20200603110839-e855014d5736 // indirect
 	honnef.co/go/tools v0.0.1-2020.1.4 // indirect
 )
+
+replace github.com/checkly/checkly-go-sdk => ../checkly-go-sdk

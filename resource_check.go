@@ -98,14 +98,6 @@ func resourceCheck() *schema.Resource {
 					return warns, errs
 				},
 			},
-			"created_at": &schema.Schema{
-				Type:     schema.TypeString,
-				Computed: true,
-			},
-			"updated_at": &schema.Schema{
-				Type:     schema.TypeString,
-				Computed: true,
-			},
 			"environment_variables": &schema.Schema{
 				Type:     schema.TypeMap,
 				Optional: true,
