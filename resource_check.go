@@ -296,7 +296,7 @@ func resourceCheck() *schema.Resource {
 						},
 						"basic_auth": &schema.Schema{
 							Type:     schema.TypeSet,
-							Optional: true,
+							Required: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"username": {
@@ -322,11 +322,11 @@ func resourceCheckCreate(d *schema.ResourceData, client interface{}) error {
 	if err != nil {
 		return fmt.Errorf("translation error: %v", err)
 	}
-	ID, err := client.(*checkly.Client).Create(check)
+	gotCheck, err := client.(*checkly.Client).Create(check)
 	if err != nil {
 		return fmt.Errorf("API error: %v", err)
 	}
-	d.SetId(ID)
+	d.SetId(gotCheck.ID)
 	return resourceCheckRead(d, client)
 }
 
@@ -343,7 +343,7 @@ func resourceCheckUpdate(d *schema.ResourceData, client interface{}) error {
 	if err != nil {
 		return fmt.Errorf("translation error: %v", err)
 	}
-	err = client.(*checkly.Client).Update(check.ID, check)
+	_, err = client.(*checkly.Client).Update(check.ID, check)
 	if err != nil {
 		return fmt.Errorf("API error: %v", err)
 	}
@@ -369,8 +369,6 @@ func resourceDataFromCheck(c *checkly.Check, d *schema.ResourceData) error {
 	d.Set("script", c.Script)
 	d.Set("degraded_response_time", c.DegradedResponseTime)
 	d.Set("max_response_time", c.MaxResponseTime)
-	d.Set("created_at", c.CreatedAt.Format(time.RFC3339))
-	d.Set("updated_at", c.UpdatedAt.Format(time.RFC3339))
 	if err := d.Set("environment_variables", setFromEnvVars(c.EnvironmentVariables)); err != nil {
 		return fmt.Errorf("error setting environment variables for resource %s: %s", d.Id(), err)
 	}
@@ -488,8 +486,6 @@ func checkFromResourceData(d *schema.ResourceData) (checkly.Check, error) {
 		Script:                 d.Get("script").(string),
 		DegradedResponseTime:   d.Get("degraded_response_time").(int),
 		MaxResponseTime:        d.Get("max_response_time").(int),
-		CreatedAt:              mustParseRFC3339Time(d.Get("created_at").(string)),
-		UpdatedAt:              mustParseRFC3339Time(d.Get("created_at").(string)),
 		EnvironmentVariables:   envVarsFromMap(d.Get("environment_variables").(tfMap)),
 		DoubleCheck:            d.Get("double_check").(bool),
 		Tags:                   stringsFromSet(d.Get("tags").(*schema.Set)),
