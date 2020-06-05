@@ -305,6 +305,14 @@ func resourceCheck() *schema.Resource {
 					},
 				},
 			},
+			"group_id": {
+				Type:     schema.TypeInt,
+				Optional: true,
+			},
+			"group_order": {
+				Type:     schema.TypeInt,
+				Optional: true,
+			},
 		},
 	}
 }
@@ -379,6 +387,8 @@ func resourceDataFromCheck(c *checkly.Check, d *schema.ResourceData) error {
 	if err := d.Set("request", setFromRequest(c.Request)); err != nil {
 		return fmt.Errorf("error setting request for resource %s: %s", d.Id(), err)
 	}
+	d.Set("group_id", c.GroupID)
+	d.Set("group_order", c.GroupOrder)
 	d.SetId(d.Id())
 	return nil
 }
@@ -489,6 +499,8 @@ func checkFromResourceData(d *schema.ResourceData) (checkly.Check, error) {
 		AlertSettings:          alertSettingsFromSet(d.Get("alert_settings").(*schema.Set)),
 		UseGlobalAlertSettings: d.Get("use_global_alert_settings").(bool),
 		Request:                requestFromSet(d.Get("request").(*schema.Set)),
+		GroupID:                int64(d.Get("group_id").(int)),
+		GroupOrder:             d.Get("group_order").(int),
 	}
 	return check, nil
 }

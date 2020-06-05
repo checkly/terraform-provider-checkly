@@ -74,6 +74,9 @@ resource "checkly_check" "test-check1" {
       password = ""
     }
   }
+
+  group_id    = checkly_check_group.test-group1.id
+  group_order = 1
 }
 
 resource "checkly_check" "test-check2" {
@@ -144,6 +147,8 @@ resource "checkly_check" "test-check2" {
       password = ""
     }
   }
+  group_id    = checkly_check_group.test-group1.id
+  group_order = 2
 }
 
 resource "checkly_check_group" "test-group1" {
