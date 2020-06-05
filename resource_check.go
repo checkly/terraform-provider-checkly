@@ -22,15 +22,15 @@ func resourceCheck() *schema.Resource {
 			State: schema.ImportStatePassthrough,
 		},
 		Schema: map[string]*schema.Schema{
-			"name": &schema.Schema{
+			"name": {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"type": &schema.Schema{
+			"type": {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"frequency": &schema.Schema{
+			"frequency": {
 				Type:     schema.TypeInt,
 				Required: true,
 				ValidateFunc: func(val interface{}, key string) (warns []string, errs []error) {
@@ -48,31 +48,31 @@ func resourceCheck() *schema.Resource {
 					return warns, errs
 				},
 			},
-			"activated": &schema.Schema{
+			"activated": {
 				Type:     schema.TypeBool,
 				Required: true,
 			},
-			"muted": &schema.Schema{
+			"muted": {
 				Type:     schema.TypeBool,
 				Optional: true,
 			},
-			"should_fail": &schema.Schema{
+			"should_fail": {
 				Type:     schema.TypeBool,
 				Optional: true,
 			},
-			"locations": &schema.Schema{
+			"locations": {
 				Type:     schema.TypeSet,
 				Required: true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
 			},
-			"script": &schema.Schema{
+			"script": {
 				Type:     schema.TypeString,
 				Optional: true,
 				Default:  "",
 			},
-			"degraded_response_time": &schema.Schema{
+			"degraded_response_time": {
 				Type:     schema.TypeInt,
 				Optional: true,
 				Default:  15000,
@@ -85,7 +85,7 @@ func resourceCheck() *schema.Resource {
 					return warns, errs
 				},
 			},
-			"max_response_time": &schema.Schema{
+			"max_response_time": {
 				Type:     schema.TypeInt,
 				Optional: true,
 				Default:  30000,
@@ -98,42 +98,42 @@ func resourceCheck() *schema.Resource {
 					return warns, errs
 				},
 			},
-			"environment_variables": &schema.Schema{
+			"environment_variables": {
 				Type:     schema.TypeMap,
 				Optional: true,
 			},
-			"double_check": &schema.Schema{
+			"double_check": {
 				Type:     schema.TypeBool,
 				Optional: true,
 			},
-			"tags": &schema.Schema{
+			"tags": {
 				Type:     schema.TypeSet,
 				Optional: true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
 			},
-			"ssl_check": &schema.Schema{
+			"ssl_check": {
 				Type:     schema.TypeBool,
 				Optional: true,
 			},
-			"setup_snippet_id": &schema.Schema{
+			"setup_snippet_id": {
 				Type:     schema.TypeInt,
 				Optional: true,
 			},
-			"teardown_snippet_id": &schema.Schema{
+			"teardown_snippet_id": {
 				Type:     schema.TypeInt,
 				Optional: true,
 			},
-			"local_setup_script": &schema.Schema{
+			"local_setup_script": {
 				Type:     schema.TypeString,
 				Optional: true,
 			},
-			"local_teardown_script": &schema.Schema{
+			"local_teardown_script": {
 				Type:     schema.TypeString,
 				Optional: true,
 			},
-			"alert_settings": &schema.Schema{
+			"alert_settings": {
 				Type:     schema.TypeSet,
 				Optional: true,
 				Computed: true,
@@ -222,11 +222,11 @@ func resourceCheck() *schema.Resource {
 					},
 				},
 			},
-			"use_global_alert_settings": &schema.Schema{
+			"use_global_alert_settings": {
 				Type:     schema.TypeBool,
 				Optional: true,
 			},
-			"request": &schema.Schema{
+			"request": {
 				Type:     schema.TypeSet,
 				Optional: true,
 				MaxItems: 1,
@@ -262,7 +262,7 @@ func resourceCheck() *schema.Resource {
 							Type:     schema.TypeString,
 							Required: true,
 						},
-						"assertion": &schema.Schema{
+						"assertion": {
 							Type:     schema.TypeSet,
 							Optional: true,
 							Elem: &schema.Resource{
@@ -286,7 +286,7 @@ func resourceCheck() *schema.Resource {
 								},
 							},
 						},
-						"basic_auth": &schema.Schema{
+						"basic_auth": {
 							Type:     schema.TypeSet,
 							Required: true,
 							Elem: &schema.Resource{

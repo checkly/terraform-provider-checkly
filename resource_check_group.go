@@ -19,53 +19,53 @@ func resourceCheckGroup() *schema.Resource {
 			State: schema.ImportStatePassthrough,
 		},
 		Schema: map[string]*schema.Schema{
-			"name": &schema.Schema{
+			"name": {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"concurrency": &schema.Schema{
+			"concurrency": {
 				Type:     schema.TypeInt,
 				Required: true,
 			},
-			"activated": &schema.Schema{
+			"activated": {
 				Type:     schema.TypeBool,
 				Required: true,
 			},
-			"muted": &schema.Schema{
+			"muted": {
 				Type:     schema.TypeBool,
 				Optional: true,
 			},
-			"locations": &schema.Schema{
+			"locations": {
 				Type:     schema.TypeSet,
 				Required: true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
 			},
-			"environment_variables": &schema.Schema{
+			"environment_variables": {
 				Type:     schema.TypeMap,
 				Optional: true,
 			},
-			"double_check": &schema.Schema{
+			"double_check": {
 				Type:     schema.TypeBool,
 				Optional: true,
 			},
-			"tags": &schema.Schema{
+			"tags": {
 				Type:     schema.TypeSet,
 				Optional: true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
 			},
-			"local_setup_script": &schema.Schema{
+			"local_setup_script": {
 				Type:     schema.TypeString,
 				Optional: true,
 			},
-			"local_teardown_script": &schema.Schema{
+			"local_teardown_script": {
 				Type:     schema.TypeString,
 				Optional: true,
 			},
-			"alert_settings": &schema.Schema{
+			"alert_settings": {
 				Type:     schema.TypeSet,
 				Optional: true,
 				Computed: true,
@@ -154,11 +154,11 @@ func resourceCheckGroup() *schema.Resource {
 					},
 				},
 			},
-			"use_global_alert_settings": &schema.Schema{
+			"use_global_alert_settings": {
 				Type:     schema.TypeBool,
 				Optional: true,
 			},
-			"api_check_defaults": &schema.Schema{
+			"api_check_defaults": {
 				Type:     schema.TypeSet,
 				Optional: true,
 				MaxItems: 1,
@@ -176,7 +176,7 @@ func resourceCheckGroup() *schema.Resource {
 							Type:     schema.TypeMap,
 							Optional: true,
 						},
-						"assertion": &schema.Schema{
+						"assertion": {
 							Type:     schema.TypeSet,
 							Optional: true,
 							Elem: &schema.Resource{
@@ -200,7 +200,7 @@ func resourceCheckGroup() *schema.Resource {
 								},
 							},
 						},
-						"basic_auth": &schema.Schema{
+						"basic_auth": {
 							Type:     schema.TypeSet,
 							Required: true,
 							Elem: &schema.Resource{

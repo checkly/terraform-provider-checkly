@@ -78,12 +78,6 @@ var wantGroup = checkly.Group{
 			AlertThreshold: 30,
 		},
 	},
-	AlertChannelSubscriptions: []checkly.Subscription{
-		{
-			Activated:      true,
-			AlertChannelID: 2996,
-		},
-	},
 	LocalSetupScript:    "setup-test",
 	LocalTearDownScript: "teardown-test",
 }
