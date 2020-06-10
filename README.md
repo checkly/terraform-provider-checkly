@@ -66,7 +66,6 @@ resource "checkly_check" "example-check" {
   frequency                 = 1
   double_check              = true
   ssl_check                 = true
-  ssl_check_domain          = "api.example.com"
   use_global_alert_settings = true
 
   locations = [
@@ -94,7 +93,6 @@ resource "checkly_check" "example-check2" {
   activated              = true
   should_fail            = true
   frequency              = 1
-  ssl_check_domain       = "api.example.com"
   double_check           = true
   degraded_response_time = 5000
   max_response_time      = 10000
@@ -159,6 +157,89 @@ resource "checkly_check" "example-check2" {
   }
 }
 ```
+
+### Groups
+
+Checkly's groups feature allows you to group together a set of related checks, which can also share default settings for various attributes. Here is an example check group:
+
+```terraform
+resource "checkly_check_group" "test-group1" {
+  name      = "My test group 1"
+  activated = true
+  muted     = false
+  tags = [
+    "auto"
+  ]
+
+  locations = [
+    "eu-west-1",
+  ]
+  concurrency = 3
+  api_check_defaults {
+    url = "http://example.com/"
+    headers = {
+      X-Test = "foo"
+    }
+
+    query_parameters = {
+      query = "foo"
+    }
+
+    assertion {
+      source     = "STATUS_CODE"
+      property   = ""
+      comparison = "EQUALS"
+      target     = "200"
+    }
+
+    basic_auth {
+      username = "user"
+      password = "pass"
+    }
+  }
+  environment_variables = {
+    ENVTEST = "Hello world"
+  }
+  double_check              = true
+  use_global_alert_settings = false
+
+  alert_settings {
+    escalation_type = "RUN_BASED"
+
+    run_based_escalation {
+      failed_run_threshold = 1
+    }
+
+    time_based_escalation {
+      minutes_failing_threshold = 5
+    }
+
+    ssl_certificates {
+      enabled         = true
+      alert_threshold = 30
+    }
+
+    reminders {
+      amount   = 2
+      interval = 5
+    }
+  }
+  local_setup_script    = "setup-test"
+  local_teardown_script = "teardown-test"
+}
+```
+
+To add a check to a group, set its `group_id` attribute to the ID of the group. For example:
+
+```terraform
+resource "checkly_check" "test-check1" {
+  name                      = "My test check 1"
+  ...
+  group_id    = checkly_check_group.test-group1.id
+  group_order = 1
+}
+
+The `group_order` attribute specifies in which order the checks will be executed: 1, 2, 3, etc.
 
 ## Developing the provider
 

@@ -12,14 +12,15 @@ import (
 func Provider() *schema.Provider {
 	return &schema.Provider{
 		Schema: map[string]*schema.Schema{
-			"api_key": &schema.Schema{
+			"api_key": {
 				Type:        schema.TypeString,
 				Required:    true,
 				DefaultFunc: schema.EnvDefaultFunc("CHECKLY_API_KEY", nil),
 			},
 		},
 		ResourcesMap: map[string]*schema.Resource{
-			"checkly_check": resourceCheck(),
+			"checkly_check":       resourceCheck(),
+			"checkly_check_group": resourceCheckGroup(),
 		},
 		ConfigureFunc: func(r *schema.ResourceData) (interface{}, error) {
 			client := checkly.NewClient(r.Get("api_key").(string))

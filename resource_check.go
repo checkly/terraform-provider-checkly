@@ -22,15 +22,15 @@ func resourceCheck() *schema.Resource {
 			State: schema.ImportStatePassthrough,
 		},
 		Schema: map[string]*schema.Schema{
-			"name": &schema.Schema{
+			"name": {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"type": &schema.Schema{
+			"type": {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"frequency": &schema.Schema{
+			"frequency": {
 				Type:     schema.TypeInt,
 				Required: true,
 				ValidateFunc: func(val interface{}, key string) (warns []string, errs []error) {
@@ -48,31 +48,31 @@ func resourceCheck() *schema.Resource {
 					return warns, errs
 				},
 			},
-			"activated": &schema.Schema{
+			"activated": {
 				Type:     schema.TypeBool,
 				Required: true,
 			},
-			"muted": &schema.Schema{
+			"muted": {
 				Type:     schema.TypeBool,
 				Optional: true,
 			},
-			"should_fail": &schema.Schema{
+			"should_fail": {
 				Type:     schema.TypeBool,
 				Optional: true,
 			},
-			"locations": &schema.Schema{
+			"locations": {
 				Type:     schema.TypeSet,
 				Required: true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
 			},
-			"script": &schema.Schema{
+			"script": {
 				Type:     schema.TypeString,
 				Optional: true,
 				Default:  "",
 			},
-			"degraded_response_time": &schema.Schema{
+			"degraded_response_time": {
 				Type:     schema.TypeInt,
 				Optional: true,
 				Default:  15000,
@@ -85,7 +85,7 @@ func resourceCheck() *schema.Resource {
 					return warns, errs
 				},
 			},
-			"max_response_time": &schema.Schema{
+			"max_response_time": {
 				Type:     schema.TypeInt,
 				Optional: true,
 				Default:  30000,
@@ -98,54 +98,42 @@ func resourceCheck() *schema.Resource {
 					return warns, errs
 				},
 			},
-			"created_at": &schema.Schema{
-				Type:     schema.TypeString,
-				Computed: true,
-			},
-			"updated_at": &schema.Schema{
-				Type:     schema.TypeString,
-				Computed: true,
-			},
-			"environment_variables": &schema.Schema{
+			"environment_variables": {
 				Type:     schema.TypeMap,
 				Optional: true,
 			},
-			"double_check": &schema.Schema{
+			"double_check": {
 				Type:     schema.TypeBool,
 				Optional: true,
 			},
-			"tags": &schema.Schema{
+			"tags": {
 				Type:     schema.TypeSet,
 				Optional: true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
 			},
-			"ssl_check": &schema.Schema{
+			"ssl_check": {
 				Type:     schema.TypeBool,
 				Optional: true,
 			},
-			"ssl_check_domain": &schema.Schema{
-				Type:     schema.TypeString,
-				Optional: true,
-			},
-			"setup_snippet_id": &schema.Schema{
+			"setup_snippet_id": {
 				Type:     schema.TypeInt,
 				Optional: true,
 			},
-			"teardown_snippet_id": &schema.Schema{
+			"teardown_snippet_id": {
 				Type:     schema.TypeInt,
 				Optional: true,
 			},
-			"local_setup_script": &schema.Schema{
+			"local_setup_script": {
 				Type:     schema.TypeString,
 				Optional: true,
 			},
-			"local_teardown_script": &schema.Schema{
+			"local_teardown_script": {
 				Type:     schema.TypeString,
 				Optional: true,
 			},
-			"alert_settings": &schema.Schema{
+			"alert_settings": {
 				Type:     schema.TypeSet,
 				Optional: true,
 				Computed: true,
@@ -234,11 +222,11 @@ func resourceCheck() *schema.Resource {
 					},
 				},
 			},
-			"use_global_alert_settings": &schema.Schema{
+			"use_global_alert_settings": {
 				Type:     schema.TypeBool,
 				Optional: true,
 			},
-			"request": &schema.Schema{
+			"request": {
 				Type:     schema.TypeSet,
 				Optional: true,
 				MaxItems: 1,
@@ -274,7 +262,7 @@ func resourceCheck() *schema.Resource {
 							Type:     schema.TypeString,
 							Required: true,
 						},
-						"assertion": &schema.Schema{
+						"assertion": {
 							Type:     schema.TypeSet,
 							Optional: true,
 							Elem: &schema.Resource{
@@ -298,9 +286,9 @@ func resourceCheck() *schema.Resource {
 								},
 							},
 						},
-						"basic_auth": &schema.Schema{
+						"basic_auth": {
 							Type:     schema.TypeSet,
-							Optional: true,
+							Required: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"username": {
@@ -317,6 +305,14 @@ func resourceCheck() *schema.Resource {
 					},
 				},
 			},
+			"group_id": {
+				Type:     schema.TypeInt,
+				Optional: true,
+			},
+			"group_order": {
+				Type:     schema.TypeInt,
+				Optional: true,
+			},
 		},
 	}
 }
@@ -326,11 +322,11 @@ func resourceCheckCreate(d *schema.ResourceData, client interface{}) error {
 	if err != nil {
 		return fmt.Errorf("translation error: %v", err)
 	}
-	ID, err := client.(*checkly.Client).Create(check)
+	gotCheck, err := client.(*checkly.Client).Create(check)
 	if err != nil {
 		return fmt.Errorf("API error: %v", err)
 	}
-	d.SetId(ID)
+	d.SetId(gotCheck.ID)
 	return resourceCheckRead(d, client)
 }
 
@@ -347,7 +343,7 @@ func resourceCheckUpdate(d *schema.ResourceData, client interface{}) error {
 	if err != nil {
 		return fmt.Errorf("translation error: %v", err)
 	}
-	err = client.(*checkly.Client).Update(check.ID, check)
+	_, err = client.(*checkly.Client).Update(check.ID, check)
 	if err != nil {
 		return fmt.Errorf("API error: %v", err)
 	}
@@ -373,8 +369,6 @@ func resourceDataFromCheck(c *checkly.Check, d *schema.ResourceData) error {
 	d.Set("script", c.Script)
 	d.Set("degraded_response_time", c.DegradedResponseTime)
 	d.Set("max_response_time", c.MaxResponseTime)
-	d.Set("created_at", c.CreatedAt.Format(time.RFC3339))
-	d.Set("updated_at", c.UpdatedAt.Format(time.RFC3339))
 	if err := d.Set("environment_variables", setFromEnvVars(c.EnvironmentVariables)); err != nil {
 		return fmt.Errorf("error setting environment variables for resource %s: %s", d.Id(), err)
 	}
@@ -382,7 +376,6 @@ func resourceDataFromCheck(c *checkly.Check, d *schema.ResourceData) error {
 	sort.Strings(c.Tags)
 	d.Set("tags", c.Tags)
 	d.Set("ssl_check", c.SSLCheck)
-	d.Set("ssl_check_domain", c.SSLCheckDomain)
 	d.Set("setup_snippet_id", c.SetupSnippetID)
 	d.Set("teardown_snippet_id", c.TearDownSnippetID)
 	d.Set("local_setup_script", c.LocalSetupScript)
@@ -394,6 +387,8 @@ func resourceDataFromCheck(c *checkly.Check, d *schema.ResourceData) error {
 	if err := d.Set("request", setFromRequest(c.Request)); err != nil {
 		return fmt.Errorf("error setting request for resource %s: %s", d.Id(), err)
 	}
+	d.Set("group_id", c.GroupID)
+	d.Set("group_order", c.GroupOrder)
 	d.SetId(d.Id())
 	return nil
 }
@@ -493,13 +488,10 @@ func checkFromResourceData(d *schema.ResourceData) (checkly.Check, error) {
 		Script:                 d.Get("script").(string),
 		DegradedResponseTime:   d.Get("degraded_response_time").(int),
 		MaxResponseTime:        d.Get("max_response_time").(int),
-		CreatedAt:              mustParseRFC3339Time(d.Get("created_at").(string)),
-		UpdatedAt:              mustParseRFC3339Time(d.Get("created_at").(string)),
 		EnvironmentVariables:   envVarsFromMap(d.Get("environment_variables").(tfMap)),
 		DoubleCheck:            d.Get("double_check").(bool),
 		Tags:                   stringsFromSet(d.Get("tags").(*schema.Set)),
 		SSLCheck:               d.Get("ssl_check").(bool),
-		SSLCheckDomain:         d.Get("ssl_check_domain").(string),
 		SetupSnippetID:         int64(d.Get("setup_snippet_id").(int)),
 		TearDownSnippetID:      int64(d.Get("teardown_snippet_id").(int)),
 		LocalSetupScript:       d.Get("local_setup_script").(string),
@@ -507,6 +499,8 @@ func checkFromResourceData(d *schema.ResourceData) (checkly.Check, error) {
 		AlertSettings:          alertSettingsFromSet(d.Get("alert_settings").(*schema.Set)),
 		UseGlobalAlertSettings: d.Get("use_global_alert_settings").(bool),
 		Request:                requestFromSet(d.Get("request").(*schema.Set)),
+		GroupID:                int64(d.Get("group_id").(int)),
+		GroupOrder:             d.Get("group_order").(int),
 	}
 	return check, nil
 }
