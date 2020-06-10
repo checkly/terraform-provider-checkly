@@ -238,6 +238,7 @@ resource "checkly_check" "test-check1" {
   group_id    = checkly_check_group.test-group1.id
   group_order = 1
 }
+```
 
 The `group_order` attribute specifies in which order the checks will be executed: 1, 2, 3, etc.
 
