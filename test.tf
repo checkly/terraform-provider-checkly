@@ -79,6 +79,7 @@ resource "checkly_check" "test-check1" {
   group_order = 1
 }
 
+
 resource "checkly_check" "test-check2" {
   name                   = "My test check 2"
   type                   = "API"
@@ -214,4 +215,23 @@ resource "checkly_check_group" "test-group1" {
   }
   local_setup_script    = "setup-test"
   local_teardown_script = "teardown-test"
+}
+
+
+# https://github.com/checkly/terraform-provider-checkly/issues/15
+resource "checkly_check_group" "ragog0" {
+  name = "ragog0"
+  activated = true
+  muted = false
+  tags = [
+  "ragog0"
+  ]
+  concurrency = 3
+  locations = [
+  "eu-central-1",
+  "eu-west-1",
+  "eu-west-2",
+  "eu-west-3",
+  "eu-north-1",
+  ]
 }
