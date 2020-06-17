@@ -7,7 +7,7 @@ require (
 	github.com/agext/levenshtein v1.2.3 // indirect
 	github.com/aws/aws-sdk-go v1.31.11 // indirect
 	github.com/bmatcuk/doublestar v1.3.1 // indirect
-	github.com/checkly/checkly-go-sdk v0.4.1
+	github.com/checkly/checkly-go-sdk v0.4.2
 	github.com/fatih/color v1.9.0 // indirect
 	github.com/google/go-cmp v0.4.1
 	github.com/gruntwork-io/terratest v0.18.3
@@ -30,6 +30,7 @@ require (
 	github.com/oklog/run v1.1.0 // indirect
 	github.com/posener/complete v1.2.3 // indirect
 	github.com/spf13/afero v1.2.2 // indirect
+	github.com/terraform-providers/terraform-provider-template v1.0.0 // indirect
 	github.com/ulikunitz/xz v0.5.7 // indirect
 	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect
 	github.com/zclconf/go-cty v1.4.2 // indirect
@@ -39,3 +40,5 @@ require (
 	golang.org/x/tools v0.0.0-20200604183345-4d5ea46c79fe // indirect
 	google.golang.org/genproto v0.0.0-20200605102947-12044bf5ea91 // indirect
 )
+
+//replace github.com/checkly/checkly-go-sdk => ../checkly-go-sdk
