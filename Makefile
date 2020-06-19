@@ -24,3 +24,4 @@ apply:
 format-code:
 	go fmt
 	terraform fmt
+
