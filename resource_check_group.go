@@ -258,7 +258,7 @@ func resourceCheckGroupUpdate(d *schema.ResourceData, client interface{}) error 
 		return fmt.Errorf("API error: %v", err)
 	}
 	d.SetId(fmt.Sprintf("%d", group.ID))
-	return resourceCheckRead(d, client)
+	return resourceCheckGroupRead(d, client)
 }
 
 func resourceCheckGroupDelete(d *schema.ResourceData, client interface{}) error {
