@@ -345,6 +345,7 @@ resource "checkly_check_group" "check-group-3" {
 }
 
 
+<<<<<<< HEAD
 #----------------------------EXAMPLE----------------------------#
 #--- Adding a check to a check group 
 
@@ -390,3 +391,34 @@ resource "checkly_check" "canonical-api-check-5" {
 
 }
 
+=======
+# https://github.com/checkly/terraform-provider-checkly/issues/15
+resource "checkly_check_group" "no-api-check-defaults" {
+  name = "no-api-check-defaults"
+  activated = true
+  muted = false
+  concurrency = 3
+  locations = [
+    "eu-central-1",
+    "eu-west-1",
+    "eu-west-2",
+  ]
+}
+
+resource "checkly_check_group" "api-check-default-no-basicAuthHeaders" {
+  name = "api-check-default-no-basicAuthHeaders"
+  activated = true
+  muted = false
+
+  concurrency = 3
+  locations = [
+    "eu-central-1",
+    "eu-west-1",
+    "eu-west-2",
+  ]
+  api_check_defaults {
+    url = "http://example.com/"
+
+  }
+}
+>>>>>>> possible fix to issue #14 by forcing defaults to be there for optional parameters
