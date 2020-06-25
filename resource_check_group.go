@@ -160,8 +160,18 @@ func resourceCheckGroup() *schema.Resource {
 			},
 			"api_check_defaults": {
 				Type:     schema.TypeSet,
-				Optional: true,
 				MaxItems: 1,
+				Optional: true,
+				Computed: true,
+				DefaultFunc: func() (interface{}, error) {
+					return []tfMap{
+						tfMap{
+						"url": "",
+						"headers": []tfMap{},
+						"query_parameters":  []tfMap{},
+						"basic_auth":  tfMap{},
+					}}, nil
+				},
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"url": {
@@ -171,10 +181,18 @@ func resourceCheckGroup() *schema.Resource {
 						"headers": {
 							Type:     schema.TypeMap,
 							Optional: true,
+							Computed: true,
+							DefaultFunc: func()(interface{}, error){
+								return []tfMap{}, nil
+							},
 						},
 						"query_parameters": {
 							Type:     schema.TypeMap,
 							Optional: true,
+							Computed: true,
+							DefaultFunc: func()(interface{}, error){
+								return []tfMap{}, nil
+							},
 						},
 						"assertion": {
 							Type:     schema.TypeSet,
@@ -202,7 +220,12 @@ func resourceCheckGroup() *schema.Resource {
 						},
 						"basic_auth": {
 							Type:     schema.TypeSet,
-							Required: true,
+							MaxItems: 1,
+							Optional: true,
+							Computed: true,
+							DefaultFunc: func()(interface{}, error){
+								return []tfMap{}, nil
+							},
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"username": {
@@ -329,8 +352,21 @@ func setFromAPICheckDefaults(a checkly.APICheckDefaults) []tfMap {
 	s["headers"] = mapFromKeyValues(a.Headers)
 	s["query_parameters"] = mapFromKeyValues(a.QueryParameters)
 	s["assertion"] = setFromAssertions(a.Assertions)
-	s["basic_auth"] = setFromBasicAuth(a.BasicAuth)
+	
+	s["basic_auth"] = checkGroupSetFromBasicAuth(a.BasicAuth)
 	return []tfMap{s}
+}
+
+func checkGroupSetFromBasicAuth(b checkly.BasicAuth) []tfMap {
+	if b.Username == "" && b.Password == "" {
+		return []tfMap{}
+	}
+	return []tfMap{
+		{
+			"username": b.Username,
+			"password": b.Password,
+		},
+	}
 }
 
 func apiCheckDefaultsFromSet(s *schema.Set) checkly.APICheckDefaults {
@@ -338,11 +374,26 @@ func apiCheckDefaultsFromSet(s *schema.Set) checkly.APICheckDefaults {
 		return checkly.APICheckDefaults{}
 	}
 	res := s.List()[0].(tfMap)
+	
 	return checkly.APICheckDefaults{
 		BaseURL:         res["url"].(string),
 		Headers:         keyValuesFromMap(res["headers"].(tfMap)),
 		QueryParameters: keyValuesFromMap(res["query_parameters"].(tfMap)),
 		Assertions:      assertionsFromSet(res["assertion"].(*schema.Set)),
-		BasicAuth:       basicAuthFromSet(res["basic_auth"].(*schema.Set)),
+		BasicAuth:       checkGroupBasicAuthFromSet(res["basic_auth"].(*schema.Set)),
+	}
+}
+
+func checkGroupBasicAuthFromSet(s *schema.Set) checkly.BasicAuth {
+	if s.Len() == 0 {
+		return checkly.BasicAuth{
+			Username: "",
+			Password: "",
+		}
+	}
+	res := s.List()[0].(tfMap)
+	return checkly.BasicAuth{
+		Username: res["username"].(string),
+		Password: res["password"].(string),
 	}
 }
