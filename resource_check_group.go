@@ -352,9 +352,20 @@ func setFromAPICheckDefaults(a checkly.APICheckDefaults) []tfMap {
 	s["headers"] = mapFromKeyValues(a.Headers)
 	s["query_parameters"] = mapFromKeyValues(a.QueryParameters)
 	s["assertion"] = setFromAssertions(a.Assertions)
-
 	s["basic_auth"] = checkGroupSetFromBasicAuth(a.BasicAuth)
 	return []tfMap{s}
+}
+
+func checkGroupSetFromBasicAuth(b checkly.BasicAuth) []tfMap {
+	if b.Username == "" && b.Password == "" {
+		return []tfMap{}
+	}
+	return []tfMap{
+		{
+			"username": b.Username,
+			"password": b.Password,
+		},
+	}
 }
 
 func apiCheckDefaultsFromSet(s *schema.Set) checkly.APICheckDefaults {
