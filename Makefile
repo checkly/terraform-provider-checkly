@@ -13,7 +13,6 @@ setup:
 replace-dep:
 	go mod edit -replace github.com/checkly/checkly-go-sdk=../checkly-go-sdk
 
-<<<<<<< HEAD
 plan:
 	go build -o terraform-provider-checkly
 	terraform init  
@@ -21,10 +20,4 @@ plan:
 
 apply:
 	terraform apply
-=======
-apply:
-	go build -o terraform-provider-checkly
-	terraform init
-	terraform plan
-	terraform apply
->>>>>>> added a makefile
+
