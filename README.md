@@ -2,13 +2,30 @@
 
 [![CircleCI](https://circleci.com/gh/checkly/terraform-provider-checkly/tree/master.svg?style=svg)](https://circleci.com/gh/checkly/terraform-provider-checkly/tree/master)
 
-This Terraform provider enables users to manage [Checkly](https://checklyhq.com) resources like checks.
+* [Introduction](#introduction)
+* [Supported resource](#supported-resources)
+* [Installation](#installing-the-provider)
+* [Usage](#using-the-provider)
+	* [Checks](#checks)
+	* [Check groups](#check-groups)
+* [Development](#developing-the-provider)
 
-You can read a detailed tutorial and explanation of the Checkly Terraform provider here:
+## Introduction
+
+This Terraform provider enables users to manage [Checkly](https://checklyhq.com) resources like checks. You can read a detailed tutorial and explanation of the Checkly Terraform provider here:
 
 * [Managing Checkly checks with Terraform](https://blog.checklyhq.com/managing-checkly-checks-with-terraform/)
 
-## Using the provider
+## Supported resources
+
+- [x] Checks
+- [x] Check groups
+- [ ] Alert channels
+- [ ] Snippets
+- [ ] Environment variables
+
+
+## Installing the provider
 
 1. If you're on MacOS, just run the  `install.sh` script:
 
@@ -45,7 +62,11 @@ Now expose the API key as an environment variable in your shell:
 export TF_VAR_checkly_api_key=<my_api_key>
 ```
 
-### Usage examples
+## Using the provider
+
+We are working on more fleshed out examples. Make sure to also test the [`test.ts`](https://github.com/checkly/terraform-provider-checkly/blob/master/test.tf) file in this repo for resources we use in our integration tests.
+
+### Checks
 
 Add a `checkly_check` resource to your resource file.
 
@@ -158,7 +179,7 @@ resource "checkly_check" "example-check2" {
 }
 ```
 
-### Groups
+### Check Groups
 
 Checkly's groups feature allows you to group together a set of related checks, which can also share default settings for various attributes. Here is an example check group:
 
