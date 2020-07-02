@@ -2,13 +2,30 @@
 
 [![CircleCI](https://circleci.com/gh/checkly/terraform-provider-checkly/tree/master.svg?style=svg)](https://circleci.com/gh/checkly/terraform-provider-checkly/tree/master)
 
-This Terraform provider enables users to manage [Checkly](https://checklyhq.com) resources like checks.
+* [Introduction](#introduction)
+* [Supported resource](#supported-resources)
+* [Installation](#installing-the-provider)
+* [Usage](#using-the-provider)
+	* [Checks](#checks)
+	* [Check groups](#check-groups)
+* [Development](#developing-the-provider)
 
-You can read a detailed tutorial and explanation of the Checkly Terraform provider here:
+## Introduction
+
+This Terraform provider enables users to manage [Checkly](https://checklyhq.com) resources like checks. You can read a detailed tutorial and explanation of the Checkly Terraform provider here:
 
 * [Managing Checkly checks with Terraform](https://blog.checklyhq.com/managing-checkly-checks-with-terraform/)
 
-## Using the provider
+## Supported resources
+
+- [x] Checks
+- [x] Check groups
+- [ ] Alert channels
+- [ ] Snippets
+- [ ] Environment variables
+
+
+## Installing the provider
 
 1. If you're on MacOS, just run the  `install.sh` script:
 
@@ -45,11 +62,17 @@ Now expose the API key as an environment variable in your shell:
 export TF_VAR_checkly_api_key=<my_api_key>
 ```
 
-### Usage examples
+## Using the provider
+
+We are working on more fleshed out examples and documentation at the moment. Make sure to also test the [`test.ts`](https://github.com/checkly/terraform-provider-checkly/blob/master/test.tf) file in this repo for resources we use in our integration tests.
+
+> Before we have full Terraform-style documentation, make sure to also reference the [Checkly public API documentation](https://www.checklyhq.com/docs/api) as the Terraform provider *talks* to this API.
+
+### Checks
 
 Add a `checkly_check` resource to your resource file.
 
-This first example is a very minimal API check.
+This first example is a very minimal **API check**.
 
 ```terraform
 variable "checkly_api_key" {}
@@ -158,7 +181,9 @@ resource "checkly_check" "example-check2" {
 }
 ```
 
-### Groups
+A **browser** check is similar, but a bit simpler as it has less options.
+
+### Check Groups
 
 Checkly's groups feature allows you to group together a set of related checks, which can also share default settings for various attributes. Here is an example check group:
 
