@@ -181,7 +181,37 @@ resource "checkly_check" "example-check2" {
 }
 ```
 
-A **browser** check is similar, but a bit simpler as it has less options.
+A **browser** check is similar, but a bit simpler as it has less options. Notice the multi line string syntax.
+
+```terraform
+resource "checkly_check" "example-check2" {
+  name                      = "Example check"
+  type                      = "BROWSER"
+  activated                 = true
+  should_fail               = false
+  frequency                 = 10
+  double_check              = true
+  ssl_check                 = true
+  use_global_alert_settings = true
+  locations = [
+    "us-west-1"
+  ]
+
+  script = <<EOT
+const assert = require("chai").assert;
+const puppeteer = require("puppeteer");
+
+const browser = await puppeteer.launch();
+const page = await browser.newPage();
+await page.goto("https://google.com/");
+const title = await page.title();
+
+assert.equal(title, "Google");
+await browser.close(); EOF
+
+EOT
+}
+```
 
 ### Check Groups
 
