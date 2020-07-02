@@ -181,7 +181,7 @@ resource "checkly_check" "example-check2" {
 }
 ```
 
-A **browser** check is similar, but a bit simpler as it has less options. Notice the multi line string syntax.
+A **browser** check is similar, but a bit simpler as it has less options. Notice the multi line string syntax with `EOT`
 
 ```terraform
 resource "checkly_check" "example-check2" {
@@ -207,7 +207,7 @@ await page.goto("https://google.com/");
 const title = await page.title();
 
 assert.equal(title, "Google");
-await browser.close(); EOF
+await browser.close();
 
 EOT
 }
