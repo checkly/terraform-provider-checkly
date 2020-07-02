@@ -64,13 +64,15 @@ export TF_VAR_checkly_api_key=<my_api_key>
 
 ## Using the provider
 
-We are working on more fleshed out examples. Make sure to also test the [`test.ts`](https://github.com/checkly/terraform-provider-checkly/blob/master/test.tf) file in this repo for resources we use in our integration tests.
+We are working on more fleshed out examples and documentation at the moment. Make sure to also test the [`test.ts`](https://github.com/checkly/terraform-provider-checkly/blob/master/test.tf) file in this repo for resources we use in our integration tests.
+
+> Before we have full Terraform-style documentation, make sure to also reference the [Checkly public API documentation](https://www.checklyhq.com/docs/api) as the Terraform provider *talks* to this API.
 
 ### Checks
 
 Add a `checkly_check` resource to your resource file.
 
-This first example is a very minimal API check.
+This first example is a very minimal **API check**.
 
 ```terraform
 variable "checkly_api_key" {}
@@ -178,6 +180,8 @@ resource "checkly_check" "example-check2" {
   }
 }
 ```
+
+A **browser** check is similar, but a bit simpler as it has less options.
 
 ### Check Groups
 
