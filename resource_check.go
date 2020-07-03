@@ -14,7 +14,6 @@ import (
 type tfMap = map[string]interface{}
 
 func resourceCheck() *schema.Resource {
-	
 	return &schema.Resource{
 		Create: resourceCheckCreate,
 		Read:   resourceCheckRead,
@@ -228,7 +227,6 @@ func resourceCheck() *schema.Resource {
 				Type:     schema.TypeBool,
 				Optional: true,
 			},
-			
 			"request": {
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -403,9 +401,11 @@ func resourceDataFromCheck(c *checkly.Check, d *schema.ResourceData) error {
 		return fmt.Errorf("error setting alert settings for resource %s: %s", d.Id(), err)
 	}
 	d.Set("use_global_alert_settings", c.UseGlobalAlertSettings)
-	err := d.Set("request", setFromRequest(c.Request));
-	if  err != nil {
-		return fmt.Errorf("error setting request for resource %s: %s", d.Id(), err)
+	if c.Type != "BROWSER" {
+		err := d.Set("request", setFromRequest(c.Request));
+		if  err != nil {
+			return fmt.Errorf("error setting request for resource %s: %s", d.Id(), err)
+		}
 	}
 	d.Set("group_id", c.GroupID)
 	d.Set("group_order", c.GroupOrder)
@@ -521,9 +521,12 @@ func checkFromResourceData(d *schema.ResourceData) (checkly.Check, error) {
 		LocalTearDownScript:    d.Get("local_teardown_script").(string),
 		AlertSettings:          alertSettingsFromSet(d.Get("alert_settings").(*schema.Set)),
 		UseGlobalAlertSettings: d.Get("use_global_alert_settings").(bool),
-		Request:                requestFromSet(d.Get("request").(*schema.Set)),
 		GroupID:                int64(d.Get("group_id").(int)),
 		GroupOrder:             d.Get("group_order").(int),
+	}
+	if check.Type != "BROWSER" {
+		// this will prevent subsequent apply from causing a tf config change in browser checks
+		check.Request = requestFromSet(d.Get("request").(*schema.Set))
 	}
 	return check, nil
 }
