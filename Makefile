@@ -15,6 +15,8 @@ replace-dep:
 
 plan:
 	go build -o terraform-provider-checkly
-	terraform init
-	terraform plan
+	terraform init  
+	terraform plan 
 
+apply:
+	terraform apply
