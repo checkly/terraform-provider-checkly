@@ -363,18 +363,6 @@ func setFromAPICheckDefaults(a checkly.APICheckDefaults) []tfMap {
 	return []tfMap{s}
 }
 
-func checkGroupSetFromBasicAuth(b checkly.BasicAuth) []tfMap {
-	if b.Username == "" && b.Password == "" {
-		return []tfMap{}
-	}
-	return []tfMap{
-		{
-			"username": b.Username,
-			"password": b.Password,
-		},
-	}
-}
-
 func apiCheckDefaultsFromSet(s *schema.Set) checkly.APICheckDefaults {
 	if s.Len() == 0 {
 		return checkly.APICheckDefaults{}
