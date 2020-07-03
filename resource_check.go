@@ -14,7 +14,6 @@ import (
 type tfMap = map[string]interface{}
 
 func resourceCheck() *schema.Resource {
-	
 	return &schema.Resource{
 		Create: resourceCheckCreate,
 		Read:   resourceCheckRead,
@@ -228,7 +227,6 @@ func resourceCheck() *schema.Resource {
 				Type:     schema.TypeBool,
 				Optional: true,
 			},
-			
 			"request": {
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -526,7 +524,7 @@ func checkFromResourceData(d *schema.ResourceData) (checkly.Check, error) {
 		GroupID:                int64(d.Get("group_id").(int)),
 		GroupOrder:             d.Get("group_order").(int),
 	}
-	if check.Type == "API" {
+	if check.Type == checkly.TypeAPI {
 		// this will prevent subsequent apply from causing a tf config change in browser checks
 		check.Request = requestFromSet(d.Get("request").(*schema.Set))
 	}
