@@ -16,12 +16,12 @@ provider "checkly" {
 #-- a very simple API check definition
 
 resource "checkly_check" "api-check-1" {
-  name = "API check 1"                          
-  type = "API"                                              
-  frequency = 60
-  activated = true
-  muted = true  
-  double_check = true
+  name              = "API check 1"
+  type              = "API"
+  frequency         = 60
+  activated         = true
+  muted             = true
+  double_check      = true
   max_response_time = 18000
   locations = [
     "eu-central-1",
@@ -30,13 +30,13 @@ resource "checkly_check" "api-check-1" {
 
   request {
     method = "GET"
-    url = "https://api.checklyhq.com/public-stats"
+    url    = "https://api.checklyhq.com/public-stats"
 
     assertion {
       comparison = "EQUALS"
-      property = ""
-      source = "STATUS_CODE"
-      target = "200"
+      property   = ""
+      source     = "STATUS_CODE"
+      target     = "200"
     }
   }
 
@@ -48,32 +48,32 @@ resource "checkly_check" "api-check-1" {
 #-- a fully fledged API check
 
 resource "checkly_check" "api-check-2" {
-  name = "API check 2"                          
-  type = "API"                                              
-  frequency = 10
-  activated = true
-  muted = true  
-  double_check = true
-  ssl_check = false
-  degraded_response_time    = 15000
-  max_response_time         = 30000
-  environment_variables = null
+  name                   = "API check 2"
+  type                   = "API"
+  frequency              = 10
+  activated              = true
+  muted                  = true
+  double_check           = true
+  ssl_check              = false
+  degraded_response_time = 15000
+  max_response_time      = 30000
+  environment_variables  = null
   locations = [
     "eu-central-1",
     "us-east-2",
     "ap-northeast-1"
   ]
 
-  tags = [ "checks", "api" ]
+  tags = ["checks", "api"]
 
   request {
-    method = "GET"
-    url = "https://api.checklyhq.com/public-stats"
+    method           = "GET"
+    url              = "https://api.checklyhq.com/public-stats"
     follow_redirects = true
 
     headers = {
       X-CUSTOM-1 = 1
-      X-CUSTOM-2 =  "foo"
+      X-CUSTOM-2 = "foo"
     }
 
     query_parameters = {
@@ -93,30 +93,30 @@ resource "checkly_check" "api-check-2" {
 
     assertion {
       comparison = "EQUALS"
-      property = ""
-      source = "STATUS_CODE"
-      target = "200"
+      property   = ""
+      source     = "STATUS_CODE"
+      target     = "200"
     }
 
     assertion {
       comparison = "EQUALS"
-      property = "cache-control"
-      source = "HEADERS"
-      target = "no-cache"
+      property   = "cache-control"
+      source     = "HEADERS"
+      target     = "no-cache"
     }
 
     assertion {
       comparison = "GREATER_THAN"
-      property = "$.apiCheckResults"
-      source = "JSON_BODY"
-      target = "100"
+      property   = "$.apiCheckResults"
+      source     = "JSON_BODY"
+      target     = "100"
     }
   }
 
   alert_settings {
     escalation_type = "RUN_BASED"
     reminders {
-      amount = 0
+      amount   = 0
       interval = 5
     }
     run_based_escalation {
@@ -124,7 +124,7 @@ resource "checkly_check" "api-check-2" {
     }
     ssl_certificates {
       alert_threshold = 30
-      enabled = true
+      enabled         = true
     }
     time_based_escalation {
       minutes_failing_threshold = 5
@@ -135,51 +135,51 @@ resource "checkly_check" "api-check-2" {
 #----------------------------EXAMPLE----------------------------#
 #-- a POST API Check with json body
 
-resource "checkly_check" "canonical-api-check-3" {
-  name = "API check 3"
-  type = "API"
-  activated = true
+resource "checkly_check" "api-check-3" {
+  name         = "Canonical API check 3"
+  type         = "API"
+  activated    = true
   double_check = true
-  frequency = 720
+  frequency    = 720
   locations = [
     "eu-central-1",
     "us-east-2",
   ]
-  max_response_time = 18000
-  muted = true
+  max_response_time     = 18000
+  muted                 = true
   environment_variables = null
 
   request {
-    method = "POST"
-    url = "https://jsonplaceholder.typicode.com/posts"
+    method           = "POST"
+    url              = "https://jsonplaceholder.typicode.com/posts"
     follow_redirects = true
 
     headers = {
-        Content-type = "application/json; charset=UTF-8"
+      Content-type = "application/json; charset=UTF-8"
     }
 
-    body = "{\"message\":\"hello checkly\",\"messageId\":1}"
+    body      = "{\"message\":\"hello checkly\",\"messageId\":1}"
     body_type = "JSON"
 
     assertion {
       comparison = "EQUALS"
-      property = ""
-      source = "STATUS_CODE"
-      target = "201"
+      property   = ""
+      source     = "STATUS_CODE"
+      target     = "201"
     }
 
     assertion {
       comparison = "EQUALS"
-      source = "JSON_BODY"
-      property = "$.message"
-      target = "hello checkly"
+      source     = "JSON_BODY"
+      property   = "$.message"
+      target     = "hello checkly"
     }
 
     assertion {
       comparison = "EQUALS"
-      source = "JSON_BODY"
-      property = "$.messageId"
-      target = 1
+      source     = "JSON_BODY"
+      property   = "$.messageId"
+      target     = 1
     }
 
   }
@@ -187,6 +187,44 @@ resource "checkly_check" "canonical-api-check-3" {
   use_global_alert_settings = true
 
 }
+
+#----------------------------EXAMPLE----------------------------#
+#-- an api check with empty basic_auth
+resource "checkly_check" "api-check-4" {
+  name                   = "api check with empty basic_auth"
+  type                   = "API"
+  activated              = true
+  should_fail            = false
+  frequency              = 1
+  degraded_response_time = 3000
+  max_response_time      = 6000
+  tags = [
+    "testing",
+    "bug"
+  ]
+
+  locations = [
+    "eu-central-1"
+  ]
+
+  request {
+    follow_redirects = false
+    url              = "https://api.checklyhq.com/public-stats"
+
+    basic_auth {
+      username = ""
+      password = ""
+    }
+
+    assertion {
+      source     = "STATUS_CODE"
+      property   = ""
+      comparison = "EQUALS"
+      target     = "200"
+    }
+  }
+}
+
 
 ################################# BROWSER CHECKS ################################# 
 
@@ -247,9 +285,9 @@ EOT
 #-- a check group definition with minimal configurations
 
 resource "checkly_check_group" "check-group-1" {
-  name = "Check Group 1"
-  activated = true
-  muted = false
+  name        = "Check Group 1"
+  activated   = true
+  muted       = false
   concurrency = 3
   locations = [
     "eu-west-1",
@@ -261,9 +299,9 @@ resource "checkly_check_group" "check-group-1" {
 #-- a check group with minimal API defaults
 
 resource "checkly_check_group" "check-group-2" {
-  name = "Check Group 2 with minimal api check defaults"
-  activated = true
-  muted = false
+  name        = "Check Group 2 with minimal api check defaults"
+  activated   = true
+  muted       = false
   concurrency = 3
   locations = [
     "eu-west-1",
@@ -279,11 +317,11 @@ resource "checkly_check_group" "check-group-2" {
 #-- a check group with more defaults
 
 resource "checkly_check_group" "check-group-3" {
-  name = "Check Group 3 with more defaults"
-  activated = true
-  muted = false
-  concurrency = 3
-  double_check = true
+  name                      = "Check Group 3 with more defaults"
+  activated                 = true
+  muted                     = false
+  concurrency               = 3
+  double_check              = true
   use_global_alert_settings = false
   locations = [
     "eu-west-1",
@@ -345,80 +383,46 @@ resource "checkly_check_group" "check-group-3" {
 }
 
 
-<<<<<<< HEAD
 #----------------------------EXAMPLE----------------------------#
 #--- Adding a check to a check group 
 
-resource "checkly_check" "canonical-api-check-4" {
-  name = "API check 1 belonging to group 1"
-  type = "API"
+resource "checkly_check" "api-check-group-1_1" {
+  name      = "API check 1 belonging to group 1"
+  type      = "API"
   activated = true
-  muted = true
+  muted     = true
   frequency = 720
   locations = [
     "eu-central-1",
     "us-east-2",
   ]
   request {
-    method = "GET"
-    url = "https://api.checklyhq.com/public-stats"
+    method           = "GET"
+    url              = "https://api.checklyhq.com/public-stats"
     follow_redirects = true
   }
 
   group_id    = checkly_check_group.check-group-1.id
-  group_order = 1            #The `group_order` attribute specifies in which order the checks will be executed: 1, 2, 3, etc.
+  group_order = 1 #The `group_order` attribute specifies in which order the checks will be executed: 1, 2, 3, etc.
 
 }
 
-resource "checkly_check" "canonical-api-check-5" {
-  name = "API check 2 belonging to group 1"
-  type = "API"
+resource "checkly_check" "api-check-group-1_2" {
+  name      = "API check 2 belonging to group 1"
+  type      = "API"
   activated = true
-  muted = true
+  muted     = true
   frequency = 720
   locations = [
     "eu-central-1",
     "us-east-2",
   ]
   request {
-    method = "GET"
-    url = "https://api.checklyhq.com/public-stats"
+    method           = "GET"
+    url              = "https://api.checklyhq.com/public-stats"
     follow_redirects = true
   }
 
   group_id    = checkly_check_group.check-group-1.id
   group_order = 2
-
 }
-
-=======
-# https://github.com/checkly/terraform-provider-checkly/issues/15
-resource "checkly_check_group" "no-api-check-defaults" {
-  name = "no-api-check-defaults"
-  activated = true
-  muted = false
-  concurrency = 3
-  locations = [
-    "eu-central-1",
-    "eu-west-1",
-    "eu-west-2",
-  ]
-}
-
-resource "checkly_check_group" "api-check-default-no-basicAuthHeaders" {
-  name = "api-check-default-no-basicAuthHeaders"
-  activated = true
-  muted = false
-
-  concurrency = 3
-  locations = [
-    "eu-central-1",
-    "eu-west-1",
-    "eu-west-2",
-  ]
-  api_check_defaults {
-    url = "http://example.com/"
-
-  }
-}
->>>>>>> possible fix to issue #14 by forcing defaults to be there for optional parameters
