@@ -40,5 +40,3 @@ require (
 	golang.org/x/tools v0.0.0-20200604183345-4d5ea46c79fe // indirect
 	google.golang.org/genproto v0.0.0-20200605102947-12044bf5ea91 // indirect
 )
-
-//replace github.com/checkly/checkly-go-sdk => ../checkly-go-sdk
