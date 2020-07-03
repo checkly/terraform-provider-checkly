@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"sort"
 	"time"
@@ -13,6 +14,7 @@ import (
 type tfMap = map[string]interface{}
 
 func resourceCheck() *schema.Resource {
+	
 	return &schema.Resource{
 		Create: resourceCheckCreate,
 		Read:   resourceCheckRead,
@@ -226,6 +228,7 @@ func resourceCheck() *schema.Resource {
 				Type:     schema.TypeBool,
 				Optional: true,
 			},
+			
 			"request": {
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -244,10 +247,18 @@ func resourceCheck() *schema.Resource {
 						"headers": {
 							Type:     schema.TypeMap,
 							Optional: true,
+							Computed: true,
+							DefaultFunc: func() (interface{}, error) {
+								return []tfMap{}, nil
+							},
 						},
 						"query_parameters": {
 							Type:     schema.TypeMap,
 							Optional: true,
+							Computed: true,
+							DefaultFunc: func() (interface{}, error) {
+								return []tfMap{}, nil
+							},
 						},
 						"follow_redirects": {
 							Type:     schema.TypeBool,
@@ -288,7 +299,12 @@ func resourceCheck() *schema.Resource {
 						},
 						"basic_auth": {
 							Type:     schema.TypeSet,
-							Required: true,
+							MaxItems: 1,
+							Optional: true,
+							Computed: true,
+							DefaultFunc: func()(interface{}, error){
+								return []tfMap{}, nil
+							},
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"username": {
@@ -320,11 +336,12 @@ func resourceCheck() *schema.Resource {
 func resourceCheckCreate(d *schema.ResourceData, client interface{}) error {
 	check, err := checkFromResourceData(d)
 	if err != nil {
-		return fmt.Errorf("translation error: %v", err)
+		return fmt.Errorf("translation error: %s", err.Error())
 	}
 	gotCheck, err := client.(*checkly.Client).Create(check)
 	if err != nil {
-		return fmt.Errorf("API error: %v", err)
+		checkJSON, _ := json.Marshal(check)
+		return fmt.Errorf("API error 1: %s, Check: %s",  err.Error(), string(checkJSON))
 	}
 	d.SetId(gotCheck.ID)
 	return resourceCheckRead(d, client)
@@ -333,19 +350,21 @@ func resourceCheckCreate(d *schema.ResourceData, client interface{}) error {
 func resourceCheckRead(d *schema.ResourceData, client interface{}) error {
 	check, err := client.(*checkly.Client).Get(d.Id())
 	if err != nil {
-		return fmt.Errorf("API error: %v", err)
+		return fmt.Errorf("API error 2: could not read check %s, Error: %s", d.Id(), err.Error())
 	}
 	return resourceDataFromCheck(&check, d)
 }
 
 func resourceCheckUpdate(d *schema.ResourceData, client interface{}) error {
 	check, err := checkFromResourceData(d)
+
 	if err != nil {
-		return fmt.Errorf("translation error: %v", err)
+		return fmt.Errorf("translation error: %s", err.Error())
 	}
 	_, err = client.(*checkly.Client).Update(check.ID, check)
 	if err != nil {
-		return fmt.Errorf("API error: %v", err)
+		checkJSON, _ := json.Marshal(check)
+		return fmt.Errorf("API error 3: Couldn't update check, Error: %s, \nCheck: %s", err.Error(), checkJSON)
 	}
 	d.SetId(check.ID)
 	return resourceCheckRead(d, client)
@@ -353,7 +372,7 @@ func resourceCheckUpdate(d *schema.ResourceData, client interface{}) error {
 
 func resourceCheckDelete(d *schema.ResourceData, client interface{}) error {
 	if err := client.(*checkly.Client).Delete(d.Id()); err != nil {
-		return fmt.Errorf("API error: %v", err)
+		return fmt.Errorf("API error 4: Couldn't delete Check %s, Error: %s", d.Id(), err.Error())
 	}
 	return nil
 }
@@ -384,7 +403,8 @@ func resourceDataFromCheck(c *checkly.Check, d *schema.ResourceData) error {
 		return fmt.Errorf("error setting alert settings for resource %s: %s", d.Id(), err)
 	}
 	d.Set("use_global_alert_settings", c.UseGlobalAlertSettings)
-	if err := d.Set("request", setFromRequest(c.Request)); err != nil {
+	err := d.Set("request", setFromRequest(c.Request));
+	if  err != nil {
 		return fmt.Errorf("error setting request for resource %s: %s", d.Id(), err)
 	}
 	d.Set("group_id", c.GroupID)
@@ -467,6 +487,9 @@ func mapFromKeyValues(kvs []checkly.KeyValue) tfMap {
 }
 
 func setFromBasicAuth(b checkly.BasicAuth) []tfMap {
+	if b.Username == "" && b.Password == "" {
+		return []tfMap{}
+	}
 	return []tfMap{
 		{
 			"username": b.Username,
