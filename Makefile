@@ -20,4 +20,3 @@ plan:
 
 apply:
 	terraform apply
-
