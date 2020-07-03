@@ -15,7 +15,6 @@ import (
 type tfMap = map[string]interface{}
 
 func resourceCheck() *schema.Resource {
-	
 	return &schema.Resource{
 		Create: resourceCheckCreate,
 		Read:   resourceCheckRead,
@@ -229,7 +228,6 @@ func resourceCheck() *schema.Resource {
 				Type:     schema.TypeBool,
 				Optional: true,
 			},
-			
 			"request": {
 				Type:     schema.TypeSet,
 				Optional: true,
