@@ -334,7 +334,7 @@ func resourceCheck() *schema.Resource {
 func resourceCheckCreate(d *schema.ResourceData, client interface{}) error {
 	check, err := checkFromResourceData(d)
 	if err != nil {
-		return fmt.Errorf("translation error: %s", err.Error())
+		return fmt.Errorf("translation error: %w", err)
 	}
 	gotCheck, err := client.(*checkly.Client).Create(check)
 	if err != nil {
