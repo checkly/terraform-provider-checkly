@@ -7,6 +7,8 @@
 * [Installation](#installing-the-provider)
 * [Usage](#using-the-provider)
 	* [Checks](#checks)
+	  * [API checks](#api-checks)
+	  * [Browser checks](#browser-checks)	  
 	* [Check groups](#check-groups)
 * [Development](#developing-the-provider)
 
@@ -71,8 +73,9 @@ We are still working on more fleshed out examples and documentation at the momen
 
 ### Checks
 
-Add a `checkly_check` resource to your resource file.
+Add a `checkly_check` resource to your resource file. You can add **API checks** and **browser checks**, either individually or as part of a **check group**.
 
+#### API checks
 This first example is a very minimal **API check**.
 
 ```terraform
@@ -181,11 +184,11 @@ resource "checkly_check" "example-check2" {
   }
 }
 ```
-
-A **browser** check is similar, but a bit simpler as it has less options. Notice the multi line string syntax with `EOT`
+#### Browser checks
+A **browser** check is similar, but a bit simpler as it has less options. Notice the multi line string syntax with `EOT`. Terraform also gives you the option to insert content from external files which would be useful for larger scripts or when you want to manage your browser check scripts as separate Javascript files. See the partial examples below
 
 ```terraform
-resource "checkly_check" "example-check2" {
+resource "checkly_check" "browser-check-1" {
   name                      = "Example check"
   type                      = "BROWSER"
   activated                 = true
@@ -211,6 +214,19 @@ assert.equal(title, "Google");
 await browser.close();
 
 EOT
+}
+```
+
+An alternative syntax for add the script is by referencing an external file
+
+```terraform
+data "local_file" "browser-script" {
+  filename = "${path.module}/browser-script.js"
+}
+
+resource "checkly_check" "browser-check-1" {
+  ...
+  script = data.local_file.browser-script.content
 }
 ```
 
