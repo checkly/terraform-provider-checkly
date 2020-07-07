@@ -63,10 +63,11 @@ export TF_VAR_checkly_api_key=<my_api_key>
 ```
 
 ## Using the provider
+We are working on more fleshed out examples and documentation at the moment. For more usage examples please look into `test.tf`(https://github.com/checkly/terraform-provider-checkly/blob/master/test.tf) to run these examples, set env variable `TF_VAR_checkly_api_key` to your checkly API key, then run `make plan` followed by `make apply`.  
 
-We are working on more fleshed out examples and documentation at the moment. Make sure to also test the [`test.ts`](https://github.com/checkly/terraform-provider-checkly/blob/master/test.tf) file in this repo for resources we use in our integration tests.
+Before we have full Terraform-style documentation, make sure to also reference the [Checkly public API documentation](https://www.checklyhq.com/docs/api) as the Terraform provider *talks* to this API.
 
-> Before we have full Terraform-style documentation, make sure to also reference the [Checkly public API documentation](https://www.checklyhq.com/docs/api) as the Terraform provider *talks* to this API.
+We are still working on more fleshed out examples and documentation at the moment.
 
 ### Checks
 
@@ -296,6 +297,8 @@ resource "checkly_check" "test-check1" {
 ```
 
 The `group_order` attribute specifies in which order the checks will be executed: 1, 2, 3, etc.
+
+
 
 ## Developing the provider
 
