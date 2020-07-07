@@ -82,8 +82,13 @@ resource "checkly_check" "api-check-2" {
     }
 
     basic_auth {
-      username = "maxmustermann"
-      password = "musterpass"
+      username = "user"
+      password = "pass"
+
+      # secret data shouldn't be put as plain text here, it should be injected usinng TF variables:
+      # username = var.username
+      # password = var.password
+      # another alternative is using git encrypted secret files
     }
 
     assertion {
@@ -188,6 +193,23 @@ resource "checkly_check" "canonical-api-check-3" {
 #----------------------------EXAMPLE----------------------------#
 #-- a Browser Check which runs E2E test
 
+resource "checkly_check" "browser-check-2" {
+  name                      = "Example check"
+  type                      = "BROWSER"
+  activated                 = true
+  should_fail               = false
+  frequency                 = 10
+  double_check              = true
+  ssl_check                 = true
+  use_global_alert_settings = true
+
+  script = "console.log('test')"
+
+  locations = [
+    "us-west-1"
+  ]
+}
+
 resource "checkly_check" "browser-check-1" {
   name                      = "A simple browser check"
   type                      = "BROWSER"
@@ -287,8 +309,8 @@ resource "checkly_check_group" "check-group-3" {
     }
 
     basic_auth {
-      username = "maxmustermann"
-      password = "musterpass"
+      username = "user"
+      password = "pass"
     }
   }
 
