@@ -300,7 +300,7 @@ func resourceCheck() *schema.Resource {
 							MaxItems: 1,
 							Optional: true,
 							Computed: true,
-							DefaultFunc: func()(interface{}, error){
+							DefaultFunc: func() (interface{}, error) {
 								return []tfMap{}, nil
 							},
 							Elem: &schema.Resource{
@@ -339,7 +339,7 @@ func resourceCheckCreate(d *schema.ResourceData, client interface{}) error {
 	gotCheck, err := client.(*checkly.Client).Create(check)
 	if err != nil {
 		checkJSON, _ := json.Marshal(check)
-		return fmt.Errorf("API error 1: %s, Check: %s",  err.Error(), string(checkJSON))
+		return fmt.Errorf("API error 1: %w, Check: %s", err, string(checkJSON))
 	}
 	d.SetId(gotCheck.ID)
 	return resourceCheckRead(d, client)
@@ -348,7 +348,7 @@ func resourceCheckCreate(d *schema.ResourceData, client interface{}) error {
 func resourceCheckRead(d *schema.ResourceData, client interface{}) error {
 	check, err := client.(*checkly.Client).Get(d.Id())
 	if err != nil {
-		return fmt.Errorf("API error 2: could not read check %s, Error: %s", d.Id(), err.Error())
+		return fmt.Errorf("API error 2: could not read check %s, Error: %w", d.Id(), err)
 	}
 	return resourceDataFromCheck(&check, d)
 }
@@ -357,12 +357,12 @@ func resourceCheckUpdate(d *schema.ResourceData, client interface{}) error {
 	check, err := checkFromResourceData(d)
 
 	if err != nil {
-		return fmt.Errorf("translation error: %s", err.Error())
+		return fmt.Errorf("translation error: %w", err)
 	}
 	_, err = client.(*checkly.Client).Update(check.ID, check)
 	if err != nil {
 		checkJSON, _ := json.Marshal(check)
-		return fmt.Errorf("API error 3: Couldn't update check, Error: %s, \nCheck: %s", err.Error(), checkJSON)
+		return fmt.Errorf("API error 3: Couldn't update check, Error: %w, \nCheck: %s", err, checkJSON)
 	}
 	d.SetId(check.ID)
 	return resourceCheckRead(d, client)
@@ -370,7 +370,7 @@ func resourceCheckUpdate(d *schema.ResourceData, client interface{}) error {
 
 func resourceCheckDelete(d *schema.ResourceData, client interface{}) error {
 	if err := client.(*checkly.Client).Delete(d.Id()); err != nil {
-		return fmt.Errorf("API error 4: Couldn't delete Check %s, Error: %s", d.Id(), err.Error())
+		return fmt.Errorf("API error 4: Couldn't delete Check %s, Error: %w", d.Id(), err)
 	}
 	return nil
 }
@@ -387,7 +387,7 @@ func resourceDataFromCheck(c *checkly.Check, d *schema.ResourceData) error {
 	d.Set("degraded_response_time", c.DegradedResponseTime)
 	d.Set("max_response_time", c.MaxResponseTime)
 	if err := d.Set("environment_variables", setFromEnvVars(c.EnvironmentVariables)); err != nil {
-		return fmt.Errorf("error setting environment variables for resource %s: %s", d.Id(), err)
+		return fmt.Errorf("error setting environment variables for resource %s: %w", d.Id(), err)
 	}
 	d.Set("double_check", c.DoubleCheck)
 	sort.Strings(c.Tags)
@@ -398,13 +398,13 @@ func resourceDataFromCheck(c *checkly.Check, d *schema.ResourceData) error {
 	d.Set("local_setup_script", c.LocalSetupScript)
 	d.Set("local_teardown_script", c.LocalTearDownScript)
 	if err := d.Set("alert_settings", setFromAlertSettings(c.AlertSettings)); err != nil {
-		return fmt.Errorf("error setting alert settings for resource %s: %s", d.Id(), err)
+		return fmt.Errorf("error setting alert settings for resource %s: %w", d.Id(), err)
 	}
 	d.Set("use_global_alert_settings", c.UseGlobalAlertSettings)
 	if c.Type == checkly.TypeAPI {
-		err := d.Set("request", setFromRequest(c.Request));
-		if  err != nil {
-			return fmt.Errorf("error setting request for resource %s: %s", d.Id(), err)
+		err := d.Set("request", setFromRequest(c.Request))
+		if err != nil {
+			return fmt.Errorf("error setting request for resource %s: %w", d.Id(), err)
 		}
 	}
 	d.Set("group_id", c.GroupID)
@@ -486,8 +486,8 @@ func mapFromKeyValues(kvs []checkly.KeyValue) tfMap {
 	return s
 }
 
-func setFromBasicAuth(b checkly.BasicAuth) []tfMap {
-	if b.Username == "" && b.Password == "" {
+func setFromBasicAuth(b *checkly.BasicAuth) []tfMap {
+	if b == nil {
 		return []tfMap{}
 	}
 	return []tfMap{
@@ -553,12 +553,12 @@ func assertionsFromSet(s *schema.Set) []checkly.Assertion {
 	return r
 }
 
-func basicAuthFromSet(s *schema.Set) checkly.BasicAuth {
+func basicAuthFromSet(s *schema.Set) *checkly.BasicAuth {
 	if s.Len() == 0 {
-		return checkly.BasicAuth{}
+		return nil
 	}
 	res := s.List()[0].(tfMap)
-	return checkly.BasicAuth{
+	return &checkly.BasicAuth{
 		Username: res["username"].(string),
 		Password: res["password"].(string),
 	}

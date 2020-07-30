@@ -7,7 +7,7 @@ require (
 	github.com/agext/levenshtein v1.2.3 // indirect
 	github.com/aws/aws-sdk-go v1.31.11 // indirect
 	github.com/bmatcuk/doublestar v1.3.1 // indirect
-	github.com/checkly/checkly-go-sdk v0.4.2
+	github.com/checkly/checkly-go-sdk v0.4.3
 	github.com/fatih/color v1.9.0 // indirect
 	github.com/google/go-cmp v0.4.1
 	github.com/gruntwork-io/terratest v0.18.3
