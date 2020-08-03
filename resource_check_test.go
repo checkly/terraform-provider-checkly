@@ -74,7 +74,7 @@ var wantCheck = checkly.Check{
 		},
 		Body:     "",
 		BodyType: "NONE",
-		BasicAuth: checkly.BasicAuth{
+		BasicAuth: &checkly.BasicAuth{
 			Username: "example",
 			Password: "pass",
 		},

@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strconv"
 
-	"github.com/checkly/checkly-go-sdk"
+	checkly "github.com/checkly/checkly-go-sdk"
 	"github.com/hashicorp/terraform/helper/schema"
 )
 
@@ -166,11 +166,11 @@ func resourceCheckGroup() *schema.Resource {
 				DefaultFunc: func() (interface{}, error) {
 					return []tfMap{
 						tfMap{
-						"url": "",
-						"headers": []tfMap{},
-						"query_parameters":  []tfMap{},
-						"basic_auth":  tfMap{},
-					}}, nil
+							"url":              "",
+							"headers":          []tfMap{},
+							"query_parameters": []tfMap{},
+							"basic_auth":       tfMap{},
+						}}, nil
 				},
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -182,7 +182,7 @@ func resourceCheckGroup() *schema.Resource {
 							Type:     schema.TypeMap,
 							Optional: true,
 							Computed: true,
-							DefaultFunc: func()(interface{}, error){
+							DefaultFunc: func() (interface{}, error) {
 								return []tfMap{}, nil
 							},
 						},
@@ -190,7 +190,7 @@ func resourceCheckGroup() *schema.Resource {
 							Type:     schema.TypeMap,
 							Optional: true,
 							Computed: true,
-							DefaultFunc: func()(interface{}, error){
+							DefaultFunc: func() (interface{}, error) {
 								return []tfMap{}, nil
 							},
 						},
@@ -223,7 +223,7 @@ func resourceCheckGroup() *schema.Resource {
 							MaxItems: 1,
 							Optional: true,
 							Computed: true,
-							DefaultFunc: func()(interface{}, error){
+							DefaultFunc: func() (interface{}, error) {
 								return []tfMap{}, nil
 							},
 							Elem: &schema.Resource{
@@ -274,11 +274,11 @@ func resourceCheckGroupRead(d *schema.ResourceData, client interface{}) error {
 func resourceCheckGroupUpdate(d *schema.ResourceData, client interface{}) error {
 	group, err := checkGroupFromResourceData(d)
 	if err != nil {
-		return fmt.Errorf("translation error: %v", err)
+		return fmt.Errorf("translation error: %w", err)
 	}
 	_, err = client.(*checkly.Client).UpdateGroup(group.ID, group)
 	if err != nil {
-		return fmt.Errorf("API error: %v", err)
+		return fmt.Errorf("API error: %w", err)
 	}
 	d.SetId(fmt.Sprintf("%d", group.ID))
 	return resourceCheckGroupRead(d, client)
@@ -290,7 +290,7 @@ func resourceCheckGroupDelete(d *schema.ResourceData, client interface{}) error 
 		return fmt.Errorf("ID %s is not numeric: %w", d.Id(), err)
 	}
 	if err := client.(*checkly.Client).DeleteGroup(ID); err != nil {
-		return fmt.Errorf("API error: %v", err)
+		return fmt.Errorf("API error: %w", err)
 	}
 	return nil
 }
@@ -352,8 +352,8 @@ func setFromAPICheckDefaults(a checkly.APICheckDefaults) []tfMap {
 	s["headers"] = mapFromKeyValues(a.Headers)
 	s["query_parameters"] = mapFromKeyValues(a.QueryParameters)
 	s["assertion"] = setFromAssertions(a.Assertions)
-	
-	s["basic_auth"] = setFromBasicAuth(a.BasicAuth)
+
+	s["basic_auth"] = checkGroupSetFromBasicAuth(a.BasicAuth)
 	return []tfMap{s}
 }
 
@@ -362,13 +362,25 @@ func apiCheckDefaultsFromSet(s *schema.Set) checkly.APICheckDefaults {
 		return checkly.APICheckDefaults{}
 	}
 	res := s.List()[0].(tfMap)
-	
+
 	return checkly.APICheckDefaults{
 		BaseURL:         res["url"].(string),
 		Headers:         keyValuesFromMap(res["headers"].(tfMap)),
 		QueryParameters: keyValuesFromMap(res["query_parameters"].(tfMap)),
 		Assertions:      assertionsFromSet(res["assertion"].(*schema.Set)),
 		BasicAuth:       checkGroupBasicAuthFromSet(res["basic_auth"].(*schema.Set)),
+	}
+}
+
+func checkGroupSetFromBasicAuth(b checkly.BasicAuth) []tfMap {
+	if b.Username == "" && b.Password == "" {
+		return []tfMap{}
+	}
+	return []tfMap{
+		{
+			"username": b.Username,
+			"password": b.Password,
+		},
 	}
 }
 
