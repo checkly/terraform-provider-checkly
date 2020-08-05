@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sort"
 	"strconv"
+	"strings"
 
 	checkly "github.com/checkly/checkly-go-sdk"
 	"github.com/hashicorp/terraform/helper/schema"
@@ -249,24 +250,32 @@ func resourceCheckGroup() *schema.Resource {
 func resourceCheckGroupCreate(d *schema.ResourceData, client interface{}) error {
 	group, err := checkGroupFromResourceData(d)
 	if err != nil {
-		return fmt.Errorf("translation error: %v", err)
+		return fmt.Errorf("translation error: %w", err)
 	}
 	gotGroup, err := client.(*checkly.Client).CreateGroup(group)
 	if err != nil {
-		return fmt.Errorf("API error: %v", err)
+		return fmt.Errorf("API error: %w", err)
 	}
 	d.SetId(fmt.Sprintf("%d", gotGroup.ID))
-	return resourceCheckGroupRead(d, client)
+	return readCheckGroup(d, client, false)
 }
 
 func resourceCheckGroupRead(d *schema.ResourceData, client interface{}) error {
+	return readCheckGroup(d, client, true)
+}
+
+func readCheckGroup(d *schema.ResourceData, client interface{}, shouldSyncRemote bool) error {
 	ID, err := strconv.ParseInt(d.Id(), 10, 64)
 	if err != nil {
 		return fmt.Errorf("ID %s is not numeric: %w", d.Id(), err)
 	}
 	group, err := client.(*checkly.Client).GetGroup(ID)
 	if err != nil {
-		return fmt.Errorf("API error: %v", err)
+		if shouldSyncRemote && strings.Contains(err.Error(), "404") {
+			// the resource was deleted remotely, try to recreate it
+			return resourceCheckGroupCreate(d, client)
+		}
+		return fmt.Errorf("API error: %w", err)
 	}
 	return resourceDataFromCheckGroup(&group, d)
 }
@@ -352,7 +361,6 @@ func setFromAPICheckDefaults(a checkly.APICheckDefaults) []tfMap {
 	s["headers"] = mapFromKeyValues(a.Headers)
 	s["query_parameters"] = mapFromKeyValues(a.QueryParameters)
 	s["assertion"] = setFromAssertions(a.Assertions)
-
 	s["basic_auth"] = checkGroupSetFromBasicAuth(a.BasicAuth)
 	return []tfMap{s}
 }
