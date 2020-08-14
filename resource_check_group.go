@@ -257,23 +257,21 @@ func resourceCheckGroupCreate(d *schema.ResourceData, client interface{}) error 
 		return fmt.Errorf("API error: %w", err)
 	}
 	d.SetId(fmt.Sprintf("%d", gotGroup.ID))
-	return readCheckGroup(d, client, false)
+	return resourceCheckGroupRead(d, client)
 }
 
 func resourceCheckGroupRead(d *schema.ResourceData, client interface{}) error {
-	return readCheckGroup(d, client, true)
-}
-
-func readCheckGroup(d *schema.ResourceData, client interface{}, shouldSyncRemote bool) error {
 	ID, err := strconv.ParseInt(d.Id(), 10, 64)
 	if err != nil {
 		return fmt.Errorf("ID %s is not numeric: %w", d.Id(), err)
 	}
 	group, err := client.(*checkly.Client).GetGroup(ID)
 	if err != nil {
-		if shouldSyncRemote && strings.Contains(err.Error(), "404") {
-			// the resource was deleted remotely, try to recreate it
-			return resourceCheckGroupCreate(d, client)
+		if strings.Contains(err.Error(), "404") {
+			//if resource is deleted remotely, then mark it as
+			//successfully gone by unsetting it's ID
+			d.SetId("")
+			return nil
 		}
 		return fmt.Errorf("API error: %w", err)
 	}
