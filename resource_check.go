@@ -344,33 +344,17 @@ func resourceCheckCreate(d *schema.ResourceData, client interface{}) error {
 		return fmt.Errorf("API error 1: %w, Check: %s", err, string(checkJSON))
 	}
 	d.SetId(gotCheck.ID)
-	return readCheck(d, client, false)
+	return resourceCheckRead(d, client)
 }
 
 func resourceCheckRead(d *schema.ResourceData, client interface{}) error {
-	return readCheck(d, client, true)
-}
-
-func readCheck(d *schema.ResourceData, client interface{}, shouldSyncRemote bool) error {
 	check, err := client.(*checkly.Client).Get(d.Id())
 	if err != nil {
-		if shouldSyncRemote && strings.Contains(err.Error(), "404") {
-			// the resource was deleted remotely, try to recreate it
-			{
-				//if a missing check belongs to a missing checkGroup and we try to sync it
-				//before synching the checkGroup, it will result in an error on the server side.
-				//To avoid this error we make sure the checkGroup exists before trying to
-				//recreate the check, if the group doesn't exist we just unset group_id
-
-				if gid, ok := d.Get("group_id").(int); ok {
-					gd := &schema.ResourceData{}
-					gd.SetId(fmt.Sprintf("%d", gid))
-					if err := readCheckGroup(gd, client, false); err != nil {
-						d.Set("group_id", nil)
-					}
-				}
-			}
-			return resourceCheckCreate(d, client)
+		if strings.Contains(err.Error(), "404") {
+			//if resource is deleted remotely, then mark it as
+			//successfully gone by unsetting it's ID
+			d.SetId("")
+			return nil
 		}
 		return fmt.Errorf("API error 2: %w", err)
 	}
