@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/checkly/checkly-go-sdk"
-	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 // Provider makes the provider available to Terraform.
