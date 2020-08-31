@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/checkly/checkly-go-sdk"
-	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 // tfMap is a shorthand alias for convenience; Terraform uses this type a *lot*.
