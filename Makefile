@@ -22,8 +22,8 @@ apply:
 	terraform apply
 
 format-code:
-	go fmt
+	go fmt ./checkly
 	terraform fmt
 
 testacc:
-	TF_ACC=1 go test ./ -v
+	TF_ACC=1 go test ./checkly -v

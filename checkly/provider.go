@@ -1,4 +1,4 @@
-package main
+package checkly
 
 import (
 	"fmt"

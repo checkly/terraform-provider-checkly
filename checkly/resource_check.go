@@ -1,4 +1,4 @@
-package main
+package checkly
 
 import (
 	"encoding/json"
@@ -234,14 +234,18 @@ func resourceCheck() *schema.Resource {
 				MaxItems: 1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"body": {
+						"method": {
 							Type:     schema.TypeString,
 							Optional: true,
+							Default:  "GET",
 						},
-						"body_type": {
+						"url": {
 							Type:     schema.TypeString,
+							Required: true,
+						},
+						"follow_redirects": {
+							Type:     schema.TypeBool,
 							Optional: true,
-							Default:  "NONE",
 						},
 						"headers": {
 							Type:     schema.TypeMap,
@@ -259,18 +263,14 @@ func resourceCheck() *schema.Resource {
 								return []tfMap{}, nil
 							},
 						},
-						"follow_redirects": {
-							Type:     schema.TypeBool,
-							Optional: true,
-						},
-						"method": {
+						"body": {
 							Type:     schema.TypeString,
 							Optional: true,
-							Default:  "GET",
 						},
-						"url": {
+						"body_type": {
 							Type:     schema.TypeString,
-							Required: true,
+							Optional: true,
+							Default:  "NONE",
 						},
 						"assertion": {
 							Type:     schema.TypeSet,
