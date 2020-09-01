@@ -1,4 +1,4 @@
-package main
+package checkly
 
 import (
 	"fmt"
@@ -243,6 +243,7 @@ func resourceCheckGroup() *schema.Resource {
 					},
 				},
 			},
+			//todo setupSnippetId, tearDownSnippetId,
 		},
 	}
 }
