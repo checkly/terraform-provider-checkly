@@ -21,6 +21,8 @@ func Provider() *schema.Provider {
 		ResourcesMap: map[string]*schema.Resource{
 			"checkly_check":       resourceCheck(),
 			"checkly_check_group": resourceCheckGroup(),
+			"checkly_snippet": resourceSnippet(),
+			//"checkly_environment_variable": resourceEnvironmentVariable(),
 		},
 		ConfigureFunc: func(r *schema.ResourceData) (interface{}, error) {
 			client := checkly.NewClient(r.Get("api_key").(string))
