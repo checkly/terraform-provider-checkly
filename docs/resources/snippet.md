@@ -22,7 +22,6 @@ EOT
 }
 ```
 
-
 Or using terraform local file provider
 
 ```terraform
