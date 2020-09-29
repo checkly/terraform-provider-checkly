@@ -22,7 +22,7 @@ func Provider() *schema.Provider {
 			"checkly_check":       resourceCheck(),
 			"checkly_check_group": resourceCheckGroup(),
 			"checkly_snippet":     resourceSnippet(),
-			//"checkly_environment_variable": resourceEnvironmentVariable(),
+			// "checkly_environment_variable": resourceEnvironmentVariable(),
 		},
 		ConfigureFunc: func(r *schema.ResourceData) (interface{}, error) {
 			client := checkly.NewClient(r.Get("api_key").(string))
