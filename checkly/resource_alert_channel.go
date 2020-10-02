@@ -174,9 +174,9 @@ func resourceAlertChannelCreate(d *schema.ResourceData, client interface{}) erro
 	if err != nil {
 		cjson, _ := json.Marshal(ac.GetConfig())
 		return makeError("resourceAlertChannelCreate.2", &ErrorLog{
-			"err":   err.Error(),
-			"type":  ac.Type,
-			"cjson": string(cjson),
+			"err":    err.Error(),
+			"type":   ac.Type,
+			"config": string(cjson),
 		})
 	}
 	d.SetId(fmt.Sprintf("%d", resp.ID))
