@@ -1,15 +1,5 @@
 #-- This file provides example terraform resource definitions that create checkly resources
 
-################################# SETUP ################################# 
-
-#--- first we need to define a variable for checkly API key & connect it to TF_CHECKLY_API_KEY environment variable
-variable "checkly_api_key" {
-}
-
-provider "checkly" {
-  api_key = var.checkly_api_key
-}
-
 ################################# API CHECKS ################################# 
 
 #----------------------------EXAMPLE----------------------------#
