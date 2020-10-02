@@ -14,8 +14,13 @@ replace-dep:
 	go mod edit -replace github.com/checkly/checkly-go-sdk=../checkly-go-sdk
 
 plan:
+	# for dev purposes only, build the provider and install 
+	# it as dev/checkly/check 0.0.1, 
 	go build -o terraform-provider-checkly
-	terraform init  
+	mkdir -p ~/.terraform.d/plugins/dev/checkly/checkly/0.0.1/darwin_amd64/
+	chmod +x terraform-provider-checkly
+	mv terraform-provider-checkly ~/.terraform.d/plugins/dev/checkly/checkly/0.0.1/darwin_amd64/terraform-provider-checkly_v0.0.1
+	TF_LOG=TRACE terraform init  
 	terraform plan 
 
 apply:
