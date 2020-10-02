@@ -6,8 +6,9 @@ import (
 	"strconv"
 	"strings"
 
-	checkly "github.com/checkly/checkly-go-sdk"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	checkly "github.com/checkly/checkly-go-sdk"
 )
 
 func resourceCheckGroup() *schema.Resource {
@@ -65,6 +66,22 @@ func resourceCheckGroup() *schema.Resource {
 			"local_teardown_script": {
 				Type:     schema.TypeString,
 				Optional: true,
+			},
+			"alert_channel_subscription": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"channel_id": {
+							Type:     schema.TypeInt,
+							Required: true,
+						},
+						"activated": {
+							Type:     schema.TypeBool,
+							Required: true,
+						},
+					},
+				},
 			},
 			"alert_settings": {
 				Type:     schema.TypeSet,
@@ -255,7 +272,7 @@ func resourceCheckGroupCreate(d *schema.ResourceData, client interface{}) error 
 	}
 	gotGroup, err := client.(*checkly.Client).CreateGroup(group)
 	if err != nil {
-		return fmt.Errorf("API error: %w", err)
+		return fmt.Errorf("API error11: %w", err)
 	}
 	d.SetId(fmt.Sprintf("%d", gotGroup.ID))
 	return resourceCheckGroupRead(d, client)
@@ -274,7 +291,7 @@ func resourceCheckGroupRead(d *schema.ResourceData, client interface{}) error {
 			d.SetId("")
 			return nil
 		}
-		return fmt.Errorf("API error: %w", err)
+		return fmt.Errorf("API error12: %w", err)
 	}
 	return resourceDataFromCheckGroup(&group, d)
 }
@@ -286,7 +303,7 @@ func resourceCheckGroupUpdate(d *schema.ResourceData, client interface{}) error 
 	}
 	_, err = client.(*checkly.Client).UpdateGroup(group.ID, group)
 	if err != nil {
-		return fmt.Errorf("API error: %w", err)
+		return fmt.Errorf("API error13: %w", err)
 	}
 	d.SetId(fmt.Sprintf("%d", group.ID))
 	return resourceCheckGroupRead(d, client)
@@ -298,7 +315,7 @@ func resourceCheckGroupDelete(d *schema.ResourceData, client interface{}) error 
 		return fmt.Errorf("ID %s is not numeric: %w", d.Id(), err)
 	}
 	if err := client.(*checkly.Client).DeleteGroup(ID); err != nil {
-		return fmt.Errorf("API error: %w", err)
+		return fmt.Errorf("API error14: %w", err)
 	}
 	return nil
 }
@@ -324,6 +341,7 @@ func resourceDataFromCheckGroup(g *checkly.Group, d *schema.ResourceData) error 
 	if err := d.Set("api_check_defaults", setFromAPICheckDefaults(g.APICheckDefaults)); err != nil {
 		return fmt.Errorf("error setting request for resource %s: %s", d.Id(), err)
 	}
+	d.Set("alert_channel_subscription", g.AlertChannelSubscriptions)
 	d.SetId(d.Id())
 	return nil
 }
@@ -337,20 +355,21 @@ func checkGroupFromResourceData(d *schema.ResourceData) (checkly.Group, error) {
 		ID = 0
 	}
 	return checkly.Group{
-		ID:                     ID,
-		Name:                   d.Get("name").(string),
-		Concurrency:            d.Get("concurrency").(int),
-		Activated:              d.Get("activated").(bool),
-		Muted:                  d.Get("muted").(bool),
-		Locations:              stringsFromSet(d.Get("locations").(*schema.Set)),
-		EnvironmentVariables:   envVarsFromMap(d.Get("environment_variables").(tfMap)),
-		DoubleCheck:            d.Get("double_check").(bool),
-		Tags:                   stringsFromSet(d.Get("tags").(*schema.Set)),
-		LocalSetupScript:       d.Get("local_setup_script").(string),
-		LocalTearDownScript:    d.Get("local_teardown_script").(string),
-		AlertSettings:          alertSettingsFromSet(d.Get("alert_settings").(*schema.Set)),
-		UseGlobalAlertSettings: d.Get("use_global_alert_settings").(bool),
-		APICheckDefaults:       apiCheckDefaultsFromSet(d.Get("api_check_defaults").(*schema.Set)),
+		ID:                        ID,
+		Name:                      d.Get("name").(string),
+		Concurrency:               d.Get("concurrency").(int),
+		Activated:                 d.Get("activated").(bool),
+		Muted:                     d.Get("muted").(bool),
+		Locations:                 stringsFromSet(d.Get("locations").(*schema.Set)),
+		EnvironmentVariables:      envVarsFromMap(d.Get("environment_variables").(tfMap)),
+		DoubleCheck:               d.Get("double_check").(bool),
+		Tags:                      stringsFromSet(d.Get("tags").(*schema.Set)),
+		LocalSetupScript:          d.Get("local_setup_script").(string),
+		LocalTearDownScript:       d.Get("local_teardown_script").(string),
+		AlertSettings:             alertSettingsFromSet(d.Get("alert_settings").(*schema.Set)),
+		UseGlobalAlertSettings:    d.Get("use_global_alert_settings").(bool),
+		APICheckDefaults:          apiCheckDefaultsFromSet(d.Get("api_check_defaults").(*schema.Set)),
+		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(d.Get("alert_channel_subscription").([]interface{})),
 	}, nil
 }
 

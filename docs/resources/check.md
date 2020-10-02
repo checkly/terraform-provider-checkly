@@ -152,6 +152,43 @@ resource "checkly_check" "browser-check-1" {
 }
 ```
 
+## Example Usage - With Alert channels
+first define an alert channel
+```terraform 
+resource "checkly_alert_channel" "email_ac1" {
+  email {
+    address = "info1@example.com"
+  }
+}
+
+resource "checkly_alert_channel" "email_ac2" {
+  email {
+    address = "info2@example.com"
+  }
+}
+```
+
+then connect the check to the alert channel
+```terraform
+resource "checkly_check" "example-check" {
+  name                      = "Example check"
+  ....
+
+  alert_channel_subscription {
+    channel_id = checkly_alert_channel.email_ac1.id
+    activated  = true
+  }
+
+  alert_channel_subscription {
+    channel_id = checkly_alert_channel.email_ac2.id
+    activated  = true
+  }
+
+}
+```
+ 
+
+
 ## Argument Reference  
 The following arguments are supported:
 * `name` - (Required) The name of the check.  

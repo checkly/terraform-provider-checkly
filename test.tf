@@ -322,11 +322,11 @@ resource "checkly_check_group" "check-group-3" {
     url = "http://example.com/"
 
     headers = {
-      X-Test = "foo"
+      X-Test = "fooheader"
     }
 
     query_parameters = {
-      query = "foo"
+      query = "foo-val"
     }
 
     assertion {
@@ -415,4 +415,103 @@ resource "checkly_check" "api-check-group-1_2" {
 
   group_id    = checkly_check_group.check-group-1.id
   group_order = 2
+}
+
+################################# ALERT CHANNELS ################################# 
+
+resource "checkly_alert_channel" "email_ac" {
+  email {
+    address = "info@example.com"
+  }
+}
+
+resource "checkly_alert_channel" "slack_ac" {
+  slack {
+    channel = "checkly_alerts"
+    url     = "https://slack.com/webhookurl"
+  }
+}
+
+resource "checkly_alert_channel" "sms_ac" {
+  sms {
+    name   = "smsalerts"
+    number = "4917512345678"
+  }
+}
+
+
+resource "checkly_alert_channel" "opsgenie_ac" {
+  opsgenie {
+    name     = "opsalert"
+    api_key  = "key1"
+    region   = "us-1"
+    priority = "highp"
+  }
+}
+
+resource "checkly_alert_channel" "webhook_ac" {
+  webhook {
+    name   = "webhhookalerts"
+    method = "get"
+    headers = {
+      X-HEADER-1 = "foo"
+    }
+    query_parameters = {
+      query1 = "bar"
+    }
+    template       = "tmpl"
+    url            = "https://example.com/webhook"
+    webhook_secret = "foo-secret"
+  }
+
+}
+
+resource "checkly_check" "check-with-alert-channels" {
+  name              = "check-with-alertc-1"
+  type              = "API"
+  frequency         = 60
+  activated         = true
+  muted             = true
+  double_check      = true
+  max_response_time = 18000
+  locations         = []
+
+  request {
+    method = "GET"
+    url    = "https://api.checklyhq.com/public-stats"
+
+    assertion {
+      comparison = "EQUALS"
+      property   = ""
+      source     = "STATUS_CODE"
+      target     = "200"
+    }
+  }
+
+  alert_channel_subscription {
+    channel_id = checkly_alert_channel.email_ac.id
+    activated  = true
+  }
+
+  alert_channel_subscription {
+    channel_id = checkly_alert_channel.sms_ac.id
+    activated  = true
+  }
+
+}
+
+resource "checkly_check_group" "group-with-alert-channels" {
+  name        = "group-with-alertc"
+  activated   = true
+  muted       = false
+  concurrency = 3
+  locations = [
+    "eu-west-1",
+    "eu-west-2",
+  ]
+
+  alert_channel_subscription {
+    channel_id = checkly_alert_channel.email_ac.id
+    activated  = true
+  }
 }

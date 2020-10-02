@@ -29,6 +29,7 @@ plan:
 	mv terraform-provider-checkly ~/.terraform.d/plugins/dev/checkly/checkly/0.0.1/darwin_amd64/terraform-provider-checkly_v0.0.1
 	TF_LOG=TRACE terraform init  
 	terraform plan 
+	terraform apply
 
 apply:
 	terraform apply

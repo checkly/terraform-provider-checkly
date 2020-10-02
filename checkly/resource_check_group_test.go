@@ -4,9 +4,10 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/checkly/checkly-go-sdk"
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+
+	"github.com/checkly/checkly-go-sdk"
 )
 
 func TestEncodeDecodeGroupResource(t *testing.T) {
