@@ -45,6 +45,16 @@ Add a `checkly_check` resource to your resource file. You can add **API checks**
 This first example is a very minimal **API check**.
 
 ```terraform
+terraform {
+  required_version = ">= 0.13"
+  required_providers {
+    checkly = {
+      source  = "checkly/checkly"
+      version = "~> 0.6.9"
+    }
+  }
+}
+
 variable "checkly_api_key" {}
 
 provider "checkly" {
