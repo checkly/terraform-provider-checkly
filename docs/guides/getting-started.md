@@ -2,14 +2,14 @@
 
 1. Make sure terraform 0.13 is installed on your system
 
-2. Create a `versions.tf` terraform config file:
+2. Create a `versions.tf` terraform config file in your project:
 ```terraform
 terraform {
   required_version = ">= 0.13"
   required_providers {
     checkly = {
-      source = "local/checkly/checkly"
-      version = "0.6.9"
+      source = "checkly/checkly"
+      version = "0.7.1"
     }
   }
 }
