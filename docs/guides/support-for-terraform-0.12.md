@@ -41,7 +41,6 @@ provider "checkly" {
   api_key = var.checkly_api_key
 }
 
-
 resource "checkly_group" "group1" {
   name        = "Group 1"
   activated   = true
