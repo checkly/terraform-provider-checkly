@@ -4,6 +4,8 @@ This file provides example terraform resource definitions that create checkly re
 
 ## API checks
 
+API checks combine an HTTP request with one or more assertions to verify the status of an API endpoint.
+
 ### Minimal API check definition
 
 ```terraform
@@ -224,6 +226,8 @@ resource "checkly_check" "api-check-4" {
 
 ## Browser checks
 
+A browser check is a Node.js script that starts up a Chrome browser and interacts with a web page to validate assumptions about that page. Example might be: Is my shopping cart visible? Can users add products to the shopping cart? Can users log in to my app?
+
 ### Browser check which runs E2E test
 
 ```terraform
@@ -273,7 +277,7 @@ EOT
 ```
 
 ## Check groups
-Checkly's groups feature allows you to group together a set of related checks, which can also share default settings for various attributes. Here is an example check group:
+Checkly's groups feature allows you to group together a set of related checks, which can also share default settings for various attributes.
 
 ### Check group with minimal configuration
 

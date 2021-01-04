@@ -1,7 +1,7 @@
-# Support for terraform 0.12
-If you're still using terraform 0.12 and are not ready to upgrade yet, you can still still use checkly provider, please follow the following instructions to set it up:
+# Support for Terraform 0.12
+If you're still using Terraform 0.12 and are not ready to upgrade yet, you can still still use checkly provider, please follow the following instructions to set it up:
 
-1. make sure terraform 0.12 is installed on your system
+1. Make sure terraform 0.12 is installed on your system
 
 2. Install checkly provider
 
@@ -30,7 +30,7 @@ Now expose the API key as an environment variable in your shell:
 export TF_VAR_checkly_api_key=<my_api_key>
 ```
 
-### usage
+### Usage
 create a tf config file, for example, `example.tf`
 
 ```terraform
@@ -50,4 +50,4 @@ resource "checkly_group" "group1" {
 }
 ```
 
-then you're ready to run `terraform init`, `terraform plan` and `terraform apply`
+Then you are ready to run `terraform init`, `terraform plan` and `terraform apply`.

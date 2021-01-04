@@ -1,4 +1,4 @@
-# Checkly Provider
+# Checkly provider
 This Terraform provider enables users to manage [Checkly](https://checklyhq.com) resources like checks, groups and snippets. 
 
 You can find a quick [step-by-step guide](https://www.checklyhq.com/docs/integrations/terraform/) in Checkly's documentation.
@@ -10,7 +10,7 @@ Now expose the API key as an environment variable in your shell:
 
 `$ export TF_VAR_checkly_api_key="your-api-key"`
 
-## Example Usage
+## Example usage
 
 ```terraform
 # define a variable to hold the API Key
