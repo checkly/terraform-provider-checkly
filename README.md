@@ -12,15 +12,6 @@
 
 This Terraform provider enables users to manage [Checkly](https://checklyhq.com) resources like checks, groups, snippets and more.
 
-## Supported resources
-
-The Checkly provider provides the following resources to interact with [Checklyhq.com](https://checklyhq.com), we'll be adding more soon. 
-- [x] Checks
-- [x] Check groups
-- [ ] Alert channels
-- [x] Snippets
-- [ ] Environment variables
-
 ## Installing the provider
 
 Please refer to the [installation guide](https://github.com/checkly/terraform-provider-checkly/blob/master/docs/guides/getting-started.md)
