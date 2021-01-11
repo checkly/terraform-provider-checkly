@@ -444,8 +444,8 @@ resource "checkly_alert_channel" "opsgenie_ac" {
   opsgenie {
     name     = "opsalert"
     api_key  = "key1"
-    region   = "us-1"
-    priority = "highp"
+    region   = "EU"
+    priority = "P1"
   }
 }
 
