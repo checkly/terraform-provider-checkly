@@ -4,9 +4,10 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/checkly/checkly-go-sdk"
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+
+	"github.com/checkly/checkly-go-sdk"
 )
 
 func TestEncodeDecodeGroupResource(t *testing.T) {
@@ -80,8 +81,9 @@ var wantGroup = checkly.Group{
 			AlertThreshold: 30,
 		},
 	},
-	LocalSetupScript:    "setup-test",
-	LocalTearDownScript: "teardown-test",
+	LocalSetupScript:          "setup-test",
+	LocalTearDownScript:       "teardown-test",
+	AlertChannelSubscriptions: []checkly.AlertChannelSubscription{},
 }
 
 func TestAccCheckGroupEmptyConfig(t *testing.T) {

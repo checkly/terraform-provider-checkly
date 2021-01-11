@@ -86,7 +86,42 @@ resource "checkly_check" "test-check1" {
   group_id    = checkly_check_group.test-group1.id
   group_order = 1
 }
-```  
+```
+
+## Example Usage - With Alert channels
+first define an alert channel
+```terraform 
+resource "checkly_alert_channel" "email_ac1" {
+  email {
+    address = "info@example.com"
+  }
+}
+resource "checkly_alert_channel" "email_ac2" {
+  email {
+    address = "info2@example.com"
+  }
+}
+```
+
+then connect the check group to the alert channel
+```terraform
+resource "checkly_check_group" "test-group1" {
+  name      = "My test group 1"
+  ....
+
+  alert_channel_subscription {
+    channel_id = checkly_alert_channel.email_ac1.id
+    activated  = true
+  }
+
+  alert_channel_subscription {
+    channel_id = checkly_alert_channel.email_ac2.id
+    activated  = true
+  }
+
+
+}
+```
 
 ## Argument Reference  
 * `name` (Required) The name of the check group.  

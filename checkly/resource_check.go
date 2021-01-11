@@ -7,8 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/checkly/checkly-go-sdk"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/checkly/checkly-go-sdk"
 )
 
 // tfMap is a shorthand alias for convenience; Terraform uses this type a *lot*.
@@ -134,6 +135,22 @@ func resourceCheck() *schema.Resource {
 			"local_teardown_script": {
 				Type:     schema.TypeString,
 				Optional: true,
+			},
+			"alert_channel_subscription": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"channel_id": {
+							Type:     schema.TypeInt,
+							Required: true,
+						},
+						"activated": {
+							Type:     schema.TypeBool,
+							Required: true,
+						},
+					},
+				},
 			},
 			"alert_settings": {
 				Type:     schema.TypeSet,
@@ -417,6 +434,7 @@ func resourceDataFromCheck(c *checkly.Check, d *schema.ResourceData) error {
 	}
 	d.Set("group_id", c.GroupID)
 	d.Set("group_order", c.GroupOrder)
+	d.Set("alert_channel_subscription", c.AlertChannelSubscriptions)
 	d.SetId(d.Id())
 	return nil
 }
@@ -507,30 +525,33 @@ func setFromBasicAuth(b *checkly.BasicAuth) []tfMap {
 }
 
 func checkFromResourceData(d *schema.ResourceData) (checkly.Check, error) {
+
+	//return checkly.Check{}, fmt.Errorf("AAA %v", alertChannelSubscriptionsFromSet(d.Get("alert_channel_subscription").([]interface{})))
 	check := checkly.Check{
-		ID:                     d.Id(),
-		Name:                   d.Get("name").(string),
-		Type:                   d.Get("type").(string),
-		Frequency:              d.Get("frequency").(int),
-		Activated:              d.Get("activated").(bool),
-		Muted:                  d.Get("muted").(bool),
-		ShouldFail:             d.Get("should_fail").(bool),
-		Locations:              stringsFromSet(d.Get("locations").(*schema.Set)),
-		Script:                 d.Get("script").(string),
-		DegradedResponseTime:   d.Get("degraded_response_time").(int),
-		MaxResponseTime:        d.Get("max_response_time").(int),
-		EnvironmentVariables:   envVarsFromMap(d.Get("environment_variables").(tfMap)),
-		DoubleCheck:            d.Get("double_check").(bool),
-		Tags:                   stringsFromSet(d.Get("tags").(*schema.Set)),
-		SSLCheck:               d.Get("ssl_check").(bool),
-		SetupSnippetID:         int64(d.Get("setup_snippet_id").(int)),
-		TearDownSnippetID:      int64(d.Get("teardown_snippet_id").(int)),
-		LocalSetupScript:       d.Get("local_setup_script").(string),
-		LocalTearDownScript:    d.Get("local_teardown_script").(string),
-		AlertSettings:          alertSettingsFromSet(d.Get("alert_settings").(*schema.Set)),
-		UseGlobalAlertSettings: d.Get("use_global_alert_settings").(bool),
-		GroupID:                int64(d.Get("group_id").(int)),
-		GroupOrder:             d.Get("group_order").(int),
+		ID:                        d.Id(),
+		Name:                      d.Get("name").(string),
+		Type:                      d.Get("type").(string),
+		Frequency:                 d.Get("frequency").(int),
+		Activated:                 d.Get("activated").(bool),
+		Muted:                     d.Get("muted").(bool),
+		ShouldFail:                d.Get("should_fail").(bool),
+		Locations:                 stringsFromSet(d.Get("locations").(*schema.Set)),
+		Script:                    d.Get("script").(string),
+		DegradedResponseTime:      d.Get("degraded_response_time").(int),
+		MaxResponseTime:           d.Get("max_response_time").(int),
+		EnvironmentVariables:      envVarsFromMap(d.Get("environment_variables").(tfMap)),
+		DoubleCheck:               d.Get("double_check").(bool),
+		Tags:                      stringsFromSet(d.Get("tags").(*schema.Set)),
+		SSLCheck:                  d.Get("ssl_check").(bool),
+		SetupSnippetID:            int64(d.Get("setup_snippet_id").(int)),
+		TearDownSnippetID:         int64(d.Get("teardown_snippet_id").(int)),
+		LocalSetupScript:          d.Get("local_setup_script").(string),
+		LocalTearDownScript:       d.Get("local_teardown_script").(string),
+		AlertSettings:             alertSettingsFromSet(d.Get("alert_settings").(*schema.Set)),
+		UseGlobalAlertSettings:    d.Get("use_global_alert_settings").(bool),
+		GroupID:                   int64(d.Get("group_id").(int)),
+		GroupOrder:                d.Get("group_order").(int),
+		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(d.Get("alert_channel_subscription").([]interface{})),
 	}
 	if check.Type == checkly.TypeAPI {
 		// this will prevent subsequent apply from causing a tf config change in browser checks
@@ -588,6 +609,29 @@ func alertSettingsFromSet(s *schema.Set) checkly.AlertSettings {
 		Reminders:           remindersFromSet(res["reminders"].(*schema.Set)),
 		SSLCertificates:     sslCertificatesFromSet(res["ssl_certificates"].(*schema.Set)),
 	}
+}
+
+func alertChannelSubscriptionsFromSet(s []interface{}) []checkly.AlertChannelSubscription {
+	res := []checkly.AlertChannelSubscription{}
+	if len(s) == 0 {
+		return res
+	}
+
+	//s := d.Get("alert_channel_subscription").([]interface{})
+	for _, it := range s {
+		tm := it.(tfMap)
+		chid := tm["channel_id"].(int)
+		res = append(res, checkly.AlertChannelSubscription{
+			Activated: (tm["activated"] == "true"),
+			ChannelID: int64(chid),
+		})
+	}
+
+	//return checkly.Check{}, fmt.Errorf("E: %v", s)
+	//it := s.List()[0].(tfMap)
+
+	//d.Get("alert_channel_subscriptions").([]checkly.AlertChannelSubscription)
+	return res
 }
 
 func runBasedEscalationFromSet(s *schema.Set) checkly.RunBasedEscalation {
