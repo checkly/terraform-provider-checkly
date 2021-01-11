@@ -11,7 +11,6 @@ import (
 )
 
 const (
-	AcFieldType               = "type"
 	AcFieldEmail              = "email"
 	AcFieldEmailAddress       = "address"
 	AcFieldSlack              = "slack"
@@ -45,10 +44,6 @@ func resourceAlertChannel() *schema.Resource {
 			State: schema.ImportStatePassthrough,
 		},
 		Schema: map[string]*schema.Schema{
-			AcFieldType: {
-				Type:     schema.TypeString,
-				Optional: true,
-			},
 			AcFieldEmail: {
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -177,11 +172,11 @@ func resourceAlertChannelCreate(d *schema.ResourceData, client interface{}) erro
 	}
 	resp, err := client.(*checkly.Client).CreateAlertChannel(ac)
 	if err != nil {
-		acjson, _ := json.Marshal(ac)
+		cjson, _ := json.Marshal(ac.GetConfig())
 		return makeError("resourceAlertChannelCreate.2", &ErrorLog{
-			"err":    err,
-			"type":   ac.Type,
-			"config": string(acjson),
+			"err":   err.Error(),
+			"type":  ac.Type,
+			"cjson": string(cjson),
 		})
 	}
 	d.SetId(fmt.Sprintf("%d", resp.ID))

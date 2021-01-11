@@ -5,9 +5,10 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/checkly/checkly-go-sdk"
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+
+	"github.com/checkly/checkly-go-sdk"
 )
 
 func TestAccCheckRequiredFields(t *testing.T) {
@@ -420,6 +421,7 @@ var wantCheck = checkly.Check{
 func TestEncodeDecodeResource(t *testing.T) {
 	res := resourceCheck()
 	data := res.TestResourceData()
+	wantCheck.AlertChannelSubscriptions = []checkly.AlertChannelSubscription{}
 	resourceDataFromCheck(&wantCheck, data)
 	got, err := checkFromResourceData(data)
 	if err != nil {

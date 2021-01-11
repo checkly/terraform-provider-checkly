@@ -501,7 +501,7 @@ resource "checkly_check" "check-with-alert-channels" {
 }
 
 resource "checkly_check_group" "group-with-alert-channels" {
-  name        = "group-with-alertc"
+  name        = "group-with-alert"
   activated   = true
   muted       = false
   concurrency = 3
@@ -513,5 +513,9 @@ resource "checkly_check_group" "group-with-alert-channels" {
   alert_channel_subscription {
     channel_id = checkly_alert_channel.email_ac.id
     activated  = true
+  }
+  alert_channel_subscription {
+    channel_id = checkly_alert_channel.sms_ac.id
+    activated  = false
   }
 }

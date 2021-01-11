@@ -81,8 +81,9 @@ var wantGroup = checkly.Group{
 			AlertThreshold: 30,
 		},
 	},
-	LocalSetupScript:    "setup-test",
-	LocalTearDownScript: "teardown-test",
+	LocalSetupScript:          "setup-test",
+	LocalTearDownScript:       "teardown-test",
+	AlertChannelSubscriptions: []checkly.AlertChannelSubscription{},
 }
 
 func TestAccCheckGroupEmptyConfig(t *testing.T) {
