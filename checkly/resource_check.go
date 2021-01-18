@@ -616,21 +616,15 @@ func alertChannelSubscriptionsFromSet(s []interface{}) []checkly.AlertChannelSub
 	if len(s) == 0 {
 		return res
 	}
-
-	//s := d.Get("alert_channel_subscription").([]interface{})
 	for _, it := range s {
 		tm := it.(tfMap)
 		chid := tm["channel_id"].(int)
+		activated := tm["activated"].(bool)
 		res = append(res, checkly.AlertChannelSubscription{
-			Activated: (tm["activated"] == "true"),
+			Activated: activated,
 			ChannelID: int64(chid),
 		})
 	}
-
-	//return checkly.Check{}, fmt.Errorf("E: %v", s)
-	//it := s.List()[0].(tfMap)
-
-	//d.Get("alert_channel_subscriptions").([]checkly.AlertChannelSubscription)
 	return res
 }
 
