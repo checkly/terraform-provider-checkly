@@ -7,8 +7,8 @@ Checkly's Alert Channels feature allows you to define global alerting channels f
 *An Email alert channel*
 ```terraform
 resource "checkly_alert_channel" "ac1" {
-    email {
-        address = "john@example.com"
+  email {
+    address = "john@example.com"
   }
 }
 ```  
@@ -16,9 +16,9 @@ resource "checkly_alert_channel" "ac1" {
 *A SMS alert channel*
 ```terraform
 resource "checkly_alert_channel" "ac1" {
-    sms {
-        name = "john"
-        number = "0123456789"
+  sms {
+    name = "john"
+    number = "0123456789"
   }
 }
 ```  
@@ -26,9 +26,9 @@ resource "checkly_alert_channel" "ac1" {
 *A Slack alert channel*
 ```terraform
 resource "checkly_alert_channel" "ac1" {
-    slack {
-        channel = "#checkly-notifications"
-        url = "https://slack.com/webhook"
+  slack {
+    channel = "#checkly-notifications"
+    url = "https://slack.com/webhook"
   }
 }
 ```  
@@ -36,12 +36,11 @@ resource "checkly_alert_channel" "ac1" {
 *An Opsgenie alert channel*
 ```terraform
 resource "checkly_alert_channel" "ac1" {
-    opsgenie {
-        name = "opsalerts"
-        api_key = "fookey"
-        region = "fooregion"
-        priority = "foopriority"
-
+  opsgenie {
+    name = "opsalerts"
+    api_key = "fookey"
+    region = "fooregion"
+    priority = "foopriority"
   }
 }
 ```  
@@ -50,13 +49,12 @@ resource "checkly_alert_channel" "ac1" {
 *An Webhook alert channel*
 ```terraform
 resource "checkly_alert_channel" "ac1" {
-    webhook {
-        name = "foo"
-        method = "get"
-        template = "footemplate"
-        url = "http://example.com/foo"
-        webhook_secret = "foosecret"
-
+  webhook {
+    name = "foo"
+    method = "get"
+    template = "footemplate"
+    url = "http://example.com/foo"
+    webhook_secret = "foosecret"
   }
 }
 ```  
@@ -71,7 +69,6 @@ resource "checkly_check" "example-check" {
     channel_id = checkly_alert_channel.email_ac.id
     activated  = true
   }
-
 
   alert_channel_subscription {
     channel_id = checkly_alert_channel.sms_ac.id
@@ -91,7 +88,6 @@ resource "checkly_check_group" "test-group1" {
     channel_id = checkly_alert_channel.email_ac.id
     activated  = true
   }
-
 
   alert_channel_subscription {
     channel_id = checkly_alert_channel.sms_ac.id
