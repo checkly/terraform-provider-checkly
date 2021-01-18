@@ -50,7 +50,7 @@ resource "checkly_alert_channel" "ac1" {
 *An Webhook alert channel*
 ```terraform
 resource "checkly_alert_channel" "ac1" {
-    opsgenie {
+    webhook {
         name = "foo"
         method = "get"
         template = "footemplate"
@@ -73,7 +73,7 @@ resource "checkly_check" "example-check" {
   }
 
 
-   alert_channel_subscription {
+  alert_channel_subscription {
     channel_id = checkly_alert_channel.sms_ac.id
     activated  = true
   }
@@ -93,7 +93,7 @@ resource "checkly_check_group" "test-group1" {
   }
 
 
-   alert_channel_subscription {
+  alert_channel_subscription {
     channel_id = checkly_alert_channel.sms_ac.id
     activated  = true
   }
