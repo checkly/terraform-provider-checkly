@@ -118,8 +118,23 @@ resource "checkly_check_group" "test-group1" {
     channel_id = checkly_alert_channel.email_ac2.id
     activated  = true
   }
+}
+```
 
+## Example Usage - With existing Alert channels
+You can assign existing alert channels that were created via the checkly UI
 
+Simply go to the alert you want to add in the checkly UI and copy the channel id from the URL to your terraform file like below, e.g. 1234 is the alert channel id at this URL https://app.checklyhq.com/alert-settings/channels/edit/email/1234
+
+```terraform
+resource "checkly_check_group" "test-group1" {
+  name      = "My test group 1"
+  ....
+
+  alert_channel_subscription {
+    channel_id = 1234
+    activated  = true
+  }
 }
 ```
 
