@@ -284,19 +284,25 @@ func alertChannelFromResourceData(d *schema.ResourceData) (checkly.AlertChannel,
 		ac.ID = ID
 	}
 
-	sr := d.Get(AcFieldSendRecovery).(bool)
-	ac.SendRecovery = &sr
-	sf := d.Get(AcFieldSendFailure).(bool)
-	ac.SendFailure = &sf
-	sd := d.Get(AcFieldSendDegraded).(bool)
-	ac.SendDegraded = &sd
-	expiry := d.Get(AcFieldSSLExpiry).(bool)
-	ac.SSLExpiry = &expiry
-	if ac.SSLExpiry != nil {
-		et := d.Get(AcFieldSSLExpiryThreshold).(int)
-		if et > 0 {
-			ac.SSLExpiryThreshold = &et
-		}
+	if v, ok := d.GetOk(AcFieldSendRecovery); ok {
+		b := v.(bool)
+		ac.SendRecovery = &b
+	}
+	if v, ok := d.GetOk(AcFieldSendFailure); ok {
+		b := v.(bool)
+		ac.SendFailure = &b
+	}
+	if v, ok := d.GetOk(AcFieldSendDegraded); ok {
+		b := v.(bool)
+		ac.SendDegraded = &b
+	}
+	if v, ok := d.GetOk(AcFieldSSLExpiry); ok {
+		b := v.(bool)
+		ac.SSLExpiry = &b
+	}
+	if v, ok := d.GetOk(AcFieldSSLExpiryThreshold); ok {
+		i := v.(int)
+		ac.SSLExpiryThreshold = &i
 	}
 	fields := []string{AcFieldEmail, AcFieldSMS, AcFieldSlack, AcFieldWebhook, AcFieldOpsgenie}
 	setCount := 0

@@ -69,6 +69,8 @@ github.com/checkly/checkly-go-sdk v0.5.0 h1:1WwBUrG6nGfhRhFApn18Zh0USb5ZEO8K1eyW
 github.com/checkly/checkly-go-sdk v0.5.0/go.mod h1:wkAoXD2cVCNQEXi9lHZqy/zONIAZc5D9frih6Gas3Rs=
 github.com/checkly/checkly-go-sdk v0.5.1 h1:rBFP0FokEzwySq+DHpaRKmb/Dbm6d60Z5VE4Bo8M5dY=
 github.com/checkly/checkly-go-sdk v0.5.1/go.mod h1:wkAoXD2cVCNQEXi9lHZqy/zONIAZc5D9frih6Gas3Rs=
+github.com/checkly/checkly-go-sdk v0.5.2 h1:v5RwFDrWdSowWxkC/6rbJAXvhKw+ppHd5vxZoagKeqY=
+github.com/checkly/checkly-go-sdk v0.5.2/go.mod h1:wkAoXD2cVCNQEXi9lHZqy/zONIAZc5D9frih6Gas3Rs=
 github.com/cheggaaa/pb v1.0.27/go.mod h1:pQciLPpbU0oxA0h+VJYYLxO+XeDQb5pZijXscXHm81s=
 github.com/chzyer/logex v1.1.10/go.mod h1:+Ywpsq7O8HXn0nuIou7OrIPyXbp3wmkHB+jjWRnGsAI=
 github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e/go.mod h1:nSuG5e5PlCu98SY8svDHJxuZscDgtXS6KTTbou5AhLI=
