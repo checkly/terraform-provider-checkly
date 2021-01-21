@@ -423,6 +423,10 @@ resource "checkly_alert_channel" "email_ac" {
   email {
     address = "info@example.com"
   }
+  send_recovery = true
+  send_failure  = false
+  send_degraded = true
+  ssl_expiry    = false
 }
 
 resource "checkly_alert_channel" "slack_ac" {
@@ -430,6 +434,11 @@ resource "checkly_alert_channel" "slack_ac" {
     channel = "checkly_alerts"
     url     = "https://slack.com/webhookurl"
   }
+  send_recovery        = false
+  send_failure         = true
+  send_degraded        = false
+  ssl_expiry           = true
+  ssl_expiry_threshold = 11
 }
 
 resource "checkly_alert_channel" "sms_ac" {
