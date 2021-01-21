@@ -294,9 +294,7 @@ func alertChannelFromResourceData(d *schema.ResourceData) (checkly.AlertChannel,
 	ac.SSLExpiry = &expiry
 	if ac.SSLExpiry != nil {
 		et := d.Get(AcFieldSSLExpiryThreshold).(int)
-		if et > 0 {
-			ac.SSLExpiryThreshold = &et
-		}
+		ac.SSLExpiryThreshold = &et
 	}
 	fields := []string{AcFieldEmail, AcFieldSMS, AcFieldSlack, AcFieldWebhook, AcFieldOpsgenie}
 	setCount := 0
