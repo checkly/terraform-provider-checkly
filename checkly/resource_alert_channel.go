@@ -32,6 +32,11 @@ const (
 	AcFieldOpsgenieAPIKey     = "api_key"
 	AcFieldOpsgenieRegion     = "region"
 	AcFieldOpsgeniePriority   = "priority"
+	AcFieldSendRecovery       = "send_recovery"
+	AcFieldSendFailure        = "send_failure"
+	AcFieldSendDegraded       = "send_degraded"
+	AcFieldSSLExpiry          = "ssl_expiry"
+	AcFieldSSLExpiryThreshold = "ssl_expiry_threshold"
 )
 
 func resourceAlertChannel() *schema.Resource {
@@ -161,6 +166,26 @@ func resourceAlertChannel() *schema.Resource {
 					},
 				},
 			},
+			AcFieldSendRecovery: {
+				Type:     schema.TypeBool,
+				Optional: true,
+			},
+			AcFieldSendFailure: {
+				Type:     schema.TypeBool,
+				Optional: true,
+			},
+			AcFieldSendDegraded: {
+				Type:     schema.TypeBool,
+				Optional: true,
+			},
+			AcFieldSSLExpiry: {
+				Type:     schema.TypeBool,
+				Optional: true,
+			},
+			AcFieldSSLExpiryThreshold: {
+				Type:     schema.TypeInt,
+				Optional: true,
+			},
 		},
 	}
 }
@@ -168,7 +193,7 @@ func resourceAlertChannel() *schema.Resource {
 func resourceAlertChannelCreate(d *schema.ResourceData, client interface{}) error {
 	ac, err := alertChannelFromResourceData(d)
 	if err != nil {
-		return makeError("resourceAlertChannelCreate.1", &ErrorLog{"err": err})
+		return makeError("resourceAlertChannelCreate.1", &ErrorLog{"err": err.Error()})
 	}
 	resp, err := client.(*checkly.Client).CreateAlertChannel(ac)
 	if err != nil {
@@ -186,7 +211,7 @@ func resourceAlertChannelCreate(d *schema.ResourceData, client interface{}) erro
 func resourceAlertChannelRead(d *schema.ResourceData, client interface{}) error {
 	ID, err := resourceIDToInt(d.Id())
 	if err != nil {
-		return makeError("resourceAlertChannelRead.1", &ErrorLog{"err": err})
+		return makeError("resourceAlertChannelRead.1", &ErrorLog{"err": err.Error()})
 	}
 	ac, err := client.(*checkly.Client).GetAlertChannel(ID)
 	if err != nil {
@@ -196,7 +221,7 @@ func resourceAlertChannelRead(d *schema.ResourceData, client interface{}) error 
 			d.SetId("")
 			return nil
 		}
-		return makeError("resourceAlertChannelRead.2", &ErrorLog{"err": err})
+		return makeError("resourceAlertChannelRead.2", &ErrorLog{"err": err.Error()})
 	}
 	return resourceDataFromAlertChannel(ac, d)
 }
@@ -204,11 +229,11 @@ func resourceAlertChannelRead(d *schema.ResourceData, client interface{}) error 
 func resourceAlertChannelUpdate(d *schema.ResourceData, client interface{}) error {
 	ac, err := alertChannelFromResourceData(d)
 	if err != nil {
-		return makeError("resourceAlertChannelUpdate.1", &ErrorLog{"err": err})
+		return makeError("resourceAlertChannelUpdate.1", &ErrorLog{"err": err.Error()})
 	}
 	_, err = client.(*checkly.Client).UpdateAlertChannel(ac.ID, ac)
 	if err != nil {
-		return makeError("resourceAlertChannelUpdate.2", &ErrorLog{"err": err})
+		return makeError("resourceAlertChannelUpdate.2", &ErrorLog{"err": err.Error()})
 	}
 	d.SetId(fmt.Sprintf("%d", ac.ID))
 	return resourceAlertChannelRead(d, client)
@@ -217,10 +242,10 @@ func resourceAlertChannelUpdate(d *schema.ResourceData, client interface{}) erro
 func resourceAlertChannelDelete(d *schema.ResourceData, client interface{}) error {
 	ID, err := resourceIDToInt(d.Id())
 	if err != nil {
-		return makeError("resourceAlertChannelDelete.1", &ErrorLog{"err": err})
+		return makeError("resourceAlertChannelDelete.1", &ErrorLog{"err": err.Error()})
 	}
 	if err := client.(*checkly.Client).DeleteAlertChannel(ID); err != nil {
-		return makeError("resourceAlertChannelDelete.2", &ErrorLog{"err": err})
+		return makeError("resourceAlertChannelDelete.2", &ErrorLog{"err": err.Error()})
 	}
 	return nil
 }
@@ -231,6 +256,21 @@ func resourceDataFromAlertChannel(it *checkly.AlertChannel, d *schema.ResourceDa
 	d.Set(AcFieldSlack, setFromSlack(it.Slack))
 	d.Set(AcFieldWebhook, setFromWebhook(it.Webhook))
 	d.Set(AcFieldOpsgenie, setFromOpsgenie(it.Opsgenie))
+	if it.SendRecovery != nil {
+		d.Set(AcFieldSendRecovery, *it.SendRecovery)
+	}
+	if it.SendFailure != nil {
+		d.Set(AcFieldSendFailure, *it.SendFailure)
+	}
+	if it.SendDegraded != nil {
+		d.Set(AcFieldSendDegraded, *it.SendDegraded)
+	}
+	if it.SSLExpiry != nil {
+		d.Set(AcFieldSSLExpiry, *it.SSLExpiry)
+	}
+	if it.SSLExpiryThreshold != nil {
+		d.Set(AcFieldSSLExpiryThreshold, *it.SSLExpiryThreshold)
+	}
 	return nil
 }
 
@@ -238,12 +278,26 @@ func alertChannelFromResourceData(d *schema.ResourceData) (checkly.AlertChannel,
 	ac := checkly.AlertChannel{}
 	ID, err := resourceIDToInt(d.Id())
 	if err != nil {
-		return ac, makeError("alertChannelFromResourceData.1", &ErrorLog{"err": err})
+		return ac, makeError("alertChannelFromResourceData.1", &ErrorLog{"err": err.Error()})
 	}
 	if err == nil {
 		ac.ID = ID
 	}
 
+	sr := d.Get(AcFieldSendRecovery).(bool)
+	ac.SendRecovery = &sr
+	sf := d.Get(AcFieldSendFailure).(bool)
+	ac.SendFailure = &sf
+	sd := d.Get(AcFieldSendDegraded).(bool)
+	ac.SendDegraded = &sd
+	expiry := d.Get(AcFieldSSLExpiry).(bool)
+	ac.SSLExpiry = &expiry
+	if ac.SSLExpiry != nil {
+		et := d.Get(AcFieldSSLExpiryThreshold).(int)
+		if et > 0 {
+			ac.SSLExpiryThreshold = &et
+		}
+	}
 	fields := []string{AcFieldEmail, AcFieldSMS, AcFieldSlack, AcFieldWebhook, AcFieldOpsgenie}
 	setCount := 0
 	for _, field := range fields {
@@ -252,7 +306,7 @@ func alertChannelFromResourceData(d *schema.ResourceData) (checkly.AlertChannel,
 			ac.Type = strings.ToUpper(field)
 			c, err := alertChannelConfigFromSet(ac.Type, cfgSet)
 			if err != nil {
-				return ac, makeError("alertChannelFromResourceData.2", &ErrorLog{"err": err})
+				return ac, makeError("alertChannelFromResourceData.2", &ErrorLog{"err": err.Error()})
 			}
 			ac.SetConfig(c)
 			setCount++

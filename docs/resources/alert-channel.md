@@ -10,6 +10,11 @@ resource "checkly_alert_channel" "ac1" {
   email {
     address = "john@example.com"
   }
+  send_recovery = true 
+  send_failure = false
+  send_degraded = true 
+  ssl_expiry = true 
+  ssl_expiry_threshold = 22
 }
 ```  
 
@@ -20,6 +25,8 @@ resource "checkly_alert_channel" "ac1" {
     name = "john"
     number = "0123456789"
   }
+  send_recovery = true 
+  send_failure = true
 }
 ```  
 
@@ -98,8 +105,13 @@ resource "checkly_check_group" "test-group1" {
 ```
 
 ## Argument Reference
-    a `checkly_alert_channel` should contain configuration for a single alerting channel, 
-    which can be one of the following: `email`, `sms`, `slack`, `opsgenie`, `webhook`.
+* a `checkly_alert_channel` should contain a single configuration for alerting channel type, which can be one of the following: `email`, `sms`, `slack`, `opsgenie`, `webhook`.
+* `send_recovery` (Optional) . Possible values: `true` | `false`.
+* `send_failure`  (Optional) . Possible values: `true` | `false`.
+* `send_degraded` (Optional) . Possible values: `true` | `false`.
+* `ssl_expiry` (Optional) . Possible values: `true` | `false`.
+* `ssl_expiry_threshold` (Optional) . Possible values between 1 and 30. Default is `30`.
+
 ### Argument Reference for Email Alert Channel
 * `email` (Optional): 
     * `address` (Required) the email address of this email alert channel.
