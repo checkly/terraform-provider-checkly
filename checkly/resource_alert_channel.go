@@ -169,18 +169,22 @@ func resourceAlertChannel() *schema.Resource {
 			AcFieldSendRecovery: {
 				Type:     schema.TypeBool,
 				Optional: true,
+				Default:  true,
 			},
 			AcFieldSendFailure: {
 				Type:     schema.TypeBool,
 				Optional: true,
+				Default:  true,
 			},
 			AcFieldSendDegraded: {
 				Type:     schema.TypeBool,
 				Optional: true,
+				Default:  false,
 			},
 			AcFieldSSLExpiry: {
 				Type:     schema.TypeBool,
 				Optional: true,
+				Default:  false,
 			},
 			AcFieldSSLExpiryThreshold: {
 				Type:     schema.TypeInt,
