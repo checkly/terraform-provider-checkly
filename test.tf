@@ -434,7 +434,7 @@ resource "checkly_alert_channel" "slack_ac" {
     channel = "checkly_alerts"
     url     = "https://slack.com/webhookurl"
   }
-  send_recovery        = false
+  send_recovery        = true
   send_failure         = true
   send_degraded        = false
   ssl_expiry           = true
