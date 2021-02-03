@@ -129,7 +129,7 @@ resource "checkly_check_group" "test-group1" {
     * `api_key` (Required).
     * `region` (Required).
     * `priority` (Required).
-### Argument Reference for Opsgenie Alert Channel
+### Argument Reference for Webhook Alert Channel
 * `webhook` (Optional)
     * `name` (Required) Webhook's channel name.
     * `method` (Required).

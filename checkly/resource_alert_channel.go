@@ -185,6 +185,7 @@ func resourceAlertChannel() *schema.Resource {
 			AcFieldSSLExpiryThreshold: {
 				Type:     schema.TypeInt,
 				Optional: true,
+				Default:  30,
 			},
 		},
 	}
@@ -284,26 +285,23 @@ func alertChannelFromResourceData(d *schema.ResourceData) (checkly.AlertChannel,
 		ac.ID = ID
 	}
 
-	if v, ok := d.GetOk(AcFieldSendRecovery); ok {
-		b := v.(bool)
-		ac.SendRecovery = &b
-	}
-	if v, ok := d.GetOk(AcFieldSendFailure); ok {
-		b := v.(bool)
-		ac.SendFailure = &b
-	}
-	if v, ok := d.GetOk(AcFieldSendDegraded); ok {
-		b := v.(bool)
-		ac.SendDegraded = &b
-	}
-	if v, ok := d.GetOk(AcFieldSSLExpiry); ok {
-		b := v.(bool)
-		ac.SSLExpiry = &b
-	}
+	sendRecovery := d.Get(AcFieldSendRecovery).(bool)
+	ac.SendRecovery = &sendRecovery
+
+	sendFailure := d.Get(AcFieldSendFailure).(bool)
+	ac.SendFailure = &sendFailure
+
+	sndDegraded := d.Get(AcFieldSendDegraded).(bool)
+	ac.SendDegraded = &sndDegraded
+
+	sslExpiry := d.Get(AcFieldSSLExpiry).(bool)
+	ac.SSLExpiry = &sslExpiry
+
 	if v, ok := d.GetOk(AcFieldSSLExpiryThreshold); ok {
 		i := v.(int)
 		ac.SSLExpiryThreshold = &i
 	}
+
 	fields := []string{AcFieldEmail, AcFieldSMS, AcFieldSlack, AcFieldWebhook, AcFieldOpsgenie}
 	setCount := 0
 	for _, field := range fields {
@@ -408,8 +406,8 @@ func setFromWebhook(cfg *checkly.AlertChannelWebhook) []tfMap {
 		{
 			AcFieldWebhookName:        cfg.Name,
 			AcFieldWebhookMethod:      cfg.Method,
-			AcFieldWebhookHeaders:     cfg.Headers,
-			AcFieldWebhookQueryParams: cfg.QueryParameters,
+			AcFieldWebhookHeaders:     mapFromKeyValues(cfg.Headers),
+			AcFieldWebhookQueryParams: mapFromKeyValues(cfg.QueryParameters),
 			AcFieldWebhookTemplate:    cfg.Template,
 			AcFieldWebhookURL:         cfg.URL,
 			AcFieldWebhookSecret:      cfg.WebhookSecret,
