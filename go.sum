@@ -73,6 +73,8 @@ github.com/checkly/checkly-go-sdk v0.5.2 h1:v5RwFDrWdSowWxkC/6rbJAXvhKw+ppHd5vxZ
 github.com/checkly/checkly-go-sdk v0.5.2/go.mod h1:wkAoXD2cVCNQEXi9lHZqy/zONIAZc5D9frih6Gas3Rs=
 github.com/checkly/checkly-go-sdk v0.5.3 h1:U5d+fuWOTBAKcczh4AGCUB7CRu5fZwQqkNiOZtWGwDY=
 github.com/checkly/checkly-go-sdk v0.5.3/go.mod h1:wkAoXD2cVCNQEXi9lHZqy/zONIAZc5D9frih6Gas3Rs=
+github.com/checkly/checkly-go-sdk v0.5.4 h1:RqLrzKfUqHFYXlO09hPtutfgrmNNnXH+lIZ0oIXvSLg=
+github.com/checkly/checkly-go-sdk v0.5.4/go.mod h1:wkAoXD2cVCNQEXi9lHZqy/zONIAZc5D9frih6Gas3Rs=
 github.com/cheggaaa/pb v1.0.27/go.mod h1:pQciLPpbU0oxA0h+VJYYLxO+XeDQb5pZijXscXHm81s=
 github.com/chzyer/logex v1.1.10/go.mod h1:+Ywpsq7O8HXn0nuIou7OrIPyXbp3wmkHB+jjWRnGsAI=
 github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e/go.mod h1:nSuG5e5PlCu98SY8svDHJxuZscDgtXS6KTTbou5AhLI=
@@ -194,7 +196,6 @@ github.com/hashicorp/terraform-exec v0.3.0 h1:5WLBsnv9BoEUGlHJZETROZZxw+qO3/TFQE
 github.com/hashicorp/terraform-exec v0.3.0/go.mod h1:yKWvMPtkTaHpeAmllw+1qdHZ7E5u+pAZ+x8e2jQF6gM=
 github.com/hashicorp/terraform-json v0.5.0 h1:7TV3/F3y7QVSuN4r9BEXqnWqrAyeOtON8f0wvREtyzs=
 github.com/hashicorp/terraform-json v0.5.0/go.mod h1:eAbqb4w0pSlRmdvl8fOyHAi/+8jnkVYN28gJkSJrLhU=
-github.com/hashicorp/terraform-plugin-sdk v1.16.0 h1:NrkXMRjHErUPPTHQkZ6JIn6bByiJzGnlJzH1rVdNEuE=
 github.com/hashicorp/terraform-plugin-sdk/v2 v2.0.1 h1:qG6EdnW2UrftQI4mBdIsWP4YWqYJXynZtl0shQYuU78=
 github.com/hashicorp/terraform-plugin-sdk/v2 v2.0.1/go.mod h1:BRz6UtYmksQJU0eMfahQR8fcJf8tIe77gn7YVm6rGD4=
 github.com/hashicorp/terraform-plugin-sdk/v2 v2.4.0 h1:2c+vG46celrDCsfYEIzaXxvBaAXCqlVG77LwtFz8cfs=
