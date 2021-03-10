@@ -2,10 +2,12 @@ package checkly
 
 import (
 	"fmt"
+	"io"
 	"os"
 
-	"github.com/checkly/checkly-go-sdk"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/checkly/checkly-go-sdk"
 )
 
 // Provider makes the provider available to Terraform.
@@ -26,16 +28,27 @@ func Provider() *schema.Provider {
 			"checkly_alert_channel": resourceAlertChannel(),
 		},
 		ConfigureFunc: func(r *schema.ResourceData) (interface{}, error) {
-			client := checkly.NewClient(r.Get("api_key").(string))
 			debugLog := os.Getenv("CHECKLY_DEBUG_LOG")
+			var debugOutput io.Writer
 			if debugLog != "" {
 				debugFile, err := os.OpenFile(debugLog, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
 				if err != nil {
 					panic(fmt.Sprintf("can't write to debug log file: %v", err))
 				}
-				client.Debug = debugFile
+				debugOutput = debugFile
 			}
-			return &client, nil
+			apiKey := ""
+			switch v := r.Get("api_key").(type) {
+			case string:
+				apiKey = v
+			}
+			client := checkly.NewClient(
+				"https://api.checklyhq.com",
+				apiKey,
+				nil,
+				debugOutput,
+			)
+			return client, nil
 		},
 	}
 }

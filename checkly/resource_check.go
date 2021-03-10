@@ -1,6 +1,7 @@
 package checkly
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -354,8 +355,9 @@ func resourceCheckCreate(d *schema.ResourceData, client interface{}) error {
 	if err != nil {
 		return fmt.Errorf("translation error: %w", err)
 	}
-
-	gotCheck, err := client.(*checkly.Client).Create(check)
+	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
+	defer cancel()
+	gotCheck, err := client.(checkly.Client).Create(ctx, check)
 	if err != nil {
 		checkJSON, _ := json.Marshal(check)
 		return fmt.Errorf("API error 1: %w, Check: %s", err, string(checkJSON))
@@ -365,7 +367,9 @@ func resourceCheckCreate(d *schema.ResourceData, client interface{}) error {
 }
 
 func resourceCheckRead(d *schema.ResourceData, client interface{}) error {
-	check, err := client.(*checkly.Client).Get(d.Id())
+	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
+	defer cancel()
+	check, err := client.(checkly.Client).Get(ctx, d.Id())
 	if err != nil {
 		if strings.Contains(err.Error(), "404") {
 			//if resource is deleted remotely, then mark it as
@@ -375,7 +379,7 @@ func resourceCheckRead(d *schema.ResourceData, client interface{}) error {
 		}
 		return fmt.Errorf("API error 2: %w", err)
 	}
-	return resourceDataFromCheck(&check, d)
+	return resourceDataFromCheck(check, d)
 }
 
 func resourceCheckUpdate(d *schema.ResourceData, client interface{}) error {
@@ -384,7 +388,9 @@ func resourceCheckUpdate(d *schema.ResourceData, client interface{}) error {
 	if err != nil {
 		return fmt.Errorf("translation error: %w", err)
 	}
-	_, err = client.(*checkly.Client).Update(check.ID, check)
+	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
+	defer cancel()
+	_, err = client.(checkly.Client).Update(ctx, check.ID, check)
 	if err != nil {
 		checkJSON, _ := json.Marshal(check)
 		return fmt.Errorf("API error 3: Couldn't update check, Error: %w, \nCheck: %s", err, checkJSON)
@@ -394,7 +400,9 @@ func resourceCheckUpdate(d *schema.ResourceData, client interface{}) error {
 }
 
 func resourceCheckDelete(d *schema.ResourceData, client interface{}) error {
-	if err := client.(*checkly.Client).Delete(d.Id()); err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
+	defer cancel()
+	if err := client.(checkly.Client).Delete(ctx, d.Id()); err != nil {
 		return fmt.Errorf("API error 4: Couldn't delete Check %s, Error: %w", d.Id(), err)
 	}
 	return nil
@@ -525,8 +533,6 @@ func setFromBasicAuth(b *checkly.BasicAuth) []tfMap {
 }
 
 func checkFromResourceData(d *schema.ResourceData) (checkly.Check, error) {
-
-	//return checkly.Check{}, fmt.Errorf("AAA %v", alertChannelSubscriptionsFromSet(d.Get("alert_channel_subscription").([]interface{})))
 	check := checkly.Check{
 		ID:                        d.Id(),
 		Name:                      d.Get("name").(string),
