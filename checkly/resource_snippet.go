@@ -38,7 +38,7 @@ func resourceSnippetCreate(d *schema.ResourceData, client interface{}) error {
 	if err != nil {
 		return fmt.Errorf("resourceSnippetCreate: translation error: %w", err)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
 	defer cancel()
 	result, err := client.(checkly.Client).CreateSnippet(ctx, snippet)
 	if err != nil {
@@ -82,7 +82,7 @@ func resourceSnippetRead(d *schema.ResourceData, client interface{}) error {
 	if err != nil {
 		return fmt.Errorf("resourceSnippetRead: ID %s is not numeric: %w", d.Id(), err)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
 	defer cancel()
 	snippet, err := client.(checkly.Client).GetSnippet(ctx, ID)
 	if err != nil {
@@ -102,7 +102,7 @@ func resourceSnippetUpdate(d *schema.ResourceData, client interface{}) error {
 	if err != nil {
 		return fmt.Errorf("resourceSnippetUpdate: translation error: %w", err)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
 	defer cancel()
 	_, err = client.(checkly.Client).UpdateSnippet(ctx, snippet.ID, snippet)
 	if err != nil {
@@ -117,7 +117,7 @@ func resourceSnippetDelete(d *schema.ResourceData, client interface{}) error {
 	if err != nil {
 		return fmt.Errorf("resourceSnippetDelete: ID %s is not numeric: %w", d.Id(), err)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
 	defer cancel()
 	err = client.(checkly.Client).DeleteSnippet(ctx, ID)
 	if err != nil {

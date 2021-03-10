@@ -201,7 +201,7 @@ func resourceAlertChannelCreate(d *schema.ResourceData, client interface{}) erro
 	if err != nil {
 		return makeError("resourceAlertChannelCreate.1", &ErrorLog{"err": err.Error()})
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
 	defer cancel()
 	resp, err := client.(checkly.Client).CreateAlertChannel(ctx, ac)
 	if err != nil {
@@ -221,7 +221,7 @@ func resourceAlertChannelRead(d *schema.ResourceData, client interface{}) error 
 	if err != nil {
 		return makeError("resourceAlertChannelRead.1", &ErrorLog{"err": err.Error()})
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
 	defer cancel()
 	ac, err := client.(checkly.Client).GetAlertChannel(ctx, ID)
 	if err != nil {
@@ -241,7 +241,7 @@ func resourceAlertChannelUpdate(d *schema.ResourceData, client interface{}) erro
 	if err != nil {
 		return makeError("resourceAlertChannelUpdate.1", &ErrorLog{"err": err.Error()})
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
 	defer cancel()
 	_, err = client.(checkly.Client).UpdateAlertChannel(ctx, ac.ID, ac)
 	if err != nil {
@@ -256,7 +256,7 @@ func resourceAlertChannelDelete(d *schema.ResourceData, client interface{}) erro
 	if err != nil {
 		return makeError("resourceAlertChannelDelete.1", &ErrorLog{"err": err.Error()})
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
 	defer cancel()
 	if err := client.(checkly.Client).DeleteAlertChannel(ctx, ID); err != nil {
 		return makeError("resourceAlertChannelDelete.2", &ErrorLog{"err": err.Error()})

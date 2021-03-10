@@ -355,7 +355,7 @@ func resourceCheckCreate(d *schema.ResourceData, client interface{}) error {
 	if err != nil {
 		return fmt.Errorf("translation error: %w", err)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
 	defer cancel()
 	gotCheck, err := client.(checkly.Client).Create(ctx, check)
 	if err != nil {
@@ -367,7 +367,7 @@ func resourceCheckCreate(d *schema.ResourceData, client interface{}) error {
 }
 
 func resourceCheckRead(d *schema.ResourceData, client interface{}) error {
-	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
 	defer cancel()
 	check, err := client.(checkly.Client).Get(ctx, d.Id())
 	if err != nil {
@@ -388,7 +388,7 @@ func resourceCheckUpdate(d *schema.ResourceData, client interface{}) error {
 	if err != nil {
 		return fmt.Errorf("translation error: %w", err)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
 	defer cancel()
 	_, err = client.(checkly.Client).Update(ctx, check.ID, check)
 	if err != nil {
@@ -400,7 +400,7 @@ func resourceCheckUpdate(d *schema.ResourceData, client interface{}) error {
 }
 
 func resourceCheckDelete(d *schema.ResourceData, client interface{}) error {
-	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
 	defer cancel()
 	if err := client.(checkly.Client).Delete(ctx, d.Id()); err != nil {
 		return fmt.Errorf("API error 4: Couldn't delete Check %s, Error: %w", d.Id(), err)

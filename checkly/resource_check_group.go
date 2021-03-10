@@ -271,7 +271,7 @@ func resourceCheckGroupCreate(d *schema.ResourceData, client interface{}) error 
 	if err != nil {
 		return fmt.Errorf("translation error: %w", err)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
 	defer cancel()
 	gotGroup, err := client.(checkly.Client).CreateGroup(ctx, group)
 	if err != nil {
@@ -286,7 +286,7 @@ func resourceCheckGroupRead(d *schema.ResourceData, client interface{}) error {
 	if err != nil {
 		return fmt.Errorf("ID %s is not numeric: %w", d.Id(), err)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
 	defer cancel()
 	group, err := client.(checkly.Client).GetGroup(ctx, ID)
 	if err != nil {
@@ -306,7 +306,7 @@ func resourceCheckGroupUpdate(d *schema.ResourceData, client interface{}) error 
 	if err != nil {
 		return fmt.Errorf("translation error: %w", err)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
 	defer cancel()
 	_, err = client.(checkly.Client).UpdateGroup(ctx, group.ID, group)
 	if err != nil {
@@ -321,7 +321,7 @@ func resourceCheckGroupDelete(d *schema.ResourceData, client interface{}) error 
 	if err != nil {
 		return fmt.Errorf("ID %s is not numeric: %w", d.Id(), err)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
 	defer cancel()
 	if err := client.(checkly.Client).DeleteGroup(ctx, ID); err != nil {
 		return fmt.Errorf("API error14: %w", err)
