@@ -1,6 +1,7 @@
 package checkly
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strconv"
@@ -270,7 +271,9 @@ func resourceCheckGroupCreate(d *schema.ResourceData, client interface{}) error 
 	if err != nil {
 		return fmt.Errorf("translation error: %w", err)
 	}
-	gotGroup, err := client.(*checkly.Client).CreateGroup(group)
+	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout)
+	defer cancel()
+	gotGroup, err := client.(checkly.Client).CreateGroup(ctx, group)
 	if err != nil {
 		return fmt.Errorf("API error11: %w", err)
 	}
@@ -283,7 +286,9 @@ func resourceCheckGroupRead(d *schema.ResourceData, client interface{}) error {
 	if err != nil {
 		return fmt.Errorf("ID %s is not numeric: %w", d.Id(), err)
 	}
-	group, err := client.(*checkly.Client).GetGroup(ID)
+	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout)
+	defer cancel()
+	group, err := client.(checkly.Client).GetGroup(ctx, ID)
 	if err != nil {
 		if strings.Contains(err.Error(), "404") {
 			//if resource is deleted remotely, then mark it as
@@ -293,7 +298,7 @@ func resourceCheckGroupRead(d *schema.ResourceData, client interface{}) error {
 		}
 		return fmt.Errorf("API error12: %w", err)
 	}
-	return resourceDataFromCheckGroup(&group, d)
+	return resourceDataFromCheckGroup(group, d)
 }
 
 func resourceCheckGroupUpdate(d *schema.ResourceData, client interface{}) error {
@@ -301,7 +306,9 @@ func resourceCheckGroupUpdate(d *schema.ResourceData, client interface{}) error 
 	if err != nil {
 		return fmt.Errorf("translation error: %w", err)
 	}
-	_, err = client.(*checkly.Client).UpdateGroup(group.ID, group)
+	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout)
+	defer cancel()
+	_, err = client.(checkly.Client).UpdateGroup(ctx, group.ID, group)
 	if err != nil {
 		return fmt.Errorf("API error13: %w", err)
 	}
@@ -314,7 +321,9 @@ func resourceCheckGroupDelete(d *schema.ResourceData, client interface{}) error 
 	if err != nil {
 		return fmt.Errorf("ID %s is not numeric: %w", d.Id(), err)
 	}
-	if err := client.(*checkly.Client).DeleteGroup(ID); err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout)
+	defer cancel()
+	if err := client.(checkly.Client).DeleteGroup(ctx, ID); err != nil {
 		return fmt.Errorf("API error14: %w", err)
 	}
 	return nil

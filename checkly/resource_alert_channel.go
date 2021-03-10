@@ -1,6 +1,7 @@
 package checkly
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -200,7 +201,9 @@ func resourceAlertChannelCreate(d *schema.ResourceData, client interface{}) erro
 	if err != nil {
 		return makeError("resourceAlertChannelCreate.1", &ErrorLog{"err": err.Error()})
 	}
-	resp, err := client.(*checkly.Client).CreateAlertChannel(ac)
+	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout)
+	defer cancel()
+	resp, err := client.(checkly.Client).CreateAlertChannel(ctx, ac)
 	if err != nil {
 		cjson, _ := json.Marshal(ac.GetConfig())
 		return makeError("resourceAlertChannelCreate.2", &ErrorLog{
@@ -218,7 +221,9 @@ func resourceAlertChannelRead(d *schema.ResourceData, client interface{}) error 
 	if err != nil {
 		return makeError("resourceAlertChannelRead.1", &ErrorLog{"err": err.Error()})
 	}
-	ac, err := client.(*checkly.Client).GetAlertChannel(ID)
+	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout)
+	defer cancel()
+	ac, err := client.(checkly.Client).GetAlertChannel(ctx, ID)
 	if err != nil {
 		if strings.Contains(err.Error(), "404") {
 			//if resource is deleted remotely, then mark it as
@@ -236,7 +241,9 @@ func resourceAlertChannelUpdate(d *schema.ResourceData, client interface{}) erro
 	if err != nil {
 		return makeError("resourceAlertChannelUpdate.1", &ErrorLog{"err": err.Error()})
 	}
-	_, err = client.(*checkly.Client).UpdateAlertChannel(ac.ID, ac)
+	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout)
+	defer cancel()
+	_, err = client.(checkly.Client).UpdateAlertChannel(ctx, ac.ID, ac)
 	if err != nil {
 		return makeError("resourceAlertChannelUpdate.2", &ErrorLog{"err": err.Error()})
 	}
@@ -249,7 +256,9 @@ func resourceAlertChannelDelete(d *schema.ResourceData, client interface{}) erro
 	if err != nil {
 		return makeError("resourceAlertChannelDelete.1", &ErrorLog{"err": err.Error()})
 	}
-	if err := client.(*checkly.Client).DeleteAlertChannel(ID); err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout)
+	defer cancel()
+	if err := client.(checkly.Client).DeleteAlertChannel(ctx, ID); err != nil {
 		return makeError("resourceAlertChannelDelete.2", &ErrorLog{"err": err.Error()})
 	}
 	return nil

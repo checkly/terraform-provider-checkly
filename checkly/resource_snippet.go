@@ -1,12 +1,14 @@
 package checkly
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
 
-	checkly "github.com/checkly/checkly-go-sdk"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	checkly "github.com/checkly/checkly-go-sdk"
 )
 
 func resourceSnippet() *schema.Resource {
@@ -36,7 +38,9 @@ func resourceSnippetCreate(d *schema.ResourceData, client interface{}) error {
 	if err != nil {
 		return fmt.Errorf("resourceSnippetCreate: translation error: %w", err)
 	}
-	result, err := client.(*checkly.Client).CreateSnippet(snippet)
+	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout)
+	defer cancel()
+	result, err := client.(checkly.Client).CreateSnippet(ctx, snippet)
 	if err != nil {
 		return fmt.Errorf("CreateSnippet: API error: %w", err)
 	}
@@ -78,7 +82,9 @@ func resourceSnippetRead(d *schema.ResourceData, client interface{}) error {
 	if err != nil {
 		return fmt.Errorf("resourceSnippetRead: ID %s is not numeric: %w", d.Id(), err)
 	}
-	snippet, err := client.(*checkly.Client).GetSnippet(ID)
+	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout)
+	defer cancel()
+	snippet, err := client.(checkly.Client).GetSnippet(ctx, ID)
 	if err != nil {
 		if strings.Contains(err.Error(), "404") {
 			//if resource is deleted remotely, then mark it as
@@ -88,7 +94,7 @@ func resourceSnippetRead(d *schema.ResourceData, client interface{}) error {
 		}
 		return fmt.Errorf("resourceSnippetRead: API error: %w", err)
 	}
-	return resourceDataFromSnippet(&snippet, d)
+	return resourceDataFromSnippet(snippet, d)
 }
 
 func resourceSnippetUpdate(d *schema.ResourceData, client interface{}) error {
@@ -96,7 +102,9 @@ func resourceSnippetUpdate(d *schema.ResourceData, client interface{}) error {
 	if err != nil {
 		return fmt.Errorf("resourceSnippetUpdate: translation error: %w", err)
 	}
-	_, err = client.(*checkly.Client).UpdateSnippet(snippet.ID, snippet)
+	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout)
+	defer cancel()
+	_, err = client.(checkly.Client).UpdateSnippet(ctx, snippet.ID, snippet)
 	if err != nil {
 		return fmt.Errorf("resourceSnippetUpdate: API error: %w", err)
 	}
@@ -109,7 +117,9 @@ func resourceSnippetDelete(d *schema.ResourceData, client interface{}) error {
 	if err != nil {
 		return fmt.Errorf("resourceSnippetDelete: ID %s is not numeric: %w", d.Id(), err)
 	}
-	err = client.(*checkly.Client).DeleteSnippet(ID)
+	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout)
+	defer cancel()
+	err = client.(checkly.Client).DeleteSnippet(ctx, ID)
 	if err != nil {
 		return fmt.Errorf("resourceSnippetDelete: API error: %w", err)
 	}
