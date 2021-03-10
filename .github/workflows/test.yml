@@ -1,0 +1,29 @@
+name: Tests
+
+on:
+  push:
+    branches: 
+  pull_request:
+
+jobs:
+
+  build:
+    name: tests
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - name: Set up Go 1.15
+      uses: actions/setup-go@v2
+      with:
+        go-version: ^1.15
+
+    - name: checkout
+      uses: actions/checkout@v2
+    
+    - name: Test
+      run: go test ./... --tags=integration
+      env:
+        TF_VAR_checkly_api_key: ${{ secrets.CHECKLY_API_KEY }}
+        CHECKLY_API_KEY: ${{ secrets.CHECKLY_API_KEY }}
+        CHECKLY_API_URL: ${{ secrets.CHECKLY_API_URL }}
