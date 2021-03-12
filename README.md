@@ -1,6 +1,6 @@
 # Checkly Terraform provider
 
-[![CircleCI](https://circleci.com/gh/checkly/terraform-provider-checkly/tree/master.svg?style=svg)](https://circleci.com/gh/checkly/terraform-provider-checkly/tree/master)
+[![Tests](https://github.com/checkly/terraform-provider-checkly/actions/workflows/test.yml/badge.svg)](https://github.com/checkly/terraform-provider-checkly/actions/workflows/test.yml)
 
 * [Introduction](#introduction)
 * [Supported resource](#supported-resources)
