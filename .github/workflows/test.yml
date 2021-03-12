@@ -22,13 +22,14 @@ jobs:
       uses: hashicorp/setup-terraform@v1
       with:
         terraform_version: 0.14.7
+        terraform_wrapper: false
 
     - name: checkout
       uses: actions/checkout@v2
     - name : Download modules
       run: go mod download
     - name: Test
-      run: go test -v ./...
+      run: go test -v ./... -tags=integration
       env:
         TF_ACC: 1
         TF_VAR_checkly_api_key: ${{ secrets.CHECKLY_API_KEY }}
