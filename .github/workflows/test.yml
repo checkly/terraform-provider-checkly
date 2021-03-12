@@ -13,10 +13,10 @@ jobs:
 
     steps:
 
-    - name: Set up Go 1.15
+    - name: Set up Go 1.16
       uses: actions/setup-go@v2
       with:
-        go-version: 1.15
+        go-version: 1.16
 
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v1
@@ -35,3 +35,6 @@ jobs:
         TF_VAR_checkly_api_key: ${{ secrets.CHECKLY_API_KEY }}
         CHECKLY_API_KEY: ${{ secrets.CHECKLY_API_KEY }}
         CHECKLY_API_URL: ${{ secrets.CHECKLY_API_URL }}
+    
+    - name: terraform plan
+      uses: dflook/terraform-plan@v1
