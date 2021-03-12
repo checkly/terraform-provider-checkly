@@ -28,7 +28,7 @@ jobs:
     - name : Download modules
       run: go mod download
     - name: Test
-      run: go test -v ./... -tags=integration
+      run: go test -v ./...
       env:
         TF_ACC: 1
         TF_VAR_checkly_api_key: ${{ secrets.CHECKLY_API_KEY }}
