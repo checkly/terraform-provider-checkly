@@ -29,8 +29,6 @@ jobs:
     - name : Download modules
       run: go mod download
 
-    - name: terraform plan
-      uses: dflook/terraform-plan@v1
     - name: Test
       run: go test -v ./...
       env:
