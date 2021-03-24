@@ -1,6 +1,6 @@
 // +build integration
 
-package main
+package checkly
 
 import (
 	"os"
@@ -20,7 +20,7 @@ func getAPIKey(t *testing.T) string {
 func TestChecklyTerraformIntegration(t *testing.T) {
 	t.Parallel()
 	terraformOptions := &terraform.Options{
-		TerraformDir: ".",
+		TerraformDir: "../",
 		Vars: map[string]interface{}{
 			"checkly_api_key": getAPIKey(t),
 		},
