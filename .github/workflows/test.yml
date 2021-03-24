@@ -30,9 +30,8 @@ jobs:
       run: go mod download
 
     - name: Test
-      run: go test -v ./checkly/...
+      run: go test -v ./...
       env:
-        TF_ACC: 1
         TF_VAR_checkly_api_key: ${{ secrets.CHECKLY_API_KEY }}
         CHECKLY_API_KEY: ${{ secrets.CHECKLY_API_KEY }}
         CHECKLY_API_URL: ${{ secrets.CHECKLY_API_URL }}
