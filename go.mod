@@ -26,4 +26,3 @@ require (
 )
 
 //replace github.com/checkly/checkly-go-sdk => ../checkly-go-sdk
-
