@@ -129,7 +129,7 @@ func TestAccFail(t *testing.T) {
 				slack {
 				} 
 			}`,
-			Error: `The argument "url" is required`,
+			Error: `Missing required argument`,
 		},
 		{
 			Config: `resource "checkly_alert_channel" "t1" { 
