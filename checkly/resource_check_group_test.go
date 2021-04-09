@@ -122,11 +122,18 @@ func TestAccCheckGroupInvalid(t *testing.T) {
 			Config:      testCheckGroup_invalid,
 			ExpectError: regexp.MustCompile(`Inappropriate value for attribute "activated"`),
 		},
+		{
+			Config:      testCheckGroup_invalid,
+			ExpectError: regexp.MustCompile(`The argument "concurrency" is required`),
+		},
+		{
+			Config:      testCheckGroup_invalid,
+			ExpectError: regexp.MustCompile(`Missing required argument`),
+		},
 	})
 }
 
 func TestAccCheckGroupBasic(t *testing.T) {
-	return
 	accTestCase(t, []resource.TestStep{
 		{
 			Config: testCheckGroup_basic,

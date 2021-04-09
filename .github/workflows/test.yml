@@ -1,8 +1,6 @@
 name: Tests
 
 on:
-  push:
-    branches: 
   pull_request:
 
 jobs:
@@ -35,4 +33,5 @@ jobs:
         TF_VAR_checkly_api_key: ${{ secrets.CHECKLY_API_KEY }}
         CHECKLY_API_KEY: ${{ secrets.CHECKLY_API_KEY }}
         CHECKLY_API_URL: ${{ secrets.CHECKLY_API_URL }}
+        TF_ACC: 1
     
