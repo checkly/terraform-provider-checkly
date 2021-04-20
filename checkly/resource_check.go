@@ -309,7 +309,7 @@ func resourceCheck() *schema.Resource {
 									},
 									"target": {
 										Type:     schema.TypeString,
-										Required: true,
+										Optional: true,
 									},
 								},
 							},
