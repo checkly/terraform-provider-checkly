@@ -1,6 +1,8 @@
 # Checkly Terraform provider
 
-[![Tests](https://github.com/checkly/terraform-provider-checkly/actions/workflows/test.yml/badge.svg)](https://github.com/checkly/terraform-provider-checkly/actions/workflows/test.yml)
+[![Tests](https://github.com/checkly/terraform-provider-checkly/actions/workflows/test.yml/badge.svg?branch=master)](https://github.com/checkly/terraform-provider-checkly/actions/workflows/test.yml)
+
+[![release](https://github.com/checkly/terraform-provider-checkly/actions/workflows/release.yml/badge.svg)](https://github.com/checkly/terraform-provider-checkly/actions/workflows/release.yml)
 
 * [Introduction](#introduction)
 * [Supported resource](#supported-resources)
