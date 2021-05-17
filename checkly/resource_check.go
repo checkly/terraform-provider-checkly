@@ -573,12 +573,12 @@ func checkFromResourceData(d *schema.ResourceData) (checkly.Check, error) {
 		check.FrequencyOffset = d.Get("frequency_offset").(int)
 
 		if check.Frequency == 0 && (check.FrequencyOffset != 10 && check.FrequencyOffset != 20 && check.FrequencyOffset != 30) {
-			return check, errors.New("When frequency == 0, frequency_offset must be 10, 20 or 30")
+			return check, errors.New("When property frequency is 0, frequency_offset must be 10, 20 or 30")
 		}
 	}
 
 	if check.Type == checkly.TypeBrowser && check.Frequency == 0 {
-		return check, errors.New("frequency == 0 is only valid for API checks")
+		return check, errors.New("Property frequency could only be 0 for API checks")
 	}
 
 	return check, nil
