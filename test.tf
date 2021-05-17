@@ -1,6 +1,6 @@
 #-- This file provides example terraform resource definitions that create checkly resources
 
-################################# API CHECKS ################################# 
+################################# API CHECKS #################################
 
 #----------------------------EXAMPLE----------------------------#
 #-- a very simple API check definition
@@ -8,7 +8,8 @@
 resource "checkly_check" "api-check-1" {
   name              = "API check 1"
   type              = "API"
-  frequency         = 60
+  frequency         = 10
+  frequency_offset  = 20
   activated         = true
   muted             = true
   double_check      = true
@@ -216,7 +217,7 @@ resource "checkly_check" "api-check-4" {
 }
 
 
-################################# BROWSER CHECKS ################################# 
+################################# BROWSER CHECKS #################################
 
 #----------------------------EXAMPLE----------------------------#
 #-- a Browser Check which runs E2E test
@@ -226,7 +227,7 @@ resource "checkly_check" "browser-check-2" {
   type                      = "BROWSER"
   activated                 = true
   should_fail               = false
-  frequency                 = 10
+  frequency                 = 15
   double_check              = true
   ssl_check                 = true
   use_global_alert_settings = true
@@ -266,9 +267,9 @@ EOT
 }
 
 
-################################# CHECK GROUPS ################################# 
-## Checkly's groups feature allows you to group together a set of related checks, 
-## which can also share default settings for various attributes. Here is an 
+################################# CHECK GROUPS #################################
+## Checkly's groups feature allows you to group together a set of related checks,
+## which can also share default settings for various attributes. Here is an
 ## example check group:
 
 #----------------------------EXAMPLE----------------------------#
@@ -374,7 +375,7 @@ resource "checkly_check_group" "check-group-3" {
 
 
 #----------------------------EXAMPLE----------------------------#
-#--- Adding a check to a check group 
+#--- Adding a check to a check group
 
 resource "checkly_check" "api-check-group-1_1" {
   name      = "API check 1 belonging to group 1"
@@ -417,7 +418,7 @@ resource "checkly_check" "api-check-group-1_2" {
   group_order = 2
 }
 
-################################# ALERT CHANNELS ################################# 
+################################# ALERT CHANNELS #################################
 
 resource "checkly_alert_channel" "email_ac" {
   email {

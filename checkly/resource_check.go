@@ -3,6 +3,7 @@ package checkly
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -40,7 +41,7 @@ func resourceCheck() *schema.Resource {
 				ValidateFunc: func(val interface{}, key string) (warns []string, errs []error) {
 					v := val.(int)
 					valid := false
-					validFreqs := []int{1, 5, 10, 15, 30, 60, 720, 1440}
+					validFreqs := []int{0, 1, 5, 10, 15, 30, 60, 720, 1440}
 					for _, i := range validFreqs {
 						if v == i {
 							valid = true
@@ -51,6 +52,10 @@ func resourceCheck() *schema.Resource {
 					}
 					return warns, errs
 				},
+			},
+			"frequency_offset": {
+				Type:     schema.TypeInt,
+				Optional: true,
 			},
 			"activated": {
 				Type:     schema.TypeBool,
@@ -412,6 +417,9 @@ func resourceDataFromCheck(c *checkly.Check, d *schema.ResourceData) error {
 	d.Set("name", c.Name)
 	d.Set("type", c.Type)
 	d.Set("frequency", c.Frequency)
+	if c.Frequency == 0 {
+		d.Set("frequency_offset", c.FrequencyOffset)
+	}
 	d.Set("activated", c.Activated)
 	d.Set("muted", c.Muted)
 	d.Set("should_fail", c.ShouldFail)
@@ -562,7 +570,17 @@ func checkFromResourceData(d *schema.ResourceData) (checkly.Check, error) {
 	if check.Type == checkly.TypeAPI {
 		// this will prevent subsequent apply from causing a tf config change in browser checks
 		check.Request = requestFromSet(d.Get("request").(*schema.Set))
+		check.FrequencyOffset = d.Get("frequency_offset").(int)
+
+		if check.Frequency == 0 && (check.FrequencyOffset != 10 && check.FrequencyOffset != 20 && check.FrequencyOffset != 30) {
+			return check, errors.New("When frequency == 0, frequency_offset must be 10, 20 or 30")
+		}
 	}
+
+	if check.Type == checkly.TypeBrowser && check.Frequency == 0 {
+		return check, errors.New("frequency == 0 is only valid for API checks")
+	}
+
 	return check, nil
 }
 
