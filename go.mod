@@ -25,4 +25,4 @@ require (
 	golang.org/x/sys v0.0.0-20200602225109-6fdc65e7d980 // indirect
 )
 
-replace github.com/checkly/checkly-go-sdk => ../checkly-go-sdk
+// replace github.com/checkly/checkly-go-sdk => ../checkly-go-sdk
