@@ -1,6 +1,6 @@
 # checkly_check
-`checkly_check` allows users to manage checkly checks. Add a `checkly_check` resource to your resource file. 
- 
+`checkly_check` allows users to manage checkly checks. Add a `checkly_check` resource to your resource file.
+
 ## Example Usage - API checks
 This first example is a very minimal **API check**.
 
@@ -103,7 +103,7 @@ resource "checkly_check" "example-check-2" {
     }
   }
 }
-```  
+```
 
 
 ## Example Usage - Browser checks
@@ -154,7 +154,7 @@ resource "checkly_check" "browser-check-1" {
 
 ## Example Usage - With Alert channels
 first define an alert channel
-```terraform 
+```terraform
 resource "checkly_alert_channel" "email_ac1" {
   email {
     address = "info1@example.com"
@@ -204,34 +204,35 @@ resource "checkly_check" "example-check" {
 }
 ```
 
-## Argument Reference  
+## Argument Reference
 The following arguments are supported:
-* `name` - (Required) The name of the check.  
-* `type` - (Required) The type of the check. Possible values are `API`, and `BROWSER`.  
-* `frequency` (Required) The frequency in minutes to run the check. Possible values are `1`, `5`, `10`, `15`, `30`, `60`, `720`, and `1440`.
-* `activated` (Required) Determines if the check is running or not. Possible values `true`, and `false`.  
-* `muted` (Optional) Determines if any notifications will be sent out when a check fails and/or recovers. Possible values `true`, and `false`.  
-* `double_check` (Optional) Setting this to "true" will trigger a retry when a check fails from the failing region and another, randomly selected region before marking the check as failed. Possible values `true`, and `false`.  
-* `ssl_check` (Optional) Determines if the SSL certificate should be validated for expiry. Possible values `true`, and `false`.  
-* `should_fail` (Optional) Allows to invert the behaviour of when a check is considered to fail. Allows for validating error status like 404. Possible values `true`, and `false`.  
-* `locations` (Required) An array of one or more data center locations where to run the this check.  
-* `script` (Optional) A valid piece of Node.js javascript code describing a browser interaction with the Puppeteer framework or a terraform reference to an external javascript file.  
-* `environment_variables` (Optional) Key/value pairs for setting environment variables during check execution. These are only relevant for Browser checks. Use global environment variables whenever possible.  
-* `Tags` (Optional) A list of Tags for organizing and filtering checks. 
-* `setup_snippet_id` (Optional) An ID reference to a snippet to use in the setup phase of an API check.  
-* `teardown_snippet_id` (Optional) An ID reference to a snippet to use in the teardown phase of an API check.  
-* `local_setup_script` (Optional) A valid piece of Node.js code to run in the setup phase.  
+* `name` - (Required) The name of the check.
+* `type` - (Required) The type of the check. Possible values are `API`, and `BROWSER`.
+* `frequency` (Required) The frequency in minutes to run the check. Possible values are `0`, `1`, `5`, `10`, `15`, `30`, `60`, `720`, and `1440`.
+* `frequency_offset` (Optional) This property only valid for API high frequency checks. To create a hight frequency check, the property `frequency` must be `0` and `frequency_offset` could be `10`, `20` or `30`.
+* `activated` (Required) Determines if the check is running or not. Possible values `true`, and `false`.
+* `muted` (Optional) Determines if any notifications will be sent out when a check fails and/or recovers. Possible values `true`, and `false`.
+* `double_check` (Optional) Setting this to "true" will trigger a retry when a check fails from the failing region and another, randomly selected region before marking the check as failed. Possible values `true`, and `false`.
+* `ssl_check` (Optional) Determines if the SSL certificate should be validated for expiry. Possible values `true`, and `false`.
+* `should_fail` (Optional) Allows to invert the behaviour of when a check is considered to fail. Allows for validating error status like 404. Possible values `true`, and `false`.
+* `locations` (Required) An array of one or more data center locations where to run the this check.
+* `script` (Optional) A valid piece of Node.js javascript code describing a browser interaction with the Puppeteer framework or a terraform reference to an external javascript file.
+* `environment_variables` (Optional) Key/value pairs for setting environment variables during check execution. These are only relevant for Browser checks. Use global environment variables whenever possible.
+* `Tags` (Optional) A list of Tags for organizing and filtering checks.
+* `setup_snippet_id` (Optional) An ID reference to a snippet to use in the setup phase of an API check.
+* `teardown_snippet_id` (Optional) An ID reference to a snippet to use in the teardown phase of an API check.
+* `local_setup_script` (Optional) A valid piece of Node.js code to run in the setup phase.
 * `local_teardown_script` (Optional) A valid piece of Node.js code to run in the teardown phase.
-* `use_global_alert_settings` (Optional) When true, the account level alert setting will be used, not the alert setting defined on this check. Possible values `true`, and `false`.  
-* `degraded_response_time` (Optional) The response time in milliseconds where a check should be considered degraded. Possible values are between 0 and 30000. Defaults to `15000`.  
-* `max_response_time` (Optional) The response time in milliseconds where a check should be considered failing. Possible values are between 0 and 30000. Defaults to `30000`.  
+* `use_global_alert_settings` (Optional) When true, the account level alert setting will be used, not the alert setting defined on this check. Possible values `true`, and `false`.
+* `degraded_response_time` (Optional) The response time in milliseconds where a check should be considered degraded. Possible values are between 0 and 30000. Defaults to `15000`.
+* `max_response_time` (Optional) The response time in milliseconds where a check should be considered failing. Possible values are between 0 and 30000. Defaults to `30000`.
 * `group_id` (Optional). The id of the check group this check is part of.
-* `group_order` (Optional) The position of this check in a check group. It determines in what order checks are run when a group is triggered from the API or from CI/CD.  
-* `request` (Optional). An API check might have one request config. Supported values documented below.    
-* `alert_settings` (Optional). Supported values documented below.  
+* `group_order` (Optional) The position of this check in a check group. It determines in what order checks are run when a group is triggered from the API or from CI/CD.
+* `request` (Optional). An API check might have one request config. Supported values documented below.
+* `alert_settings` (Optional). Supported values documented below.
 
 ### Argument Reference: request
-The `request` section is added to API checks and supports the following:  
+The `request` section is added to API checks and supports the following:
 * `method` (Optional) The HTTP method to use for this API check. Possible values are `GET`, `POST`, `PUT`, `HEAD`, `DELETE`, `PATCH`. Defaults to `GET`.
 * `url` (Required) .
 * `follow_redirects` (Optional) .
@@ -239,26 +240,26 @@ The `request` section is added to API checks and supports the following:
 * `query_parameters` (Optional).
 * `body` (Optional)
 * `body_type` (Optional) Possible values `NONE`, `JSON`, `FORM`, `RAW`, and `GRAPHQL`.
-* `assertion` (Optional) A request can have multiple assetions. Assertion has the following arguments:  
-  * `source` (Required) Possible values `STATUS_CODE`, `JSON_BODY`, `HEADERS`, `TEXT_BODY`, and `RESPONSE_TIME`.  
-  * `property` (Optional).  
-  * `comparison` (Required) Possible values `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL`, and `NOT_NULL`.  
-  * `target` (Required).  
+* `assertion` (Optional) A request can have multiple assetions. Assertion has the following arguments:
+  * `source` (Required) Possible values `STATUS_CODE`, `JSON_BODY`, `HEADERS`, `TEXT_BODY`, and `RESPONSE_TIME`.
+  * `property` (Optional).
+  * `comparison` (Required) Possible values `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL`, and `NOT_NULL`.
+  * `target` (Required).
 * `basic_auth` (Optional) A request might have one basic_auth config. basic_auth has two arguments:
-  * `username` (Required)  
-  * `password` (Required)  
+  * `username` (Required)
+  * `password` (Required)
 
 
 ### Argument Reference: alert_settings
-The `alert_Settings` section supports the following:  
-* `escalation_type` (Optional) Determines what type of escalation to use. Possible values are `RUN_BASED` or `TIME_BASED`.  
+The `alert_Settings` section supports the following:
+* `escalation_type` (Optional) Determines what type of escalation to use. Possible values are `RUN_BASED` or `TIME_BASED`.
 * `run_based_escalation` (Optional). Possible arguments:
-  * `failed_run_threshold` (Optional) After how many failed consecutive check runs an alert notification should be send. Possible values are between 1 and 5. Defaults to `1`.  
+  * `failed_run_threshold` (Optional) After how many failed consecutive check runs an alert notification should be send. Possible values are between 1 and 5. Defaults to `1`.
 * `time_based_escalation` (Optional). Possible arguments:
-  * `minutes_failing_threshold` (Optional) After how many minutes after a check starts failing an alert should be send. Possible values are `5`, `10`, `15`, and `30`. Defaults to `5`.  
+  * `minutes_failing_threshold` (Optional) After how many minutes after a check starts failing an alert should be send. Possible values are `5`, `10`, `15`, and `30`. Defaults to `5`.
 * `reminders` (Optional). Possible arguments:
   * `amount` (Optional) How many reminders to send out after the initial alert notification. Possible values are `0`, `1`, `2`, `3`, `4`, `5`, and `100000`
-  * `interval` (Optional). Possible values are `5`, `10`, `15`, and `30`. Defaults to `5`.  
+  * `interval` (Optional). Possible values are `5`, `10`, `15`, and `30`. Defaults to `5`.
 * `ssl_certificates` (Optional) At what interval the reminders should be send.  Possible arguments:
-  * `enabled` (Optional) Determines if alert notifications should be send for expiring SSL certificates. Possible values `true`, and `false`. Defaults to `true`.  
-  * `alert_threshold` (Optional) At what moment in time to start alerting on SSL certificates. Possible values `3`, `7`, `14`, `30`. Defaults to `3`.  
+  * `enabled` (Optional) Determines if alert notifications should be send for expiring SSL certificates. Possible values `true`, and `false`. Defaults to `true`.
+  * `alert_threshold` (Optional) At what moment in time to start alerting on SSL certificates. Possible values `3`, `7`, `14`, `30`. Defaults to `3`.
