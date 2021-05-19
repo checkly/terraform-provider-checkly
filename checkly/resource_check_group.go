@@ -60,6 +60,14 @@ func resourceCheckGroup() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
+			"setup_snippet_id": {
+				Type:     schema.TypeInt,
+				Optional: true,
+			},
+			"teardown_snippet_id": {
+				Type:     schema.TypeInt,
+				Optional: true,
+			},
 			"local_setup_script": {
 				Type:     schema.TypeString,
 				Optional: true,
@@ -261,7 +269,6 @@ func resourceCheckGroup() *schema.Resource {
 					},
 				},
 			},
-			//todo setupSnippetId, tearDownSnippetId,
 		},
 	}
 }
@@ -341,6 +348,8 @@ func resourceDataFromCheckGroup(g *checkly.Group, d *schema.ResourceData) error 
 	d.Set("double_check", g.DoubleCheck)
 	sort.Strings(g.Tags)
 	d.Set("tags", g.Tags)
+	d.Set("setup_snippet_id", g.SetupSnippetID)
+	d.Set("teardown_snippet_id", g.TearDownSnippetID)
 	d.Set("local_setup_script", g.LocalSetupScript)
 	d.Set("local_teardown_script", g.LocalTearDownScript)
 	if err := d.Set("alert_settings", setFromAlertSettings(g.AlertSettings)); err != nil {
@@ -373,6 +382,8 @@ func checkGroupFromResourceData(d *schema.ResourceData) (checkly.Group, error) {
 		EnvironmentVariables:      envVarsFromMap(d.Get("environment_variables").(tfMap)),
 		DoubleCheck:               d.Get("double_check").(bool),
 		Tags:                      stringsFromSet(d.Get("tags").(*schema.Set)),
+		SetupSnippetID:            int64(d.Get("setup_snippet_id").(int)),
+		TearDownSnippetID:         int64(d.Get("teardown_snippet_id").(int)),
 		LocalSetupScript:          d.Get("local_setup_script").(string),
 		LocalTearDownScript:       d.Get("local_teardown_script").(string),
 		AlertSettings:             alertSettingsFromSet(d.Get("alert_settings").(*schema.Set)),
