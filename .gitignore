@@ -4,3 +4,5 @@ crash.log
 terraform-provider-checkly
 tf.plan
 dist/*
+.DS_Store
+.terraform.lock.hcl

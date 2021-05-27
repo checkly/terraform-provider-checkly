@@ -20,12 +20,12 @@ url="$(curl -s https://api.github.com/repos/checkly/terraform-provider-checkly/r
 # Get the version of the latest binary release (e.g. 0.6.6)
 ver="$(curl -s https://api.github.com/repos/checkly/terraform-provider-checkly/releases/latest | jq -r "${jq_ver_cmd}")"
 # Download the tarball
-curl -OL ${url}
+curl -OL "${url}"
 # Rename and copy to your Terraform plugin folder
-filename=$(basename $url)
-gunzip ${filename}
+filename=$(basename "$url")
+gunzip "${filename}"
 filename=${filename%.gz}
-chmod +x ${filename}
+chmod +x "${filename}"
 PLUGIN_DIR=~/.terraform.d/plugins/local/checkly/checkly/$ver/$platform
-mkdir -p $PLUGIN_DIR
-mv $filename ${PLUGIN_DIR}/${filename%_${platform}}
+mkdir -p "$PLUGIN_DIR"
+mv "$filename" "${PLUGIN_DIR}"/"${filename%_${platform}}"

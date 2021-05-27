@@ -17,12 +17,12 @@ jq_cmd=".assets[] | select(.name | endswith(\"${platform}.gz\")).browser_downloa
 # Find latest binary release URL for this platform
 url="$(curl -s https://api.github.com/repos/checkly/terraform-provider-checkly/releases/latest | jq -r "${jq_cmd}")"
 # Download the tarball
-curl -OL ${url}
+curl -OL "${url}"
 # Rename and copy to your Terraform plugin folder
-filename=$(basename $url)
-gunzip ${filename}
-filename=${filename%.gz}
-chmod +x ${filename}
+filename=$(basename "$url")
+gunzip "${filename}"
+filename="${filename%.gz}"
+chmod +x "${filename}"
 PLUGIN_DIR=~/.terraform.d/plugins/$platform
 mkdir -p $PLUGIN_DIR
-mv $filename ${PLUGIN_DIR}/${filename%_${platform}}
+mv "$filename" "${PLUGIN_DIR}"/"${filename%_${platform}}"
