@@ -29,10 +29,9 @@ plan:
 	mkdir -p ~/.terraform.d/plugins/dev/checkly/checkly/${version}/darwin_amd64/
 	chmod +x terraform-provider-checkly
 	mv terraform-provider-checkly ~/.terraform.d/plugins/dev/checkly/checkly/${version}/darwin_amd64/terraform-provider-checkly_v${version}
-	rm .terraform.lock.hcl
+	rm -f .terraform.lock.hcl
 	TF_LOG=TRACE terraform init -upgrade
 	terraform plan
-	terraform apply
 
 apply:
 	terraform apply

@@ -89,7 +89,7 @@ resource "checkly_check" "test-check1" {
 ```
 
 ## Example Usage - With Alert channels
-first define an alert channel
+1. Define an alert channel
 ```terraform
 resource "checkly_alert_channel" "email_ac1" {
   email {
@@ -103,7 +103,7 @@ resource "checkly_alert_channel" "email_ac2" {
 }
 ```
 
-then connect the check group to the alert channel
+2. Connect the check group to the alert channel
 ```terraform
 resource "checkly_check_group" "test-group1" {
   name      = "My test group 1"

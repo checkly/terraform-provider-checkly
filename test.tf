@@ -458,6 +458,14 @@ resource "checkly_alert_channel" "opsgenie_ac" {
   }
 }
 
+resource "checkly_alert_channel" "pagerduty_ac" {
+  pagerduty {
+    account      = "checkly"
+    service_key  = "key1"
+    service_name = "pdalert"
+  }
+}
+
 resource "checkly_alert_channel" "webhook_ac" {
   webhook {
     name   = "webhhookalerts"
@@ -506,7 +514,6 @@ resource "checkly_check" "check-with-alert-channels" {
     channel_id = checkly_alert_channel.sms_ac.id
     activated  = true
   }
-
 }
 
 resource "checkly_check_group" "group-with-alert-channels" {

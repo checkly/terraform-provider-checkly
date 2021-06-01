@@ -1,48 +1,48 @@
 # checkly_alert_channel
-The `checkly_alert_channel` resource allows users to manage checkly Alert Channels.  
+The `checkly_alert_channel` resource allows users to manage checkly Alert Channels.
 
 Checkly's Alert Channels feature allows you to define global alerting channels for the checks in your account:
 
 ## Example usage
 *An Email alert channel*
 ```terraform
-resource "checkly_alert_channel" "ac1" {
+resource "checkly_alert_channel" "email_ac" {
   email {
     address = "john@example.com"
   }
-  send_recovery = true 
+  send_recovery = true
   send_failure = false
-  send_degraded = true 
-  ssl_expiry = true 
+  send_degraded = true
+  ssl_expiry = true
   ssl_expiry_threshold = 22
 }
-```  
+```
 
 *A SMS alert channel*
 ```terraform
-resource "checkly_alert_channel" "ac1" {
+resource "checkly_alert_channel" "sms_ac" {
   sms {
     name = "john"
     number = "0123456789"
   }
-  send_recovery = true 
+  send_recovery = true
   send_failure = true
 }
-```  
+```
 
 *A Slack alert channel*
 ```terraform
-resource "checkly_alert_channel" "ac1" {
+resource "checkly_alert_channel" "slack_ac" {
   slack {
     channel = "#checkly-notifications"
     url = "https://slack.com/webhook"
   }
 }
-```  
+```
 
 *An Opsgenie alert channel*
 ```terraform
-resource "checkly_alert_channel" "ac1" {
+resource "checkly_alert_channel" "opsgenie_ac" {
   opsgenie {
     name = "opsalerts"
     api_key = "fookey"
@@ -50,12 +50,23 @@ resource "checkly_alert_channel" "ac1" {
     priority = "foopriority"
   }
 }
-```  
+```
+
+*An Pagerduty alert channel*
+```terraform
+resource "checkly_alert_channel" "pagerduty_ac" {
+  pagerduty {
+    account      = "checkly"
+    service_key  = "key1"
+    service_name = "pdalert"
+  }
+}
+```
 
 
 *An Webhook alert channel*
 ```terraform
-resource "checkly_alert_channel" "ac1" {
+resource "checkly_alert_channel" "webhook_ac" {
   webhook {
     name = "foo"
     method = "get"
@@ -64,13 +75,12 @@ resource "checkly_alert_channel" "ac1" {
     webhook_secret = "foosecret"
   }
 }
-```  
+```
 
 *Connecting the alert channel to a check
 ```terraform
 resource "checkly_check" "example-check" {
-  name                      = "Example check"
-  ....
+  name = "Example check"
 
   alert_channel_subscription {
     channel_id = checkly_alert_channel.email_ac.id
@@ -81,15 +91,13 @@ resource "checkly_check" "example-check" {
     channel_id = checkly_alert_channel.sms_ac.id
     activated  = true
   }
-
 }
 ```
 
 *Connecting the alert channel to a check group
 ```terraform
 resource "checkly_check_group" "test-group1" {
-  name                      = "Check group"
-  ....
+  name = "Check group"
 
   alert_channel_subscription {
     channel_id = checkly_alert_channel.email_ac.id
@@ -100,7 +108,6 @@ resource "checkly_check_group" "test-group1" {
     channel_id = checkly_alert_channel.sms_ac.id
     activated  = true
   }
-
 }
 ```
 
@@ -113,7 +120,7 @@ resource "checkly_check_group" "test-group1" {
 * `ssl_expiry_threshold` (Optional) . Possible values between 1 and 30. Default is `30`.
 
 ### Argument Reference for Email Alert Channel
-* `email` (Optional): 
+* `email` (Optional):
     * `address` (Required) the email address of this email alert channel.
 ### SMS Alert Channel
 * `sms` (Optional):
@@ -129,6 +136,11 @@ resource "checkly_check_group" "test-group1" {
     * `api_key` (Required).
     * `region` (Required).
     * `priority` (Required).
+### Argument Reference for Pagerduty Alert Channel
+* `pagerduty` (Optional)
+    * `service_key` (Required) Pagerduty's service integration key.
+    * `service_name` (Required) Pagerduty's service name.
+    * `account` (Optional) Pagerduty's account name.
 ### Argument Reference for Webhook Alert Channel
 * `webhook` (Optional)
     * `name` (Required) Webhook's channel name.
