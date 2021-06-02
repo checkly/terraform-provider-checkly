@@ -75,6 +75,21 @@ func TestAccOpsgenie(t *testing.T) {
 	})
 }
 
+func TestAccPagerduty(t *testing.T) {
+	t.Parallel()
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `resource "checkly_alert_channel" "pagerduty_ac" {
+				pagerduty {
+					account      = "checkly"
+					service_key  = "key1"
+					service_name = "pdalert"
+				}
+			}`,
+		},
+	})
+}
+
 func TestAccWebhook(t *testing.T) {
 	t.Parallel()
 	accTestCase(t, []resource.TestStep{
@@ -105,66 +120,73 @@ func TestAccFail(t *testing.T) {
 		Error  string
 	}{
 		{
-			Config: `resource "checkly_alert_channel" "t1" { 
-				email {	} 
+			Config: `resource "checkly_alert_channel" "t1" {
+				email {	}
 			}`,
 			Error: `The argument "address" is required`,
 		},
 		{
-			Config: `resource "checkly_alert_channel" "t1" { 
+			Config: `resource "checkly_alert_channel" "t1" {
 				sms {
-				} 
+				}
 			}`,
 			Error: `The argument "number" is required`,
 		},
 		{
-			Config: `resource "checkly_alert_channel" "t1" { 
+			Config: `resource "checkly_alert_channel" "t1" {
 				slack {
-				} 
+				}
 			}`,
 			Error: `The argument "channel" is required`,
 		},
 		{
-			Config: `resource "checkly_alert_channel" "t1" { 
+			Config: `resource "checkly_alert_channel" "t1" {
 				slack {
-				} 
+				}
 			}`,
 			Error: `Missing required argument`,
 		},
 		{
-			Config: `resource "checkly_alert_channel" "t1" { 
+			Config: `resource "checkly_alert_channel" "t1" {
 				webhook {
-				} 
+				}
 			}`,
 			Error: `The argument "name" is required`,
 		},
 		{
-			Config: `resource "checkly_alert_channel" "t1" { 
+			Config: `resource "checkly_alert_channel" "t1" {
 				webhook {
-				} 
+				}
 			}`,
 			Error: `The argument "method" is required`,
 		},
 		{
-			Config: `resource "checkly_alert_channel" "t1" { 
+			Config: `resource "checkly_alert_channel" "t1" {
 				opsgenie {
-				} 
+				}
 			}`,
 			Error: `The argument "api_key" is required`,
 		},
 		{
-			Config: `resource "checkly_alert_channel" "t1" { 
+			Config: `resource "checkly_alert_channel" "t1" {
 				opsgenie {
-				} 
+				}
 			}`,
 			Error: `The argument "priority" is required`,
 		},
 		{
-			Config: `resource "checkly_alert_channel" "t1" { 
+			Config: `resource "checkly_alert_channel" "t1" {
 				opsgenie {
-				} 
+				}
 			}`,
 			Error: `The argument "region" is required`,
+		},
+		{
+			Config: `resource "checkly_alert_channel" "t1" {
+				pagerduty {
+				}
+			}`,
+			Error: `The argument "service_key" is required`,
 		},
 	}
 	for key, tc := range cases {
