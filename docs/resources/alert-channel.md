@@ -63,7 +63,6 @@ resource "checkly_alert_channel" "pagerduty_ac" {
 }
 ```
 
-
 *An Webhook alert channel*
 ```terraform
 resource "checkly_alert_channel" "webhook_ac" {
