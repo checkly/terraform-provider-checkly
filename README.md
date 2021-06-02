@@ -4,7 +4,10 @@
 
 # Checkly Terraform Provider
 
-[![Tests](https://github.com/checkly/terraform-provider-checkly/actions/workflows/test.yml/badge.svg?branch=master)](https://github.com/checkly/terraform-provider-checkly/actions/workflows/test.yml) [![release](https://github.com/checkly/terraform-provider-checkly/actions/workflows/release.yml/badge.svg)](https://github.com/checkly/terraform-provider-checkly/actions/workflows/release.yml)
+[![Tests](https://github.com/checkly/terraform-provider-checkly/actions/workflows/test.yml/badge.svg?branch=master)](https://github.com/checkly/terraform-provider-checkly/actions/workflows/test.yml)
+[![Release](https://github.com/checkly/terraform-provider-checkly/actions/workflows/release.yml/badge.svg)](https://github.com/checkly/terraform-provider-checkly/actions/workflows/release.yml)
+![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/checkly/terraform-provider-checkly)
+![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/checkly/terraform-provider-checkly?label=Version)
 
 > 🌐 A Terraform provider for the Checkly monitoring service
 
