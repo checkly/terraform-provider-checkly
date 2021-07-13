@@ -1,5 +1,5 @@
 # checkly_check_group
-The `checkly_check_group` resource allows users to manage checkly Check Groups.
+The `checkly_check_group` resource allows users to manage Checkly check groups.
 
 Checkly's groups feature allows you to group together a set of related checks, which can also share default settings for various attributes. Here is an example check group:
 
@@ -154,6 +154,7 @@ resource "checkly_check_group" "test-group1" {
 * `use_global_alert_settings` (Optional) When true, the account level alert setting will be used, not the alert setting defined on this check group.
 * `api_check_defaults` (Optional) Default configs to use for all api checks belonging to this group. Supported values documented below.
 * `alert_settings` (Optional). Supported values documented below.
+* `runtime_id` (Optional). The id of the runtime to use for this group.
 
 
 ### Argument Reference: api_check_defaults

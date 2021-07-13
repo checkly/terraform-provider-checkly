@@ -1,5 +1,5 @@
 # checkly_check
-`checkly_check` allows users to manage checkly checks. Add a `checkly_check` resource to your resource file.
+`checkly_check` allows users to manage Checkly checks. Add a `checkly_check` resource to your resource file.
 
 ## Example Usage - API checks
 This first example is a very minimal **API check**.
@@ -123,6 +123,8 @@ resource "checkly_check" "browser-check-1" {
     "us-west-1"
   ]
 
+  runtime_id = "2021.06"
+
   script = <<EOT
 const assert = require("chai").assert;
 const puppeteer = require("puppeteer");
@@ -230,6 +232,7 @@ The following arguments are supported:
 * `group_order` (Optional) The position of this check in a check group. It determines in what order checks are run when a group is triggered from the API or from CI/CD.
 * `request` (Optional). An API check might have one request config. Supported values documented below.
 * `alert_settings` (Optional). Supported values documented below.
+* `runtime_id` (Optional). The id of the runtime to use for this check.
 
 ### Argument Reference: request
 The `request` section is added to API checks and supports the following:

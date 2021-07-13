@@ -76,6 +76,11 @@ func resourceCheckGroup() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 			},
+			"runtime_id": {
+				Type:     schema.TypeString,
+				Optional: true,
+				Default:  nil,
+			},
 			"alert_channel_subscription": {
 				Type:     schema.TypeList,
 				Optional: true,
@@ -352,6 +357,11 @@ func resourceDataFromCheckGroup(g *checkly.Group, d *schema.ResourceData) error 
 	d.Set("teardown_snippet_id", g.TearDownSnippetID)
 	d.Set("local_setup_script", g.LocalSetupScript)
 	d.Set("local_teardown_script", g.LocalTearDownScript)
+
+	if g.RuntimeID != nil {
+		d.Set("runtime_id", *g.RuntimeID)
+	}
+
 	if err := d.Set("alert_settings", setFromAlertSettings(g.AlertSettings)); err != nil {
 		return fmt.Errorf("error setting alert settings for resource %s: %s", d.Id(), err)
 	}
@@ -372,7 +382,7 @@ func checkGroupFromResourceData(d *schema.ResourceData) (checkly.Group, error) {
 		}
 		ID = 0
 	}
-	return checkly.Group{
+	group := checkly.Group{
 		ID:                        ID,
 		Name:                      d.Get("name").(string),
 		Concurrency:               d.Get("concurrency").(int),
@@ -390,7 +400,16 @@ func checkGroupFromResourceData(d *schema.ResourceData) (checkly.Group, error) {
 		UseGlobalAlertSettings:    d.Get("use_global_alert_settings").(bool),
 		APICheckDefaults:          apiCheckDefaultsFromSet(d.Get("api_check_defaults").(*schema.Set)),
 		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(d.Get("alert_channel_subscription").([]interface{})),
-	}, nil
+	}
+
+	runtimeId := d.Get("runtime_id").(string)
+	if runtimeId == "" {
+		group.RuntimeID = nil
+	} else {
+		group.RuntimeID = &runtimeId
+	}
+
+	return group, nil
 }
 
 func setFromAPICheckDefaults(a checkly.APICheckDefaults) []tfMap {

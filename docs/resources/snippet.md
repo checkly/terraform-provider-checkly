@@ -1,6 +1,6 @@
 # checkly_snippet
-`checkly_snippet` allows users to manage checkly snippets. Add a `checkly_snippet` resource to your resource file. 
- 
+`checkly_snippet` allows users to manage Checkly snippets. Add a `checkly_snippet` resource to your resource file.
+
 ## Example Usage
 
 ```terraform
@@ -35,7 +35,7 @@ resource "checkly_snippet" "example-3" {
 }
 ```
 
-## Argument Reference  
+## Argument Reference
 The following arguments are supported:
-* `name` - (Required) The name of the snippet.  
+* `name` - (Required) The name of the snippet.
 * `script` - (Required) Your Node.js code that interacts with the API check lifecycle, or functions as a partial for browser checks.
