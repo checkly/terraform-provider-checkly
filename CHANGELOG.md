@@ -4,28 +4,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+
+## [1.2.0-rc2] - 2021-07-14
+### Added
+- Support for versioned runtimes  [#31](https://github.com/checkly/checkly-go-sdk/issues/31).
 
 ## [1.2.0-rc1] - 2021-06-02
 ### Added
 - Support for PagerDuty alert channels integration [#53](https://github.com/checkly/terraform-provider-checkly/issues/53).
 
-### Changed
-N/A
-
-### Removed
-N/A
 
 ## [1.1.0] - 2021-05-28
 ### Added
 - Support for API high frequency checks [#68](https://github.com/checkly/terraform-provider-checkly/issues/68).
 - Add `setupSnippetId` and `teardownSnippetID` to `check_group` resource [#69](https://github.com/checkly/terraform-provider-checkly/issues/69).
-
-### Changed
-N/A
-
-### Removed
-N/A
 
 ## [1.0.0] - 2021-04-09
 ### Added
@@ -34,6 +26,3 @@ N/A
 ### Changed
 - [🚨 BREAKING CHANGE] The default behavior of assigning all alert channels to checks and check groups is now removed. You can add alerts to your checks and check groups using the `alert_channel_subscription`
 - Support for go1.16
-
-### Removed
-N/A
