@@ -251,6 +251,8 @@ resource "checkly_check" "browser-check-1" {
     "us-west-1"
   ]
 
+  runtime_id = "2020.01"
+
   script = <<EOT
 const assert = require("chai").assert;
 const puppeteer = require("puppeteer");

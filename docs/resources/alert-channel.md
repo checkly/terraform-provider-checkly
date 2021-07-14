@@ -1,5 +1,5 @@
 # checkly_alert_channel
-The `checkly_alert_channel` resource allows users to manage checkly Alert Channels.
+The `checkly_alert_channel` resource allows users to manage Checkly alert channels.
 
 Checkly's Alert Channels feature allows you to define global alerting channels for the checks in your account:
 

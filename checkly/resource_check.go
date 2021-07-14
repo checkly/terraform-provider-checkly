@@ -142,6 +142,11 @@ func resourceCheck() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 			},
+			"runtime_id": {
+				Type:     schema.TypeString,
+				Optional: true,
+				Default:  nil,
+			},
 			"alert_channel_subscription": {
 				Type:     schema.TypeList,
 				Optional: true,
@@ -438,10 +443,16 @@ func resourceDataFromCheck(c *checkly.Check, d *schema.ResourceData) error {
 	d.Set("teardown_snippet_id", c.TearDownSnippetID)
 	d.Set("local_setup_script", c.LocalSetupScript)
 	d.Set("local_teardown_script", c.LocalTearDownScript)
+
+	if c.RuntimeID != nil {
+		d.Set("runtime_id", *c.RuntimeID)
+	}
+
 	if err := d.Set("alert_settings", setFromAlertSettings(c.AlertSettings)); err != nil {
 		return fmt.Errorf("error setting alert settings for resource %s: %w", d.Id(), err)
 	}
 	d.Set("use_global_alert_settings", c.UseGlobalAlertSettings)
+
 	if c.Type == checkly.TypeAPI {
 		err := d.Set("request", setFromRequest(c.Request))
 		if err != nil {
@@ -567,6 +578,14 @@ func checkFromResourceData(d *schema.ResourceData) (checkly.Check, error) {
 		GroupOrder:                d.Get("group_order").(int),
 		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(d.Get("alert_channel_subscription").([]interface{})),
 	}
+
+	runtimeId := d.Get("runtime_id").(string)
+	if runtimeId == "" {
+		check.RuntimeID = nil
+	} else {
+		check.RuntimeID = &runtimeId
+	}
+
 	if check.Type == checkly.TypeAPI {
 		// this will prevent subsequent apply from causing a tf config change in browser checks
 		check.Request = requestFromSet(d.Get("request").(*schema.Set))
