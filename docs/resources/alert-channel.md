@@ -143,9 +143,9 @@ resource "checkly_check_group" "test-group1" {
 ### Argument Reference for Webhook Alert Channel
 * `webhook` (Optional)
     * `name` (Required) Webhook's channel name.
-    * `method` (Required).
-    * `headers` (Optional).
-    * `query_parameters` (Optional).
-    * `template` (Optional).
     * `url` (Required).
+    * `method` (Optional) Default is `POST`.
+    * `headers` (Optional).
+    * `template` (Optional).
+    * `query_parameters` (Optional).
     * `webhook_secret` (Optional).

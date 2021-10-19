@@ -113,7 +113,7 @@ func resourceAlertChannel() *schema.Resource {
 						},
 						AcFieldWebhookMethod: {
 							Type:     schema.TypeString,
-							Required: true,
+							Optional: true,
 						},
 						AcFieldWebhookHeaders: {
 							Type:     schema.TypeMap,
@@ -137,7 +137,7 @@ func resourceAlertChannel() *schema.Resource {
 						},
 						AcFieldWebhookURL: {
 							Type:     schema.TypeString,
-							Optional: true,
+							Required: true,
 						},
 						AcFieldWebhookSecret: {
 							Type:     schema.TypeString,
