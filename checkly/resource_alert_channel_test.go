@@ -158,7 +158,7 @@ func TestAccFail(t *testing.T) {
 				webhook {
 				}
 			}`,
-			Error: `The argument "method" is required`,
+			Error: `The argument "url" is required`,
 		},
 		{
 			Config: `resource "checkly_alert_channel" "t1" {
