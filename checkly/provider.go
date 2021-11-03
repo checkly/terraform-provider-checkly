@@ -26,6 +26,7 @@ func Provider() *schema.Provider {
 			"checkly_snippet":     resourceSnippet(),
 			// "checkly_environment_variable": resourceEnvironmentVariable(),
 			"checkly_alert_channel": resourceAlertChannel(),
+			"checkly_dashboard":     resourceDashboard(),
 		},
 		ConfigureFunc: func(r *schema.ResourceData) (interface{}, error) {
 			debugLog := os.Getenv("CHECKLY_DEBUG_LOG")
@@ -43,7 +44,7 @@ func Provider() *schema.Provider {
 				apiKey = v
 			}
 			client := checkly.NewClient(
-				"https://api.checklyhq.com",
+				"http://localhost:3000",
 				apiKey,
 				nil,
 				debugOutput,
