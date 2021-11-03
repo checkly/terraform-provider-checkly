@@ -44,7 +44,7 @@ func Provider() *schema.Provider {
 				apiKey = v
 			}
 			client := checkly.NewClient(
-				"https://api.checklyhq.com",
+				"http://localhost:3000",
 				apiKey,
 				nil,
 				debugOutput,
