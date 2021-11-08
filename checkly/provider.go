@@ -19,6 +19,11 @@ func Provider() *schema.Provider {
 				Required:    true,
 				DefaultFunc: schema.EnvDefaultFunc("CHECKLY_API_KEY", nil),
 			},
+			"account_id": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("CHECKLY_ACCOUNT_ID", nil),
+			},
 		},
 		ResourcesMap: map[string]*schema.Resource{
 			"checkly_check":         resourceCheck(),
@@ -39,17 +44,29 @@ func Provider() *schema.Provider {
 				}
 				debugOutput = debugFile
 			}
+
 			apiKey := ""
 			switch v := r.Get("api_key").(type) {
 			case string:
 				apiKey = v
 			}
+
 			client := checkly.NewClient(
 				"https://api.checklyhq.com",
 				apiKey,
 				nil,
 				debugOutput,
 			)
+
+			accountId := ""
+			switch v := r.Get("account_id").(type) {
+			case string:
+				accountId = v
+			}
+			if accountId != "" {
+				client.SetAccountId(accountId)
+			}
+
 			return client, nil
 		},
 	}
