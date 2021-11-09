@@ -540,7 +540,7 @@ resource "checkly_check_group" "group-with-alert-channels" {
 
  resource "checkly_dashboard" "dashboard-1" {
   custom_url = "testurl"
-  custom_domain = "testdomai"
+  custom_domain = "testdomain"
   logo= "logo"
   header= "header"
   refresh_rate= 60
