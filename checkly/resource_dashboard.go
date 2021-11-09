@@ -3,7 +3,6 @@ package checkly
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -129,36 +128,27 @@ func resourceDashboardUpdate(d *schema.ResourceData, client interface{}) error {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
 	defer cancel()
-	_, err = client.(checkly.Client).UpdateDashboard(ctx, dashboard.ID, dashboard)
+	result, err := client.(checkly.Client).UpdateDashboard(ctx, d.Id(), dashboard)
 	if err != nil {
 		return fmt.Errorf("resourceDashboardUpdate: API error: %w", err)
 	}
-	d.SetId(fmt.Sprintf("%d", dashboard.ID))
+	d.SetId(result.DashboardID)
 	return resourceDashboardRead(d, client)
 }
 
 func resourceDashboardDelete(d *schema.ResourceData, client interface{}) error {
-	ID, err := strconv.ParseInt(d.Id(), 10, 64)
-	if err != nil {
-		return fmt.Errorf("resourceDashboardDelete: ID %s is not numeric: %w", d.Id(), err)
-	}
 	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
 	defer cancel()
-	err = client.(checkly.Client).DeleteDashboard(ctx, ID)
+	err := client.(checkly.Client).DeleteDashboard(ctx, d.Id())
 	if err != nil {
 		return fmt.Errorf("resourceDashboardDelete: API error: %w", err)
 	}
 	return nil
 }
-
 func resourceDashboardRead(d *schema.ResourceData, client interface{}) error {
-	ID, err := strconv.ParseInt(d.Id(), 10, 64)
-	if err != nil {
-		return fmt.Errorf("resourceDashboardRead: ID %s is not numeric: %w", d.Id(), err)
-	}
 	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
-	dashboard, err := client.(checkly.Client).GetDashboard(ctx, ID)
 	defer cancel()
+	dashboard, err := client.(checkly.Client).GetDashboard(ctx, d.Id())
 	if err != nil {
 		if strings.Contains(err.Error(), "404") {
 			d.SetId("")
