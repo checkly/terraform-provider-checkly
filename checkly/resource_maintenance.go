@@ -41,14 +41,6 @@ func resourceMaintenanceWindows() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"created_at": {
-				Type:     schema.TypeString,
-				Required: true,
-			},
-			"updated_at": {
-				Type:     schema.TypeString,
-				Required: true,
-			},
 			"repeat_interval": {
 				Type:     schema.TypeInt,
 				Required: true,
@@ -79,9 +71,7 @@ func maintenanceWindowsFromResourceData(d *schema.ResourceData) (checkly.Mainten
 		EndsAt:         d.Get("ends_at").(string),
 		RepeatUnit:     d.Get("repeat_unit").(string),
 		RepeatEndsAt:   d.Get("repeat_ends_at").(string),
-		CreatedAt:      d.Get("created_at").(string),
 		RepeatInterval: d.Get("repeat_interval").(int),
-		UpdatedAt:      d.Get("updated_at").(string),
 		Tags:           stringsFromSet(d.Get("tags").(*schema.Set)),
 	}
 
@@ -96,9 +86,7 @@ func resourceDataFromMaintenanceWindows(s *checkly.MaintenanceWindow, d *schema.
 	d.Set("ends_at", s.EndsAt)
 	d.Set("repeat_unit", s.RepeatUnit)
 	d.Set("repeat_ends_at", s.RepeatEndsAt)
-	d.Set("created_at", s.CreatedAt)
 	d.Set("repeat_interval", s.RepeatInterval)
-	d.Set("updated_at", s.UpdatedAt)
 	d.Set("tags", s.Tags)
 	return nil
 }
