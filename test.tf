@@ -551,8 +551,8 @@ resource "checkly_maintenance_windows" "maintenance-1" {
 }
 
 resource "checkly_dashboard" "dashboard-1" {
-  custom_url = "string"
-  custom_domain = "string"
+  custom_url = "testurl"
+  custom_domain = "testdomain"
   logo= "logo"
   header= "header"
   refresh_rate= 60
