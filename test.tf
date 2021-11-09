@@ -538,17 +538,29 @@ resource "checkly_check_group" "group-with-alert-channels" {
   }
 }
 
- resource "checkly_dashboard" "dashboard-1" {
-  custom_url = "testurl"
-  custom_domain = "testdomain"
-  logo= "logo"
-  header= "header"
-  refresh_rate= 60
-  paginate= false
-  pagination_rate= 30
-  hide_tags= false
-  width= "FULL"
-  tags= [
+resource "checkly_maintenance_windows" "maintenance-1" {
+  name            = "string"
+  starts_at       = "2014-08-24T00:00:00.000Z"
+  ends_at         = "2014-08-25T00:00:00.000Z"
+  repeat_unit     = "MONTH"
+  repeat_ends_at  = "2014-08-24T00:00:00.000Z"
+  repeat_interval = 1
+  tags = [
+    "string",
+  ]
+}
+
+resource "checkly_dashboard" "dashboard-1" {
+  custom_url      = "testurl"
+  custom_domain   = "testdomain"
+  logo            = "logo"
+  header          = "header"
+  refresh_rate    = 60
+  paginate        = false
+  pagination_rate = 30
+  hide_tags       = false
+  width           = "FULL"
+  tags = [
     "string",
   ]
 }
