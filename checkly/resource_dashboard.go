@@ -63,10 +63,6 @@ func resourceDashboard() *schema.Resource {
 				Type:     schema.TypeBool,
 				Required: true,
 			},
-			"dashboard_id": {
-				Type:     schema.TypeString,
-				Optional: true,
-			},
 		},
 	}
 }
@@ -117,7 +113,7 @@ func resourceDashboardCreate(d *schema.ResourceData, client interface{}) error {
 		return fmt.Errorf("CreateDashboard: API error: %w", err)
 	}
 
-	d.SetId(fmt.Sprintf("%d", result.ID))
+	d.SetId(result.DashboardID)
 	return resourceDashboardRead(d, client)
 }
 
@@ -145,10 +141,11 @@ func resourceDashboardDelete(d *schema.ResourceData, client interface{}) error {
 	}
 	return nil
 }
+
 func resourceDashboardRead(d *schema.ResourceData, client interface{}) error {
 	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
-	defer cancel()
 	dashboard, err := client.(checkly.Client).GetDashboard(ctx, d.Id())
+	defer cancel()
 	if err != nil {
 		if strings.Contains(err.Error(), "404") {
 			d.SetId("")
