@@ -19,6 +19,11 @@ func Provider() *schema.Provider {
 				Required:    true,
 				DefaultFunc: schema.EnvDefaultFunc("CHECKLY_API_KEY", nil),
 			},
+			"api_url": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("CHECKLY_API_URL", nil),
+			},
 			"account_id": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -51,8 +56,18 @@ func Provider() *schema.Provider {
 				apiKey = v
 			}
 
+			apiUrl := ""
+			switch v := r.Get("api_url").(type) {
+			case string:
+				apiUrl = v
+			}
+
+			if apiUrl == "" {
+				apiUrl = "https://api.checklyhq.com"
+			}
+
 			client := checkly.NewClient(
-				"https://api.checklyhq.com",
+				apiUrl,
 				apiKey,
 				nil,
 				debugOutput,
