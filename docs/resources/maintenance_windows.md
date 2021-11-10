@@ -38,7 +38,7 @@ The following arguments are supported:
 * `name` - (Required) The maintenance window name.
 * `starts_at` - (Required) The start date of the maintenance window.
 * `ends_at` - (Required) The end date of the maintenance window.
-* `repeat_unit` - (Optional) The repeat strategy for the maintenance window.
+* `repeat_unit` - (Optional) The repeat strategy for the maintenance window. Possible values `DAY`, `WEEK` and `MONTH`.
 * `repeat_ends_at` - (Required) The end date where the maintenance window should stop repeating.
 * `repeat_interval` - (Optional) The repeat interval of the maintenance window from the first occurance.
 * `tags` - (Required) The names of the checks and groups maintenance window should apply to.
