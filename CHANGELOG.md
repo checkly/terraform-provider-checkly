@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2021-11-10
+### Added
+- Support for Public Dashboards [#81](https://github.com/checkly/terraform-provider-checkly/issues/81)
+- Support for Maintenance Windows [#83](https://github.com/checkly/terraform-provider-checkly/issues/83)
+- Support for User API Keys [#88](https://github.com/checkly/terraform-provider-checkly/issues/88)
 
 ## [1.2.1] - 2021-10-19
 ### Changed
