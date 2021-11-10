@@ -3,10 +3,24 @@
 
 ## Example Usage
 
-Minimal dashboard example
+Minimal maintenance windows example
 
 ```terraform
-resource "checkly_dashboard" "dashboard-1" {
+resource "checkly_maintenance_windows" "maintenance-1" {
+  name            = "string"
+  starts_at       = "2014-08-24T00:00:00.000Z"
+  ends_at         = "2014-08-25T00:00:00.000Z"
+  repeat_unit     = "MONTH"
+  tags = [
+    "string",
+  ]
+}
+```
+
+Full maintenance windows example (includes optional fields)
+
+```terraform
+resource "checkly_maintenance_windows" "maintenance-1" {
   name            = "string"
   starts_at       = "2014-08-24T00:00:00.000Z"
   ends_at         = "2014-08-25T00:00:00.000Z"
@@ -19,34 +33,12 @@ resource "checkly_dashboard" "dashboard-1" {
 }
 ```
 
-Full dashboard example (includes optional fields)
-
-```terraform
-resource "checkly_dashboard" "dashboard-1" {
-  custom_url      = "testurl"
-  custom_domain   = "testdomain"
-  logo            = "logo"
-  header          = "header"
-  refresh_rate    = 60
-  paginate        = false
-  pagination_rate = 30
-  hide_tags       = false
-  width           = "FULL"
-  tags = [
-    "string",
-  ]
-}
-```
-
 ## Argument Reference
 The following arguments are supported:
-* `custom_url` - (Required) A custom user domain, e.g. "status.example.com". See the docs on updating your DNS and SSL usage.
-* `custom_domain` - (Required) A subdomain name under "checklyhq.com". Needs to be unique across all users.
-* `logo` - (Required) A URL pointing to an image file.
-* `header` - (Required) A piece of text displayed at the top of your dashboard.
-* `refresh_rate` - (Required) How often to refresh the dashboard in seconds. Possible values `30`, `60` and `600`.
-* `paginate` - (Required) Determines of pagination is on or off.
-* `pagination_rate` - (Required) How often to trigger pagination in seconds. Possible values `30`, `60` and `300`.
-* `hide_tags` - (Required) Show or hide the tags on the dashboard.
-* `width` - (Optional) Determines whether to use the full screen or focus in the center. Possible values `FULL` and `960PX`.
-* `tags` - (Optional) A list of one or more tags that filter which checks to display on the dashboard.
+* `name` - (Required) The maintenance window name.
+* `starts_at` - (Required) The start date of the maintenance window.
+* `ends_at` - (Required) The end date of the maintenance window.
+* `repeat_unit` - (Optional) The repeat strategy for the maintenance window.
+* `repeat_ends_at` - (Required) The end date where the maintenance window should stop repeating.
+* `repeat_interval` - (Optional) The repeat interval of the maintenance window from the first occurance.
+* `tags` - (Required) The names of the checks and groups maintenance window should apply to.
