@@ -7,10 +7,10 @@ Minimal dashboard example
 
 ```terraform
 resource "checkly_dashboard" "dashboard-1" {
-  custom_url      = "testurl"
-  custom_domain   = "testdomain"
-  logo            = "logo"
-  header          = "header"
+  custom_url      = "checkly"
+  custom_domain   = "https://checklyhq.com/"
+  logo            = "https://www.checklyhq.com/logo.png"
+  header          = "Public dashboard"
   refresh_rate    = 60
   paginate        = false
   pagination_rate = 30
@@ -22,17 +22,17 @@ Full dashboard example (includes optional fields)
 
 ```terraform
 resource "checkly_dashboard" "dashboard-1" {
-  custom_url      = "testurl"
-  custom_domain   = "testdomain"
-  logo            = "logo"
-  header          = "header"
+  custom_url      = "checkly"
+  custom_domain   = "https://checklyhq.com/"
+  logo            = "https://www.checklyhq.com/logo.png"
+  header          = "Public dashboard"
   refresh_rate    = 60
   paginate        = false
   pagination_rate = 30
   hide_tags       = false
   width           = "FULL"
   tags = [
-    "string",
+    "auto",
   ]
 }
 ```
