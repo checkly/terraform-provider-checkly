@@ -31,12 +31,13 @@ func Provider() *schema.Provider {
 			},
 		},
 		ResourcesMap: map[string]*schema.Resource{
-			"checkly_check":         resourceCheck(),
-			"checkly_check_group":   resourceCheckGroup(),
-			"checkly_snippet":       resourceSnippet(),
-			"checkly_dashboard":     resourceDashboard(),
-      "checkly_maintenance_windows": resourceMaintenanceWindows(),
-			"checkly_alert_channel": resourceAlertChannel(),
+			"checkly_check":               resourceCheck(),
+			"checkly_check_group":         resourceCheckGroup(),
+			"checkly_snippet":             resourceSnippet(),
+			"checkly_dashboard":           resourceDashboard(),
+			"checkly_maintenance_windows": resourceMaintenanceWindows(),
+			"checkly_alert_channel":       resourceAlertChannel(),
+			"checkly_trigger_check":       resourceTriggerCheck(),
 			// "checkly_environment_variable": resourceEnvironmentVariable(),
 
 		},
@@ -68,7 +69,7 @@ func Provider() *schema.Provider {
 			}
 
 			client := checkly.NewClient(
-				apiUrl,
+				"http://localhost:3000",
 				apiKey,
 				nil,
 				debugOutput,
