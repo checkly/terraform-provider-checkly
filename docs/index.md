@@ -4,7 +4,7 @@ This Terraform provider enables users to manage [Checkly](https://checklyhq.com)
 You can find a quick [step-by-step guide](https://www.checklyhq.com/docs/integrations/terraform/) in Checkly's documentation.
 
 ## Authentication
-To use the provider with your Checkly account, you will need an API Key for the account. Go to the [Account Settings: API Keys](https://app.checklyhq.com/account/api-keys) page to create a new API key or to use an existing one.
+To use the provider with your Checkly account, you will need an API Key for your Checkly user. Go to the [User Settings: API Keys page](https://app.checklyhq.com/settings/user/api-keys) page to create a new API key or to use an existing one.
 
 Now expose the API key as an environment variable in your shell:
 

@@ -19,7 +19,7 @@ provider "checkly" {
 }
 ```
 
-2. To use the provider with your Checkly account, you will need an API Key for the account. Go to the [Account Settings: API Keys page](https://app.checklyhq.com/account/api-keys) and click 'Create API Key'. Get your api key and add it to your env `export TF_VAR_checkly_api_key=XXXXXX`
+2. To use the provider with your Checkly account, you will need an API Key for your Checkly user. Go to the [User Settings: API Keys page](https://app.checklyhq.com/settings/user/api-keys) and click 'Create API Key'. Get your api key and add it to your env `export TF_VAR_checkly_api_key=XXXXXX`
 
 3. Run `terraform providers`. The Checkly plugin should be listed.
 

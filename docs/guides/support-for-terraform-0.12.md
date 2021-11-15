@@ -22,7 +22,7 @@ If you're having issues, please check [the Hashicorp docs on installing third pa
 
 ### Authentication
 
-To use the provider with your Checkly account, you will need an API Key for the account. Go to the [Account Settings: API Keys page](https://app.checklyhq.com/account/api-keys) and click 'Create API Key'.
+To use the provider with your Checkly account, you will need an API Key for your Checkly user. Go to the [User Settings: API Keys page](https://app.checklyhq.com/settings/user/api-keys) and click 'Create API Key'.
 
 Now expose the API key as an environment variable in your shell:
 
