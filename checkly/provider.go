@@ -38,6 +38,7 @@ func Provider() *schema.Provider {
 			"checkly_maintenance_windows": resourceMaintenanceWindows(),
 			"checkly_alert_channel":       resourceAlertChannel(),
 			"checkly_trigger_check":       resourceTriggerCheck(),
+			"checkly_trigger_group":       resourceTriggerGroup(),
 			// "checkly_environment_variable": resourceEnvironmentVariable(),
 
 		},
@@ -69,7 +70,7 @@ func Provider() *schema.Provider {
 			}
 
 			client := checkly.NewClient(
-				"http://localhost:3000",
+				apiUrl,
 				apiKey,
 				nil,
 				debugOutput,
