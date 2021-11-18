@@ -6,7 +6,7 @@ If you're still using Terraform 0.12 and are not ready to upgrade yet, you can s
 2. Install checkly provider
 
 ```bash
-curl https://raw.githubusercontent.com/checkly/terraform-provider-checkly/master/install-0.12.sh | sh
+curl https://raw.githubusercontent.com/checkly/terraform-provider-checkly/main/install-0.12.sh | sh
 ```
 
 2. Run `terraform providers`. The Checkly plugin should be listed.

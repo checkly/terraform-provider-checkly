@@ -7,7 +7,7 @@
   <h1>Checkly Terraform Provider</h1>
 </p>
 
-[![Tests](https://github.com/checkly/terraform-provider-checkly/actions/workflows/test.yml/badge.svg?branch=master)](https://github.com/checkly/terraform-provider-checkly/actions/workflows/test.yml)
+[![Tests](https://github.com/checkly/terraform-provider-checkly/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/checkly/terraform-provider-checkly/actions/workflows/test.yml)
 [![Release](https://github.com/checkly/terraform-provider-checkly/actions/workflows/release.yml/badge.svg)](https://github.com/checkly/terraform-provider-checkly/actions/workflows/release.yml)
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/checkly/terraform-provider-checkly)
 ![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/checkly/terraform-provider-checkly?label=Version)
@@ -24,9 +24,9 @@ This Terraform provider enables users to manage [Checkly](https://checklyhq.com)
 
 ## 🪛 Installation
 
-Please refer to the [installation guide](https://github.com/checkly/terraform-provider-checkly/blob/master/docs/guides/getting-started.md)
+Please refer to the [installation guide](https://github.com/checkly/terraform-provider-checkly/blob/main/docs/guides/getting-started.md)
 
-If you're still using Terraform 0.12 please refer to [terraform 0.12 documentation](https://github.com/checkly/terraform-provider-checkly/blob/master/docs/guides/support-for-terraform-0.12.md)
+If you're still using Terraform 0.12 please refer to [terraform 0.12 documentation](https://github.com/checkly/terraform-provider-checkly/blob/main/docs/guides/support-for-terraform-0.12.md)
 
 <br>
 
@@ -35,7 +35,7 @@ If you're still using Terraform 0.12 please refer to [terraform 0.12 documentati
 For documentation and example usage see:
 1. [Checkly's documentation](https://www.checklyhq.com/docs/integrations/terraform/).
 2. [The official provider documentation](https://registry.terraform.io/providers/checkly/checkly/latest/docs)
-3. [`test.tf`](https://github.com/checkly/terraform-provider-checkly/blob/master/test.tf).
+3. [`test.tf`](https://github.com/checkly/terraform-provider-checkly/blob/main/test.tf).
 
 You can also find step-by-step guides on Checkly's blog:
 
@@ -59,7 +59,7 @@ go build && CHECKLY_API_KEY=XXX go test -tags=integration
 
 ## 📄 License
 
-[MIT](https://github.com/checkly/terraform-checkly-provider/blob/master/LICENSE)
+[MIT](https://github.com/checkly/terraform-checkly-provider/blob/main/LICENSE)
 
 <br>
 
