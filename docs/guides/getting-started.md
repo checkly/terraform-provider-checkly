@@ -28,7 +28,8 @@ provider "checkly" {
 $ export TF_VAR_checkly_api_key=cu_xxx
 ```
 
-1. You also need to set your target Account ID, you can find the Checkly Account ID under your [account settings](https://app.checklyhq.com/settings/account/general). If you don't have access to account settings, please contact your account owner/admin.
+3. You also need to set your target Account ID, which you can find under your [account settings](https://app.checklyhq.com/settings/account/general). If you don't have access to account settings, please contact your account owner/admin.
+
 
 ```bash
 $ export TF_VAR_checkly_account_id=xxx
@@ -36,7 +37,7 @@ $ export TF_VAR_checkly_account_id=xxx
 
 > ⚠️ If you are still using legacy Account API Keys, you can skip this step. Notice that Account API keys will be deprecated soon.
 
-1. Run `$ terraform providers` in your terminal. The Checkly plugin should be listed.
+4. Run `$ terraform providers` in your terminal. The Checkly plugin should be listed.
 
 ```bash
 terraform providers
@@ -55,4 +56,4 @@ resource "checkly_check_group" "first-group" {
 }
 ```
 
-5. Now run `$ terraform init` to setup a new project. Then use `$ terraform plan` followed by `$ terraform apply` to deploy your monitoring.
+6. Now run `$ terraform init` to setup a new project. Then use `$ terraform plan` followed by `$ terraform apply` to deploy your monitoring.
