@@ -27,7 +27,7 @@ terraform {
   required_providers {
     checkly = {
       source = "checkly/checkly"
-      version = "1.2.0"
+      version = "1.3.0"
     }
   }
 }
