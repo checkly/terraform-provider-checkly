@@ -21,10 +21,6 @@ func resourceTriggerGroup() *schema.Resource {
 			State: schema.ImportStatePassthrough,
 		},
 		Schema: map[string]*schema.Schema{
-			"token": {
-				Type:     schema.TypeString,
-				Required: true,
-			},
 			"group_id": {
 				Type:     schema.TypeInt,
 				Required: true,
@@ -43,7 +39,6 @@ func triggerGroupFromResourceData(d *schema.ResourceData) (checkly.TriggerGroup,
 	}
 	a := checkly.TriggerGroup{
 		ID:      ID,
-		Token:   d.Get("token").(string),
 		GroupId: int64(d.Get("group_id").(int)),
 	}
 
@@ -53,7 +48,6 @@ func triggerGroupFromResourceData(d *schema.ResourceData) (checkly.TriggerGroup,
 }
 
 func resourceDataFromTriggerGroup(s *checkly.TriggerGroup, d *schema.ResourceData) error {
-	d.Set("token", s.Token)
 	d.Set("group_id", s.GroupId)
 	return nil
 }
@@ -82,7 +76,7 @@ func resourceTriggerGroupDelete(d *schema.ResourceData, client interface{}) erro
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
 	defer cancel()
-	err = client.(checkly.Client).DeleteTriggerGroup(ctx, tc.GroupId, tc.Token)
+	err = client.(checkly.Client).DeleteTriggerGroup(ctx, tc.GroupId)
 	if err != nil {
 		return fmt.Errorf("resourceTriggerGroupDelete: API error: %w", err)
 	}

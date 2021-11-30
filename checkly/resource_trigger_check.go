@@ -21,10 +21,6 @@ func resourceTriggerCheck() *schema.Resource {
 			State: schema.ImportStatePassthrough,
 		},
 		Schema: map[string]*schema.Schema{
-			"token": {
-				Type:     schema.TypeString,
-				Required: true,
-			},
 			"check_id": {
 				Type:     schema.TypeString,
 				Required: true,
@@ -43,7 +39,6 @@ func triggerCheckFromResourceData(d *schema.ResourceData) (checkly.TriggerCheck,
 	}
 	a := checkly.TriggerCheck{
 		ID:      ID,
-		Token:   d.Get("token").(string),
 		CheckId: d.Get("check_id").(string),
 	}
 
@@ -53,7 +48,6 @@ func triggerCheckFromResourceData(d *schema.ResourceData) (checkly.TriggerCheck,
 }
 
 func resourceDataFromTriggerCheck(s *checkly.TriggerCheck, d *schema.ResourceData) error {
-	d.Set("token", s.Token)
 	d.Set("check_id", s.CheckId)
 	return nil
 }
@@ -82,7 +76,7 @@ func resourceTriggerCheckDelete(d *schema.ResourceData, client interface{}) erro
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
 	defer cancel()
-	err = client.(checkly.Client).DeleteTriggerCheck(ctx, tc.CheckId, tc.Token)
+	err = client.(checkly.Client).DeleteTriggerCheck(ctx, tc.CheckId)
 	if err != nil {
 		return fmt.Errorf("resourceTriggerCheckDelete: API error: %w", err)
 	}
