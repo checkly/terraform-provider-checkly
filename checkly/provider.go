@@ -70,7 +70,7 @@ func Provider() *schema.Provider {
 			}
 
 			client := checkly.NewClient(
-				"http://localhost:3000",
+				apiUrl,
 				apiKey,
 				nil,
 				debugOutput,
