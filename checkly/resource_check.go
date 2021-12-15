@@ -71,7 +71,7 @@ func resourceCheck() *schema.Resource {
 			},
 			"locations": {
 				Type:     schema.TypeSet,
-				Required: true,
+				Optional: true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},

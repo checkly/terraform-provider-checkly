@@ -256,12 +256,10 @@ resource "checkly_check" "browser-check-1" {
   script = <<EOT
 const assert = require("chai").assert;
 const puppeteer = require("puppeteer");
-
 const browser = await puppeteer.launch();
 const page = await browser.newPage();
 await page.goto("https://google.com/");
 const title = await page.title();
-
 assert.equal(title, "Google");
 await browser.close();
 EOT
