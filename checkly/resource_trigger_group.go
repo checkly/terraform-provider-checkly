@@ -25,6 +25,10 @@ func resourceTriggerGroup() *schema.Resource {
 				Type:     schema.TypeInt,
 				Required: true,
 			},
+			"token": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
 		},
 	}
 }
@@ -40,6 +44,7 @@ func triggerGroupFromResourceData(d *schema.ResourceData) (checkly.TriggerGroup,
 	a := checkly.TriggerGroup{
 		ID:      ID,
 		GroupId: int64(d.Get("group_id").(int)),
+		Token:   d.Get("token").(string),
 	}
 
 	fmt.Printf("%v", a)
@@ -49,6 +54,7 @@ func triggerGroupFromResourceData(d *schema.ResourceData) (checkly.TriggerGroup,
 
 func resourceDataFromTriggerGroup(s *checkly.TriggerGroup, d *schema.ResourceData) error {
 	d.Set("group_id", s.GroupId)
+	d.Set("token", s.Token)
 	return nil
 }
 
@@ -66,6 +72,8 @@ func resourceTriggerGroupCreate(d *schema.ResourceData, client interface{}) erro
 	}
 
 	d.SetId(fmt.Sprintf("%d", result.ID))
+	d.Set("token", result.Token)
+
 	return resourceTriggerGroupRead(d, client)
 }
 
@@ -102,6 +110,19 @@ func resourceTriggerGroupRead(d *schema.ResourceData, client interface{}) error 
 }
 
 func resourceTriggerGroupUpdate(d *schema.ResourceData, client interface{}) error {
-	// NOTE: this method is empty because we do not allow trigger updates.
-	return nil
+	tc, err := triggerGroupFromResourceData(d)
+	if err != nil {
+		return fmt.Errorf("resourceTriggerGroupRead: translation error: %w", err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
+	result, err := client.(checkly.Client).GetTriggerGroup(ctx, tc.GroupId)
+	defer cancel()
+
+	if err != nil {
+		return fmt.Errorf("resourceTriggerGroupUpdate: API error: %w", err)
+	}
+
+	d.Set("token", result.Token)
+
+	return resourceTriggerCheckRead(d, client)
 }
