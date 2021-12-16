@@ -102,15 +102,6 @@ func resourceTriggerGroupRead(d *schema.ResourceData, client interface{}) error 
 }
 
 func resourceTriggerGroupUpdate(d *schema.ResourceData, client interface{}) error {
-	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
-	mw, err := client.(checkly.Client).GetTriggerGroup(ctx, 4)
-	defer cancel()
-	if err != nil {
-		if strings.Contains(err.Error(), "404") {
-			d.SetId("")
-			return nil
-		}
-		return fmt.Errorf("resourceTriggerCheckRead: API error: %w", err)
-	}
-	return resourceDataFromTriggerGroup(mw, d)
+	// NOTE: this method is empty because we do not allow trigger updates.
+	return nil
 }

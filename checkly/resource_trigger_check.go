@@ -25,6 +25,10 @@ func resourceTriggerCheck() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 			},
+			"token": {
+				Type:     schema.TypeString,
+				Optional: true,
+			},
 		},
 	}
 }
@@ -40,6 +44,7 @@ func triggerCheckFromResourceData(d *schema.ResourceData) (checkly.TriggerCheck,
 	a := checkly.TriggerCheck{
 		ID:      ID,
 		CheckId: d.Get("check_id").(string),
+		Token:   d.Get("token").(string),
 	}
 
 	fmt.Printf("%v", a)
@@ -49,6 +54,7 @@ func triggerCheckFromResourceData(d *schema.ResourceData) (checkly.TriggerCheck,
 
 func resourceDataFromTriggerCheck(s *checkly.TriggerCheck, d *schema.ResourceData) error {
 	d.Set("check_id", s.CheckId)
+	d.Set("token", s.Token)
 	return nil
 }
 
@@ -66,6 +72,8 @@ func resourceTriggerCheckCreate(d *schema.ResourceData, client interface{}) erro
 	}
 
 	d.SetId(fmt.Sprintf("%d", result.ID))
+	d.Set("token", result.Token)
+
 	return resourceTriggerCheckRead(d, client)
 }
 
@@ -102,15 +110,19 @@ func resourceTriggerCheckRead(d *schema.ResourceData, client interface{}) error 
 }
 
 func resourceTriggerCheckUpdate(d *schema.ResourceData, client interface{}) error {
-	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
-	mw, err := client.(checkly.Client).GetTriggerCheck(ctx, d.Id())
-	defer cancel()
+	tc, err := triggerCheckFromResourceData(d)
 	if err != nil {
-		if strings.Contains(err.Error(), "404") {
-			d.SetId("")
-			return nil
-		}
-		return fmt.Errorf("resourceTriggerCheckRead: API error: %w", err)
+		return fmt.Errorf("resourceTriggerCheckCreate: translation error: %w", err)
 	}
-	return resourceDataFromTriggerCheck(mw, d)
+	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
+	defer cancel()
+	result, err := client.(checkly.Client).GetTriggerCheck(ctx, tc.CheckId)
+
+	if err != nil {
+		return fmt.Errorf("CreateTriggerCheck: API error: %w", err)
+	}
+
+	d.Set("token", result.Token)
+
+	return resourceTriggerCheckRead(d, client)
 }
