@@ -37,8 +37,9 @@ func Provider() *schema.Provider {
 			"checkly_dashboard":           resourceDashboard(),
 			"checkly_maintenance_windows": resourceMaintenanceWindows(),
 			"checkly_alert_channel":       resourceAlertChannel(),
+			"checkly_trigger_check":       resourceTriggerCheck(),
+			"checkly_trigger_group":       resourceTriggerGroup(),
 			// "checkly_environment_variable": resourceEnvironmentVariable(),
-
 		},
 		ConfigureFunc: func(r *schema.ResourceData) (interface{}, error) {
 			debugLog := os.Getenv("CHECKLY_DEBUG_LOG")

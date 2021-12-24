@@ -6,7 +6,7 @@ If you're still using Terraform 0.12 and are not ready to upgrade yet, you can s
 2. Install checkly provider
 
 ```bash
-curl https://raw.githubusercontent.com/checkly/terraform-provider-checkly/master/install-0.12.sh | sh
+curl https://raw.githubusercontent.com/checkly/terraform-provider-checkly/main/install-0.12.sh | sh
 ```
 
 2. Run `terraform providers`. The Checkly plugin should be listed.
@@ -22,7 +22,7 @@ If you're having issues, please check [the Hashicorp docs on installing third pa
 
 ### Authentication
 
-To use the provider with your Checkly account, you will need an API Key for the account. Go to the [Account Settings: API Keys page](https://app.checklyhq.com/account/api-keys) and click 'Create API Key'.
+To use the provider with your Checkly account, you will need an API Key for your Checkly user. Go to the [User Settings: API Keys page](https://app.checklyhq.com/settings/user/api-keys) and click 'Create API Key'.
 
 Now expose the API key as an environment variable in your shell:
 
