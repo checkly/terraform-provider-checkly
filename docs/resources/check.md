@@ -217,7 +217,7 @@ The following arguments are supported:
 * `double_check` (Optional) Setting this to "true" will trigger a retry when a check fails from the failing region and another, randomly selected region before marking the check as failed. Possible values `true`, and `false`.
 * `ssl_check` (Optional) Determines if the SSL certificate should be validated for expiry. Possible values `true`, and `false`.
 * `should_fail` (Optional) Allows to invert the behaviour of when a check is considered to fail. Allows for validating error status like 404. Possible values `true`, and `false`.
-* `locations` (Required) An array of one or more data center locations where to run the this check.
+* `locations` (Optional) An array of one or more data center locations where to run the this check. Defaults to["us-east-1"].
 * `script` (Optional) A valid piece of Node.js javascript code describing a browser interaction with the Puppeteer framework or a terraform reference to an external javascript file.
 * `environment_variables` (Optional) Key/value pairs for setting environment variables during check execution. These are only relevant for Browser checks. Use global environment variables whenever possible.
 * `Tags` (Optional) A list of Tags for organizing and filtering checks.
