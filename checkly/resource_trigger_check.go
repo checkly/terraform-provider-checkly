@@ -28,101 +28,94 @@ func resourceTriggerCheck() *schema.Resource {
 			"token": {
 				Type:     schema.TypeString,
 				Optional: true,
+				Computed: true,
+			},
+			"url": {
+				Type:     schema.TypeString,
+				Optional: true,
+				Computed: true,
 			},
 		},
 	}
 }
 
-func triggerCheckFromResourceData(d *schema.ResourceData) (checkly.TriggerCheck, error) {
-	ID, err := strconv.ParseInt(d.Id(), 10, 64)
+func triggerCheckFromResourceData(data *schema.ResourceData) (checkly.TriggerCheck, error) {
+	ID, err := strconv.ParseInt(data.Id(), 10, 64)
 	if err != nil {
-		if d.Id() != "" {
+		if data.Id() != "" {
 			return checkly.TriggerCheck{}, err
 		}
 		ID = 0
 	}
-	a := checkly.TriggerCheck{
+	return checkly.TriggerCheck{
 		ID:      ID,
-		CheckId: d.Get("check_id").(string),
-		Token:   d.Get("token").(string),
-	}
-
-	fmt.Printf("%v", a)
-
-	return a, nil
+		CheckId: data.Get("check_id").(string),
+		Token:   data.Get("token").(string),
+		URL:     data.Get("url").(string),
+	}, nil
 }
 
-func resourceDataFromTriggerCheck(s *checkly.TriggerCheck, d *schema.ResourceData) error {
-	d.Set("check_id", s.CheckId)
-	d.Set("token", s.Token)
+func resourceDataFromTriggerCheck(trigger *checkly.TriggerCheck, data *schema.ResourceData) error {
+	data.Set("check_id", trigger.CheckId)
+	data.Set("token", trigger.Token)
+	data.Set("url", trigger.URL)
 	return nil
 }
 
-func resourceTriggerCheckCreate(d *schema.ResourceData, client interface{}) error {
-	tc, err := triggerCheckFromResourceData(d)
+func resourceTriggerCheckCreate(data *schema.ResourceData, client interface{}) error {
+	trigger, err := triggerCheckFromResourceData(data)
 	if err != nil {
 		return fmt.Errorf("resourceTriggerCheckCreate: translation error: %w", err)
 	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
 	defer cancel()
-	result, err := client.(checkly.Client).CreateTriggerCheck(ctx, tc.CheckId)
-
+	result, err := client.(checkly.Client).CreateTriggerCheck(ctx, trigger.CheckId)
 	if err != nil {
 		return fmt.Errorf("CreateTriggerCheck: API error: %w", err)
 	}
 
-	d.SetId(fmt.Sprintf("%d", result.ID))
-	d.Set("token", result.Token)
+	data.SetId(fmt.Sprintf("%d", result.ID))
 
-	return resourceTriggerCheckRead(d, client)
+	return resourceTriggerCheckRead(data, client)
 }
 
-func resourceTriggerCheckDelete(d *schema.ResourceData, client interface{}) error {
-	tc, err := triggerCheckFromResourceData(d)
+func resourceTriggerCheckDelete(data *schema.ResourceData, client interface{}) error {
+	trigger, err := triggerCheckFromResourceData(data)
 	if err != nil {
-		return fmt.Errorf("resourceTriggerCheckCreate: translation error: %w", err)
+		return fmt.Errorf("resourceTriggerCheckDelete: translation error: %w", err)
 	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
 	defer cancel()
-	err = client.(checkly.Client).DeleteTriggerCheck(ctx, tc.CheckId)
+	err = client.(checkly.Client).DeleteTriggerCheck(ctx, trigger.CheckId)
 	if err != nil {
-		return fmt.Errorf("resourceTriggerCheckDelete: API error: %w", err)
+		return fmt.Errorf("DeleteTriggerCheck: API error: %w", err)
 	}
+
 	return nil
 }
 
-func resourceTriggerCheckRead(d *schema.ResourceData, client interface{}) error {
-	tc, err := triggerCheckFromResourceData(d)
+func resourceTriggerCheckRead(data *schema.ResourceData, client interface{}) error {
+	trigger, err := triggerCheckFromResourceData(data)
 	if err != nil {
-		return fmt.Errorf("resourceTriggerCheckDelete: ID %s is not numeric: %w", d.Id(), err)
+		return fmt.Errorf("resourceTriggerCheckRead: ID %s is not numeric: %w", data.Id(), err)
 	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
-	mw, err := client.(checkly.Client).GetTriggerCheck(ctx, tc.CheckId)
+	result, err := client.(checkly.Client).GetTriggerCheck(ctx, trigger.CheckId)
 	defer cancel()
 	if err != nil {
 		if strings.Contains(err.Error(), "404") {
-			d.SetId("")
+			data.SetId("")
 			return nil
 		}
-		return fmt.Errorf("resourceTriggerCheckRead: API error: %w", err)
+		return fmt.Errorf("GetTriggerCheck: API error: %w", err)
 	}
-	return resourceDataFromTriggerCheck(mw, d)
+
+	return resourceDataFromTriggerCheck(result, data)
 }
 
-func resourceTriggerCheckUpdate(d *schema.ResourceData, client interface{}) error {
-	tc, err := triggerCheckFromResourceData(d)
-	if err != nil {
-		return fmt.Errorf("resourceTriggerCheckCreate: translation error: %w", err)
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
-	defer cancel()
-	result, err := client.(checkly.Client).GetTriggerCheck(ctx, tc.CheckId)
-
-	if err != nil {
-		return fmt.Errorf("CreateTriggerCheck: API error: %w", err)
-	}
-
-	d.Set("token", result.Token)
-
-	return resourceTriggerCheckRead(d, client)
+func resourceTriggerCheckUpdate(data *schema.ResourceData, client interface{}) error {
+	return resourceTriggerCheckRead(data, client)
 }

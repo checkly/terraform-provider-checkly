@@ -34,6 +34,14 @@ resource "checkly_check" "api-check-1" {
 
 }
 
+resource "checkly_trigger_check" "trigger-api-check-1" {
+  check_id = checkly_check.api-check-1.id
+}
+
+output "trigger_api_check-1-url" {
+  value = checkly_trigger_check.trigger-api-check-1.url
+}
+
 #----------------------------EXAMPLE----------------------------#
 #-- a fully fledged API check
 
@@ -283,6 +291,14 @@ resource "checkly_check_group" "check-group-1" {
     "eu-west-1",
     "eu-west-2",
   ]
+}
+
+resource "checkly_trigger_group" "trigger-check-group-1" {
+ group_id = checkly_check_group.check-group-1.id
+}
+
+output "trigger_check-group-1-url" {
+  value = checkly_trigger_group.trigger-check-group-1.url
 }
 
 #----------------------------EXAMPLE----------------------------#
