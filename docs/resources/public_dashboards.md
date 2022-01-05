@@ -8,7 +8,7 @@ Minimal dashboard example
 ```terraform
 resource "checkly_dashboard" "dashboard-1" {
   custom_url      = "checkly"
-  custom_domain   = "https://checklyhq.com/"
+  custom_domain   = "status.example.com"
   logo            = "https://www.checklyhq.com/logo.png"
   header          = "Public dashboard"
   refresh_rate    = 60
@@ -23,7 +23,7 @@ Full dashboard example (includes optional fields)
 ```terraform
 resource "checkly_dashboard" "dashboard-1" {
   custom_url      = "checkly"
-  custom_domain   = "https://checklyhq.com/"
+  custom_domain   = "status.example.com"
   logo            = "https://www.checklyhq.com/logo.png"
   header          = "Public dashboard"
   refresh_rate    = 60
@@ -39,8 +39,8 @@ resource "checkly_dashboard" "dashboard-1" {
 
 ## Argument Reference
 The following arguments are supported:
-* `custom_url` - (Required) A custom user domain, e.g. "status.example.com". See the docs on updating your DNS and SSL usage.
-* `custom_domain` - (Required) A subdomain name under "checklyhq.com". Needs to be unique across all users.
+* `custom_url` - (Required) A subdomain name under "checklyhq.com". Needs to be unique across all users.
+* `custom_domain` - (Required) A custom user domain, e.g. "status.example.com". See the docs on updating your DNS and SSL usage.
 * `logo` - (Required) A URL pointing to an image file.
 * `header` - (Required) A piece of text displayed at the top of your dashboard.
 * `refresh_rate` - (Required) How often to refresh the dashboard in seconds. Possible values `30`, `60` and `600`.
