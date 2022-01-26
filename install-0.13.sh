@@ -2,14 +2,19 @@
 set -x
 
 # Determine architecture
-if [[ $(uname -s) == Darwin ]]
-then
+if [[ $(uname -s) == Darwin ]]; then
 	platform='darwin_amd64'
-elif [[ $(uname -s) == Linux ]]
-then
+elif [[ $(uname -s) == Linux ]]; then
 	platform='linux_amd64'
 else
 	echo "No supported architecture found, you need to install checkly terraform provider manually"
+	exit 1
+fi
+
+if [ ! "$(command -v jq)" ]; then
+	echo "Please install 'jq' to continue."
+	echo "On MacOS: brew install jq"
+	echo "On (Ubuntu) Linux: sudo apt install jq"
 	exit 1
 fi
 
