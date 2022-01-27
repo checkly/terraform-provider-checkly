@@ -84,6 +84,8 @@ func Provider() *schema.Provider {
 				client.SetAccountId(accountId)
 			}
 
+			client.SetChecklySource("TF")
+
 			return client, nil
 		},
 	}
