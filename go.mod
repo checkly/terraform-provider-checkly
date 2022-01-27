@@ -5,7 +5,7 @@ go 1.14
 require (
 	github.com/agext/levenshtein v1.2.3 // indirect
 	github.com/aws/aws-sdk-go v1.31.11 // indirect
-	github.com/checkly/checkly-go-sdk v1.5.4
+	github.com/checkly/checkly-go-sdk v1.5.5
 	github.com/fatih/color v1.9.0 // indirect
 	github.com/google/go-cmp v0.5.0
 	github.com/gruntwork-io/terratest v0.18.3
