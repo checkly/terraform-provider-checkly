@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2022-01-28
+### Added
+- Support for Command Line Triggers [#87](https://github.com/checkly/terraform-provider-checkly/issues/87)
+- Add Public API `source` HTTP header [#110](https://github.com/checkly/terraform-provider-checkly/issues/110)
+
+### Changed
+- Made check/group `locations` property optional [#103](https://github.com/checkly/terraform-provider-checkly/issues/103)
+- Rename default branch to `main` [#99](https://github.com/checkly/terraform-provider-checkly/issues/99)
+- Improve User API Keys docs [#95](https://github.com/checkly/terraform-provider-checkly/issues/95)
+
 ## [1.3.0] - 2021-11-10
 ### Added
 - Support for Public Dashboards [#81](https://github.com/checkly/terraform-provider-checkly/issues/81)
