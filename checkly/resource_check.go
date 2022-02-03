@@ -275,6 +275,10 @@ func resourceCheck() *schema.Resource {
 							Type:     schema.TypeBool,
 							Optional: true,
 						},
+						"skip_ssl": {
+							Type:     schema.TypeBool,
+							Optional: true,
+						},
 						"headers": {
 							Type:     schema.TypeMap,
 							Optional: true,
@@ -509,6 +513,7 @@ func setFromRequest(r checkly.Request) []tfMap {
 	s["method"] = r.Method
 	s["url"] = r.URL
 	s["follow_redirects"] = r.FollowRedirects
+	s["skip_ssl"] = r.SkipSSL
 	s["body"] = r.Body
 	s["body_type"] = r.BodyType
 	s["headers"] = mapFromKeyValues(r.Headers)
@@ -722,6 +727,7 @@ func requestFromSet(s *schema.Set) checkly.Request {
 		Method:          res["method"].(string),
 		URL:             res["url"].(string),
 		FollowRedirects: res["follow_redirects"].(bool),
+		SkipSSL:         res["skip_ssl"].(bool),
 		Body:            res["body"].(string),
 		BodyType:        res["body_type"].(string),
 		Headers:         keyValuesFromMap(res["headers"].(tfMap)),
