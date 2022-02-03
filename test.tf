@@ -297,7 +297,7 @@ resource "checkly_check_group" "check-group-1" {
 }
 
 resource "checkly_trigger_group" "trigger-check-group-1" {
- group_id = checkly_check_group.check-group-1.id
+  group_id = checkly_check_group.check-group-1.id
 }
 
 output "trigger_check-group-1-url" {
