@@ -22,6 +22,7 @@ resource "checkly_check" "example-check" {
   request {
     url              = "https://api.example.com/"
     follow_redirects = true
+    skip_ssl         = false
     assertion {
       source     = "STATUS_CODE"
       comparison = "EQUALS"
@@ -73,6 +74,7 @@ resource "checkly_check" "example-check-2" {
 
   request {
     follow_redirects = true
+    skip_ssl         = false
     url              = "http://api.example.com/"
 
     query_parameters = {
@@ -239,6 +241,7 @@ The `request` section is added to API checks and supports the following:
 * `method` (Optional) The HTTP method to use for this API check. Possible values are `GET`, `POST`, `PUT`, `HEAD`, `DELETE`, `PATCH`. Defaults to `GET`.
 * `url` (Required) .
 * `follow_redirects` (Optional) .
+* `skip_ssl` (Optional) .
 * `headers` (Optional) .
 * `query_parameters` (Optional).
 * `body` (Optional)
