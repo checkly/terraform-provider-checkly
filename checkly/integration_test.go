@@ -14,6 +14,15 @@ func getAPIKey(t *testing.T) string {
 	if key == "" {
 		t.Fatal("'CHECKLY_API_KEY' must be set for integration tests")
 	}
+
+	return key
+}
+
+func getAccountId(t *testing.T) string {
+	key := os.Getenv("CHECKLY_ACCOUNT_ID")
+	if key == "" {
+		t.Fatal("'CHECKLY_ACCOUNT_ID' must be set for integration tests")
+	}
 	return key
 }
 
@@ -22,7 +31,8 @@ func TestChecklyTerraformIntegration(t *testing.T) {
 	terraformOptions := &terraform.Options{
 		TerraformDir: "../",
 		Vars: map[string]interface{}{
-			"checkly_api_key": getAPIKey(t),
+			"checkly_api_key":    getAPIKey(t),
+			"checkly_account_id": getAccountId(t),
 		},
 	}
 	defer terraform.Destroy(t, terraformOptions)

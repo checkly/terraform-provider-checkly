@@ -34,7 +34,9 @@ jobs:
     - name: Test
       run: go test -v ./...
       env:
-        TF_VAR_checkly_api_key: ${{ secrets.CHECKLY_API_KEY }}
         CHECKLY_API_KEY: ${{ secrets.CHECKLY_API_KEY }}
+        TF_VAR_checkly_api_key: ${{ secrets.CHECKLY_API_KEY }}
+        TF_VAR_checkly_account_id: ${{ secrets.CHECKLY_ACCOUNT_ID }}
+        CHECKLY_ACCOUNT_ID: ${{ secrets.CHECKLY_ACCOUNT_ID }}
         CHECKLY_API_URL: ${{ secrets.CHECKLY_API_URL }}
         TF_ACC: 1

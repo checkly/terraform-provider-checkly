@@ -52,7 +52,7 @@ Clone the repo, build the project and add it to your Terraform plugins directory
 git clone git@github.com:checkly/terraform-provider-checkly.git
 cd terraform-provider-checkly
 go test
-go build && CHECKLY_API_KEY=XXX go test -tags=integration
+go build && CHECKLY_API_KEY=xxx CHECKLY_ACCOUNT_ID=xxx  go test -tags=integration
 ```
 
 <br>
