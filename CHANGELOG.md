@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Support for Command Line Triggers [#87](https://github.com/checkly/terraform-provider-checkly/issues/87)
 - Add Public API `source` HTTP header [#110](https://github.com/checkly/terraform-provider-checkly/issues/110)
+- Allow skip ssl validation to api checks [#112](https://github.com/checkly/terraform-provider-checkly/issues/112)
 
 ### Changed
 - Made check/group `locations` property optional [#103](https://github.com/checkly/terraform-provider-checkly/issues/103)
