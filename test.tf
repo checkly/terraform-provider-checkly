@@ -68,6 +68,7 @@ resource "checkly_check" "api-check-2" {
     method           = "GET"
     url              = "https://api.checklyhq.com/public-stats"
     follow_redirects = true
+    skip_ssl         = false
 
     headers = {
       X-CUSTOM-1 = 1
@@ -151,6 +152,7 @@ resource "checkly_check" "api-check-3" {
     method           = "POST"
     url              = "https://jsonplaceholder.typicode.com/posts"
     follow_redirects = true
+    skip_ssl         = false
 
     headers = {
       Content-type = "application/json; charset=UTF-8"
@@ -207,6 +209,7 @@ resource "checkly_check" "api-check-4" {
 
   request {
     follow_redirects = false
+    skip_ssl         = true
     url              = "https://api.checklyhq.com/public-stats"
 
     basic_auth {
@@ -294,7 +297,7 @@ resource "checkly_check_group" "check-group-1" {
 }
 
 resource "checkly_trigger_group" "trigger-check-group-1" {
- group_id = checkly_check_group.check-group-1.id
+  group_id = checkly_check_group.check-group-1.id
 }
 
 output "trigger_check-group-1-url" {
@@ -406,6 +409,7 @@ resource "checkly_check" "api-check-group-1_1" {
     method           = "GET"
     url              = "https://api.checklyhq.com/public-stats"
     follow_redirects = true
+    skip_ssl         = false
   }
 
   group_id    = checkly_check_group.check-group-1.id
@@ -427,6 +431,7 @@ resource "checkly_check" "api-check-group-1_2" {
     method           = "GET"
     url              = "https://api.checklyhq.com/public-stats"
     follow_redirects = true
+    skip_ssl         = false
   }
 
   group_id    = checkly_check_group.check-group-1.id
