@@ -84,7 +84,12 @@ func Provider() *schema.Provider {
 				client.SetAccountId(accountId)
 			}
 
-			client.SetChecklySource("TF")
+			checklyApiSource := os.Getenv("CHECKLY_API_SOURCE")
+			if checklyApiSource != "" {
+				client.SetChecklySource(checklyApiSource)
+			} else {
+				client.SetChecklySource("TF")
+			}
 
 			return client, nil
 		},
