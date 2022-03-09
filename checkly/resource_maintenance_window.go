@@ -11,12 +11,12 @@ import (
 	checkly "github.com/checkly/checkly-go-sdk"
 )
 
-func resourceMaintenanceWindows() *schema.Resource {
+func resourceMaintenanceWindow() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceMaintenanceWindowsCreate,
-		Read:   resourceMaintenanceWindowsRead,
-		Update: resourceMaintenanceWindowsUpdate,
-		Delete: resourceMaintenanceWindowsDelete,
+		Create: resourceMaintenanceWindowCreate,
+		Read:   resourceMaintenanceWindowRead,
+		Update: resourceMaintenanceWindowUpdate,
+		Delete: resourceMaintenanceWindowDelete,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -91,10 +91,10 @@ func resourceDataFromMaintenanceWindows(s *checkly.MaintenanceWindow, d *schema.
 	return nil
 }
 
-func resourceMaintenanceWindowsCreate(d *schema.ResourceData, client interface{}) error {
+func resourceMaintenanceWindowCreate(d *schema.ResourceData, client interface{}) error {
 	mw, err := maintenanceWindowsFromResourceData(d)
 	if err != nil {
-		return fmt.Errorf("resourceMaintenanceWindowsCreate: translation error: %w", err)
+		return fmt.Errorf("resourceMaintenanceWindowCreate: translation error: %w", err)
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
 	defer cancel()
@@ -105,10 +105,10 @@ func resourceMaintenanceWindowsCreate(d *schema.ResourceData, client interface{}
 	}
 
 	d.SetId(fmt.Sprintf("%d", result.ID))
-	return resourceMaintenanceWindowsRead(d, client)
+	return resourceMaintenanceWindowRead(d, client)
 }
 
-func resourceMaintenanceWindowsUpdate(d *schema.ResourceData, client interface{}) error {
+func resourceMaintenanceWindowUpdate(d *schema.ResourceData, client interface{}) error {
 	mw, err := maintenanceWindowsFromResourceData(d)
 	if err != nil {
 		return fmt.Errorf("resourceMaintenanceWindowUpdate: translation error: %w", err)
@@ -120,27 +120,27 @@ func resourceMaintenanceWindowsUpdate(d *schema.ResourceData, client interface{}
 		return fmt.Errorf("resourceMaintenanceWindowUpdate: API error: %w", err)
 	}
 	d.SetId(fmt.Sprintf("%d", mw.ID))
-	return resourceMaintenanceWindowsRead(d, client)
+	return resourceMaintenanceWindowRead(d, client)
 }
 
-func resourceMaintenanceWindowsDelete(d *schema.ResourceData, client interface{}) error {
+func resourceMaintenanceWindowDelete(d *schema.ResourceData, client interface{}) error {
 	ID, err := strconv.ParseInt(d.Id(), 10, 64)
 	if err != nil {
-		return fmt.Errorf("resourceMaintenanceWindowsDelete: ID %s is not numeric: %w", d.Id(), err)
+		return fmt.Errorf("resourceMaintenanceWindowDelete: ID %s is not numeric: %w", d.Id(), err)
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
 	defer cancel()
 	err = client.(checkly.Client).DeleteMaintenanceWindow(ctx, ID)
 	if err != nil {
-		return fmt.Errorf("resourceMaintenanceWindowsDelete: API error: %w", err)
+		return fmt.Errorf("resourceMaintenanceWindowDelete: API error: %w", err)
 	}
 	return nil
 }
 
-func resourceMaintenanceWindowsRead(d *schema.ResourceData, client interface{}) error {
+func resourceMaintenanceWindowRead(d *schema.ResourceData, client interface{}) error {
 	ID, err := strconv.ParseInt(d.Id(), 10, 64)
 	if err != nil {
-		return fmt.Errorf("resourceMaintenanceWindowsRead: ID %s is not numeric: %w", d.Id(), err)
+		return fmt.Errorf("resourceMaintenanceWindowRead: ID %s is not numeric: %w", d.Id(), err)
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
 	mw, err := client.(checkly.Client).GetMaintenanceWindow(ctx, ID)
@@ -150,7 +150,7 @@ func resourceMaintenanceWindowsRead(d *schema.ResourceData, client interface{}) 
 			d.SetId("")
 			return nil
 		}
-		return fmt.Errorf("resourceMaintenanceWindowsRead: API error: %w", err)
+		return fmt.Errorf("resourceMaintenanceWindowRead: API error: %w", err)
 	}
 	return resourceDataFromMaintenanceWindows(mw, d)
 }

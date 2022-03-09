@@ -35,7 +35,7 @@ func Provider() *schema.Provider {
 			"checkly_check_group":         resourceCheckGroup(),
 			"checkly_snippet":             resourceSnippet(),
 			"checkly_dashboard":           resourceDashboard(),
-			"checkly_maintenance_windows": resourceMaintenanceWindows(),
+			"checkly_maintenance_windows": resourceMaintenanceWindow(),
 			"checkly_alert_channel":       resourceAlertChannel(),
 			"checkly_trigger_check":       resourceTriggerCheck(),
 			"checkly_trigger_group":       resourceTriggerGroup(),
