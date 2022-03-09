@@ -124,6 +124,7 @@ github.com/google/go-cmp v0.4.0/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/
 github.com/google/go-cmp v0.4.1/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
 github.com/google/go-cmp v0.5.0 h1:/QaMHBdZ26BB3SSst0Iwl10Epc+xhTquomWX0oZEB6w=
 github.com/google/go-cmp v0.5.0/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
+github.com/google/go-cmp v0.5.6/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
 github.com/google/martian v2.1.0+incompatible h1:/CP5g8u/VJHijgedC/Legn3BAbAaWPgecwXBIDzw5no=
 github.com/google/martian v2.1.0+incompatible/go.mod h1:9I4somxYTbIHy5NJKHRl3wXiIaQGbYVAs8BPL6v8lEs=
 github.com/google/martian/v3 v3.0.0 h1:pMen7vLs8nvgEYhywH3KDWJIJTeEr2ULsVWHWYHQyBs=
@@ -184,6 +185,8 @@ github.com/hashicorp/terraform-json v0.5.0 h1:7TV3/F3y7QVSuN4r9BEXqnWqrAyeOtON8f
 github.com/hashicorp/terraform-json v0.5.0/go.mod h1:eAbqb4w0pSlRmdvl8fOyHAi/+8jnkVYN28gJkSJrLhU=
 github.com/hashicorp/terraform-plugin-sdk/v2 v2.0.1 h1:qG6EdnW2UrftQI4mBdIsWP4YWqYJXynZtl0shQYuU78=
 github.com/hashicorp/terraform-plugin-sdk/v2 v2.0.1/go.mod h1:BRz6UtYmksQJU0eMfahQR8fcJf8tIe77gn7YVm6rGD4=
+github.com/hashicorp/terraform-plugin-sdk/v2 v2.10.1 h1:B9AocC+dxrCqcf4vVhztIkSkt3gpRjUkEka8AmZWGlQ=
+github.com/hashicorp/terraform-plugin-sdk/v2 v2.10.1/go.mod h1:FjM9DXWfP0w/AeOtJoSKHBZ01LqmaO6uP4bXhv3fekw=
 github.com/hashicorp/terraform-plugin-test/v2 v2.0.0 h1:fYGV3nZvs8KFGKuY2NPAJDMNfVSDHo+U2FGFl3bPv1s=
 github.com/hashicorp/terraform-plugin-test/v2 v2.0.0/go.mod h1:C6VALgUlvaif+PnHyRGKWPTdQkMJK4NQ20VJolxZLI0=
 github.com/hashicorp/yamux v0.0.0-20180604194846-3520598351bb/go.mod h1:+NfK9FKeTrX5uv1uIXGdwYDTeHna2qgaIlx54MXqjAM=
