@@ -35,15 +35,15 @@ func resourceMaintenanceWindows() *schema.Resource {
 			},
 			"repeat_unit": {
 				Type:     schema.TypeString,
-				Required: true,
+				Optional: true,
 			},
 			"repeat_ends_at": {
 				Type:     schema.TypeString,
-				Required: true,
+				Optional: true,
 			},
 			"repeat_interval": {
 				Type:     schema.TypeInt,
-				Required: true,
+				Optional: true,
 			},
 			"tags": {
 				Type:     schema.TypeSet,

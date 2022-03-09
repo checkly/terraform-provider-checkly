@@ -26,15 +26,15 @@ func resourceDashboard() *schema.Resource {
 			},
 			"custom_domain": {
 				Type:     schema.TypeString,
-				Required: true,
+				Optional: true,
 			},
 			"logo": {
 				Type:     schema.TypeString,
-				Required: true,
+				Optional: true,
 			},
 			"header": {
 				Type:     schema.TypeString,
-				Required: true,
+				Optional: true,
 			},
 			"width": {
 				Type:     schema.TypeString,
@@ -42,15 +42,15 @@ func resourceDashboard() *schema.Resource {
 			},
 			"refresh_rate": {
 				Type:     schema.TypeInt,
-				Required: true,
+				Optional: true,
 			},
 			"paginate": {
 				Type:     schema.TypeBool,
-				Required: true,
+				Optional: true,
 			},
 			"pagination_rate": {
 				Type:     schema.TypeInt,
-				Required: true,
+				Optional: true,
 			},
 			"tags": {
 				Type:     schema.TypeSet,
@@ -61,7 +61,7 @@ func resourceDashboard() *schema.Resource {
 			},
 			"hide_tags": {
 				Type:     schema.TypeBool,
-				Required: true,
+				Optional: true,
 			},
 		},
 	}
