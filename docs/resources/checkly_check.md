@@ -109,7 +109,7 @@ resource "checkly_check" "example-check-2" {
 
 
 ## Example Usage - Browser checks
-A **browser** check is similar, but a bit simpler as it has less options. Notice the multi line string syntax with `EOT`. Terraform also gives you the option to insert content from external files which would be useful for larger scripts or when you want to manage your browser check scripts as separate Javascript files. See the partial examples below
+A **browser** check is similar, but a bit simpler as it has less options. Notice the multi line string syntax with `EOT`. This provider also gives you the option to insert content from external files which would be useful for larger scripts or when you want to manage your browser check scripts as separate Javascript files. See the partial examples below
 
 ```terraform
 resource "checkly_check" "browser-check-1" {
@@ -194,7 +194,7 @@ resource "checkly_check" "example-check" {
 ## Example Usage - With existing Alert channels
 You can assign existing alert channels that were created via the checkly UI
 
-Simply go to the alert you want to add in the checkly UI and copy the channel id from the URL to your terraform file like below, e.g. 1234 is the alert channel id at this URL https://app.checklyhq.com/alert-settings/channels/edit/email/1234
+Simply go to the alert you want to add in the checkly UI and copy the channel id from the URL to your provider file like below, e.g. 1234 is the alert channel id at this URL https://app.checklyhq.com/alert-settings/channels/edit/email/1234
 
 ```terraform
 resource "checkly_check" "example-check" {
@@ -220,7 +220,7 @@ The following arguments are supported:
 * `ssl_check` (Optional) Determines if the SSL certificate should be validated for expiry. Possible values `true`, and `false`.
 * `should_fail` (Optional) Allows to invert the behaviour of when a check is considered to fail. Allows for validating error status like 404. Possible values `true`, and `false`.
 * `locations` (Optional) An array of one or more data center locations where to run the this check. Defaults to["us-east-1"].
-* `script` (Optional) A valid piece of Node.js javascript code describing a browser interaction with the Puppeteer framework or a terraform reference to an external javascript file.
+* `script` (Optional) A valid piece of Node.js javascript code describing a browser interaction with the Puppeteer/Playwright framework or a reference to an external javascript file.
 * `environment_variables` (Optional) Key/value pairs for setting environment variables during check execution. These are only relevant for Browser checks. Use global environment variables whenever possible.
 * `Tags` (Optional) A list of Tags for organizing and filtering checks.
 * `setup_snippet_id` (Optional) An ID reference to a snippet to use in the setup phase of an API check.

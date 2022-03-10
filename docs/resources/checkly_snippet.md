@@ -22,7 +22,7 @@ EOT
 }
 ```
 
-Or using terraform local file provider
+Or using local file provider
 
 ```terraform
 data "local_file" "snippet-script" {
