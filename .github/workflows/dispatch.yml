@@ -1,13 +1,37 @@
-name: Repository Dispatch
+name: Tests [Dispatch]
 on:
   repository_dispatch:
     types: [test-tf]
 
 jobs:
-  test-tf:
+  tests-dispatch:
+    name: Tests
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v2
-        with:
-          ref: ${{ github.event.client_payload.ref }}
-      - run: echo ${{ github.event.client_payload.sha }}
+
+    - name: Set up Go 1.16
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.16
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v1
+      with:
+        terraform_version: 0.14.7
+        terraform_wrapper: false
+
+    - name: checkout
+      uses: actions/checkout@v2
+    - name : Download modules
+      run: go mod download
+
+    - name: Test
+      run: go test -v ./...
+      env:
+        CHECKLY_API_KEY: ${{ secrets.CHECKLY_API_KEY }}
+        TF_VAR_checkly_api_key: ${{ secrets.CHECKLY_API_KEY }}
+        TF_VAR_checkly_account_id: ${{ secrets.CHECKLY_ACCOUNT_ID }}
+        CHECKLY_ACCOUNT_ID: ${{ secrets.CHECKLY_ACCOUNT_ID }}
+        CHECKLY_API_URL: ${{ secrets.CHECKLY_API_URL }}
+        TF_ACC: 1

@@ -8,13 +8,11 @@ on:
   pull_request:
 
 jobs:
-
   tests:
     name: Tests
     runs-on: ubuntu-latest
 
     steps:
-
     - name: Set up Go 1.16
       uses: actions/setup-go@v2
       with:
