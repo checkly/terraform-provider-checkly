@@ -1,15 +1,14 @@
 name: Tests [Dispatch]
 on:
   repository_dispatch:
-    types: [test-tf]
+    types: [test-terraform]
 
 jobs:
   tests-dispatch:
-    name: Tests
+    name: Tests [Dispatch]
     runs-on: ubuntu-latest
 
     steps:
-
     - name: Set up Go 1.16
       uses: actions/setup-go@v2
       with:
