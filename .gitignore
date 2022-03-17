@@ -7,4 +7,4 @@ dist/*
 .DS_Store
 .terraform.lock.hcl
 .vscode/
-local
+.local
