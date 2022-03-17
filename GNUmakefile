@@ -1,6 +1,6 @@
 default: testacc
 
-version="0.0.2"
+version="0.0.0-canary"
 
 # Run acceptance tests
 .PHONY: testacc
@@ -22,7 +22,7 @@ setup:
 replace-dep:
 	go mod edit -replace github.com/checkly/checkly-go-sdk=../checkly-go-sdk
 
-plan:
+dev:
 	# for dev purposes only, build the provider and install
 	# it as dev/checkly/check + version number,
 	go build -o terraform-provider-checkly
@@ -31,13 +31,6 @@ plan:
 	mv terraform-provider-checkly ~/.terraform.d/plugins/dev/checkly/checkly/${version}/darwin_amd64/terraform-provider-checkly_v${version}
 	rm -f .terraform.lock.hcl
 	TF_LOG=TRACE terraform init -upgrade
-	terraform plan
-
-apply:
-	terraform apply
-
-destroy:
-	terraform destroy
 
 format-code:
 	go fmt ./checkly
