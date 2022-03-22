@@ -26,14 +26,17 @@ func resourceCheck() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
+		Description: "A checks allows you to monitor key webapp flows, backend API's and set up alerting, so you get a notification when things break or slow down.",
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "The name of the check.",
 			},
 			"type": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "The type of the check. Possible values are `API`, and `BROWSER`.",
 			},
 			"frequency": {
 				Type:     schema.TypeInt,
@@ -52,22 +55,27 @@ func resourceCheck() *schema.Resource {
 					}
 					return warns, errs
 				},
+				Description: "The frequency in minutes to run the check. Possible values are `0`, `1`, `5`, `10`, `15`, `30`, `60`, `720`, and `1440`.",
 			},
 			"frequency_offset": {
-				Type:     schema.TypeInt,
-				Optional: true,
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Description: "This property only valid for API high frequency checks. To create a hight frequency check, the property `frequency` must be `0` and `frequency_offset` could be `10`, `20` or `30`.",
 			},
 			"activated": {
-				Type:     schema.TypeBool,
-				Required: true,
+				Type:        schema.TypeBool,
+				Required:    true,
+				Description: "Determines if the check is running or not. Possible values `true`, and `false`.",
 			},
 			"muted": {
-				Type:     schema.TypeBool,
-				Optional: true,
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "Determines if any notifications will be sent out when a check fails and/or recovers.",
 			},
 			"should_fail": {
-				Type:     schema.TypeBool,
-				Optional: true,
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "Allows to invert the behaviour of when a check is considered to fail. Allows for validating error status like 404.",
 			},
 			"locations": {
 				Type:     schema.TypeSet,
@@ -75,11 +83,13 @@ func resourceCheck() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
+				Description: "An array of one or more data center locations where to run the this check. (Default [\"us-east-1\"])",
 			},
 			"script": {
-				Type:     schema.TypeString,
-				Optional: true,
-				Default:  "",
+				Type:        schema.TypeString,
+				Optional:    true,
+				Default:     "",
+				Description: "A valid piece of Node.js javascript code describing a browser interaction with the Puppeteer/Playwright framework or a reference to an external JavaScript file.",
 			},
 			"degraded_response_time": {
 				Type:     schema.TypeInt,
@@ -93,6 +103,7 @@ func resourceCheck() *schema.Resource {
 					}
 					return warns, errs
 				},
+				Description: "The response time in milliseconds where a check should be considered degraded. Possible values are between 0 and 30000. (Default `15000`).",
 			},
 			"max_response_time": {
 				Type:     schema.TypeInt,
@@ -106,14 +117,17 @@ func resourceCheck() *schema.Resource {
 					}
 					return warns, errs
 				},
+				Description: "The response time in milliseconds where a check should be considered failing. Possible values are between 0 and 30000. (Default `30000`).",
 			},
 			"environment_variables": {
-				Type:     schema.TypeMap,
-				Optional: true,
+				Type:        schema.TypeMap,
+				Optional:    true,
+				Description: "Key/value pairs for setting environment variables during check execution. These are only relevant for Browser checks. Use global environment variables whenever possible.",
 			},
 			"double_check": {
-				Type:     schema.TypeBool,
-				Optional: true,
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "Setting this to `true` will trigger a retry when a check fails from the failing region and another, randomly selected region before marking the check as failed.",
 			},
 			"tags": {
 				Type:     schema.TypeSet,
@@ -121,31 +135,38 @@ func resourceCheck() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
+				Description: "A list of Tags for organizing and filtering checks.",
 			},
 			"ssl_check": {
-				Type:     schema.TypeBool,
-				Optional: true,
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "Determines if the SSL certificate should be validated for expiry.",
 			},
 			"setup_snippet_id": {
-				Type:     schema.TypeInt,
-				Optional: true,
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Description: "An ID reference to a snippet to use in the setup phase of an API check.",
 			},
 			"teardown_snippet_id": {
-				Type:     schema.TypeInt,
-				Optional: true,
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Description: "An ID reference to a snippet to use in the teardown phase of an API check.",
 			},
 			"local_setup_script": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "A valid piece of Node.js code to run in the setup phase.",
 			},
 			"local_teardown_script": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "A valid piece of Node.js code to run in the teardown phase.",
 			},
 			"runtime_id": {
-				Type:     schema.TypeString,
-				Optional: true,
-				Default:  nil,
+				Type:        schema.TypeString,
+				Optional:    true,
+				Default:     nil,
+				Description: "The id of the runtime to use for this check.",
 			},
 			"alert_channel_subscription": {
 				Type:     schema.TypeList,
@@ -171,8 +192,9 @@ func resourceCheck() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"escalation_type": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "Determines what type of escalation to use. Possible values are `RUN_BASED` or `TIME_BASED`.",
 						},
 						"run_based_escalation": {
 							Type:     schema.TypeSet,
@@ -180,9 +202,10 @@ func resourceCheck() *schema.Resource {
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"failed_run_threshold": {
-										Type:     schema.TypeInt,
-										Optional: true,
-										Default:  1,
+										Type:        schema.TypeInt,
+										Optional:    true,
+										Default:     1,
+										Description: "After how many failed consecutive check runs an alert notification should be send. Possible values are between 1 and 5. (Default `1`).",
 									},
 								},
 							},
@@ -193,9 +216,10 @@ func resourceCheck() *schema.Resource {
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"minutes_failing_threshold": {
-										Type:     schema.TypeInt,
-										Optional: true,
-										Default:  5,
+										Type:        schema.TypeInt,
+										Optional:    true,
+										Default:     5,
+										Description: "After how many minutes after a check starts failing an alert should be send. Possible values are `5`, `10`, `15`, and `30`. (Default `5`).",
 									},
 								},
 							},
@@ -206,13 +230,15 @@ func resourceCheck() *schema.Resource {
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"amount": {
-										Type:     schema.TypeInt,
-										Optional: true,
+										Type:        schema.TypeInt,
+										Optional:    true,
+										Description: "How many reminders to send out after the initial alert notification. Possible values are `0`, `1`, `2`, `3`, `4`, `5`, and `100000`",
 									},
 									"interval": {
-										Type:     schema.TypeInt,
-										Optional: true,
-										Default:  5,
+										Type:        schema.TypeInt,
+										Optional:    true,
+										Default:     5,
+										Description: "Possible values are `5`, `10`, `15`, and `30`. (Default `5`).",
 									},
 								},
 							},
@@ -223,9 +249,10 @@ func resourceCheck() *schema.Resource {
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"enabled": {
-										Type:     schema.TypeBool,
-										Optional: true,
-										Default:  false,
+										Type:        schema.TypeBool,
+										Optional:    true,
+										Default:     false,
+										Description: "Determines if alert notifications should be send for expiring SSL certificates. Possible values `true`, and `false`. (Default `false`).",
 									},
 									"alert_threshold": {
 										Type:     schema.TypeInt,
@@ -245,16 +272,19 @@ func resourceCheck() *schema.Resource {
 											}
 											return warns, errs
 										},
+										Description: "At what moment in time to start alerting on SSL certificates. Possible values `3`, `7`, `14`, `30`. (Default `3`).",
 									},
 								},
+								Description: "At what interval the reminders should be send.",
 							},
 						},
 					},
 				},
 			},
 			"use_global_alert_settings": {
-				Type:     schema.TypeBool,
-				Optional: true,
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "When true, the account level alert setting will be used, not the alert setting defined on this check.",
 			},
 			"request": {
 				Type:     schema.TypeSet,
@@ -263,9 +293,10 @@ func resourceCheck() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"method": {
-							Type:     schema.TypeString,
-							Optional: true,
-							Default:  "GET",
+							Type:        schema.TypeString,
+							Optional:    true,
+							Default:     "GET",
+							Description: "The HTTP method to use for this API check. Possible values are `GET`, `POST`, `PUT`, `HEAD`, `DELETE`, `PATCH`. (Default `GET`).",
 						},
 						"url": {
 							Type:     schema.TypeString,
@@ -296,8 +327,9 @@ func resourceCheck() *schema.Resource {
 							},
 						},
 						"body": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "Possible values `NONE`, `JSON`, `FORM`, `RAW`, and `GRAPHQL`.",
 						},
 						"body_type": {
 							Type:     schema.TypeString,
@@ -310,16 +342,18 @@ func resourceCheck() *schema.Resource {
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"source": {
-										Type:     schema.TypeString,
-										Required: true,
+										Type:        schema.TypeString,
+										Required:    true,
+										Description: "Possible values `STATUS_CODE`, `JSON_BODY`, `HEADERS`, `TEXT_BODY`, and `RESPONSE_TIME`.",
 									},
 									"property": {
 										Type:     schema.TypeString,
 										Optional: true,
 									},
 									"comparison": {
-										Type:     schema.TypeString,
-										Required: true,
+										Type:        schema.TypeString,
+										Required:    true,
+										Description: "Possible values `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL`, and `NOT_NULL`.",
 									},
 									"target": {
 										Type:     schema.TypeString,
@@ -327,6 +361,7 @@ func resourceCheck() *schema.Resource {
 									},
 								},
 							},
+							Description: "A request can have multiple assetions.",
 						},
 						"basic_auth": {
 							Type:     schema.TypeSet,
@@ -348,17 +383,21 @@ func resourceCheck() *schema.Resource {
 									},
 								},
 							},
+							Description: "Set up HTTP basic authentication (username & password).",
 						},
 					},
 				},
+				Description: "An API check might have one request config.",
 			},
 			"group_id": {
-				Type:     schema.TypeInt,
-				Optional: true,
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Description: "The id of the check group this check is part of.",
 			},
 			"group_order": {
-				Type:     schema.TypeInt,
-				Optional: true,
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Description: "The position of this check in a check group. It determines in what order checks are run when a group is triggered from the API or from CI/CD.",
 			},
 		},
 	}

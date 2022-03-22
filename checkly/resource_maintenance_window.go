@@ -22,28 +22,34 @@ func resourceMaintenanceWindow() *schema.Resource {
 		},
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "The maintenance window name.",
 			},
 			"starts_at": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "The start date of the maintenance window.",
 			},
 			"ends_at": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "The end date of the maintenance window.",
 			},
 			"repeat_unit": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "he repeat strategy for the maintenance window. Possible values `DAY`, `WEEK` and `MONTH`.",
 			},
 			"repeat_ends_at": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "The end date where the maintenance window should stop repeating.",
 			},
 			"repeat_interval": {
-				Type:     schema.TypeInt,
-				Required: true,
+				Type:        schema.TypeInt,
+				Required:    true,
+				Description: "The repeat interval of the maintenance window from the first occurance.",
 			},
 			"tags": {
 				Type:     schema.TypeSet,
@@ -51,6 +57,7 @@ func resourceMaintenanceWindow() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
+				Description: "The names of the checks and groups maintenance window should apply to.",
 			},
 		},
 	}

@@ -46,10 +46,11 @@ const (
 
 func resourceAlertChannel() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceAlertChannelCreate,
-		Read:   resourceAlertChannelRead,
-		Update: resourceAlertChannelUpdate,
-		Delete: resourceAlertChannelDelete,
+		Description: "Allows you to define global alerting channels for the checks and groups in your account",
+		Create:      resourceAlertChannelCreate,
+		Read:        resourceAlertChannelRead,
+		Update:      resourceAlertChannelUpdate,
+		Delete:      resourceAlertChannelDelete,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -61,8 +62,9 @@ func resourceAlertChannel() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						AcFieldEmailAddress: {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The email address of this email alert channel.",
 						},
 					},
 				},
@@ -74,12 +76,14 @@ func resourceAlertChannel() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						AcFieldSlackURL: {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The slack webhook URL",
 						},
 						AcFieldSlackChannel: {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The name of the alert's slack channel",
 						},
 					},
 				},
@@ -91,12 +95,14 @@ func resourceAlertChannel() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						AcFieldSMSName: {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The name of this alert channel",
 						},
 						AcFieldSMSNumber: {
-							Type:     schema.TypeString,
-							Required: true,
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The mobile number to receive the alerts",
 						},
 					},
 				},
@@ -112,8 +118,10 @@ func resourceAlertChannel() *schema.Resource {
 							Required: true,
 						},
 						AcFieldWebhookMethod: {
-							Type:     schema.TypeString,
-							Optional: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							Default:     "POST",
+							Description: "(Default `POST`)",
 						},
 						AcFieldWebhookHeaders: {
 							Type:     schema.TypeMap,
@@ -193,29 +201,43 @@ func resourceAlertChannel() *schema.Resource {
 				},
 			},
 			AcFieldSendRecovery: {
-				Type:     schema.TypeBool,
-				Optional: true,
-				Default:  true,
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     true,
+				Description: "(Default `true`)",
 			},
 			AcFieldSendFailure: {
-				Type:     schema.TypeBool,
-				Optional: true,
-				Default:  true,
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     true,
+				Description: "(Default `true`)",
 			},
 			AcFieldSendDegraded: {
-				Type:     schema.TypeBool,
-				Optional: true,
-				Default:  false,
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "(Default `false`)",
 			},
 			AcFieldSSLExpiry: {
-				Type:     schema.TypeBool,
-				Optional: true,
-				Default:  false,
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "(Default `false`)",
 			},
 			AcFieldSSLExpiryThreshold: {
 				Type:     schema.TypeInt,
 				Optional: true,
 				Default:  30,
+				ValidateFunc: func(val interface{}, key string) (warns []string, errs []error) {
+					min := 1
+					max := 30
+					v := val.(int)
+					if v < min || v > max {
+						errs = append(errs, fmt.Errorf("%q must be between %d and  %d, got: %d", key, min, max, v))
+					}
+					return warns, errs
+				},
+				Description: "Value must be between 1 and 30 (Default `30`)",
 			},
 		},
 	}
