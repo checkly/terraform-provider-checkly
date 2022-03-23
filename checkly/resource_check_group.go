@@ -231,7 +231,7 @@ func resourceCheckGroup() *schema.Resource {
 						"url": {
 							Type:        schema.TypeString,
 							Required:    true,
-							Description: "The base url for this group which you can reference with the {{GROUP_BASE_URL}} variable in all group checks.",
+							Description: "The base url for this group which you can reference with the `GROUP_BASE_URL` variable in all group checks.",
 						},
 						"headers": {
 							Type:     schema.TypeMap,

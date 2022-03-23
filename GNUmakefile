@@ -38,3 +38,4 @@ format-code:
 
 docs:
 	./tools/tfplugindocs
+

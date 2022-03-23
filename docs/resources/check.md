@@ -3,19 +3,195 @@
 page_title: "checkly_check Resource - terraform-provider-checkly"
 subcategory: ""
 description: |-
-  
+  A checks allows you to monitor key webapp flows, backend API's and set up alerting, so you get a notification when things break or slow down.
 ---
 
 # checkly_check (Resource)
 
-
+A checks allows you to monitor key webapp flows, backend API's and set up alerting, so you get a notification when things break or slow down.
 
 ## Example Usage
 
 ```terraform
-# Create a new Datadog API Key
-resource "datadog_api_key" "foo" {
-  name = "foo-application"
+# Basic API Check
+resource "checkly_check" "example-check" {
+  name                      = "Example check"
+  type                      = "API"
+  activated                 = true
+  should_fail               = false
+  frequency                 = 1
+  double_check              = true
+  ssl_check                 = true
+  use_global_alert_settings = true
+
+  locations = [
+    "us-west-1"
+  ]
+
+  request {
+    url              = "https://api.example.com/"
+    follow_redirects = true
+    skip_ssl         = false
+    assertion {
+      source     = "STATUS_CODE"
+      comparison = "EQUALS"
+      target     = "200"
+    }
+  }
+}
+
+# A more complex example using more assertions and setting alerts
+resource "checkly_check" "example-check-2" {
+  name                   = "Example API check 2"
+  type                   = "API"
+  activated              = true
+  should_fail            = true
+  frequency              = 1
+  double_check           = true
+  degraded_response_time = 5000
+  max_response_time      = 10000
+
+  locations = [
+    "us-west-1",
+    "ap-northeast-1",
+    "ap-south-1",
+  ]
+
+  alert_settings {
+    escalation_type = "RUN_BASED"
+
+    run_based_escalation {
+      failed_run_threshold = 1
+    }
+
+    time_based_escalation {
+      minutes_failing_threshold = 5
+    }
+
+    ssl_certificates {
+      enabled         = true
+      alert_threshold = 30
+    }
+
+    reminders {
+      amount = 1
+    }
+  }
+
+  request {
+    follow_redirects = true
+    skip_ssl         = false
+    url              = "http://api.example.com/"
+
+    query_parameters = {
+      search = "foo"
+    }
+
+    headers = {
+      X-Bogus = "bogus"
+    }
+
+    assertion {
+      source     = "JSON_BODY"
+      property   = "code"
+      comparison = "HAS_VALUE"
+      target     = "authentication.failed"
+    }
+
+    assertion {
+      source     = "STATUS_CODE"
+      property   = ""
+      comparison = "EQUALS"
+      target     = "401"
+    }
+
+    basic_auth {
+      username = ""
+      password = ""
+    }
+  }
+}
+
+# Basic Browser  Check
+resource "checkly_check" "browser-check-1" {
+  name                      = "Example check"
+  type                      = "BROWSER"
+  activated                 = true
+  should_fail               = false
+  frequency                 = 10
+  double_check              = true
+  ssl_check                 = true
+  use_global_alert_settings = true
+  locations = [
+    "us-west-1"
+  ]
+
+  runtime_id = "2021.06"
+
+  script = <<EOT
+const assert = require("chai").assert;
+const puppeteer = require("puppeteer");
+
+const browser = await puppeteer.launch();
+const page = await browser.newPage();
+await page.goto("https://google.com/");
+const title = await page.title();
+
+assert.equal(title, "Google");
+await browser.close();
+
+EOT
+}
+
+# An alternative syntax for add the script is by referencing an external file
+data "local_file" "browser-script" {
+  filename = "${path.module}/browser-script.js"
+}
+
+resource "checkly_check" "browser-check-1" {
+  name                      = "Example check"
+  type                      = "BROWSER"
+  activated                 = true
+  should_fail               = false
+  frequency                 = 10
+  double_check              = true
+  ssl_check                 = true
+  use_global_alert_settings = true
+  locations = [
+    "us-west-1"
+  ]
+
+  runtime_id = "2021.06"
+  script = data.local_file.browser-script.content
+}
+
+## Connection checks with alert channels
+resource "checkly_alert_channel" "email_ac1" {
+  email {
+    address = "info1@example.com"
+  }
+}
+
+resource "checkly_alert_channel" "email_ac2" {
+  email {
+    address = "info2@example.com"
+  }
+}
+
+resource "checkly_check" "example-check" {
+  name                      = "Example check"
+  ....
+
+  alert_channel_subscription {
+    channel_id = checkly_alert_channel.email_ac1.id
+    activated  = true
+  }
+
+  alert_channel_subscription {
+    channel_id = checkly_alert_channel.email_ac2.id
+    activated  = true
+  }
+
 }
 ```
 
@@ -24,36 +200,36 @@ resource "datadog_api_key" "foo" {
 
 ### Required
 
-- `activated` (Boolean)
-- `frequency` (Number)
-- `name` (String)
-- `type` (String)
+- `activated` (Boolean) Determines if the check is running or not. Possible values `true`, and `false`.
+- `frequency` (Number) The frequency in minutes to run the check. Possible values are `0`, `1`, `5`, `10`, `15`, `30`, `60`, `720`, and `1440`.
+- `name` (String) The name of the check.
+- `type` (String) The type of the check. Possible values are `API`, and `BROWSER`.
 
 ### Optional
 
 - `alert_channel_subscription` (Block List) (see [below for nested schema](#nestedblock--alert_channel_subscription))
 - `alert_settings` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--alert_settings))
-- `degraded_response_time` (Number)
-- `double_check` (Boolean)
-- `environment_variables` (Map of String)
-- `frequency_offset` (Number)
-- `group_id` (Number)
-- `group_order` (Number)
+- `degraded_response_time` (Number) The response time in milliseconds where a check should be considered degraded. Possible values are between 0 and 30000. (Default `15000`).
+- `double_check` (Boolean) Setting this to `true` will trigger a retry when a check fails from the failing region and another, randomly selected region before marking the check as failed.
+- `environment_variables` (Map of String) Key/value pairs for setting environment variables during check execution. These are only relevant for Browser checks. Use global environment variables whenever possible.
+- `frequency_offset` (Number) This property only valid for API high frequency checks. To create a hight frequency check, the property `frequency` must be `0` and `frequency_offset` could be `10`, `20` or `30`.
+- `group_id` (Number) The id of the check group this check is part of.
+- `group_order` (Number) The position of this check in a check group. It determines in what order checks are run when a group is triggered from the API or from CI/CD.
 - `id` (String) The ID of this resource.
-- `local_setup_script` (String)
-- `local_teardown_script` (String)
-- `locations` (Set of String)
-- `max_response_time` (Number)
-- `muted` (Boolean)
-- `request` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--request))
-- `runtime_id` (String)
-- `script` (String)
-- `setup_snippet_id` (Number)
-- `should_fail` (Boolean)
-- `ssl_check` (Boolean)
-- `tags` (Set of String)
-- `teardown_snippet_id` (Number)
-- `use_global_alert_settings` (Boolean)
+- `local_setup_script` (String) A valid piece of Node.js code to run in the setup phase.
+- `local_teardown_script` (String) A valid piece of Node.js code to run in the teardown phase.
+- `locations` (Set of String) An array of one or more data center locations where to run the this check. (Default ["us-east-1"])
+- `max_response_time` (Number) The response time in milliseconds where a check should be considered failing. Possible values are between 0 and 30000. (Default `30000`).
+- `muted` (Boolean) Determines if any notifications will be sent out when a check fails and/or recovers.
+- `request` (Block Set, Max: 1) An API check might have one request config. (see [below for nested schema](#nestedblock--request))
+- `runtime_id` (String) The id of the runtime to use for this check.
+- `script` (String) A valid piece of Node.js javascript code describing a browser interaction with the Puppeteer/Playwright framework or a reference to an external JavaScript file.
+- `setup_snippet_id` (Number) An ID reference to a snippet to use in the setup phase of an API check.
+- `should_fail` (Boolean) Allows to invert the behaviour of when a check is considered to fail. Allows for validating error status like 404.
+- `ssl_check` (Boolean) Determines if the SSL certificate should be validated for expiry.
+- `tags` (Set of String) A list of Tags for organizing and filtering checks.
+- `teardown_snippet_id` (Number) An ID reference to a snippet to use in the teardown phase of an API check.
+- `use_global_alert_settings` (Boolean) When true, the account level alert setting will be used, not the alert setting defined on this check.
 
 <a id="nestedblock--alert_channel_subscription"></a>
 ### Nested Schema for `alert_channel_subscription`
@@ -69,7 +245,7 @@ Required:
 
 Optional:
 
-- `escalation_type` (String)
+- `escalation_type` (String) Determines what type of escalation to use. Possible values are `RUN_BASED` or `TIME_BASED`.
 - `reminders` (Block Set) (see [below for nested schema](#nestedblock--alert_settings--reminders))
 - `run_based_escalation` (Block Set) (see [below for nested schema](#nestedblock--alert_settings--run_based_escalation))
 - `ssl_certificates` (Block Set) (see [below for nested schema](#nestedblock--alert_settings--ssl_certificates))
@@ -80,8 +256,8 @@ Optional:
 
 Optional:
 
-- `amount` (Number)
-- `interval` (Number)
+- `amount` (Number) How many reminders to send out after the initial alert notification. Possible values are `0`, `1`, `2`, `3`, `4`, `5`, and `100000`
+- `interval` (Number) Possible values are `5`, `10`, `15`, and `30`. (Default `5`).
 
 
 <a id="nestedblock--alert_settings--run_based_escalation"></a>
@@ -89,7 +265,7 @@ Optional:
 
 Optional:
 
-- `failed_run_threshold` (Number)
+- `failed_run_threshold` (Number) After how many failed consecutive check runs an alert notification should be send. Possible values are between 1 and 5. (Default `1`).
 
 
 <a id="nestedblock--alert_settings--ssl_certificates"></a>
@@ -97,8 +273,8 @@ Optional:
 
 Optional:
 
-- `alert_threshold` (Number)
-- `enabled` (Boolean)
+- `alert_threshold` (Number) At what moment in time to start alerting on SSL certificates. Possible values `3`, `7`, `14`, `30`. (Default `3`).
+- `enabled` (Boolean) Determines if alert notifications should be send for expiring SSL certificates. Possible values `true`, and `false`. (Default `false`).
 
 
 <a id="nestedblock--alert_settings--time_based_escalation"></a>
@@ -106,7 +282,7 @@ Optional:
 
 Optional:
 
-- `minutes_failing_threshold` (Number)
+- `minutes_failing_threshold` (Number) After how many minutes after a check starts failing an alert should be send. Possible values are `5`, `10`, `15`, and `30`. (Default `5`).
 
 
 
@@ -119,13 +295,13 @@ Required:
 
 Optional:
 
-- `assertion` (Block Set) (see [below for nested schema](#nestedblock--request--assertion))
-- `basic_auth` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--request--basic_auth))
-- `body` (String)
+- `assertion` (Block Set) A request can have multiple assetions. (see [below for nested schema](#nestedblock--request--assertion))
+- `basic_auth` (Block Set, Max: 1) Set up HTTP basic authentication (username & password). (see [below for nested schema](#nestedblock--request--basic_auth))
+- `body` (String) Possible values `NONE`, `JSON`, `FORM`, `RAW`, and `GRAPHQL`.
 - `body_type` (String)
 - `follow_redirects` (Boolean)
 - `headers` (Map of String)
-- `method` (String)
+- `method` (String) The HTTP method to use for this API check. Possible values are `GET`, `POST`, `PUT`, `HEAD`, `DELETE`, `PATCH`. (Default `GET`).
 - `query_parameters` (Map of String)
 - `skip_ssl` (Boolean)
 
@@ -134,8 +310,8 @@ Optional:
 
 Required:
 
-- `comparison` (String)
-- `source` (String)
+- `comparison` (String) Possible values `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL`, and `NOT_NULL`.
+- `source` (String) Possible values `STATUS_CODE`, `JSON_BODY`, `HEADERS`, `TEXT_BODY`, and `RESPONSE_TIME`.
 
 Optional:
 

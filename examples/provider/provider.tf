@@ -10,7 +10,6 @@ terraform {
   }
 }
 
-
 # Configure the Checkly provider
 variable "checkly_api_key" {
 }

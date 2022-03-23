@@ -98,13 +98,13 @@ resource "checkly_check" "example-check" {
 - `id` (String) The ID of this resource.
 - `opsgenie` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--opsgenie))
 - `pagerduty` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--pagerduty))
-- `send_degraded` (Boolean)
-- `send_failure` (Boolean)
-- `send_recovery` (Boolean)
+- `send_degraded` (Boolean) (Default `false`)
+- `send_failure` (Boolean) (Default `true`)
+- `send_recovery` (Boolean) (Default `true`)
 - `slack` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--slack))
 - `sms` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--sms))
-- `ssl_expiry` (Boolean)
-- `ssl_expiry_threshold` (Number) Value must be between 1 and 30 (Default 30)
+- `ssl_expiry` (Boolean) (Default `false`)
+- `ssl_expiry_threshold` (Number) Value must be between 1 and 30 (Default `30`)
 - `webhook` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--webhook))
 
 <a id="nestedblock--email"></a>
