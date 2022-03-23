@@ -1,40 +1,97 @@
 name: Tests
-
 on:
-  push:
-    branches:
-      - main
-
   pull_request:
+    paths-ignore:
+      - 'README.md'
+  push:
+    paths-ignore:
+      - 'README.md'
+  schedule:
+    - cron: '0 13 * * *'
 
 jobs:
-  tests:
-    name: Tests
+  build:
+    name: Build
     runs-on: ubuntu-latest
-
+    timeout-minutes: 5
     steps:
-    - name: Set up Go 1.16
-      uses: actions/setup-go@v2
-      with:
-        go-version: 1.16
 
-    - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v1
+    - name: Set up Go
+      uses: actions/setup-go@v2.1.3
       with:
-        terraform_version: 0.14.7
+        go-version: '1.16'
+      id: go
+
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v3
+
+    - name: Get dependencies
+      run: |
+        go mod download
+
+    - name: Build
+      run: |
+        go build -v .
+
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-go@v3
+        with:
+          go-version: '1.16'
+      - uses: actions/checkout@v3
+      - run: go generate ./...
+      - name: git diff
+        run: |
+          git diff --compact-summary --exit-code || \
+            (echo; echo "Unexpected difference in directories after code generation. Run 'go generate ./...' command and commit."; exit 1)
+
+  # run acceptance tests in a matrix with Terraform core versions
+  test:
+    name: Matrix Test
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        # list whatever Terraform versions here you would like to support
+        terraform:
+          - '0.12.*'
+          - '0.13.*'
+          - '0.14.*'
+          - '0.15.*'
+          - '1.0.*'
+          - '1.1.*'
+    steps:
+
+    - name: Set up Go
+      uses: actions/setup-go@v2.1.3
+      with:
+        go-version: '1.16'
+      id: go
+
+    - uses: hashicorp/setup-terraform@v1
+      with:
+        terraform_version: ${{ matrix.terraform }}
         terraform_wrapper: false
 
-    - name: checkout
-      uses: actions/checkout@v2
-    - name : Download modules
-      run: go mod download
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v3
 
-    - name: Test
+    - name: Get dependencies
+      run: |
+        go mod download
+
+    - name: TF acceptance tests
+      timeout-minutes: 10
       run: go test -v ./...
       env:
-        CHECKLY_API_KEY: ${{ secrets.CHECKLY_API_KEY }}
+        TF_ACC: "1"
         TF_VAR_checkly_api_key: ${{ secrets.CHECKLY_API_KEY }}
         TF_VAR_checkly_account_id: ${{ secrets.CHECKLY_ACCOUNT_ID }}
         CHECKLY_ACCOUNT_ID: ${{ secrets.CHECKLY_ACCOUNT_ID }}
         CHECKLY_API_URL: ${{ secrets.CHECKLY_API_URL }}
-        TF_ACC: 1
+        CHECKLY_API_KEY: ${{ secrets.CHECKLY_API_KEY }}
+
+
