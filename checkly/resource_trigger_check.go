@@ -22,18 +22,21 @@ func resourceTriggerCheck() *schema.Resource {
 		},
 		Schema: map[string]*schema.Schema{
 			"check_id": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "The id of the check that you want to attach the trigger to.",
 			},
 			"token": {
-				Type:     schema.TypeString,
-				Optional: true,
-				Computed: true,
+				Type:        schema.TypeString,
+				Optional:    true,
+				Computed:    true,
+				Description: "The token value created to trigger the check",
 			},
 			"url": {
-				Type:     schema.TypeString,
-				Optional: true,
-				Computed: true,
+				Type:        schema.TypeString,
+				Optional:    true,
+				Computed:    true,
+				Description: "The request URL to trigger the check run.",
 			},
 		},
 	}

@@ -21,36 +21,44 @@ func resourceDashboard() *schema.Resource {
 		},
 		Schema: map[string]*schema.Schema{
 			"custom_url": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "A subdomain name under 'checklyhq.com'. Needs to be unique across all users.",
 			},
 			"custom_domain": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "A custom user domain, e.g. 'status.example.com'. See the docs on updating your DNS and SSL usage.",
 			},
 			"logo": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "A URL pointing to an image file.",
 			},
 			"header": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "A piece of text displayed at the top of your dashboard.",
 			},
 			"width": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Determines whether to use the full screen or focus in the center. Possible values `FULL` and `960PX`.",
 			},
 			"refresh_rate": {
-				Type:     schema.TypeInt,
-				Required: true,
+				Type:        schema.TypeInt,
+				Required:    true,
+				Description: "How often to refresh the dashboard in seconds. Possible values `30`, `60` and `600`.",
 			},
 			"paginate": {
-				Type:     schema.TypeBool,
-				Required: true,
+				Type:        schema.TypeBool,
+				Required:    true,
+				Description: "Determines if pagination is on or off.",
 			},
 			"pagination_rate": {
-				Type:     schema.TypeInt,
-				Required: true,
+				Type:        schema.TypeInt,
+				Required:    true,
+				Description: "How often to trigger pagination in seconds. Possible values `30`, `60` and `300`.",
 			},
 			"tags": {
 				Type:     schema.TypeSet,
@@ -58,10 +66,12 @@ func resourceDashboard() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
+				Description: "A list of one or more tags that filter which checks to display on the dashboard.",
 			},
 			"hide_tags": {
-				Type:     schema.TypeBool,
-				Required: true,
+				Type:        schema.TypeBool,
+				Required:    true,
+				Description: "Show or hide the tags on the dashboard.",
 			},
 		},
 	}

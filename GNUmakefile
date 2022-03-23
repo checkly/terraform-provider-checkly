@@ -35,3 +35,7 @@ dev:
 format-code:
 	go fmt ./checkly
 	terraform fmt
+
+docs:
+	./tools/tfplugindocs
+
