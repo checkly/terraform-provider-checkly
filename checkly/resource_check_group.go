@@ -21,7 +21,7 @@ func resourceCheckGroup() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
-		Description: "Check Groups feature allows you to group together a set of related checks, which can also share default settings for various attributes.",
+		Description: "Check groups allow  you to group together a set of related checks, which can also share default settings for various attributes.",
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
@@ -31,7 +31,7 @@ func resourceCheckGroup() *schema.Resource {
 			"concurrency": {
 				Type:        schema.TypeInt,
 				Required:    true,
-				Description: "Determines how many checks are invoked concurrently when triggering a check group from CI/CD or through the API.",
+				Description: "Determines how many checks are run concurrently when triggering a check group from CI/CD or through the API.",
 			},
 			"activated": {
 				Type:        schema.TypeBool,
@@ -41,7 +41,7 @@ func resourceCheckGroup() *schema.Resource {
 			"muted": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Description: "Determines if any notifications will be send out when a check in this group fails and/or recovers.",
+				Description: "Determines if any notifications will be sent out when a check in this group fails and/or recovers.",
 			},
 			"locations": {
 				Type:     schema.TypeSet,
@@ -54,7 +54,7 @@ func resourceCheckGroup() *schema.Resource {
 			"environment_variables": {
 				Type:        schema.TypeMap,
 				Optional:    true,
-				Description: "Key/value pairs for setting environment variables during check execution. These are only relevant for Browser checks. Use global environment variables whenever possible.",
+				Description: "Key/value pairs for setting environment variables during check execution. These are only relevant for browser checks. Use global environment variables whenever possible.",
 			},
 			"double_check": {
 				Type:        schema.TypeBool,
@@ -132,7 +132,7 @@ func resourceCheckGroup() *schema.Resource {
 										Type:        schema.TypeInt,
 										Optional:    true,
 										Default:     1,
-										Description: "After how many failed consecutive check runs an alert notification should be send. Possible values are between 1 and 5. (Default `1`).",
+										Description: "After how many failed consecutive check runs an alert notification should be sent. Possible values are between 1 and 5. (Default `1`).",
 									},
 								},
 							},
@@ -146,7 +146,7 @@ func resourceCheckGroup() *schema.Resource {
 										Type:        schema.TypeInt,
 										Optional:    true,
 										Default:     5,
-										Description: "After how many minutes after a check starts failing an alert should be send. Possible values are `5`, `10`, `15`, and `30`. (Default `5`).",
+										Description: "After how many minutes after a check starts failing an alert should be sent. Possible values are `5`, `10`, `15`, and `30`. (Default `5`).",
 									},
 								},
 							},
@@ -179,7 +179,7 @@ func resourceCheckGroup() *schema.Resource {
 										Type:        schema.TypeBool,
 										Optional:    true,
 										Default:     false,
-										Description: "Determines if alert notifications should be send for expiring SSL certificates.",
+										Description: "Determines if alert notifications should be sent for expiring SSL certificates.",
 									},
 									"alert_threshold": {
 										Type:     schema.TypeInt,
@@ -210,7 +210,7 @@ func resourceCheckGroup() *schema.Resource {
 			"use_global_alert_settings": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Description: "When true, the account level alert setting will be used, not the alert setting defined on this check group.",
+				Description: "When true, the account level alert settings will be used, not the alert setting defined on this check group.",
 			},
 			"api_check_defaults": {
 				Type:     schema.TypeSet,
@@ -257,7 +257,7 @@ func resourceCheckGroup() *schema.Resource {
 									"source": {
 										Type:        schema.TypeString,
 										Required:    true,
-										Description: "Possible values `STATUS_CODE`, `JSON_BODY`, `HEADERS`, `TEXT_BODY`, and `RESPONSE_TIME`.",
+										Description: "The source of the asserted value. Possible values `STATUS_CODE`, `JSON_BODY`, `HEADERS`, `TEXT_BODY`, and `RESPONSE_TIME`.",
 									},
 									"property": {
 										Type:     schema.TypeString,
@@ -266,7 +266,7 @@ func resourceCheckGroup() *schema.Resource {
 									"comparison": {
 										Type:        schema.TypeString,
 										Required:    true,
-										Description: "Possible values `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL`, and `NOT_NULL`.",
+										Description: "The type of comparison to be executed between expected and actual value of the assertion. Possible values `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL`, and `NOT_NULL`.",
 									},
 									"target": {
 										Type:     schema.TypeString,

@@ -33,9 +33,9 @@ resource "checkly_maintenance_windows" "maintenance-1" {
 
 - `ends_at` (String) The end date of the maintenance window.
 - `name` (String) The maintenance window name.
-- `repeat_ends_at` (String) The end date where the maintenance window should stop repeating.
-- `repeat_interval` (Number) The repeat interval of the maintenance window from the first occurance.
-- `repeat_unit` (String) he repeat strategy for the maintenance window. Possible values `DAY`, `WEEK` and `MONTH`.
+- `repeat_ends_at` (String) The date on which the maintenance window window should stop repeating.
+- `repeat_interval` (Number) The repeat interval of the maintenance window from the first occurrence.
+- `repeat_unit` (String) The repeat cadence for the maintenance window. Possible values `DAY`, `WEEK` and `MONTH`.
 - `starts_at` (String) The start date of the maintenance window.
 
 ### Optional

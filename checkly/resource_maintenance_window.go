@@ -39,17 +39,17 @@ func resourceMaintenanceWindow() *schema.Resource {
 			"repeat_unit": {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "he repeat strategy for the maintenance window. Possible values `DAY`, `WEEK` and `MONTH`.",
+				Description: "The repeat cadence for the maintenance window. Possible values `DAY`, `WEEK` and `MONTH`.",
 			},
 			"repeat_ends_at": {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "The end date where the maintenance window should stop repeating.",
+				Description: "The date on which the maintenance window window should stop repeating.",
 			},
 			"repeat_interval": {
 				Type:        schema.TypeInt,
 				Required:    true,
-				Description: "The repeat interval of the maintenance window from the first occurance.",
+				Description: "The repeat interval of the maintenance window from the first occurrence.",
 			},
 			"tags": {
 				Type:     schema.TypeSet,

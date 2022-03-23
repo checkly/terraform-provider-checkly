@@ -32,7 +32,7 @@ output "test-trigger-check-url" {
 ### Optional
 
 - `id` (String) The ID of this resource.
-- `token` (String)
+- `token` (String) The token value created to trigger the check
 - `url` (String) The request URL to trigger the check run.
 
 

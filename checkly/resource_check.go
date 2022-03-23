@@ -26,7 +26,7 @@ func resourceCheck() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
-		Description: "A checks allows you to monitor key webapp flows, backend API's and set up alerting, so you get a notification when things break or slow down.",
+		Description: "Checks allows you to monitor key webapp flows, backend API's and set up alerting, so you get a notification when things break or slow down.",
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
@@ -70,7 +70,7 @@ func resourceCheck() *schema.Resource {
 			"muted": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Description: "Determines if any notifications will be sent out when a check fails and/or recovers.",
+				Description: "Determines if any notifications will be sent out when a check fails/degrades/recovers.",
 			},
 			"should_fail": {
 				Type:        schema.TypeBool,
@@ -89,7 +89,7 @@ func resourceCheck() *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Default:     "",
-				Description: "A valid piece of Node.js javascript code describing a browser interaction with the Puppeteer/Playwright framework or a reference to an external JavaScript file.",
+				Description: "A valid piece of Node.js JavaScript code describing a browser interaction with the Puppeteer/Playwright framework or a reference to an external JavaScript file.",
 			},
 			"degraded_response_time": {
 				Type:     schema.TypeInt,
@@ -103,7 +103,7 @@ func resourceCheck() *schema.Resource {
 					}
 					return warns, errs
 				},
-				Description: "The response time in milliseconds where a check should be considered degraded. Possible values are between 0 and 30000. (Default `15000`).",
+				Description: "The response time in milliseconds starting from which a check should be considered degraded. Possible values are between 0 and 30000. (Default `15000`).",
 			},
 			"max_response_time": {
 				Type:     schema.TypeInt,
@@ -117,12 +117,12 @@ func resourceCheck() *schema.Resource {
 					}
 					return warns, errs
 				},
-				Description: "The response time in milliseconds where a check should be considered failing. Possible values are between 0 and 30000. (Default `30000`).",
+				Description: "The response time in milliseconds starting from which a check should be considered failing. Possible values are between 0 and 30000. (Default `30000`).",
 			},
 			"environment_variables": {
 				Type:        schema.TypeMap,
 				Optional:    true,
-				Description: "Key/value pairs for setting environment variables during check execution. These are only relevant for Browser checks. Use global environment variables whenever possible.",
+				Description: "Key/value pairs for setting environment variables during check execution. These are only relevant for browser checks. Use global environment variables whenever possible.",
 			},
 			"double_check": {
 				Type:        schema.TypeBool,
@@ -135,7 +135,7 @@ func resourceCheck() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
-				Description: "A list of Tags for organizing and filtering checks.",
+				Description: "A list of tags for organizing and filtering checks.",
 			},
 			"ssl_check": {
 				Type:        schema.TypeBool,
@@ -205,7 +205,7 @@ func resourceCheck() *schema.Resource {
 										Type:        schema.TypeInt,
 										Optional:    true,
 										Default:     1,
-										Description: "After how many failed consecutive check runs an alert notification should be send. Possible values are between 1 and 5. (Default `1`).",
+										Description: "After how many failed consecutive check runs an alert notification should be sent. Possible values are between 1 and 5. (Default `1`).",
 									},
 								},
 							},
@@ -219,7 +219,7 @@ func resourceCheck() *schema.Resource {
 										Type:        schema.TypeInt,
 										Optional:    true,
 										Default:     5,
-										Description: "After how many minutes after a check starts failing an alert should be send. Possible values are `5`, `10`, `15`, and `30`. (Default `5`).",
+										Description: "After how many minutes after a check starts failing an alert should be sent. Possible values are `5`, `10`, `15`, and `30`. (Default `5`).",
 									},
 								},
 							},
@@ -252,7 +252,7 @@ func resourceCheck() *schema.Resource {
 										Type:        schema.TypeBool,
 										Optional:    true,
 										Default:     false,
-										Description: "Determines if alert notifications should be send for expiring SSL certificates. Possible values `true`, and `false`. (Default `false`).",
+										Description: "Determines if alert notifications should be sent for expiring SSL certificates. Possible values `true`, and `false`. (Default `false`).",
 									},
 									"alert_threshold": {
 										Type:     schema.TypeInt,
@@ -272,10 +272,10 @@ func resourceCheck() *schema.Resource {
 											}
 											return warns, errs
 										},
-										Description: "At what moment in time to start alerting on SSL certificates. Possible values `3`, `7`, `14`, `30`. (Default `3`).",
+										Description: "How long before SSL certificate expiry to send alerts. Possible values `3`, `7`, `14`, `30`. (Default `3`).",
 									},
 								},
-								Description: "At what interval the reminders should be send.",
+								Description: "At what interval the reminders should be sent.",
 							},
 						},
 					},
@@ -284,7 +284,7 @@ func resourceCheck() *schema.Resource {
 			"use_global_alert_settings": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Description: "When true, the account level alert setting will be used, not the alert setting defined on this check.",
+				Description: "When true, the account level alert settings will be used, not the alert setting defined on this check.",
 			},
 			"request": {
 				Type:     schema.TypeSet,
@@ -344,7 +344,7 @@ func resourceCheck() *schema.Resource {
 									"source": {
 										Type:        schema.TypeString,
 										Required:    true,
-										Description: "Possible values `STATUS_CODE`, `JSON_BODY`, `HEADERS`, `TEXT_BODY`, and `RESPONSE_TIME`.",
+										Description: "The source of the asserted value. Possible values `STATUS_CODE`, `JSON_BODY`, `HEADERS`, `TEXT_BODY`, and `RESPONSE_TIME`.",
 									},
 									"property": {
 										Type:     schema.TypeString,
@@ -353,7 +353,7 @@ func resourceCheck() *schema.Resource {
 									"comparison": {
 										Type:        schema.TypeString,
 										Required:    true,
-										Description: "Possible values `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL`, and `NOT_NULL`.",
+										Description: "The type of comparison to be executed between expected and actual value of the assertion. Possible values `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL`, and `NOT_NULL`.",
 									},
 									"target": {
 										Type:     schema.TypeString,
@@ -361,7 +361,7 @@ func resourceCheck() *schema.Resource {
 									},
 								},
 							},
-							Description: "A request can have multiple assetions.",
+							Description: "A request can have multiple assertions.",
 						},
 						"basic_auth": {
 							Type:     schema.TypeSet,

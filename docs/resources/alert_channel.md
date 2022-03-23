@@ -3,12 +3,12 @@
 page_title: "checkly_alert_channel Resource - terraform-provider-checkly"
 subcategory: ""
 description: |-
-  Allows you to define global alerting channels for the checks and groups in your account
+  Allows you to define alerting channels for the checks and groups in your account
 ---
 
 # checkly_alert_channel (Resource)
 
-Allows you to define global alerting channels for the checks and groups in your account
+Allows you to define alerting channels for the checks and groups in your account
 
 ## Example Usage
 
@@ -144,8 +144,8 @@ Optional:
 
 Required:
 
-- `channel` (String) The name of the alert's slack channel
-- `url` (String) The slack webhook URL
+- `channel` (String) The name of the alert's Slack channel
+- `url` (String) The Slack webhook URL
 
 
 <a id="nestedblock--sms"></a>

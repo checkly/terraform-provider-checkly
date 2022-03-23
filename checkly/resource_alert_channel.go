@@ -46,7 +46,7 @@ const (
 
 func resourceAlertChannel() *schema.Resource {
 	return &schema.Resource{
-		Description: "Allows you to define global alerting channels for the checks and groups in your account",
+		Description: "Allows you to define alerting channels for the checks and groups in your account",
 		Create:      resourceAlertChannelCreate,
 		Read:        resourceAlertChannelRead,
 		Update:      resourceAlertChannelUpdate,
@@ -78,12 +78,12 @@ func resourceAlertChannel() *schema.Resource {
 						AcFieldSlackURL: {
 							Type:        schema.TypeString,
 							Required:    true,
-							Description: "The slack webhook URL",
+							Description: "The Slack webhook URL",
 						},
 						AcFieldSlackChannel: {
 							Type:        schema.TypeString,
 							Required:    true,
-							Description: "The name of the alert's slack channel",
+							Description: "The name of the alert's Slack channel",
 						},
 					},
 				},

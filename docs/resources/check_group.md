@@ -3,12 +3,12 @@
 page_title: "checkly_check_group Resource - terraform-provider-checkly"
 subcategory: ""
 description: |-
-  Check Groups feature allows you to group together a set of related checks, which can also share default settings for various attributes.
+  Check groups allow  you to group together a set of related checks, which can also share default settings for various attributes.
 ---
 
 # checkly_check_group (Resource)
 
-Check Groups feature allows you to group together a set of related checks, which can also share default settings for various attributes.
+Check groups allow  you to group together a set of related checks, which can also share default settings for various attributes.
 
 ## Example Usage
 
@@ -130,7 +130,7 @@ resource "checkly_check_group" "test-group1" {
 ### Required
 
 - `activated` (Boolean) Determines if the checks in the group are running or not.
-- `concurrency` (Number) Determines how many checks are invoked concurrently when triggering a check group from CI/CD or through the API.
+- `concurrency` (Number) Determines how many checks are run concurrently when triggering a check group from CI/CD or through the API.
 - `locations` (Set of String) An array of one or more data center locations where to run the checks.
 - `name` (String) The name of the check group.
 
@@ -140,16 +140,16 @@ resource "checkly_check_group" "test-group1" {
 - `alert_settings` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--alert_settings))
 - `api_check_defaults` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--api_check_defaults))
 - `double_check` (Boolean) Setting this to `true` will trigger a retry when a check fails from the failing region and another, randomly selected region before marking the check as failed.
-- `environment_variables` (Map of String) Key/value pairs for setting environment variables during check execution. These are only relevant for Browser checks. Use global environment variables whenever possible.
+- `environment_variables` (Map of String) Key/value pairs for setting environment variables during check execution. These are only relevant for browser checks. Use global environment variables whenever possible.
 - `id` (String) The ID of this resource.
 - `local_setup_script` (String) A valid piece of Node.js code to run in the setup phase of an API check in this group.
 - `local_teardown_script` (String) A valid piece of Node.js code to run in the teardown phase of an API check in this group.
-- `muted` (Boolean) Determines if any notifications will be send out when a check in this group fails and/or recovers.
+- `muted` (Boolean) Determines if any notifications will be sent out when a check in this group fails and/or recovers.
 - `runtime_id` (String) The id of the runtime to use for this group.
 - `setup_snippet_id` (Number) An ID reference to a snippet to use in the setup phase of an API check.
 - `tags` (Set of String) Tags for organizing and filtering checks.
 - `teardown_snippet_id` (Number) An ID reference to a snippet to use in the teardown phase of an API check.
-- `use_global_alert_settings` (Boolean) When true, the account level alert setting will be used, not the alert setting defined on this check group.
+- `use_global_alert_settings` (Boolean) When true, the account level alert settings will be used, not the alert setting defined on this check group.
 
 <a id="nestedblock--alert_channel_subscription"></a>
 ### Nested Schema for `alert_channel_subscription`
@@ -185,7 +185,7 @@ Optional:
 
 Optional:
 
-- `failed_run_threshold` (Number) After how many failed consecutive check runs an alert notification should be send. Possible values are between 1 and 5. (Default `1`).
+- `failed_run_threshold` (Number) After how many failed consecutive check runs an alert notification should be sent. Possible values are between 1 and 5. (Default `1`).
 
 
 <a id="nestedblock--alert_settings--ssl_certificates"></a>
@@ -194,7 +194,7 @@ Optional:
 Optional:
 
 - `alert_threshold` (Number) At what moment in time to start alerting on SSL certificates. Possible values `3`, `7`, `14`, `30`. (Default `3`).
-- `enabled` (Boolean) Determines if alert notifications should be send for expiring SSL certificates.
+- `enabled` (Boolean) Determines if alert notifications should be sent for expiring SSL certificates.
 
 
 <a id="nestedblock--alert_settings--time_based_escalation"></a>
@@ -202,7 +202,7 @@ Optional:
 
 Optional:
 
-- `minutes_failing_threshold` (Number) After how many minutes after a check starts failing an alert should be send. Possible values are `5`, `10`, `15`, and `30`. (Default `5`).
+- `minutes_failing_threshold` (Number) After how many minutes after a check starts failing an alert should be sent. Possible values are `5`, `10`, `15`, and `30`. (Default `5`).
 
 
 
@@ -225,8 +225,8 @@ Optional:
 
 Required:
 
-- `comparison` (String) Possible values `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL`, and `NOT_NULL`.
-- `source` (String) Possible values `STATUS_CODE`, `JSON_BODY`, `HEADERS`, `TEXT_BODY`, and `RESPONSE_TIME`.
+- `comparison` (String) The type of comparison to be executed between expected and actual value of the assertion. Possible values `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL`, and `NOT_NULL`.
+- `source` (String) The source of the asserted value. Possible values `STATUS_CODE`, `JSON_BODY`, `HEADERS`, `TEXT_BODY`, and `RESPONSE_TIME`.
 - `target` (String)
 
 Optional:

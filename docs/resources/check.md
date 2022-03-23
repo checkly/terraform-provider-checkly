@@ -3,12 +3,12 @@
 page_title: "checkly_check Resource - terraform-provider-checkly"
 subcategory: ""
 description: |-
-  A checks allows you to monitor key webapp flows, backend API's and set up alerting, so you get a notification when things break or slow down.
+  Checks allows you to monitor key webapp flows, backend API's and set up alerting, so you get a notification when things break or slow down.
 ---
 
 # checkly_check (Resource)
 
-A checks allows you to monitor key webapp flows, backend API's and set up alerting, so you get a notification when things break or slow down.
+Checks allows you to monitor key webapp flows, backend API's and set up alerting, so you get a notification when things break or slow down.
 
 ## Example Usage
 
@@ -209,9 +209,9 @@ resource "checkly_check" "example-check" {
 
 - `alert_channel_subscription` (Block List) (see [below for nested schema](#nestedblock--alert_channel_subscription))
 - `alert_settings` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--alert_settings))
-- `degraded_response_time` (Number) The response time in milliseconds where a check should be considered degraded. Possible values are between 0 and 30000. (Default `15000`).
+- `degraded_response_time` (Number) The response time in milliseconds starting from which a check should be considered degraded. Possible values are between 0 and 30000. (Default `15000`).
 - `double_check` (Boolean) Setting this to `true` will trigger a retry when a check fails from the failing region and another, randomly selected region before marking the check as failed.
-- `environment_variables` (Map of String) Key/value pairs for setting environment variables during check execution. These are only relevant for Browser checks. Use global environment variables whenever possible.
+- `environment_variables` (Map of String) Key/value pairs for setting environment variables during check execution. These are only relevant for browser checks. Use global environment variables whenever possible.
 - `frequency_offset` (Number) This property only valid for API high frequency checks. To create a hight frequency check, the property `frequency` must be `0` and `frequency_offset` could be `10`, `20` or `30`.
 - `group_id` (Number) The id of the check group this check is part of.
 - `group_order` (Number) The position of this check in a check group. It determines in what order checks are run when a group is triggered from the API or from CI/CD.
@@ -219,17 +219,17 @@ resource "checkly_check" "example-check" {
 - `local_setup_script` (String) A valid piece of Node.js code to run in the setup phase.
 - `local_teardown_script` (String) A valid piece of Node.js code to run in the teardown phase.
 - `locations` (Set of String) An array of one or more data center locations where to run the this check. (Default ["us-east-1"])
-- `max_response_time` (Number) The response time in milliseconds where a check should be considered failing. Possible values are between 0 and 30000. (Default `30000`).
-- `muted` (Boolean) Determines if any notifications will be sent out when a check fails and/or recovers.
+- `max_response_time` (Number) The response time in milliseconds starting from which a check should be considered failing. Possible values are between 0 and 30000. (Default `30000`).
+- `muted` (Boolean) Determines if any notifications will be sent out when a check fails/degrades/recovers.
 - `request` (Block Set, Max: 1) An API check might have one request config. (see [below for nested schema](#nestedblock--request))
 - `runtime_id` (String) The id of the runtime to use for this check.
-- `script` (String) A valid piece of Node.js javascript code describing a browser interaction with the Puppeteer/Playwright framework or a reference to an external JavaScript file.
+- `script` (String) A valid piece of Node.js JavaScript code describing a browser interaction with the Puppeteer/Playwright framework or a reference to an external JavaScript file.
 - `setup_snippet_id` (Number) An ID reference to a snippet to use in the setup phase of an API check.
 - `should_fail` (Boolean) Allows to invert the behaviour of when a check is considered to fail. Allows for validating error status like 404.
 - `ssl_check` (Boolean) Determines if the SSL certificate should be validated for expiry.
-- `tags` (Set of String) A list of Tags for organizing and filtering checks.
+- `tags` (Set of String) A list of tags for organizing and filtering checks.
 - `teardown_snippet_id` (Number) An ID reference to a snippet to use in the teardown phase of an API check.
-- `use_global_alert_settings` (Boolean) When true, the account level alert setting will be used, not the alert setting defined on this check.
+- `use_global_alert_settings` (Boolean) When true, the account level alert settings will be used, not the alert setting defined on this check.
 
 <a id="nestedblock--alert_channel_subscription"></a>
 ### Nested Schema for `alert_channel_subscription`
@@ -265,7 +265,7 @@ Optional:
 
 Optional:
 
-- `failed_run_threshold` (Number) After how many failed consecutive check runs an alert notification should be send. Possible values are between 1 and 5. (Default `1`).
+- `failed_run_threshold` (Number) After how many failed consecutive check runs an alert notification should be sent. Possible values are between 1 and 5. (Default `1`).
 
 
 <a id="nestedblock--alert_settings--ssl_certificates"></a>
@@ -273,8 +273,8 @@ Optional:
 
 Optional:
 
-- `alert_threshold` (Number) At what moment in time to start alerting on SSL certificates. Possible values `3`, `7`, `14`, `30`. (Default `3`).
-- `enabled` (Boolean) Determines if alert notifications should be send for expiring SSL certificates. Possible values `true`, and `false`. (Default `false`).
+- `alert_threshold` (Number) How long before SSL certificate expiry to send alerts. Possible values `3`, `7`, `14`, `30`. (Default `3`).
+- `enabled` (Boolean) Determines if alert notifications should be sent for expiring SSL certificates. Possible values `true`, and `false`. (Default `false`).
 
 
 <a id="nestedblock--alert_settings--time_based_escalation"></a>
@@ -282,7 +282,7 @@ Optional:
 
 Optional:
 
-- `minutes_failing_threshold` (Number) After how many minutes after a check starts failing an alert should be send. Possible values are `5`, `10`, `15`, and `30`. (Default `5`).
+- `minutes_failing_threshold` (Number) After how many minutes after a check starts failing an alert should be sent. Possible values are `5`, `10`, `15`, and `30`. (Default `5`).
 
 
 
@@ -295,7 +295,7 @@ Required:
 
 Optional:
 
-- `assertion` (Block Set) A request can have multiple assetions. (see [below for nested schema](#nestedblock--request--assertion))
+- `assertion` (Block Set) A request can have multiple assertions. (see [below for nested schema](#nestedblock--request--assertion))
 - `basic_auth` (Block Set, Max: 1) Set up HTTP basic authentication (username & password). (see [below for nested schema](#nestedblock--request--basic_auth))
 - `body` (String) Possible values `NONE`, `JSON`, `FORM`, `RAW`, and `GRAPHQL`.
 - `body_type` (String)
@@ -310,8 +310,8 @@ Optional:
 
 Required:
 
-- `comparison` (String) Possible values `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL`, and `NOT_NULL`.
-- `source` (String) Possible values `STATUS_CODE`, `JSON_BODY`, `HEADERS`, `TEXT_BODY`, and `RESPONSE_TIME`.
+- `comparison` (String) The type of comparison to be executed between expected and actual value of the assertion. Possible values `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL`, and `NOT_NULL`.
+- `source` (String) The source of the asserted value. Possible values `STATUS_CODE`, `JSON_BODY`, `HEADERS`, `TEXT_BODY`, and `RESPONSE_TIME`.
 
 Optional:
 

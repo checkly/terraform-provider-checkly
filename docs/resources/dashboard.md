@@ -39,7 +39,7 @@ resource "checkly_dashboard" "dashboard-1" {
 - `header` (String) A piece of text displayed at the top of your dashboard.
 - `hide_tags` (Boolean) Show or hide the tags on the dashboard.
 - `logo` (String) A URL pointing to an image file.
-- `paginate` (Boolean) Determines of pagination is on or off.
+- `paginate` (Boolean) Determines if pagination is on or off.
 - `pagination_rate` (Number) How often to trigger pagination in seconds. Possible values `30`, `60` and `300`.
 - `refresh_rate` (Number) How often to refresh the dashboard in seconds. Possible values `30`, `60` and `600`.
 
