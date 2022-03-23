@@ -519,7 +519,7 @@ const apiCheck_full = `
 		target     = "100"
 	  }
 	}
-  
+
 	alert_settings {
 	  escalation_type = "RUN_BASED"
 	  reminders {

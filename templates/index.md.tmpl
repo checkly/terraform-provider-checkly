@@ -1,0 +1,34 @@
+---
+layout: ""
+page_title: "Provider: Checkly"
+description: |-
+  Manage Checkly monitoring resources like checks, groups and snippets.
+---
+
+# Checkly Provider
+
+This Terraform provider enables users to manage Checkly resources like checks, groups and snippets.
+
+You can find a quick step-by-step guide in [Checkly's documentation](https://www.checklyhq.com/docs/integrations/terraform/).
+
+## Authentication
+
+To use the provider with your Checkly account, you will need an API Key for your Checkly user. If you don't have an API Key, go to the [API Keys section](https://app.checklyhq.com/settings/user/api-keys) to create one.
+
+You also need to set your target Account ID, which you can find under your [account settings page](https://app.checklyhq.com/settings/account/general).
+
+> If you don't have access to account settings, please contact your account owner/admin.
+
+Now open the terminal and expose the `API Key` and `Account ID` as environment variables:
+```bash
+$ export TF_VAR_checkly_api_key="your-api-key"
+$ export TF_VAR_checkly_account_id="your-account-id"
+```
+
+## Example Usage
+
+{{tffile "examples/provider/provider.tf"}}
+
+{{ .SchemaMarkdown | trimspace }}
+
+> For additional documentation and examples, check the Resources sections.

@@ -1,6 +1,14 @@
+---
+layout: ""
+page_title: "Getting Started"
+description: |-
+  Getting Started with Checkly Terraform Provider
+---
+
 # Installing the provider and getting started
 
 1. Create a `versions.tf` terraform config file in your project:
+
 ```terraform
 terraform {
   required_providers {
