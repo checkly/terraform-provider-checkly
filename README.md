@@ -1,7 +1,3 @@
-<p align="center">
-  <img width="400px" src="./docs/images/terraform.png" alt="Terraform" />
-</p>
-
 <p>
   <img height="128" src="https://www.checklyhq.com/images/footer-logo.svg" align="right" />
   <h1>Checkly Terraform Provider</h1>
@@ -14,23 +10,17 @@
 
 > 🌐 A Terraform provider for the Checkly monitoring service
 
-<br>
-
-## 👀 Overview
+## Overview
 
 This Terraform provider enables users to manage [Checkly](https://checklyhq.com) resources like checks, groups, snippets and more.
 
-<br>
-
-## 🪛 Installation
+## Installation
 
 Please refer to the [installation guide](https://github.com/checkly/terraform-provider-checkly/blob/main/docs/guides/getting-started.md)
 
 If you're still using Terraform 0.12 please refer to [terraform 0.12 documentation](https://github.com/checkly/terraform-provider-checkly/blob/main/docs/guides/support-for-terraform-0.12.md)
 
-<br>
-
-## 🔧 How to use?
+## How to use?
 
 For documentation and example usage see:
 1. [Checkly's documentation](https://www.checklyhq.com/docs/integrations/terraform/).
@@ -42,9 +32,8 @@ You can also find step-by-step guides on Checkly's blog:
 1. [Managing Checkly checks with Terraform](https://blog.checklyhq.com/managing-checkly-checks-with-terraform/)
 2. [Scaling Puppeteer and Playwright on Checkly with Terraform](https://blog.checklyhq.com/scaling-puppeteer-playwright-on-checkly-with-terraform/)
 
-<br>
 
-## 🖥️ Run Locally
+## Run Locally
 
 Clone the repo, build the project and add it to your Terraform plugins directory. You will need to have Go installed.
 
