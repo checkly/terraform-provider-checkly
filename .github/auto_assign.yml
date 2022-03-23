@@ -3,11 +3,10 @@ addAssignees: author
 
 reviewers:
   - pilimartinez
-  - danielpaulus
   - ianaya89
-  - umutuzgur
+
 
 skipKeywords:
   - wip
 
-numberOfReviewers: 3
+numberOfReviewers: 1
