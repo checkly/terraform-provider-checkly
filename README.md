@@ -46,7 +46,7 @@ go build && CHECKLY_API_KEY=xxx CHECKLY_ACCOUNT_ID=xxx  go test -tags=integratio
 
 > We recommend to use [tfswitch](https://tfswitch.warrensbox.com/) to easily manage different Terraform versions in your local environment.
 
-## 📄 License
+## License
 
 [MIT](https://github.com/checkly/terraform-checkly-provider/blob/main/LICENSE)
 
