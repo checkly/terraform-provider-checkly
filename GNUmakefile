@@ -29,13 +29,12 @@ dev:
 	mkdir -p ~/.terraform.d/plugins/dev/checkly/checkly/${version}/darwin_amd64/
 	chmod +x terraform-provider-checkly
 	mv terraform-provider-checkly ~/.terraform.d/plugins/dev/checkly/checkly/${version}/darwin_amd64/terraform-provider-checkly_v${version}
-	rm -f .terraform.lock.hcl
-	TF_LOG=TRACE terraform init -upgrade
+	cd demo && rm -f .terraform.lock.hcl
+	cd demo && TF_LOG=TRACE terraform init -upgrade
 
-format-code:
+format:
 	go fmt ./checkly
 	terraform fmt
 
 docs:
 	./tools/tfplugindocs
-

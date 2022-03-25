@@ -8,7 +8,7 @@
 ## Pre-Requisites
 * [ ] Terraform code is formatted with `terraform fmt`
 * [ ] Go code is formatted with `go fmt`
-* [ ] Plan & apply of `test.tf` do not produce diffs
+* [ ] `plan` & `apply` command of `demo/main.tf` file do not produce diffs
 
 <!-- You can erase any parts of this template not applicable to your Pull Request. -->
 ## Notes for the Reviewer
