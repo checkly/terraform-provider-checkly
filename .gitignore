@@ -8,3 +8,4 @@ dist/*
 .terraform.lock.hcl
 .vscode/
 .local
+*.tfvars

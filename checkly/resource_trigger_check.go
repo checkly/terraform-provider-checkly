@@ -18,7 +18,7 @@ func resourceTriggerCheck() *schema.Resource {
 		Delete: resourceTriggerCheckDelete,
 		Update: resourceTriggerCheckUpdate,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 		Schema: map[string]*schema.Schema{
 			"check_id": {

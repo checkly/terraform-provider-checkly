@@ -24,7 +24,7 @@ func resourceCheck() *schema.Resource {
 		Update: resourceCheckUpdate,
 		Delete: resourceCheckDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 		Description: "Checks allows you to monitor key webapp flows, backend API's and set up alerting, so you get a notification when things break or slow down.",
 		Schema: map[string]*schema.Schema{

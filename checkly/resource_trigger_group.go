@@ -18,7 +18,7 @@ func resourceTriggerGroup() *schema.Resource {
 		Delete: resourceTriggerGroupDelete,
 		Update: resourceTriggerGroupUpdate,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 		Schema: map[string]*schema.Schema{
 			"group_id": {

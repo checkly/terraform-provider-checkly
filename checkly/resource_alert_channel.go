@@ -52,7 +52,7 @@ func resourceAlertChannel() *schema.Resource {
 		Update:      resourceAlertChannelUpdate,
 		Delete:      resourceAlertChannelDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 		Schema: map[string]*schema.Schema{
 			AcFieldEmail: {
