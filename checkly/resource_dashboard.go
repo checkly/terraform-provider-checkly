@@ -84,12 +84,13 @@ func resourceDashboard() *schema.Resource {
 			"paginate": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Default:     false,
+				Default:     true,
 				Description: "Determines if pagination is on or off.",
 			},
 			"pagination_rate": {
 				Type:         schema.TypeInt,
 				Optional:     true,
+				Default:      60,
 				ValidateFunc: validateOptions([]int{30, 60, 300}),
 				Description:  "How often to trigger pagination in seconds. Possible values `30`, `60` and `300`.",
 			},
