@@ -19,7 +19,7 @@ func resourceCheckGroup() *schema.Resource {
 		Update: resourceCheckGroupUpdate,
 		Delete: resourceCheckGroupDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 		Description: "Check groups allow  you to group together a set of related checks, which can also share default settings for various attributes.",
 		Schema: map[string]*schema.Schema{

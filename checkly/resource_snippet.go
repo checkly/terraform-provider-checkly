@@ -18,7 +18,7 @@ func resourceSnippet() *schema.Resource {
 		Update: resourceSnippetUpdate,
 		Delete: resourceSnippetDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 		Schema: map[string]*schema.Schema{
 			"name": {
