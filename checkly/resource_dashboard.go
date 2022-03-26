@@ -10,6 +10,22 @@ import (
 	checkly "github.com/checkly/checkly-go-sdk"
 )
 
+func validateOptions(options []int) func(val interface{}, key string) (warns []string, errs []error) {
+	return func(val interface{}, key string) (warns []string, errs []error) {
+		v := val.(int)
+		valid := false
+		for _, i := range options {
+			if v == i {
+				valid = true
+			}
+		}
+		if !valid {
+			errs = append(errs, fmt.Errorf("%q must be one of %v, got: %d", key, options, v))
+		}
+		return warns, errs
+	}
+}
+
 func resourceDashboard() *schema.Resource {
 	return &schema.Resource{
 		Create: resourceDashboardCreate,
@@ -27,38 +43,55 @@ func resourceDashboard() *schema.Resource {
 			},
 			"custom_domain": {
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
+				Default:     nil,
 				Description: "A custom user domain, e.g. 'status.example.com'. See the docs on updating your DNS and SSL usage.",
 			},
 			"logo": {
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
+				Default:     "",
 				Description: "A URL pointing to an image file.",
 			},
 			"header": {
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
+				Default:     "",
 				Description: "A piece of text displayed at the top of your dashboard.",
 			},
 			"width": {
-				Type:        schema.TypeString,
-				Optional:    true,
+				Type:     schema.TypeString,
+				Optional: true,
+				Default:  "FULL",
+				ValidateFunc: func(value interface{}, key string) (warns []string, errs []error) {
+					full := "FULL"
+					px960 := "960PX"
+					v := value.(string)
+					if v != full && v != px960 {
+						errs = append(errs, fmt.Errorf("%q must  %s and  %s, got: %s", key, full, px960, v))
+					}
+					return warns, errs
+				},
 				Description: "Determines whether to use the full screen or focus in the center. Possible values `FULL` and `960PX`.",
 			},
 			"refresh_rate": {
-				Type:        schema.TypeInt,
-				Required:    true,
-				Description: "How often to refresh the dashboard in seconds. Possible values `30`, `60` and `600`.",
+				Type:         schema.TypeInt,
+				Optional:     true,
+				Default:      60,
+				ValidateFunc: validateOptions([]int{30, 60, 600}),
+				Description:  "How often to refresh the dashboard in seconds. Possible values `30`, `60` and `600`.",
 			},
 			"paginate": {
 				Type:        schema.TypeBool,
-				Required:    true,
+				Optional:    true,
+				Default:     false,
 				Description: "Determines if pagination is on or off.",
 			},
 			"pagination_rate": {
-				Type:        schema.TypeInt,
-				Required:    true,
-				Description: "How often to trigger pagination in seconds. Possible values `30`, `60` and `300`.",
+				Type:         schema.TypeInt,
+				Optional:     true,
+				ValidateFunc: validateOptions([]int{30, 60, 300}),
+				Description:  "How often to trigger pagination in seconds. Possible values `30`, `60` and `300`.",
 			},
 			"tags": {
 				Type:     schema.TypeSet,
@@ -70,7 +103,8 @@ func resourceDashboard() *schema.Resource {
 			},
 			"hide_tags": {
 				Type:        schema.TypeBool,
-				Required:    true,
+				Optional:    true,
+				Default:     false,
 				Description: "Show or hide the tags on the dashboard.",
 			},
 		},
