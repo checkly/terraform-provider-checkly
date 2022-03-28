@@ -38,18 +38,21 @@ func resourceMaintenanceWindow() *schema.Resource {
 			},
 			"repeat_unit": {
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
+				Default:     nil,
 				Description: "The repeat cadence for the maintenance window. Possible values `DAY`, `WEEK` and `MONTH`.",
-			},
-			"repeat_ends_at": {
-				Type:        schema.TypeString,
-				Required:    true,
-				Description: "The date on which the maintenance window window should stop repeating.",
 			},
 			"repeat_interval": {
 				Type:        schema.TypeInt,
-				Required:    true,
+				Optional:    true,
+				Default:     nil,
 				Description: "The repeat interval of the maintenance window from the first occurrence.",
+			},
+			"repeat_ends_at": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Default:     nil,
+				Description: "The date on which the maintenance window window should stop repeating.",
 			},
 			"tags": {
 				Type:     schema.TypeSet,
