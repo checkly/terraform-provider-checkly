@@ -62,6 +62,23 @@ resource "checkly_check_group" "first-group" {
   concurrency = 3
   locations = [ "eu-west-1" ]
 }
+
+resource "checkly_check" "first-api-check" {
+  name      = "API check 1"
+  type      = "API"
+  activated = true
+  muted     = false
+  frequency = 720
+
+  request {
+    method           = "GET"
+    url              = "https://api.checklyhq.com/public-stats"
+  }
+
+  group_id    = checkly_check_group.first-group.id
+  group_order = 1
+
+}
 ```
 
 6. Now run `$ terraform init` to setup a new project. Then use `$ terraform plan` followed by `$ terraform apply` to deploy your monitoring.
