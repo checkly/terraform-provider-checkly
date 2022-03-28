@@ -248,7 +248,7 @@ Optional:
 - `escalation_type` (String) Determines what type of escalation to use. Possible values are `RUN_BASED` or `TIME_BASED`.
 - `reminders` (Block Set) (see [below for nested schema](#nestedblock--alert_settings--reminders))
 - `run_based_escalation` (Block Set) (see [below for nested schema](#nestedblock--alert_settings--run_based_escalation))
-- `ssl_certificates` (Block Set) (see [below for nested schema](#nestedblock--alert_settings--ssl_certificates))
+- `ssl_certificates` (Block Set, Deprecated) (see [below for nested schema](#nestedblock--alert_settings--ssl_certificates))
 - `time_based_escalation` (Block Set) (see [below for nested schema](#nestedblock--alert_settings--time_based_escalation))
 
 <a id="nestedblock--alert_settings--reminders"></a>
