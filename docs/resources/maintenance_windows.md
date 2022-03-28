@@ -3,7 +3,7 @@
 page_title: "checkly_maintenance_windows Resource - terraform-provider-checkly"
 subcategory: ""
 description: |-
-  
+
 ---
 
 # checkly_maintenance_windows (Resource)
@@ -38,7 +38,7 @@ resource "checkly_maintenance_windows" "maintenance-1" {
 ### Optional
 
 - `id` (String) The ID of this resource.
-- `repeat_ends_at` (String) The date on which the maintenance window window should stop repeating.
+- `repeat_ends_at` (String) The date on which the maintenance window should stop repeating.
 - `repeat_interval` (Number) The repeat interval of the maintenance window from the first occurrence.
 - `repeat_unit` (String) The repeat cadence for the maintenance window. Possible values `DAY`, `WEEK` and `MONTH`.
 - `tags` (Set of String) The names of the checks and groups maintenance window should apply to.

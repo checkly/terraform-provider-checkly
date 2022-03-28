@@ -66,7 +66,7 @@ func resourceMaintenanceWindow() *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Default:     nil,
-				Description: "The date on which the maintenance window window should stop repeating.",
+				Description: "The date on which the maintenance window should stop repeating.",
 			},
 			"tags": {
 				Type:     schema.TypeSet,
