@@ -37,25 +37,45 @@ func resourceMaintenanceWindow() *schema.Resource {
 				Description: "The end date of the maintenance window.",
 			},
 			"repeat_unit": {
-				Type:        schema.TypeString,
-				Required:    true,
+				Type:     schema.TypeString,
+				Optional: true,
+				Default:  nil,
+				ValidateFunc: func(value interface{}, key string) (warns []string, errs []error) {
+					v := value.(string)
+					isValid := false
+					options := []string{"DAY", "WEEK", "MONTH"}
+					for _, option := range options {
+						if v == option {
+							isValid = true
+						}
+					}
+					if !isValid {
+						errs = append(errs, fmt.Errorf("%q must be one of %v, got %s", key, options, v))
+					}
+					return warns, errs
+				},
 				Description: "The repeat cadence for the maintenance window. Possible values `DAY`, `WEEK` and `MONTH`.",
-			},
-			"repeat_ends_at": {
-				Type:        schema.TypeString,
-				Required:    true,
-				Description: "The date on which the maintenance window window should stop repeating.",
 			},
 			"repeat_interval": {
 				Type:        schema.TypeInt,
-				Required:    true,
+				Optional:    true,
+				Default:     nil,
 				Description: "The repeat interval of the maintenance window from the first occurrence.",
+			},
+			"repeat_ends_at": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Default:     nil,
+				Description: "The date on which the maintenance window should stop repeating.",
 			},
 			"tags": {
 				Type:     schema.TypeSet,
 				Optional: true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
+				},
+				DefaultFunc: func() (interface{}, error) {
+					return []tfMap{}, nil
 				},
 				Description: "The names of the checks and groups maintenance window should apply to.",
 			},
