@@ -34,18 +34,18 @@ resource "checkly_dashboard" "dashboard-1" {
 
 ### Required
 
-- `custom_domain` (String) A custom user domain, e.g. 'status.example.com'. See the docs on updating your DNS and SSL usage.
 - `custom_url` (String) A subdomain name under 'checklyhq.com'. Needs to be unique across all users.
+
+### Optional
+
+- `custom_domain` (String) A custom user domain, e.g. 'status.example.com'. See the docs on updating your DNS and SSL usage.
 - `header` (String) A piece of text displayed at the top of your dashboard.
 - `hide_tags` (Boolean) Show or hide the tags on the dashboard.
+- `id` (String) The ID of this resource.
 - `logo` (String) A URL pointing to an image file.
 - `paginate` (Boolean) Determines if pagination is on or off.
 - `pagination_rate` (Number) How often to trigger pagination in seconds. Possible values `30`, `60` and `300`.
 - `refresh_rate` (Number) How often to refresh the dashboard in seconds. Possible values `30`, `60` and `600`.
-
-### Optional
-
-- `id` (String) The ID of this resource.
 - `tags` (Set of String) A list of one or more tags that filter which checks to display on the dashboard.
 - `width` (String) Determines whether to use the full screen or focus in the center. Possible values `FULL` and `960PX`.
 
