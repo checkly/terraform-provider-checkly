@@ -140,6 +140,7 @@ func resourceCheck() *schema.Resource {
 			"ssl_check": {
 				Type:        schema.TypeBool,
 				Optional:    true,
+				Deprecated:  "The property `ssl_check` is deprecated and it's ignored by the Checkly Public API. It will be removed in a future version.",
 				Description: "Determines if the SSL certificate should be validated for expiry.",
 			},
 			"setup_snippet_id": {

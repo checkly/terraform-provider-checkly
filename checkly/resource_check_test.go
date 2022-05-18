@@ -40,7 +40,6 @@ func TestAccBrowserCheckInvalidInputs(t *testing.T) {
 		activated                 = "invalid"
 		should_fail               = "invalid"
 		double_check              = "invalid"
-		ssl_check                 = "invalid"
 		use_global_alert_settings = "invalid"
 		locations = "invalid"
 		script = 4
@@ -57,10 +56,6 @@ func TestAccBrowserCheckInvalidInputs(t *testing.T) {
 		{
 			Config:      config,
 			ExpectError: regexp.MustCompile(`Inappropriate value for attribute "should_fail"`),
-		},
-		{
-			Config:      config,
-			ExpectError: regexp.MustCompile(`Inappropriate value for attribute "ssl_check"`),
 		},
 		{
 			Config:      config,
@@ -363,7 +358,7 @@ var wantCheck = checkly.Check{
 		"foo",
 		"bar",
 	},
-	SSLCheck:            true,
+	SSLCheck:            false,
 	LocalSetupScript:    "bogus",
 	LocalTearDownScript: "bogus",
 	AlertSettings: checkly.AlertSettings{
@@ -436,7 +431,6 @@ const browserCheck_basic = `
 		should_fail               = false
 		frequency                 = 720
 		double_check              = true
-		ssl_check                 = true
 		use_global_alert_settings = true
 		locations                 = [ "us-east-1", "eu-central-1" ]
 		tags                      = [ "browser", "e2e" ]
@@ -475,7 +469,6 @@ const apiCheck_full = `
 	activated              = true
 	muted                  = true
 	double_check           = true
-	ssl_check              = false
 	degraded_response_time = 15000
 	max_response_time      = 30000
 	environment_variables  = null

@@ -6,7 +6,6 @@ resource "checkly_check" "example-check" {
   should_fail               = false
   frequency                 = 1
   double_check              = true
-  ssl_check                 = true
   use_global_alert_settings = true
 
   locations = [
@@ -100,7 +99,6 @@ resource "checkly_check" "browser-check-1" {
   should_fail               = false
   frequency                 = 10
   double_check              = true
-  ssl_check                 = true
   use_global_alert_settings = true
   locations = [
     "us-west-1"
@@ -135,7 +133,6 @@ resource "checkly_check" "browser-check-1" {
   should_fail               = false
   frequency                 = 10
   double_check              = true
-  ssl_check                 = true
   use_global_alert_settings = true
   locations = [
     "us-west-1"
