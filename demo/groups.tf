@@ -86,11 +86,6 @@ resource "checkly_check_group" "check-group-3" {
       minutes_failing_threshold = 5
     }
 
-    ssl_certificates {
-      enabled         = true
-      alert_threshold = 30
-    }
-
     reminders {
       amount   = 2
       interval = 5
