@@ -258,7 +258,6 @@ func resourceCheck() *schema.Resource {
 									"alert_threshold": {
 										Type:     schema.TypeInt,
 										Optional: true,
-										Default:  3,
 										ValidateFunc: func(val interface{}, key string) (warns []string, errs []error) {
 											v := val.(int)
 											valid := false

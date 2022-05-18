@@ -442,7 +442,6 @@ const testCheckGroup_full = `
 	  }
 	  ssl_certificates {
 		enabled         = false
-		alert_threshold = 0
 	  }
 	  reminders {
 		amount   = 2
