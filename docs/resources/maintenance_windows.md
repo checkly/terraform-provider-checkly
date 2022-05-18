@@ -3,7 +3,7 @@
 page_title: "checkly_maintenance_windows Resource - terraform-provider-checkly"
 subcategory: ""
 description: |-
-
+  
 ---
 
 # checkly_maintenance_windows (Resource)
