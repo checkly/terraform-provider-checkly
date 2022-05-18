@@ -291,7 +291,7 @@ func TestAccCheckGroupFull(t *testing.T) {
 				testCheckResourceAttrExpr(
 					"checkly_check_group.test",
 					"alert_settings.*.ssl_certificates.*.enabled",
-					"true",
+					"false",
 				),
 				testCheckResourceAttrExpr(
 					"checkly_check_group.test",
@@ -391,9 +391,9 @@ const testCheckGroup_withApiDefaults = `
 		activated   = true
 		muted       = false
 		concurrency = 3
-		locations   = [ 
-			"eu-west-1", 
-			"eu-west-2" 
+		locations   = [
+			"eu-west-1",
+			"eu-west-2"
 		]
 		api_check_defaults {
 			url = "http://api.example.com/"
@@ -441,8 +441,8 @@ const testCheckGroup_full = `
 		minutes_failing_threshold = 5
 	  }
 	  ssl_certificates {
-		enabled         = true
-		alert_threshold = 30
+		enabled         = false
+		alert_threshold = 0
 	  }
 	  reminders {
 		amount   = 2

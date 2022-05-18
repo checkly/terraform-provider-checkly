@@ -114,10 +114,6 @@ resource "checkly_check" "api-check-2" {
     run_based_escalation {
       failed_run_threshold = 1
     }
-    ssl_certificates {
-      alert_threshold = 30
-      enabled         = true
-    }
     time_based_escalation {
       minutes_failing_threshold = 5
     }

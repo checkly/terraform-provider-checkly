@@ -530,8 +530,8 @@ const apiCheck_full = `
 		failed_run_threshold = 1
 	  }
 	  ssl_certificates {
-		alert_threshold = 30
-		enabled         = true
+		alert_threshold = 0
+		enabled         = false
 	  }
 	  time_based_escalation {
 		minutes_failing_threshold = 5

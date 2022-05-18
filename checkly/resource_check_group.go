@@ -171,8 +171,9 @@ func resourceCheckGroup() *schema.Resource {
 							},
 						},
 						"ssl_certificates": {
-							Type:     schema.TypeSet,
-							Optional: true,
+							Type:       schema.TypeSet,
+							Optional:   true,
+							Deprecated: "The property `ssl_certificates` is deprecated and it's ignored by the Checkly Public API. It will be removed in a future version.",
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"enabled": {
