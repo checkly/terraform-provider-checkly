@@ -18,16 +18,18 @@ func resourceSnippet() *schema.Resource {
 		Update: resourceSnippetUpdate,
 		Delete: resourceSnippetDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "The name of the snippet",
 			},
 			"script": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "Your Node.js code that interacts with the API check lifecycle, or functions as a partial for browser checks.",
 			},
 		},
 	}

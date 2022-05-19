@@ -30,10 +30,6 @@ func TestAccCheckRequiredFields(t *testing.T) {
 			Config:      config,
 			ExpectError: regexp.MustCompile(`The argument "frequency" is required, but no definition was found.`),
 		},
-		{
-			Config:      config,
-			ExpectError: regexp.MustCompile(`The argument "locations" is required, but no definition was found.`),
-		},
 	})
 }
 
@@ -44,7 +40,6 @@ func TestAccBrowserCheckInvalidInputs(t *testing.T) {
 		activated                 = "invalid"
 		should_fail               = "invalid"
 		double_check              = "invalid"
-		ssl_check                 = "invalid"
 		use_global_alert_settings = "invalid"
 		locations = "invalid"
 		script = 4
@@ -61,10 +56,6 @@ func TestAccBrowserCheckInvalidInputs(t *testing.T) {
 		{
 			Config:      config,
 			ExpectError: regexp.MustCompile(`Inappropriate value for attribute "should_fail"`),
-		},
-		{
-			Config:      config,
-			ExpectError: regexp.MustCompile(`Inappropriate value for attribute "ssl_check"`),
 		},
 		{
 			Config:      config,
@@ -367,7 +358,7 @@ var wantCheck = checkly.Check{
 		"foo",
 		"bar",
 	},
-	SSLCheck:            true,
+	SSLCheck:            false,
 	LocalSetupScript:    "bogus",
 	LocalTearDownScript: "bogus",
 	AlertSettings: checkly.AlertSettings{
@@ -440,7 +431,6 @@ const browserCheck_basic = `
 		should_fail               = false
 		frequency                 = 720
 		double_check              = true
-		ssl_check                 = true
 		use_global_alert_settings = true
 		locations                 = [ "us-east-1", "eu-central-1" ]
 		tags                      = [ "browser", "e2e" ]
@@ -479,7 +469,6 @@ const apiCheck_full = `
 	activated              = true
 	muted                  = true
 	double_check           = true
-	ssl_check              = false
 	degraded_response_time = 15000
 	max_response_time      = 30000
 	environment_variables  = null
@@ -523,7 +512,7 @@ const apiCheck_full = `
 		target     = "100"
 	  }
 	}
-  
+
 	alert_settings {
 	  escalation_type = "RUN_BASED"
 	  reminders {
@@ -534,8 +523,7 @@ const apiCheck_full = `
 		failed_run_threshold = 1
 	  }
 	  ssl_certificates {
-		alert_threshold = 30
-		enabled         = true
+		enabled         = false
 	  }
 	  time_based_escalation {
 		minutes_failing_threshold = 5

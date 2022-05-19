@@ -24,6 +24,10 @@ func testAccPreCheck(t *testing.T) {
 	if os.Getenv("CHECKLY_API_KEY") == "" {
 		t.Fatal("CHECKLY_API_KEY must be set for acceptance tests")
 	}
+
+	if os.Getenv("CHECKLY_ACCOUNT_ID") == "" {
+		t.Fatal("CHECKLY_ACCOUNT_ID must be set for acceptance tests")
+	}
 }
 
 func accTestCase(t *testing.T, steps []resource.TestStep) {
