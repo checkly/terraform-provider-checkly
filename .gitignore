@@ -9,3 +9,5 @@ dist/*
 .vscode/
 .local
 *.tfvars
+__debug_bin
+local/*

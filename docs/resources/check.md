@@ -68,11 +68,6 @@ resource "checkly_check" "example-check-2" {
       minutes_failing_threshold = 5
     }
 
-    ssl_certificates {
-      enabled         = true
-      alert_threshold = 30
-    }
-
     reminders {
       amount = 1
     }
