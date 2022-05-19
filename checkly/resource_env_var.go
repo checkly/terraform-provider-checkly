@@ -28,6 +28,10 @@ func resourceEnvVar() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 			},
+			"locked": {
+				Type:     schema.TypeBool,
+				Optional: true,
+			},
 		},
 	}
 }
@@ -49,14 +53,16 @@ func resourceEnvVarCreate(d *schema.ResourceData, client interface{}) error {
 
 func envVarFromResourceData(d *schema.ResourceData) (checkly.EnvironmentVariable, error) {
 	return checkly.EnvironmentVariable{
-		Key:   d.Get("key").(string),
-		Value: d.Get("value").(string),
+		Key:    d.Get("key").(string),
+		Value:  d.Get("value").(string),
+		Locked: d.Get("locked").(bool),
 	}, nil
 }
 
 func resourceDataFromEnvVar(s *checkly.EnvironmentVariable, d *schema.ResourceData) error {
 	d.Set("key", s.Key)
 	d.Set("value", s.Value)
+	d.Set("locked", s.Locked)
 	return nil
 }
 
