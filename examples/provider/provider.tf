@@ -26,7 +26,6 @@ resource "checkly_check" "example-check" {
   should_fail               = false
   frequency                 = 10
   double_check              = true
-  ssl_check                 = true
   use_global_alert_settings = true
 
   locations = [

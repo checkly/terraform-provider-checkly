@@ -45,7 +45,6 @@ resource "checkly_check" "api-check-2" {
   activated              = true
   muted                  = true
   double_check           = true
-  ssl_check              = false
   degraded_response_time = 15000
   max_response_time      = 30000
   environment_variables  = null
@@ -113,10 +112,6 @@ resource "checkly_check" "api-check-2" {
     }
     run_based_escalation {
       failed_run_threshold = 1
-    }
-    ssl_certificates {
-      alert_threshold = 30
-      enabled         = true
     }
     time_based_escalation {
       minutes_failing_threshold = 5
