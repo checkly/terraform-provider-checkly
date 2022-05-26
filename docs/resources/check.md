@@ -21,7 +21,6 @@ resource "checkly_check" "example-check" {
   should_fail               = false
   frequency                 = 1
   double_check              = true
-  ssl_check                 = true
   use_global_alert_settings = true
 
   locations = [
@@ -115,7 +114,6 @@ resource "checkly_check" "browser-check-1" {
   should_fail               = false
   frequency                 = 10
   double_check              = true
-  ssl_check                 = true
   use_global_alert_settings = true
   locations = [
     "us-west-1"
@@ -150,7 +148,6 @@ resource "checkly_check" "browser-check-1" {
   should_fail               = false
   frequency                 = 10
   double_check              = true
-  ssl_check                 = true
   use_global_alert_settings = true
   locations = [
     "us-west-1"
@@ -221,7 +218,7 @@ resource "checkly_check" "example-check" {
 - `script` (String) A valid piece of Node.js JavaScript code describing a browser interaction with the Puppeteer/Playwright framework or a reference to an external JavaScript file.
 - `setup_snippet_id` (Number) An ID reference to a snippet to use in the setup phase of an API check.
 - `should_fail` (Boolean) Allows to invert the behaviour of when a check is considered to fail. Allows for validating error status like 404.
-- `ssl_check` (Boolean) Determines if the SSL certificate should be validated for expiry.
+- `ssl_check` (Boolean, Deprecated) Determines if the SSL certificate should be validated for expiry.
 - `tags` (Set of String) A list of tags for organizing and filtering checks.
 - `teardown_snippet_id` (Number) An ID reference to a snippet to use in the teardown phase of an API check.
 - `use_global_alert_settings` (Boolean) When true, the account level alert settings will be used, not the alert setting defined on this check.
