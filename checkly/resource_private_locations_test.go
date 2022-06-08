@@ -7,8 +7,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 )
 
-func TestAccPrivateLocationsCheckRequiredFields(t *testing.T) {
-	config := `resource "checkly_private_locations" "test" {}`
+func TestAccPrivateLocationCheckRequiredFields(t *testing.T) {
+	config := `resource "checkly_private_location" "test" {}`
 	accTestCase(t, []resource.TestStep{
 		{
 			Config:      config,
@@ -21,8 +21,8 @@ func TestAccPrivateLocationsCheckRequiredFields(t *testing.T) {
 	})
 }
 
-func TestAccPrivateLocationsSuccess(t *testing.T) {
-	config := `resource "checkly_private_locations" "test" {
+func TestAccPrivateLocationSuccess(t *testing.T) {
+	config := `resource "checkly_private_location" "test" {
 		name     = "New Private Location"
 		slug_name   = "new-private-location"
 		icon       	= "location"
@@ -32,17 +32,17 @@ func TestAccPrivateLocationsSuccess(t *testing.T) {
 			Config: config,
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
-					"checkly_private_locations.test",
+					"checkly_private_location.test",
 					"name",
 					"New Private Location",
 				),
 				resource.TestCheckResourceAttr(
-					"checkly_private_locations.test",
+					"checkly_private_location.test",
 					"slug_name",
 					"new-private-location",
 				),
 				resource.TestCheckResourceAttr(
-					"checkly_private_locations.test",
+					"checkly_private_location.test",
 					"icon",
 					"location",
 				),

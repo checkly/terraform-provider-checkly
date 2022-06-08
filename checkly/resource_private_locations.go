@@ -10,39 +10,43 @@ import (
 	checkly "github.com/checkly/checkly-go-sdk"
 )
 
-func resourcePrivateLocations() *schema.Resource {
+func resourcePrivateLocation() *schema.Resource {
 	return &schema.Resource{
-		Create: resourcePrivateLocationsCreate,
-		Read:   resourcePrivateLocationsRead,
-		Update: resourcePrivateLocationsUpdate,
-		Delete: resourcePrivateLocationsDelete,
+		Create: resourcePrivateLocationCreate,
+		Read:   resourcePrivateLocationRead,
+		Update: resourcePrivateLocationUpdate,
+		Delete: resourcePrivateLocationDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
 		Schema: map[string]*schema.Schema{
 			"name": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "The private location name.",
 			},
 			"slug_name": {
-				Type:     schema.TypeString,
-				Required: true,
+				Type:        schema.TypeString,
+				Required:    true,
+				Description: "Valid slug name.",
 			},
 			"icon": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Icon assigned to the private location.",
 			},
-			"raw_key": {
-				Type:      schema.TypeString,
-				Optional:  true,
-				Computed:  true,
-				Sensitive: true,
+			"key": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Computed:    true,
+				Sensitive:   true,
+				Description: "Private location API key.",
 			},
 		},
 	}
 }
 
-func privateLocationsFromResourceData(d *schema.ResourceData) (checkly.PrivateLocation, error) {
+func privateLocationFromResourceData(d *schema.ResourceData) (checkly.PrivateLocation, error) {
 	return checkly.PrivateLocation{
 		Name:     d.Get("name").(string),
 		SlugName: d.Get("slug_name").(string),
@@ -50,10 +54,10 @@ func privateLocationsFromResourceData(d *schema.ResourceData) (checkly.PrivateLo
 	}, nil
 }
 
-func resourcePrivateLocationsCreate(d *schema.ResourceData, client interface{}) error {
-	pl, err := privateLocationsFromResourceData(d)
+func resourcePrivateLocationCreate(d *schema.ResourceData, client interface{}) error {
+	pl, err := privateLocationFromResourceData(d)
 	if err != nil {
-		return fmt.Errorf("resourcePrivateLocationsCreate: translation error: %w", err)
+		return fmt.Errorf("resourcePrivateLocationCreate: translation error: %w", err)
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
 	defer cancel()
@@ -62,32 +66,32 @@ func resourcePrivateLocationsCreate(d *schema.ResourceData, client interface{}) 
 		return fmt.Errorf("CreatePrivateLocation: API error: %w", err)
 	}
 	d.SetId(result.ID)
-	d.Set("raw_key", result.Keys[0].RawKey)
-	return resourcePrivateLocationsRead(d, client)
+	d.Set("key", result.Keys[0].RawKey)
+	return resourcePrivateLocationRead(d, client)
 }
 
-func resourceDataFromPrivateLocations(pl *checkly.PrivateLocation, d *schema.ResourceData) error {
+func resourceDataFromPrivateLocation(pl *checkly.PrivateLocation, d *schema.ResourceData) error {
 	d.Set("name", pl.Name)
 	d.Set("slug_name", pl.SlugName)
 	d.Set("icon", pl.Icon)
 	return nil
 }
 
-func resourcePrivateLocationsUpdate(d *schema.ResourceData, client interface{}) error {
-	pl, err := privateLocationsFromResourceData(d)
+func resourcePrivateLocationUpdate(d *schema.ResourceData, client interface{}) error {
+	pl, err := privateLocationFromResourceData(d)
 	if err != nil {
-		return fmt.Errorf("resourcePrivateLocationsUpdate: translation error: %w", err)
+		return fmt.Errorf("resourcePrivateLocationUpdate: translation error: %w", err)
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
 	defer cancel()
 	_, err = client.(checkly.Client).UpdatePrivateLocation(ctx, d.Id(), pl)
 	if err != nil {
-		return fmt.Errorf("resourcePrivateLocationsUpdate: API error: %w", err)
+		return fmt.Errorf("resourcePrivateLocationUpdate: API error: %w", err)
 	}
-	return resourcePrivateLocationsRead(d, client)
+	return resourcePrivateLocationRead(d, client)
 }
 
-func resourcePrivateLocationsRead(d *schema.ResourceData, client interface{}) error {
+func resourcePrivateLocationRead(d *schema.ResourceData, client interface{}) error {
 	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
 	defer cancel()
 	pl, err := client.(checkly.Client).GetPrivateLocation(ctx, d.Id())
@@ -98,17 +102,17 @@ func resourcePrivateLocationsRead(d *schema.ResourceData, client interface{}) er
 			d.SetId("")
 			return nil
 		}
-		return fmt.Errorf("resourcePrivateLocationsRead: %w", err)
+		return fmt.Errorf("resourcePrivateLocationRead: %w", err)
 	}
-	return resourceDataFromPrivateLocations(pl, d)
+	return resourceDataFromPrivateLocation(pl, d)
 }
 
-func resourcePrivateLocationsDelete(d *schema.ResourceData, client interface{}) error {
+func resourcePrivateLocationDelete(d *schema.ResourceData, client interface{}) error {
 	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
 	defer cancel()
 	err := client.(checkly.Client).DeletePrivateLocation(ctx, d.Id())
 	if err != nil {
-		return fmt.Errorf("resourcePrivateLocationsDelete: API error: %w", err)
+		return fmt.Errorf("resourcePrivateLocationDelete: API error: %w", err)
 	}
 	return nil
 }
