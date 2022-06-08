@@ -33,9 +33,10 @@ func resourcePrivateLocations() *schema.Resource {
 				Optional: true,
 			},
 			"raw_key": {
-				Type:     schema.TypeString,
-				Optional: true,
-				Computed: true,
+				Type:      schema.TypeString,
+				Optional:  true,
+				Computed:  true,
+				Sensitive: true,
 			},
 		},
 	}
