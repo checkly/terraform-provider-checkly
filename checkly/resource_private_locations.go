@@ -32,6 +32,11 @@ func resourcePrivateLocations() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 			},
+			"raw_key": {
+				Type:     schema.TypeString,
+				Optional: true,
+				Computed: true,
+			},
 		},
 	}
 }
@@ -56,13 +61,14 @@ func resourcePrivateLocationsCreate(d *schema.ResourceData, client interface{}) 
 		return fmt.Errorf("CreatePrivateLocation: API error: %w", err)
 	}
 	d.SetId(result.ID)
+	d.Set("raw_key", result.Keys[0].RawKey)
 	return resourcePrivateLocationsRead(d, client)
 }
 
-func resourceDataFromPrivateLocations(s *checkly.PrivateLocation, d *schema.ResourceData) error {
-	d.Set("name", s.Name)
-	d.Set("slug_name", s.SlugName)
-	d.Set("icon", s.Icon)
+func resourceDataFromPrivateLocations(pl *checkly.PrivateLocation, d *schema.ResourceData) error {
+	d.Set("name", pl.Name)
+	d.Set("slug_name", pl.SlugName)
+	d.Set("icon", pl.Icon)
 	return nil
 }
 
@@ -77,7 +83,6 @@ func resourcePrivateLocationsUpdate(d *schema.ResourceData, client interface{}) 
 	if err != nil {
 		return fmt.Errorf("resourcePrivateLocationsUpdate: API error: %w", err)
 	}
-
 	return resourcePrivateLocationsRead(d, client)
 }
 

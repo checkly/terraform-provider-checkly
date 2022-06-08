@@ -3,3 +3,7 @@ resource "checkly_private_locations" "location" {
   slug_name     = "new-private-location"
   icon          = "location"
 }
+
+output "test-trigger-check-key" {
+  value = checkly_private_locations.location.raw_key
+}
