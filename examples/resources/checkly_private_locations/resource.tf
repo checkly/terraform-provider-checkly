@@ -4,6 +4,6 @@ resource "checkly_private_locations" "location" {
   icon          = "location"
 }
 
-output "test-trigger-check-key" {
+output "location-key" {
   value = checkly_private_locations.location.raw_key
 }
