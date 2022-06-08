@@ -207,6 +207,7 @@ resource "checkly_check" "example-check" {
 - `frequency_offset` (Number) This property only valid for API high frequency checks. To create a hight frequency check, the property `frequency` must be `0` and `frequency_offset` could be `10`, `20` or `30`.
 - `group_id` (Number) The id of the check group this check is part of.
 - `group_order` (Number) The position of this check in a check group. It determines in what order checks are run when a group is triggered from the API or from CI/CD.
+- `private_location` (Block List) (see [below for nested schema](#nestedblock--private_location))
 - `id` (String) The ID of this resource.
 - `local_setup_script` (String) A valid piece of Node.js code to run in the setup phase.
 - `local_teardown_script` (String) A valid piece of Node.js code to run in the teardown phase.
@@ -222,6 +223,13 @@ resource "checkly_check" "example-check" {
 - `tags` (Set of String) A list of tags for organizing and filtering checks.
 - `teardown_snippet_id` (Number) An ID reference to a snippet to use in the teardown phase of an API check.
 - `use_global_alert_settings` (Boolean) When true, the account level alert settings will be used, not the alert setting defined on this check.
+
+<a id="nestedblock--private_location"></a>
+### Nested Schema for `private_location`
+
+Required:
+
+- `private_location_id` (String)
 
 <a id="nestedblock--alert_channel_subscription"></a>
 ### Nested Schema for `alert_channel_subscription`
