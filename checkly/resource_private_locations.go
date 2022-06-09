@@ -35,12 +35,14 @@ func resourcePrivateLocation() *schema.Resource {
 				Optional:    true,
 				Description: "Icon assigned to the private location.",
 			},
-			"key": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Computed:    true,
-				Sensitive:   true,
-				Description: "Private location API key.",
+			"keys": {
+				Type:      schema.TypeSet,
+				Computed:  true,
+				Sensitive: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Description: "Private location API keys.",
 			},
 		},
 	}
@@ -66,7 +68,9 @@ func resourcePrivateLocationCreate(d *schema.ResourceData, client interface{}) e
 		return fmt.Errorf("CreatePrivateLocation: API error: %w", err)
 	}
 	d.SetId(result.ID)
-	d.Set("key", result.Keys[0].RawKey)
+
+	var keys = []string{result.Keys[0].RawKey}
+	d.Set("keys", keys)
 	return resourcePrivateLocationRead(d, client)
 }
 
