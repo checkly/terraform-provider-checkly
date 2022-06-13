@@ -1,0 +1,38 @@
+name: "New Story"
+description: Create a new working ticket (maintainers only)
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Before You Start...**
+
+        🚨 This issue type is supposed to be use only by the project maintainers. If you want to request a future or report a bug, please use the existing templates
+
+        Do not forget:
+        - [ ] Assign an owner to this story
+        - [ ] Add proper labels (type & priority)
+        - [ ] Set a project and  milestone
+  - type: input
+    id: title
+    attributes:
+      label: Story Title
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Story description
+      description: |
+        Explain your use case, context, and rationale behind this feature request. More importantly, what is the **end user experience** you are trying to build that led to the need for this feature?
+      placeholder: Problem description
+    validations:
+      required: true
+  - type: textarea
+    id: proposed-code
+    attributes:
+      label: How would you implement this feature?
+      description: |
+        Describe how you propose to solve the problem and provide code/api samples to use as guide. Note that you can use [Markdown](https://guides.github.com/features/mastering-markdown/) to format your code blocks.
+      placeholder: Steps to reproduce
+    validations:
+      required: true
