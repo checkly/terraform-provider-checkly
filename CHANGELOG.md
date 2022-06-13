@@ -4,20 +4,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.4.3] - 2022-03-09
+## [1.4.3](https://github.com/checkly/terraform-provider-checkly/releases/tag/v1.4.3) - 2022-03-09
 ### Changed
 - Use generic provider descriptions in docs [#e7bb925](https://github.com/checkly/terraform-provider-checkly/commit/e7bb925)
 
-## [1.4.2] - 2022-03-02
+## [1.4.2](https://github.com/checkly/terraform-provider-checkly/releases/tag/v1.4.2) - 2022-03-02
 ### Added
 - Add CHECKLY_API_SOURCE env variable [#120](https://github.com/checkly/terraform-provider-checkly/issues/120)
 
-## [1.4.1] - 2022-02-08
+## [1.4.1](https://github.com/checkly/terraform-provider-checkly/releases/tag/v1.4.1) - 2022-02-08
 
 ### Changed
 - Migrate project test cases to User API Keys [#b35d8a7](https://github.com/checkly/terraform-provider-checkly/commit/b35d8a7)
 
-## [1.4.0] - 2022-01-28
+## [1.4.0](https://github.com/checkly/terraform-provider-checkly/releases/tag/v1.4.0) - 2022-01-28
 ### Added
 - Support for Command Line Triggers [#87](https://github.com/checkly/terraform-provider-checkly/issues/87)
 - Add Public API `source` HTTP header [#110](https://github.com/checkly/terraform-provider-checkly/issues/110)
@@ -28,31 +28,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Rename default branch to `main` [#99](https://github.com/checkly/terraform-provider-checkly/issues/99)
 - Improve User API Keys docs [#95](https://github.com/checkly/terraform-provider-checkly/issues/95)
 
-## [1.3.0] - 2021-11-10
+## [1.3.0](https://github.com/checkly/terraform-provider-checkly/releases/tag/v1.3.0) - 2021-11-10
 ### Added
 - Support for Public Dashboards [#81](https://github.com/checkly/terraform-provider-checkly/issues/81)
 - Support for Maintenance Windows [#83](https://github.com/checkly/terraform-provider-checkly/issues/83)
 - Support for User API Keys [#88](https://github.com/checkly/terraform-provider-checkly/issues/88)
 
-## [1.2.1] - 2021-10-19
+## [1.2.1](https://github.com/checkly/terraform-provider-checkly/releases/tag/v1.2.1) - 2021-10-19
 ### Changed
 - Fix optional and required values in webhooks alert channels [#82](https://github.com/checkly/terraform-provider-checkly/pull/82)
 
-## [1.2.0] - 2021-07-14
+## [1.2.0](https://github.com/checkly/terraform-provider-checkly/releases/tag/v1.2.0) - 2021-07-14
 ### Added
 - Support for versioned runtimes  [#31](https://github.com/checkly/checkly-go-sdk/issues/31).
-
-## [1.2.0-rc1] - 2021-06-02
-### Added
 - Support for PagerDuty alert channels integration [#53](https://github.com/checkly/terraform-provider-checkly/issues/53).
 
 
-## [1.1.0] - 2021-05-28
+## [1.1.0](https://github.com/checkly/terraform-provider-checkly/releases/tag/v1.1.0) - 2021-05-28
 ### Added
 - Support for API high frequency checks [#68](https://github.com/checkly/terraform-provider-checkly/issues/68).
 - Add `setupSnippetId` and `teardownSnippetID` to `check_group` resource [#69](https://github.com/checkly/terraform-provider-checkly/issues/69).
 
-## [1.0.0] - 2021-04-09
+## [1.0.0](https://github.com/checkly/terraform-provider-checkly/releases/tag/v1.4.3) - 2021-04-09
 ### Added
 - Apple Silicon support is now added. The Terraform provider now also has `darwin_arm64` binaries
 
