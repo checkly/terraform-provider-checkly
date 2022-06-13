@@ -13,9 +13,9 @@
 This Terraform provider enables users to handle [Checkly](https://checklyhq.com) resources.  Manage your checks, groups, alert channels and stary applying code practices in monitoring.
 
 ## Installation
-Please refer to the [installation guide](https://github.com/checkly/terraform-provider-checkly/blob/main/docs/guides/getting-started.md)
+Please take a look at the [installation guide](https://github.com/checkly/terraform-provider-checkly/blob/main/docs/guides/getting-started.md)
 
-If you're still using Terraform 0.12 please refer to [terraform 0.12 documentation](https://github.com/checkly/terraform-provider-checkly/blob/main/docs/guides/support-for-terraform-0.12.md)
+> If you're still using Terraform 0.12 please refer to [terraform 0.12 documentation](https://github.com/checkly/terraform-provider-checkly/blob/main/docs/guides/support-for-terraform-0.12.md)
 
 ## Getting Started
 For documentation and example usage see:
@@ -31,7 +31,7 @@ For documentation and example usage see:
 Please make sure to respect issue requirements and choose the proper [issue template](https://github.com/checkly/terraform-provider-checkly/issues/new/choose) when opening an issue. Issues not conforming to the guidelines may be closed.
 
 ## Contribution
-Please make sure to read the [Contributing Guide](https://github.com/checkly/terraform-checkly-provider/blob/main/CONTRIBUTING.md) before making a pull request.
+Please make sure to read the [Contributing Guide](https://github.com/checkly/terraform-provider-checkly/blob/main/CONTRIBUTING.md) before making a pull request.
 
 ## License
 

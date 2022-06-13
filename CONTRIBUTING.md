@@ -10,8 +10,7 @@ Hi! We are really excited that you are interested in contributing to Checkly Ter
 - [Development Setup](#development-setup)
 - [Scripts](#scripts)
 - [Project Structure](#project-structure)
-- [Contributing Tests](#contributing-tests)
-- [Financial Contribution](#financial-contribution)
+- [Release Process](#releases-process)
 
 ## Issue Reporting Guidelines
 
@@ -24,13 +23,10 @@ Hi! We are really excited that you are interested in contributing to Checkly Ter
 - [Make sure to tick the "Allow edits from maintainers" box](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/allowing-changes-to-a-pull-request-branch-created-from-a-fork). This allows us to directly make minor edits / refactors and saves a lot of time.
 
 - Add accompanying documentation, usage samples & test cases
-- Add or update existing demo files to showcase your changes.
+- Add/update demo files to showcase your changes.
 - Use existing resources as templates and ensure that each property has a corresponding `description` field.
 - Each PR should be linked with an issue, use [GitHub keywords](https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/using-keywords-in-issues-and-pull-requests) for that.
-- Be sure to follow up project code styles, you can easily format the code wit these two commands:
-  ```sh
-  $ make fmt
-  ```
+- Be sure to follow up project code styles (`$ make fmt`)
 
 - If adding a new feature:
   - Provide a convincing reason to add this feature. Ideally, you should open a "feature request" issue first and have it approved before working on it (it should has the label "state: confirmed")
@@ -43,11 +39,13 @@ Hi! We are really excited that you are interested in contributing to Checkly Ter
 
 - Make sure tests pass!
 
-- Commit messages must follow the [commit message convention](./commit-convention.md) so that changelogs can be automatically generated. Commit messages are automatically validated before commit (by invoking [Git Hooks](https://git-scm.com/docs/githooks) via [yorkie](https://github.com/yyx990803/yorkie)).
+- Commit messages must follow the [semantic commit messages](https://gist.github.com/joshbuchea/6f47e86d2510bce28f8e7f42ae84c716) so that changelogs can be automatically generated.
 
 ## Development Setup
 
 The development branch is `main`. This is the branch that all pull requests should be made against.
+
+> ⚠️ Before you start, is recommended to have a good understanding on how the provider works, the resources it has and its different configurations. Here are the ["getting started"](https://github.com/checkly/terraform-provider-checkly#getting-started) guides.
 
 ### Pre-requirements
 - [Terraform](https://learn.hashicorp.com/tutorials/terraform/install-cli) >= v1.2.2
@@ -81,7 +79,7 @@ After you have installed Terraform and Go, you can clone the repository and star
 
 > 💡 We recommend to use [tfswitch](https://tfswitch.warrensbox.com/) to easily manage different Terraform versions in your local environment.
 
-You are ready to go, take a look at the [`dev` script](###`make-dev`) to start testing your changes.
+You are ready to go, take a look at the [`dev` script](###`make-dev`) so you can start testing your local changes.
 
 ## Scripts
 
@@ -97,6 +95,24 @@ After you run the `dev` script, you should be able to run terraform with the `de
   1. Navigate to the: `$ cd demo`
   1. Start a new terraform project `terraform init`
   1. Run `terraform plan` and/or `terraform apply`
+
+Other useful tip for local testing/development is to override the `demo/versions.tf` with configuration pointing to your local environments:
+  ```tf
+  terraform {
+    required_providers {
+      checkly = {
+        source  = "dev/checkly/checkly"
+        version = "0.0.0-canary"
+      }
+    }
+  }
+
+  provider "checkly" {
+    api_key = "xxx"
+    account_id = "xxx"
+    api_url="http://localhost:3000" # sorry, this is only for Checkly employees 😅
+  }
+  ```
 
 ### `make local-sdk`
 If you are also performing updates in the [Checkly Go SDK](https://github.com/checkly/checkly-go-sdk) (ensure to have both projects located  in the same directory), you can use this script to point the provider to the local version of the Checkly Go SDK.
@@ -121,6 +137,25 @@ Run acceptance tests (all test must pass in order to merge a PR).
 ```sh
 $ make testacc
 ```
+
+## Project Structure
+
+- `./.github`: contains github (and github actions) related files.
+
+- `./checkly`: contains the provider itself. This is the most important directory and where you will be working most of the time. The file `provider` is the main entry point for the provider, then you will find some helpers and the resource files (i.e. `resource_checkly.go`). Note that each resource has its own `_test` file (i.e. `resource_checkly_test.go`).
+
+> If you want to learn more about Terraform Providers and resources, [here](https://www.terraform.io/cdktf/concepts/providers-and-resources) is a good place to start.
+
+- `./demo`: it is a full working sample of the provider with all the different resources. It's also used to easily try out your local changes.
+
+- `./docs`: this directoy is automatically generated, please do not apply manual changes here. Run `make doc` in order to re-generate documentation.
+
+- `./examples`: here you will find resource and provider exampels (in `.tf` files). This will be use to generate docs and samples.
+
+- `./templates`: contains the templates used to generate the documentation layouts.
+
+- `./tools`: contains tools, scripts or utilities for development workflow.
+
 
 ## Release Process
 The release process is automatically handled with [goreleaser](https://goreleaser.com/) and GitHub `release` action.
