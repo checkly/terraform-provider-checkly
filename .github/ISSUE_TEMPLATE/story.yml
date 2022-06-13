@@ -1,5 +1,6 @@
 name: "New Story"
 description: Create a new working ticket (maintainers only)
+title: '[story]: '
 body:
   - type: markdown
     attributes:
