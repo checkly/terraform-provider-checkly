@@ -9,3 +9,6 @@ contact_links:
   - name: Terraform Provider Registry
     url: https://registry.terraform.io/providers/checkly/checkly/latest/docs
     about: The official Terraform registry contains all the basic information about the provider resources
+  - name: Questions
+    url: https://github.com/checkly/terraform-provider-checkly/discussions
+    about: Ask questions and discuss with other community members

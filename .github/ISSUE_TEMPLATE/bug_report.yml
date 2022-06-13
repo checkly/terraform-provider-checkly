@@ -1,5 +1,7 @@
-name: "\U0001F41E Bug report"
+name: "Bug report"
 description: Create a report to help us improve
+labels:
+  - 'type: bug'
 body:
   - type: markdown
     attributes:
@@ -21,7 +23,7 @@ body:
   - type: input
     id: checkly-version
     attributes:
-      label: Checkly provider version
+      label: Provider version
     validations:
       required: true
   - type: textarea
@@ -52,7 +54,7 @@ body:
       label: System Info
       description: Not required but if you consider relevant please include it
       render: shell
-      placeholder: System, Binaries, Browsers
+      placeholder: System, Binaries, Browsers, Logs
   - type: textarea
     id: additional-comments
     attributes:

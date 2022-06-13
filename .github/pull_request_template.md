@@ -1,6 +1,6 @@
 ## Affected Components
 * [ ] Resources
-* [ ] Tests
+* [ ] Test
 * [ ] Docs
 * [ ] Tooling
 * [ ] Other
