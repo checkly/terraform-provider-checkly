@@ -1,6 +1,6 @@
 name: 'New docs request/improvement'
 description: A request to update or improve provider documentation
-title: '[docs]: '
+title: 'docs: '
 labels:
   - 'type: documentation'
 body:

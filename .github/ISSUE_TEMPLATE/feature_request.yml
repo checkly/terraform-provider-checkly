@@ -1,6 +1,6 @@
 name: " New feature request"
 description: Suggest an idea for this project
-title: '[feat]: '
+title: 'feat: '
 labels:
   - 'type: feature request'
 body:
