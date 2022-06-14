@@ -27,6 +27,9 @@ For documentation and example usage see:
 1. [Managing Checkly checks with Terraform](https://blog.checklyhq.com/managing-checkly-checks-with-terraform/)
 2. [Scaling Puppeteer and Playwright on Checkly with Terraform](https://blog.checklyhq.com/scaling-puppeteer-playwright-on-checkly-with-terraform/)
 
+## Questions
+For questions and support please open a new  [discussion](https://github.com/checkly/terraform-provider-checkly/discussions). The issue list of this repo is exclusively for bug reports and feature/docs requests.
+
 ## Issues
 Please make sure to respect issue requirements and choose the proper [issue template](https://github.com/checkly/terraform-provider-checkly/issues/new/choose) when opening an issue. Issues not conforming to the guidelines may be closed.
 
