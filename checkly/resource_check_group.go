@@ -51,17 +51,13 @@ func resourceCheckGroup() *schema.Resource {
 				},
 				Description: "An array of one or more data center locations where to run the checks.",
 			},
-			"private_location": {
-				Type:     schema.TypeList,
-				Optional: true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"private_location_id": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-					},
+			"private_locations": {
+				Type:     schema.TypeSet,
+				Required: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
 				},
+				Description: "An array of one or more private locations assigned to the group.",
 			},
 			"environment_variables": {
 				Type:        schema.TypeMap,
@@ -407,7 +403,7 @@ func resourceDataFromCheckGroup(g *checkly.Group, d *schema.ResourceData) error 
 		return fmt.Errorf("error setting request for resource %s: %s", d.Id(), err)
 	}
 	d.Set("alert_channel_subscription", g.AlertChannelSubscriptions)
-	d.Set("private_location", g.PrivateLocationAssignments)
+	d.Set("private_locations", g.PrivateLocations)
 	d.SetId(d.Id())
 	return nil
 }
@@ -421,24 +417,24 @@ func checkGroupFromResourceData(d *schema.ResourceData) (checkly.Group, error) {
 		ID = 0
 	}
 	group := checkly.Group{
-		ID:                         ID,
-		Name:                       d.Get("name").(string),
-		Concurrency:                d.Get("concurrency").(int),
-		Activated:                  d.Get("activated").(bool),
-		Muted:                      d.Get("muted").(bool),
-		Locations:                  stringsFromSet(d.Get("locations").(*schema.Set)),
-		EnvironmentVariables:       envVarsFromMap(d.Get("environment_variables").(tfMap)),
-		DoubleCheck:                d.Get("double_check").(bool),
-		Tags:                       stringsFromSet(d.Get("tags").(*schema.Set)),
-		SetupSnippetID:             int64(d.Get("setup_snippet_id").(int)),
-		TearDownSnippetID:          int64(d.Get("teardown_snippet_id").(int)),
-		LocalSetupScript:           d.Get("local_setup_script").(string),
-		LocalTearDownScript:        d.Get("local_teardown_script").(string),
-		AlertSettings:              alertSettingsFromSet(d.Get("alert_settings").(*schema.Set)),
-		UseGlobalAlertSettings:     d.Get("use_global_alert_settings").(bool),
-		APICheckDefaults:           apiCheckDefaultsFromSet(d.Get("api_check_defaults").(*schema.Set)),
-		AlertChannelSubscriptions:  alertChannelSubscriptionsFromSet(d.Get("alert_channel_subscription").([]interface{})),
-		PrivateLocationAssignments: groupPrivateLocationFromSet(d.Get("private_location").([]interface{})),
+		ID:                        ID,
+		Name:                      d.Get("name").(string),
+		Concurrency:               d.Get("concurrency").(int),
+		Activated:                 d.Get("activated").(bool),
+		Muted:                     d.Get("muted").(bool),
+		Locations:                 stringsFromSet(d.Get("locations").(*schema.Set)),
+		EnvironmentVariables:      envVarsFromMap(d.Get("environment_variables").(tfMap)),
+		DoubleCheck:               d.Get("double_check").(bool),
+		Tags:                      stringsFromSet(d.Get("tags").(*schema.Set)),
+		SetupSnippetID:            int64(d.Get("setup_snippet_id").(int)),
+		TearDownSnippetID:         int64(d.Get("teardown_snippet_id").(int)),
+		LocalSetupScript:          d.Get("local_setup_script").(string),
+		LocalTearDownScript:       d.Get("local_teardown_script").(string),
+		AlertSettings:             alertSettingsFromSet(d.Get("alert_settings").(*schema.Set)),
+		UseGlobalAlertSettings:    d.Get("use_global_alert_settings").(bool),
+		APICheckDefaults:          apiCheckDefaultsFromSet(d.Get("api_check_defaults").(*schema.Set)),
+		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(d.Get("alert_channel_subscription").([]interface{})),
+		PrivateLocations:          stringsFromSet(d.Get("private_locations").(*schema.Set)),
 	}
 
 	runtimeId := d.Get("runtime_id").(string)
@@ -449,21 +445,6 @@ func checkGroupFromResourceData(d *schema.ResourceData) (checkly.Group, error) {
 	}
 
 	return group, nil
-}
-
-func groupPrivateLocationFromSet(s []interface{}) []checkly.GroupPrivateLocation {
-	res := []checkly.GroupPrivateLocation{}
-	if len(s) == 0 {
-		return res
-	}
-	for _, it := range s {
-		tm := it.(tfMap)
-		id := tm["private_location_id"].(string)
-		res = append(res, checkly.GroupPrivateLocation{
-			PrivateLocationId: id,
-		})
-	}
-	return res
 }
 
 func setFromAPICheckDefaults(a checkly.APICheckDefaults) []tfMap {

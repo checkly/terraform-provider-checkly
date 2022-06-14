@@ -185,17 +185,13 @@ func resourceCheck() *schema.Resource {
 					},
 				},
 			},
-			"private_location": {
-				Type:     schema.TypeList,
+			"private_locations": {
+				Type:     schema.TypeSet,
 				Optional: true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"private_location_id": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-					},
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
 				},
+				Description: "An array of one or more private locations assigned to the check.",
 			},
 			"alert_settings": {
 				Type:     schema.TypeSet,
@@ -517,7 +513,7 @@ func resourceDataFromCheck(c *checkly.Check, d *schema.ResourceData) error {
 	}
 	d.Set("group_id", c.GroupID)
 	d.Set("group_order", c.GroupOrder)
-	d.Set("private_location", c.PrivateLocationAssignments)
+	d.Set("private_locations", c.PrivateLocations)
 	d.Set("alert_channel_subscription", c.AlertChannelSubscriptions)
 	d.SetId(d.Id())
 	return nil
@@ -611,31 +607,31 @@ func setFromBasicAuth(b *checkly.BasicAuth) []tfMap {
 
 func checkFromResourceData(d *schema.ResourceData) (checkly.Check, error) {
 	check := checkly.Check{
-		ID:                         d.Id(),
-		Name:                       d.Get("name").(string),
-		Type:                       d.Get("type").(string),
-		Frequency:                  d.Get("frequency").(int),
-		Activated:                  d.Get("activated").(bool),
-		Muted:                      d.Get("muted").(bool),
-		ShouldFail:                 d.Get("should_fail").(bool),
-		Locations:                  stringsFromSet(d.Get("locations").(*schema.Set)),
-		Script:                     d.Get("script").(string),
-		DegradedResponseTime:       d.Get("degraded_response_time").(int),
-		MaxResponseTime:            d.Get("max_response_time").(int),
-		EnvironmentVariables:       envVarsFromMap(d.Get("environment_variables").(tfMap)),
-		DoubleCheck:                d.Get("double_check").(bool),
-		Tags:                       stringsFromSet(d.Get("tags").(*schema.Set)),
-		SSLCheck:                   d.Get("ssl_check").(bool),
-		SetupSnippetID:             int64(d.Get("setup_snippet_id").(int)),
-		TearDownSnippetID:          int64(d.Get("teardown_snippet_id").(int)),
-		LocalSetupScript:           d.Get("local_setup_script").(string),
-		LocalTearDownScript:        d.Get("local_teardown_script").(string),
-		AlertSettings:              alertSettingsFromSet(d.Get("alert_settings").(*schema.Set)),
-		UseGlobalAlertSettings:     d.Get("use_global_alert_settings").(bool),
-		GroupID:                    int64(d.Get("group_id").(int)),
-		GroupOrder:                 d.Get("group_order").(int),
-		AlertChannelSubscriptions:  alertChannelSubscriptionsFromSet(d.Get("alert_channel_subscription").([]interface{})),
-		PrivateLocationAssignments: privateLocationFromSet(d.Get("private_location").([]interface{})),
+		ID:                        d.Id(),
+		Name:                      d.Get("name").(string),
+		Type:                      d.Get("type").(string),
+		Frequency:                 d.Get("frequency").(int),
+		Activated:                 d.Get("activated").(bool),
+		Muted:                     d.Get("muted").(bool),
+		ShouldFail:                d.Get("should_fail").(bool),
+		Locations:                 stringsFromSet(d.Get("locations").(*schema.Set)),
+		Script:                    d.Get("script").(string),
+		DegradedResponseTime:      d.Get("degraded_response_time").(int),
+		MaxResponseTime:           d.Get("max_response_time").(int),
+		EnvironmentVariables:      envVarsFromMap(d.Get("environment_variables").(tfMap)),
+		DoubleCheck:               d.Get("double_check").(bool),
+		Tags:                      stringsFromSet(d.Get("tags").(*schema.Set)),
+		SSLCheck:                  d.Get("ssl_check").(bool),
+		SetupSnippetID:            int64(d.Get("setup_snippet_id").(int)),
+		TearDownSnippetID:         int64(d.Get("teardown_snippet_id").(int)),
+		LocalSetupScript:          d.Get("local_setup_script").(string),
+		LocalTearDownScript:       d.Get("local_teardown_script").(string),
+		AlertSettings:             alertSettingsFromSet(d.Get("alert_settings").(*schema.Set)),
+		UseGlobalAlertSettings:    d.Get("use_global_alert_settings").(bool),
+		GroupID:                   int64(d.Get("group_id").(int)),
+		GroupOrder:                d.Get("group_order").(int),
+		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(d.Get("alert_channel_subscription").([]interface{})),
+		PrivateLocations:          stringsFromSet(d.Get("private_locations").(*schema.Set)),
 	}
 
 	runtimeId := d.Get("runtime_id").(string)
@@ -725,21 +721,6 @@ func alertChannelSubscriptionsFromSet(s []interface{}) []checkly.AlertChannelSub
 		res = append(res, checkly.AlertChannelSubscription{
 			Activated: activated,
 			ChannelID: int64(chid),
-		})
-	}
-	return res
-}
-
-func privateLocationFromSet(s []interface{}) []checkly.CheckPrivateLocation {
-	res := []checkly.CheckPrivateLocation{}
-	if len(s) == 0 {
-		return res
-	}
-	for _, it := range s {
-		tm := it.(tfMap)
-		id := tm["private_location_id"].(string)
-		res = append(res, checkly.CheckPrivateLocation{
-			PrivateLocationId: id,
 		})
 	}
 	return res
