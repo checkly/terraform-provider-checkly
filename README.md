@@ -8,8 +8,6 @@
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/checkly/terraform-provider-checkly)
 ![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/checkly/terraform-provider-checkly?label=Version)
 
-> 🌐 A Terraform provider for the Checkly monitoring service
-
 This Terraform provider enables users to handle [Checkly](https://checklyhq.com) resources.  Manage your checks, groups, alert channels and stary applying code practices in monitoring.
 
 ## Installation
