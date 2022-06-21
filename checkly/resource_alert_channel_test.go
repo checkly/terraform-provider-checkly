@@ -33,7 +33,7 @@ func TestAccSlack(t *testing.T) {
 			Config: `resource "checkly_alert_channel" "slack_ac" {
 				slack {
 					channel = "checkly_alerts"
-					url     = "https://slack.com/webhookurl"
+					url     = "https://hooks.slack.com/services/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"
 				}
 				send_recovery        = true
 				send_failure         = true
