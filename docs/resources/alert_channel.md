@@ -39,7 +39,7 @@ resource "checkly_alert_channel" "sms_ac" {
 resource "checkly_alert_channel" "slack_ac" {
   slack {
     channel = "#checkly-notifications"
-    url = "https://slack.com/webhook"
+    url = "https://hooks.slack.com/services/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"
   }
 }
 
