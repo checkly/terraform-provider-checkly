@@ -1,5 +1,5 @@
 terraform {
-  required_version = "<= 1.1.17"
+  required_version = ">= 1.1.17"
   required_providers {
     checkly = {
       # dev/checkly/checkly is used for development only,
@@ -20,7 +20,7 @@ variable "api_url" {
 }
 
 provider "checkly" {
-  api_key = var.api_key
+  api_key    = var.api_key
   account_id = var.account_id
-  api_url = var.api_url
+  api_url    = var.api_url
 }

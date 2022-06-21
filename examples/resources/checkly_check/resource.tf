@@ -156,8 +156,8 @@ resource "checkly_alert_channel" "email_ac2" {
 }
 
 resource "checkly_check" "example-check" {
-  name                      = "Example check"
-  ....
+  name = "Example check"
+  # ...
 
   alert_channel_subscription {
     channel_id = checkly_alert_channel.email_ac1.id
@@ -168,5 +168,4 @@ resource "checkly_check" "example-check" {
     channel_id = checkly_alert_channel.email_ac2.id
     activated  = true
   }
-
 }

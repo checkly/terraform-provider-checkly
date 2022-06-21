@@ -1,7 +1,7 @@
 # Simple public dashboard example
 resource "checkly_dashboard" "dashboard-1" {
-  custom_url      = "tf-demo-status"
-  tags = ["checks"]
+  custom_url = "tf-demo-status"
+  tags       = ["checks"]
 }
 
 # Complete public dashboard example
@@ -14,5 +14,5 @@ resource "checkly_dashboard" "dashboard-2" {
   pagination_rate = 30
   hide_tags       = false
   width           = "960PX"
-  tags = ["checks"]
+  tags            = ["checks"]
 }

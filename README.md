@@ -8,22 +8,18 @@
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/checkly/terraform-provider-checkly)
 ![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/checkly/terraform-provider-checkly?label=Version)
 
-This Terraform provider enables users to handle [Checkly](https://checklyhq.com) resources.  Manage your checks, groups, alert channels and stary applying code practices in monitoring.
+This Terraform provider enables users to handle [Checkly](https://checklyhq.com) resources. Manage your checks, groups, alert channels and more and start declaring your monitoring setup as code.
 
 ## Installation
 Please take a look at the [installation guide](https://github.com/checkly/terraform-provider-checkly/blob/main/docs/guides/getting-started.md)
 
 > If you're still using Terraform 0.12 please refer to [terraform 0.12 documentation](https://github.com/checkly/terraform-provider-checkly/blob/main/docs/guides/support-for-terraform-0.12.md)
 
-## Getting Started
+## Getting started
 For documentation and example usage see:
-1. [Checkly's documentation](https://www.checklyhq.com/docs/integrations/terraform/).
-2. [The official provider documentation](https://registry.terraform.io/providers/checkly/checkly/latest/docs)
-3. [Working demo](https://github.com/checkly/terraform-provider-checkly/blob/main/demo).
-
-## Learn more
-1. [Managing Checkly checks with Terraform](https://blog.checklyhq.com/managing-checkly-checks-with-terraform/)
-2. [Scaling Puppeteer and Playwright on Checkly with Terraform](https://blog.checklyhq.com/scaling-puppeteer-playwright-on-checkly-with-terraform/)
+1. [Checkly's documentation and getting started guide](https://www.checklyhq.com/docs/terraform-provider).
+2. [The official provider resource documentation](https://registry.terraform.io/providers/checkly/checkly/latest/docs).
+3. [Working demo](https://github.com/checkly/checkly-terraform-getting-started).
 
 ## Questions
 For questions and support please open a new  [discussion](https://github.com/checkly/terraform-provider-checkly/discussions). The issue list of this repo is exclusively for bug reports and feature/docs requests.

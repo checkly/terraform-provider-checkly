@@ -4,6 +4,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.5.0]
+
+### Added
+- Support for global Environment Variables [#41](https://github.com/checkly/terraform-provider-checkly/issues/41)
+- Implemented tfdocs for automatic docs generation [#125](https://github.com/checkly/terraform-provider-checkly/issues/125)
+
+### Changed
+- Remove unneeded `required` from `PublicDashboard`[#121](https://github.com/checkly/terraform-provider-checkly/issues/121)
+- Remove unneeded `required` from `MaintenanceWindow`[#140](https://github.com/checkly/terraform-provider-checkly/issues/140)
+- Improve CI and local tooling [#130](https://github.com/checkly/terraform-provider-checkly/issues/130)
+- Update TF SDK and refactor local build [#124](https://github.com/checkly/terraform-provider-checkly/pull/124)
+- Allow set empty `locations` in checks within groups [#98](https://github.com/checkly/terraform-provider-checkly/issues/98)
+- Bump github.com/google/go-cmp to v0.5.8 [#149](https://github.com/checkly/terraform-provider-checkly/pull/149)
+- Bump github/codeql-action to v2 [#148](https://github.com/checkly/terraform-provider-checkly/pull/148)
+- Bump hashicorp/setup-terraform to v2 [#146](https://github.com/checkly/terraform-provider-checkly/pull/146)
+- Bump goreleaser/goreleaser-action to v3 [#154](https://github.com/checkly/terraform-provider-checkly/pull/154)
+- Bump actions/setup-go to v3 [#154](https://github.com/checkly/terraform-provider-checkly/pull/154)
+- Bump github.com/gruntwork-io/terratest to v0.40.17 [#169](https://github.com/checkly/terraform-provider-checkly/pull/169)
+- Bump actions/checkout to v3 [#132](https://github.com/checkly/terraform-provider-checkly/pull/132)
+- Bump github.com/checkly/checkly-go-sdk to v1.5.7 [#134](https://github.com/checkly/terraform-provider-checkly/pull/134)
+- Bump github.com/hashicorp/terraform-plugin-sdk/v2 to v2.12.0 [#135](https://github.com/checkly/terraform-provider-checkly/pull/135)
+- Flag `sslCertificates` as deprecated [#137](https://github.com/checkly/terraform-provider-checkly/pull/137)
+- Migrate to new Terraform schema Importer [#138](https://github.com/checkly/terraform-provider-checkly/pull/138)
+
+### Removed
+-
+
 ## [v1.4.3](https://github.com/checkly/terraform-provider-checkly/releases/tag/v1.4.3) - 2022-03-09
 ### Changed
 - Use generic provider descriptions in docs [#e7bb925](https://github.com/checkly/terraform-provider-checkly/commit/e7bb925)
