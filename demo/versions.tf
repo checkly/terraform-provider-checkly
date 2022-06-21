@@ -1,5 +1,5 @@
 terraform {
-  required_version = "<= 1.1.17"
+  required_version = ">= 1.1.17"
   required_providers {
     checkly = {
       # dev/checkly/checkly is used for development only,

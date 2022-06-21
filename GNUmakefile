@@ -1,6 +1,11 @@
 default: testacc
 version="0.0.0-canary"
 
+chip=amd64
+ifeq ($(shell uname -m), arm64)
+  chip=arm64
+endif
+
 # Run acceptance tests
 .PHONY: testacc
 testacc:
@@ -11,11 +16,11 @@ local-sdk:
 
 dev:
 	# for dev purposes only, build the provider and install
-	# it as dev/checkly/check + version number,
+	# it as dev/checkly/check + version number
 	go build -o terraform-provider-checkly
-	mkdir -p ~/.terraform.d/plugins/dev/checkly/checkly/${version}/darwin_amd64/
+	mkdir -p ~/.terraform.d/plugins/dev/checkly/checkly/${version}/darwin_${chip}/
 	chmod +x terraform-provider-checkly
-	mv terraform-provider-checkly ~/.terraform.d/plugins/dev/checkly/checkly/${version}/darwin_amd64/terraform-provider-checkly_v${version}
+	mv terraform-provider-checkly ~/.terraform.d/plugins/dev/checkly/checkly/${version}/darwin_${chip}/terraform-provider-checkly_v${version}
 	cd demo && rm -f .terraform.lock.hcl
 	cd demo && TF_LOG=TRACE terraform init -upgrade
 
