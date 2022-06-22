@@ -24,12 +24,13 @@ func TestEncodeDecodeGroupResource(t *testing.T) {
 }
 
 var wantGroup = checkly.Group{
-	Name:        "test",
-	Activated:   true,
-	Muted:       false,
-	Tags:        []string{"auto"},
-	Locations:   []string{"eu-west-1"},
-	Concurrency: 3,
+	Name:             "test",
+	Activated:        true,
+	Muted:            false,
+	Tags:             []string{"auto"},
+	Locations:        []string{"eu-west-1"},
+	PrivateLocations: &[]string{},
+	Concurrency:      3,
 	APICheckDefaults: checkly.APICheckDefaults{
 		BaseURL: "example.com/api/test",
 		Headers: []checkly.KeyValue{
