@@ -57,7 +57,10 @@ func resourceCheckGroup() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
-				Description: "An array of one or more private locations assigned to the group.",
+				DefaultFunc: func() (interface{}, error) {
+					return []tfMap{}, nil
+				},
+				Description: "An array of one or more private locations slugs.",
 			},
 			"environment_variables": {
 				Type:        schema.TypeMap,
@@ -434,7 +437,6 @@ func checkGroupFromResourceData(d *schema.ResourceData) (checkly.Group, error) {
 		UseGlobalAlertSettings:    d.Get("use_global_alert_settings").(bool),
 		APICheckDefaults:          apiCheckDefaultsFromSet(d.Get("api_check_defaults").(*schema.Set)),
 		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(d.Get("alert_channel_subscription").([]interface{})),
-		PrivateLocations:          stringsFromSet(d.Get("private_locations").(*schema.Set)),
 	}
 
 	runtimeId := d.Get("runtime_id").(string)
@@ -444,7 +446,18 @@ func checkGroupFromResourceData(d *schema.ResourceData) (checkly.Group, error) {
 		group.RuntimeID = &runtimeId
 	}
 
+	privateLocations := stringsFromSet(d.Get("private_locations").(*schema.Set))
+	group.PrivateLocations = &privateLocations
+
 	return group, nil
+}
+
+func stringsFromSet2(set *schema.Set) []string {
+	r := make([]string, set.Len())
+	for i, item := range set.List() {
+		r[i] = item.(string)
+	}
+	return r
 }
 
 func setFromAPICheckDefaults(a checkly.APICheckDefaults) []tfMap {

@@ -4,7 +4,7 @@ go 1.14
 
 require (
 	github.com/aws/aws-sdk-go v1.42.35 // indirect
-	github.com/checkly/checkly-go-sdk v1.6.0
+	github.com/checkly/checkly-go-sdk v1.6.1
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/google/go-cmp v0.5.8
 	github.com/gruntwork-io/terratest v0.40.17
@@ -18,3 +18,4 @@ require (
 	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b // indirect
 	golang.org/x/tools v0.1.11-0.20220316014157-77aa08bb151a // indirect
 )
+
