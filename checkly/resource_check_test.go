@@ -344,6 +344,7 @@ var wantCheck = checkly.Check{
 	Muted:                false,
 	ShouldFail:           false,
 	Locations:            []string{"eu-west-1"},
+	PrivateLocations:     &[]string{},
 	Script:               "foo",
 	DegradedResponseTime: 15000,
 	MaxResponseTime:      30000,

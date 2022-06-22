@@ -207,6 +207,7 @@ resource "checkly_check" "example-check" {
 - `frequency_offset` (Number) This property only valid for API high frequency checks. To create a hight frequency check, the property `frequency` must be `0` and `frequency_offset` could be `10`, `20` or `30`.
 - `group_id` (Number) The id of the check group this check is part of.
 - `group_order` (Number) The position of this check in a check group. It determines in what order checks are run when a group is triggered from the API or from CI/CD.
+- `private_locations` (Set of String) Private locations assigned to the check.
 - `id` (String) The ID of this resource.
 - `local_setup_script` (String) A valid piece of Node.js code to run in the setup phase.
 - `local_teardown_script` (String) A valid piece of Node.js code to run in the teardown phase.

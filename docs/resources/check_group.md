@@ -145,6 +145,7 @@ resource "checkly_check_group" "test-group1" {
 - `tags` (Set of String) Tags for organizing and filtering checks.
 - `teardown_snippet_id` (Number) An ID reference to a snippet to use in the teardown phase of an API check.
 - `use_global_alert_settings` (Boolean) When true, the account level alert settings will be used, not the alert setting defined on this check group.
+- `private_locations` (Set of String) Private locations assigned to the group.
 
 <a id="nestedblock--alert_channel_subscription"></a>
 ### Nested Schema for `alert_channel_subscription`

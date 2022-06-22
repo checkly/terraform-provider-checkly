@@ -185,6 +185,17 @@ func resourceCheck() *schema.Resource {
 					},
 				},
 			},
+			"private_locations": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				DefaultFunc: func() (interface{}, error) {
+					return []tfMap{}, nil
+				},
+				Description: "An array of one or more private locations slugs.",
+			},
 			"alert_settings": {
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -505,6 +516,7 @@ func resourceDataFromCheck(c *checkly.Check, d *schema.ResourceData) error {
 	}
 	d.Set("group_id", c.GroupID)
 	d.Set("group_order", c.GroupOrder)
+	d.Set("private_locations", c.PrivateLocations)
 	d.Set("alert_channel_subscription", c.AlertChannelSubscriptions)
 	d.SetId(d.Id())
 	return nil
@@ -630,6 +642,9 @@ func checkFromResourceData(d *schema.ResourceData) (checkly.Check, error) {
 	} else {
 		check.RuntimeID = &runtimeId
 	}
+
+	privateLocations := stringsFromSet(d.Get("private_locations").(*schema.Set))
+	check.PrivateLocations = &privateLocations
 
 	if check.Type == checkly.TypeAPI {
 		// this will prevent subsequent apply from causing a tf config change in browser checks
