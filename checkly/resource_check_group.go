@@ -45,9 +45,12 @@ func resourceCheckGroup() *schema.Resource {
 			},
 			"locations": {
 				Type:     schema.TypeSet,
-				Required: true,
+				Optional: true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
+				},
+				DefaultFunc: func() (interface{}, error) {
+					return []tfMap{}, nil
 				},
 				Description: "An array of one or more data center locations where to run the checks.",
 			},

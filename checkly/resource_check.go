@@ -83,7 +83,21 @@ func resourceCheck() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
+				DefaultFunc: func() (interface{}, error) {
+					return []tfMap{}, nil
+				},
 				Description: "An array of one or more data center locations where to run the this check. (Default [\"us-east-1\"])",
+			},
+			"private_locations": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				DefaultFunc: func() (interface{}, error) {
+					return []tfMap{}, nil
+				},
+				Description: "An array of one or more private locations slugs.",
 			},
 			"script": {
 				Type:        schema.TypeString,
@@ -184,17 +198,6 @@ func resourceCheck() *schema.Resource {
 						},
 					},
 				},
-			},
-			"private_locations": {
-				Type:     schema.TypeSet,
-				Optional: true,
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-				},
-				DefaultFunc: func() (interface{}, error) {
-					return []tfMap{}, nil
-				},
-				Description: "An array of one or more private locations slugs.",
 			},
 			"alert_settings": {
 				Type:     schema.TypeSet,
