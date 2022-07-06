@@ -117,32 +117,10 @@ const title = await page.title();
 
 assert.equal(title, "Google");
 await browser.close();
-
 EOT
 }
 
-# An alternative syntax for add the script is by referencing an external file
-data "local_file" "browser-script" {
-  filename = "${path.module}/browser-script.js"
-}
-
-resource "checkly_check" "browser-check-1" {
-  name                      = "Example check"
-  type                      = "BROWSER"
-  activated                 = true
-  should_fail               = false
-  frequency                 = 10
-  double_check              = true
-  use_global_alert_settings = true
-  locations = [
-    "us-west-1"
-  ]
-
-  runtime_id = "2021.06"
-  script = data.local_file.browser-script.content
-}
-
-## Connection checks with alert channels
+# Connection checks with alert channels
 resource "checkly_alert_channel" "email_ac1" {
   email {
     address = "info1@example.com"
@@ -169,3 +147,24 @@ resource "checkly_check" "example-check" {
     activated  = true
   }
 }
+
+# An alternative syntax for add the script is by referencing an external file
+# data "local_file" "browser-script" {
+#   filename = "${path.module}/browser-script.js"
+# }
+
+# resource "checkly_check" "browser-check-1" {
+#   name                      = "Example check"
+#   type                      = "BROWSER"
+#   activated                 = true
+#   should_fail               = false
+#   frequency                 = 10
+#   double_check              = true
+#   use_global_alert_settings = true
+#   locations = [
+#     "us-west-1"
+#   ]
+
+#   runtime_id = "2021.06"
+#   script = data.local_file.browser-script.content
+# }

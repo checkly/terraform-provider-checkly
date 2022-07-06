@@ -13,12 +13,11 @@ EOT
 }
 
 # Using local file provider
-data "local_file" "snippet-script" {
-  filename = "./snippet.js"
-}
+# data "local_file" "snippet-script" {
+#   filename = "./snippet.js"
+# }
 
-resource "checkly_snippet" "example-3" {
-  name = "Example 3"
-  script = data.local_file.snippet-script.content
-}
-
+# resource "checkly_snippet" "example-3" {
+#   name = "Example 3"
+#   script = data.local_file.snippet-script.content
+# }
