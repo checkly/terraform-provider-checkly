@@ -100,10 +100,6 @@ func TestAccCheckGroupEmptyConfig(t *testing.T) {
 		},
 		{
 			Config:      config,
-			ExpectError: regexp.MustCompile(`The argument "locations" is required`),
-		},
-		{
-			Config:      config,
 			ExpectError: regexp.MustCompile(`The argument "activated" is required`),
 		},
 	})
