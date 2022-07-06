@@ -126,7 +126,6 @@ resource "checkly_check_group" "test-group1" {
 
 - `activated` (Boolean) Determines if the checks in the group are running or not.
 - `concurrency` (Number) Determines how many checks are run concurrently when triggering a check group from CI/CD or through the API.
-- `locations` (Set of String) An array of one or more data center locations where to run the checks.
 - `name` (String) The name of the check group.
 
 ### Optional
@@ -146,6 +145,7 @@ resource "checkly_check_group" "test-group1" {
 - `teardown_snippet_id` (Number) An ID reference to a snippet to use in the teardown phase of an API check.
 - `use_global_alert_settings` (Boolean) When true, the account level alert settings will be used, not the alert setting defined on this check group.
 - `private_locations` (Set of String) Private locations assigned to the group.
+- `locations` (Set of String) An array of one or more data center locations where to run the checks.
 
 <a id="nestedblock--alert_channel_subscription"></a>
 ### Nested Schema for `alert_channel_subscription`
