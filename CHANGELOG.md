@@ -26,6 +26,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Remove unneeded `required` from `MaintenanceWindow`[#140](https://github.com/checkly/terraform-provider-checkly/issues/140)
 - Improve CI and local tooling [#130](https://github.com/checkly/terraform-provider-checkly/issues/130)
 - Update TF SDK and refactor local build [#124](https://github.com/checkly/terraform-provider-checkly/pull/124)
+- Flag `sslCertificates` as deprecated [#137](https://github.com/checkly/terraform-provider-checkly/pull/137)
+- Migrate to new Terraform schema Importer [#138](https://github.com/checkly/terraform-provider-checkly/pull/138)
 - Allow set empty `locations` in checks within groups [#98](https://github.com/checkly/terraform-provider-checkly/issues/98)
 - Bump github.com/google/go-cmp to v0.5.8 [#149](https://github.com/checkly/terraform-provider-checkly/pull/149)
 - Bump github/codeql-action to v2 [#148](https://github.com/checkly/terraform-provider-checkly/pull/148)
@@ -36,10 +38,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bump actions/checkout to v3 [#132](https://github.com/checkly/terraform-provider-checkly/pull/132)
 - Bump github.com/checkly/checkly-go-sdk to v1.5.7 [#134](https://github.com/checkly/terraform-provider-checkly/pull/134)
 - Bump github.com/hashicorp/terraform-plugin-sdk/v2 to v2.12.0 [#135](https://github.com/checkly/terraform-provider-checkly/pull/135)
-- Flag `sslCertificates` as deprecated [#137](https://github.com/checkly/terraform-provider-checkly/pull/137)
-- Migrate to new Terraform schema Importer [#138](https://github.com/checkly/terraform-provider-checkly/pull/138)
-
--
 
 ## [v1.4.3](https://github.com/checkly/terraform-provider-checkly/releases/tag/v1.4.3) - 2022-03-09
 ### Changed
@@ -47,7 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [v1.4.2](https://github.com/checkly/terraform-provider-checkly/releases/tag/v1.4.2) - 2022-03-02
 ### Added
-- Add CHECKLY_API_SOURCE env variable [#120](https://github.com/checkly/terraform-provider-checkly/issues/120)
+- Add `CHECKLY_API_SOURCE` env variable [#120](https://github.com/checkly/terraform-provider-checkly/issues/120)
 
 ## [v1.4.1](https://github.com/checkly/terraform-provider-checkly/releases/tag/v1.4.1) - 2022-02-08
 
