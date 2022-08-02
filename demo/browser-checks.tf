@@ -4,7 +4,7 @@ resource "checkly_check" "browser-check-1" {
   type                      = "BROWSER"
   activated                 = true
   should_fail               = false
-  frequency                 = 10
+  frequency                 = 2
   double_check              = true
   use_global_alert_settings = true
   locations = [

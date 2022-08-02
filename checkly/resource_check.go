@@ -44,7 +44,7 @@ func resourceCheck() *schema.Resource {
 				ValidateFunc: func(val interface{}, key string) (warns []string, errs []error) {
 					v := val.(int)
 					valid := false
-					validFreqs := []int{0, 1, 5, 10, 15, 30, 60, 720, 1440}
+					validFreqs := []int{0, 1, 2, 5, 10, 15, 30, 60, 120, 180, 360, 720, 1440}
 					for _, i := range validFreqs {
 						if v == i {
 							valid = true
@@ -55,7 +55,7 @@ func resourceCheck() *schema.Resource {
 					}
 					return warns, errs
 				},
-				Description: "The frequency in minutes to run the check. Possible values are `0`, `1`, `5`, `10`, `15`, `30`, `60`, `720`, and `1440`.",
+				Description: "The frequency in minutes to run the check. Possible values are `0`, `1`, `2`, `5`, `10`, `15`, `30`, `60`, `120`, `180`, `360`, `720`, and `1440`.",
 			},
 			"frequency_offset": {
 				Type:        schema.TypeInt,

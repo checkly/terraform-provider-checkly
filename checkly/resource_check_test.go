@@ -466,7 +466,7 @@ const apiCheck_full = `
   resource "checkly_check" "test" {
 	name                   = "apiCheck_full"
 	type                   = "API"
-	frequency              = 10
+	frequency              = 120
 	activated              = true
 	muted                  = true
 	double_check           = true
