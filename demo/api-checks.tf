@@ -41,7 +41,7 @@ output "trigger_api_check-1-url" {
 resource "checkly_check" "api-check-2" {
   name                   = "API check 2"
   type                   = "API"
-  frequency              = 10
+  frequency              = 120
   activated              = true
   muted                  = true
   double_check           = true
