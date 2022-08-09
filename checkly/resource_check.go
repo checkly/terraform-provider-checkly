@@ -531,31 +531,35 @@ func setFromEnvVars(evs []checkly.EnvironmentVariable) tfMap {
 }
 
 func setFromAlertSettings(as checkly.AlertSettings) []tfMap {
+	s := tfMap{}
+	s["escalation_type"] = as.EscalationType
+	s["run_based_escalation"] = checkGroupSetFromRun(as.RunBasedEscalation)
+	s["time_based_escalation"] = checkGroupSetFromTime(as.TimeBasedEscalation)
+	s["reminders"] = checkGroupSetFromRem(as.Reminders)
+	return []tfMap{s}
+}
+
+func checkGroupSetFromRun(b checkly.RunBasedEscalation) []tfMap {
 	return []tfMap{
 		{
-			"escalation_type": as.EscalationType,
-			"run_based_escalation": []tfMap{
-				{
-					"failed_run_threshold": as.RunBasedEscalation.FailedRunThreshold,
-				},
-			},
-			"time_based_escalation": []tfMap{
-				{
-					"minutes_failing_threshold": as.TimeBasedEscalation.MinutesFailingThreshold,
-				},
-			},
-			"reminders": []tfMap{
-				{
-					"amount":   as.Reminders.Amount,
-					"interval": as.Reminders.Interval,
-				},
-			},
-			"ssl_certificates": []tfMap{
-				{
-					"enabled":         as.SSLCertificates.Enabled,
-					"alert_threshold": as.SSLCertificates.AlertThreshold,
-				},
-			},
+			"failed_run_threshold": b.FailedRunThreshold,
+		},
+	}
+}
+
+func checkGroupSetFromTime(b checkly.TimeBasedEscalation) []tfMap {
+	return []tfMap{
+		{
+			"minutes_failing_threshold": b.MinutesFailingThreshold,
+		},
+	}
+}
+
+func checkGroupSetFromRem(b checkly.Reminders) []tfMap {
+	return []tfMap{
+		{
+			"amount":   b.Amount,
+			"interval": b.Interval,
 		},
 	}
 }
