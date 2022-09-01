@@ -731,6 +731,24 @@ func alertChannelSubscriptionsFromSet(s []interface{}) []checkly.AlertChannelSub
 	return res
 }
 
+func environmentVariablesFromSet(s []interface{}) []checkly.EnvironmentVariable {
+	res := []checkly.EnvironmentVariable{}
+	if len(s) == 0 {
+		return res
+	}
+	for _, it := range s {
+		tm := it.(tfMap)
+		key := tm["key"].(string)
+		value := tm["value"].(string)
+		locked := tm["locked"].(bool)
+		res = append(res, checkly.EnvironmentVariable{
+			Key:    key,
+			Value:  value,
+			Locked: locked,
+		})
+	}
+	return res
+}
 func runBasedEscalationFromSet(s *schema.Set) checkly.RunBasedEscalation {
 	if s.Len() == 0 {
 		return checkly.RunBasedEscalation{}

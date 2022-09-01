@@ -75,6 +75,12 @@ resource "checkly_check_group" "check-group-3" {
     ENVTEST = "Hello world"
   }
 
+  environment_variable_list {
+    key = "NEWENVTEST"
+    value = "Environment variable test"
+    locked = false
+  }
+
   alert_settings {
     escalation_type = "RUN_BASED"
 
