@@ -19,20 +19,21 @@ You also need to set your target Account ID, which you can find under your [acco
 
 > If you don't have access to account settings, please contact your account owner/admin.
 
+Configuration for the Checkly provider can be derived from two sources, which are applied in the following order:
+1. Parameters in the provider configuration
+2. Environment variables
+
+#### Parameters in the provider configuration
 Now open the terminal and expose the `API Key` and `Account ID` as environment variables:
 ```bash
 $ export TF_VAR_checkly_api_key="your-api-key"
 $ export TF_VAR_checkly_account_id="your-account-id"
 ```
 
-## Example Usage
-
 ```terraform
-# Define a variable to hold the API Key and Account ID
 variable "checkly_api_key" {}
 variable "checkly_account_id" {}
 
-# Specify the Checkly provider
 terraform {
   required_providers {
     checkly = {
@@ -42,13 +43,35 @@ terraform {
   }
 }
 
-# Pass the API Key environment variable to the provider
 provider "checkly" {
   api_key = var.checkly_api_key
   account_id = var.checkly_account_id
 }
+```
 
-# Create your first API Check
+#### Environment variables
+```bash
+$ export CHECKLY_API_KEY="your-api-key"
+$ export CHECKLY_ACCOUNT_ID="your-account-id"
+```
+
+```terraform
+terraform {
+  required_providers {
+    checkly = {
+      source = "checkly/checkly"
+      version = "1.4.3"
+    }
+  }
+}
+
+provider "checkly" {}
+```
+
+## Example Usage
+
+```terraform
+# After declaring the provider, create your first API Check
 resource "checkly_check" "example-check" {
   name                      = "Example API check"
   type                      = "API"
