@@ -74,7 +74,7 @@ resource "checkly_alert_channel" "webhook_ac" {
 }
 
 # Connecting the alert channel to a check
-resource "checkly_check" "example-check" {
+resource "checkly_check" "example_check" {
   name = "Example check"
 
   alert_channel_subscription {

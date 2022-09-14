@@ -72,7 +72,7 @@ provider "checkly" {}
 
 ```terraform
 # After declaring the provider, create your first API Check
-resource "checkly_check" "example-check" {
+resource "checkly_check" "example_check" {
   name                      = "Example API check"
   type                      = "API"
   activated                 = true
