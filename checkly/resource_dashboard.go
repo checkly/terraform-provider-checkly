@@ -51,7 +51,25 @@ func resourceDashboard() *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Default:     "",
-				Description: "A URL pointing to an image file.",
+				Description: "A URL pointing to an image file to use for the dashboard logo.",
+			},
+			"favicon": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Default:     "",
+				Description: "A URL pointing to an image file to use as browser favicon",
+			},
+			"link": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Default:     "",
+				Description: "A link to for the dashboard logo.",
+			},
+			"description": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Default:     "",
+				Description: "HTML <meta> description for the dashboard.",
 			},
 			"header": {
 				Type:        schema.TypeString,
@@ -87,6 +105,12 @@ func resourceDashboard() *schema.Resource {
 				Default:     true,
 				Description: "Determines if pagination is on or off.",
 			},
+			"checks_per_page": {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Default:     15,
+				Description: "Determines how many checks to show per page.",
+			},
 			"pagination_rate": {
 				Type:         schema.TypeInt,
 				Optional:     true,
@@ -108,22 +132,33 @@ func resourceDashboard() *schema.Resource {
 				Default:     false,
 				Description: "Show or hide the tags on the dashboard.",
 			},
+			"use_tags_and_operator": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Set when to use AND operator for fetching dashboard tags",
+			},
 		},
 	}
 }
 
 func dashboardFromResourceData(d *schema.ResourceData) (checkly.Dashboard, error) {
 	a := checkly.Dashboard{
-		CustomDomain:   d.Get("custom_domain").(string),
-		CustomUrl:      d.Get("custom_url").(string),
-		Logo:           d.Get("logo").(string),
-		Header:         d.Get("header").(string),
-		RefreshRate:    d.Get("refresh_rate").(int),
-		Paginate:       d.Get("paginate").(bool),
-		PaginationRate: d.Get("pagination_rate").(int),
-		HideTags:       d.Get("hide_tags").(bool),
-		Width:          d.Get("width").(string),
-		Tags:           stringsFromSet(d.Get("tags").(*schema.Set)),
+		CustomDomain:       d.Get("custom_domain").(string),
+		CustomUrl:          d.Get("custom_url").(string),
+		Logo:               d.Get("logo").(string),
+		Favicon:            d.Get("favicon").(string),
+		Link:               d.Get("link").(string),
+		Description:        d.Get("description").(string),
+		Header:             d.Get("header").(string),
+		RefreshRate:        d.Get("refresh_rate").(int),
+		Paginate:           d.Get("paginate").(bool),
+		ChecksPerPage:      d.Get("checks_per_page").(int),
+		PaginationRate:     d.Get("pagination_rate").(int),
+		HideTags:           d.Get("hide_tags").(bool),
+		Width:              d.Get("width").(string),
+		UseTagsAndOperator: d.Get("use_tags_and_operator").(bool),
+		Tags:               stringsFromSet(d.Get("tags").(*schema.Set)),
 	}
 
 	fmt.Printf("%v", a)
@@ -135,13 +170,18 @@ func resourceDataFromDashboard(s *checkly.Dashboard, d *schema.ResourceData) err
 	d.Set("custom_domain", s.CustomDomain)
 	d.Set("custom_url", s.CustomUrl)
 	d.Set("logo", s.Logo)
+	d.Set("favicon", s.Favicon)
+	d.Set("link", s.Link)
+	d.Set("description", s.Description)
 	d.Set("header", s.Header)
 	d.Set("refresh_rate", s.RefreshRate)
 	d.Set("paginate", s.Paginate)
+	d.Set("checks_per_page", s.ChecksPerPage)
 	d.Set("pagination_rate", s.PaginationRate)
 	d.Set("hide_tags", s.HideTags)
 	d.Set("tags", s.Tags)
 	d.Set("width", s.Width)
+	d.Set("use_tags_and_operator", s.UseTagsAndOperator)
 	return nil
 }
 
