@@ -57,7 +57,7 @@ func resourceDashboard() *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Default:     "",
-				Description: "A URL pointing to an image file to use as browser favicon",
+				Description: "A URL pointing to an image file to use as browser favicon.",
 			},
 			"link": {
 				Type:        schema.TypeString,
@@ -136,7 +136,7 @@ func resourceDashboard() *schema.Resource {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Default:     false,
-				Description: "Set when to use AND operator for fetching dashboard tags",
+				Description: "Set when to use AND operator for fetching dashboard tags.",
 			},
 		},
 	}
