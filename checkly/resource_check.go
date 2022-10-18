@@ -124,6 +124,28 @@ func resourceCheck() *schema.Resource {
 				Optional:    true,
 				Description: "Key/value pairs for setting environment variables during check execution. These are only relevant for browser checks. Use global environment variables whenever possible.",
 			},
+			"environment_variable_list": {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Key/value pairs for setting environment variables during check execution, add locked = true to keep value hidden. These are only relevant for browser checks. Use global environment variables whenever possible.",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"key": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"value": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"locked": {
+							Type:     schema.TypeBool,
+							Optional: true,
+							Default:  false,
+						},
+					},
+				},
+			},
 			"double_check": {
 				Type:        schema.TypeBool,
 				Optional:    true,
@@ -642,6 +664,9 @@ func checkFromResourceData(d *schema.ResourceData) (checkly.Check, error) {
 	} else {
 		check.RuntimeID = &runtimeId
 	}
+
+	environmentVariable := environmentVariablesFromSet(d.Get("environment_variable_list").([]interface{}))
+	check.EnvironmentVariables = append(check.EnvironmentVariables, environmentVariable...)
 
 	privateLocations := stringsFromSet(d.Get("private_locations").(*schema.Set))
 	check.PrivateLocations = &privateLocations
