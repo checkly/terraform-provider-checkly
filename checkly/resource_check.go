@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
@@ -122,9 +121,10 @@ func resourceCheck() *schema.Resource {
 			"environment_variables": {
 				Type:        schema.TypeMap,
 				Optional:    true,
+				Deprecated:  "The property `environment_variables` is deprecated and will be removed in a future version. Consider using the new `environment_variable` list.",
 				Description: "Key/value pairs for setting environment variables during check execution. These are only relevant for browser checks. Use global environment variables whenever possible.",
 			},
-			"environment_variable_list": {
+			"environment_variable": {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "Key/value pairs for setting environment variables during check execution, add locked = true to keep value hidden. These are only relevant for browser checks. Use global environment variables whenever possible.",
@@ -509,9 +509,6 @@ func resourceDataFromCheck(c *checkly.Check, d *schema.ResourceData) error {
 	d.Set("script", c.Script)
 	d.Set("degraded_response_time", c.DegradedResponseTime)
 	d.Set("max_response_time", c.MaxResponseTime)
-	if err := d.Set("environment_variables", setFromEnvVars(c.EnvironmentVariables)); err != nil {
-		return fmt.Errorf("error setting environment variables for resource %s: %w", d.Id(), err)
-	}
 	d.Set("double_check", c.DoubleCheck)
 	sort.Strings(c.Tags)
 	d.Set("tags", c.Tags)
@@ -523,6 +520,13 @@ func resourceDataFromCheck(c *checkly.Check, d *schema.ResourceData) error {
 
 	if c.RuntimeID != nil {
 		d.Set("runtime_id", *c.RuntimeID)
+	}
+
+	environmentVariables := environmentVariablesFromSet(d.Get("environment_variable").([]interface{}))
+	if len(environmentVariables) > 0 {
+		d.Set("environment_variable", c.EnvironmentVariables)
+	} else if err := d.Set("environment_variables", setFromEnvVars(c.EnvironmentVariables)); err != nil {
+		return fmt.Errorf("error setting environment variables for resource %s: %s", d.Id(), err)
 	}
 
 	if err := d.Set("alert_settings", setFromAlertSettings(c.AlertSettings)); err != nil {
@@ -643,7 +647,6 @@ func checkFromResourceData(d *schema.ResourceData) (checkly.Check, error) {
 		Script:                    d.Get("script").(string),
 		DegradedResponseTime:      d.Get("degraded_response_time").(int),
 		MaxResponseTime:           d.Get("max_response_time").(int),
-		EnvironmentVariables:      envVarsFromMap(d.Get("environment_variables").(tfMap)),
 		DoubleCheck:               d.Get("double_check").(bool),
 		Tags:                      stringsFromSet(d.Get("tags").(*schema.Set)),
 		SSLCheck:                  d.Get("ssl_check").(bool),
@@ -665,8 +668,11 @@ func checkFromResourceData(d *schema.ResourceData) (checkly.Check, error) {
 		check.RuntimeID = &runtimeId
 	}
 
-	environmentVariable := environmentVariablesFromSet(d.Get("environment_variable_list").([]interface{}))
-	check.EnvironmentVariables = append(check.EnvironmentVariables, environmentVariable...)
+	environmentVariables, err := getResourceEnvironmentVariables(d)
+	if err != nil {
+		return checkly.Check{}, err
+	}
+	check.EnvironmentVariables = environmentVariables
 
 	privateLocations := stringsFromSet(d.Get("private_locations").(*schema.Set))
 	check.PrivateLocations = &privateLocations
@@ -772,8 +778,10 @@ func environmentVariablesFromSet(s []interface{}) []checkly.EnvironmentVariable 
 			Locked: locked,
 		})
 	}
+
 	return res
 }
+
 func runBasedEscalationFromSet(s *schema.Set) checkly.RunBasedEscalation {
 	if s.Len() == 0 {
 		return checkly.RunBasedEscalation{}
@@ -835,17 +843,6 @@ func requestFromSet(s *schema.Set) checkly.Request {
 	}
 }
 
-func mustParseRFC3339Time(s string) time.Time {
-	if s == "" {
-		return time.Time{}
-	}
-	t, err := time.Parse(time.RFC3339, s)
-	if err != nil {
-		panic(err)
-	}
-	return t
-}
-
 func envVarsFromMap(m map[string]interface{}) []checkly.EnvironmentVariable {
 	r := make([]checkly.EnvironmentVariable, 0, len(m))
 	for k, v := range m {
@@ -853,10 +850,12 @@ func envVarsFromMap(m map[string]interface{}) []checkly.EnvironmentVariable {
 		if !ok {
 			panic(fmt.Errorf("could not convert environment variable value %v to string", v))
 		}
+
 		r = append(r, checkly.EnvironmentVariable{
 			Key:   k,
 			Value: s,
 		})
+
 	}
 	return r
 }
@@ -874,4 +873,19 @@ func keyValuesFromMap(m map[string]interface{}) []checkly.KeyValue {
 		})
 	}
 	return r
+}
+
+func getResourceEnvironmentVariables(d *schema.ResourceData) ([]checkly.EnvironmentVariable, error) {
+	deprecatedEnvironmentVariables := envVarsFromMap(d.Get("environment_variables").(tfMap))
+	environmentVariables := environmentVariablesFromSet(d.Get("environment_variable").([]interface{}))
+
+	if len(environmentVariables) > 0 && len(deprecatedEnvironmentVariables) > 0 {
+		return nil, errors.New("can't use both \"environment_variables\" and \"environment_variable\" on checkly_check_group resource")
+	}
+
+	if len(environmentVariables) > 0 {
+		return environmentVariables, nil
+	}
+
+	return deprecatedEnvironmentVariables, nil
 }
