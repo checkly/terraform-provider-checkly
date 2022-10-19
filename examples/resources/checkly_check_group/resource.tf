@@ -1,4 +1,4 @@
-resource "checkly_check_group" "test-group1" {
+resource "checkly_check_group" "test_group1" {
   name      = "My test group 1"
   activated = true
   muted     = false
@@ -66,10 +66,10 @@ resource "checkly_check_group" "test-group1" {
 }
 
 # Add a check to a group
-resource "checkly_check" "test-check1" {
+resource "checkly_check" "test_check1" {
   name                      = "My test check 1"
 
-  group_id    = checkly_check_group.test-group1.id
+  group_id    = checkly_check_group.test_group1.id
   group_order = 1
 }
 
@@ -89,7 +89,7 @@ resource "checkly_alert_channel" "email_ac2" {
 
 
 # Connect the check group to the alert channels
-resource "checkly_check_group" "test-group1" {
+resource "checkly_check_group" "test_group1" {
   name      = "My test group 1"
 
   alert_channel_subscription {

@@ -1,4 +1,4 @@
-resource "checkly_dashboard" "dashboard-1" {
+resource "checkly_dashboard" "dashboard_1" {
   custom_url      = "checkly"
   custom_domain   = "status.example.com"
   logo            = "https://www.checklyhq.com/logo.png"

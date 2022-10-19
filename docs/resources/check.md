@@ -14,7 +14,7 @@ Checks allows you to monitor key webapp flows, backend API's and set up alerting
 
 ```terraform
 # Basic API Check
-resource "checkly_check" "example-check" {
+resource "checkly_check" "example_check" {
   name                      = "Example check"
   type                      = "API"
   activated                 = true
@@ -40,7 +40,7 @@ resource "checkly_check" "example-check" {
 }
 
 # A more complex example using more assertions and setting alerts
-resource "checkly_check" "example-check-2" {
+resource "checkly_check" "example_check_2" {
   name                   = "Example API check 2"
   type                   = "API"
   activated              = true
@@ -107,7 +107,7 @@ resource "checkly_check" "example-check-2" {
 }
 
 # Basic Browser  Check
-resource "checkly_check" "browser-check-1" {
+resource "checkly_check" "browser_check_1" {
   name                      = "Example check"
   type                      = "BROWSER"
   activated                 = true
@@ -137,11 +137,11 @@ EOT
 }
 
 # An alternative syntax for add the script is by referencing an external file
-data "local_file" "browser-script" {
+data "local_file" "browser_script" {
   filename = "${path.module}/browser-script.js"
 }
 
-resource "checkly_check" "browser-check-1" {
+resource "checkly_check" "browser_check_1" {
   name                      = "Example check"
   type                      = "BROWSER"
   activated                 = true
@@ -154,7 +154,7 @@ resource "checkly_check" "browser-check-1" {
   ]
 
   runtime_id = "2021.06"
-  script = data.local_file.browser-script.content
+  script = data.local_file.browser_script.content
 }
 
 ## Connection checks with alert channels
@@ -170,7 +170,7 @@ resource "checkly_alert_channel" "email_ac2" {
   }
 }
 
-resource "checkly_check" "example-check" {
+resource "checkly_check" "example_check" {
   name                      = "Example check"
   ....
 
