@@ -77,10 +77,6 @@ var wantGroup = checkly.Group{
 			Amount:   0,
 			Interval: 5,
 		},
-		SSLCertificates: checkly.SSLCertificates{
-			Enabled:        true,
-			AlertThreshold: 30,
-		},
 	},
 	LocalSetupScript:          "setup-test",
 	LocalTearDownScript:       "teardown-test",
@@ -280,16 +276,7 @@ func TestAccCheckGroupFull(t *testing.T) {
 					"alert_settings.*.run_based_escalation.*.failed_run_threshold",
 					"1",
 				),
-				testCheckResourceAttrExpr(
-					"checkly_check_group.test",
-					"alert_settings.*.ssl_certificates.#",
-					"1",
-				),
-				testCheckResourceAttrExpr(
-					"checkly_check_group.test",
-					"alert_settings.*.ssl_certificates.*.enabled",
-					"false",
-				),
+
 				testCheckResourceAttrExpr(
 					"checkly_check_group.test",
 					"alert_settings.*.time_based_escalation.*.minutes_failing_threshold",
@@ -436,9 +423,6 @@ const testCheckGroup_full = `
 	  }
 	  time_based_escalation {
 		minutes_failing_threshold = 5
-	  }
-	  ssl_certificates {
-		enabled         = false
 	  }
 	  reminders {
 		amount   = 2
