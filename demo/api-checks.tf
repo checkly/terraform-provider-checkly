@@ -47,7 +47,6 @@ resource "checkly_check" "api-check-2" {
   double_check           = true
   degraded_response_time = 15000
   max_response_time      = 30000
-  environment_variables  = null
   locations = [
     "eu-central-1",
     "us-east-2",
@@ -132,7 +131,6 @@ resource "checkly_check" "api-check-3" {
   ]
   max_response_time     = 18000
   muted                 = true
-  environment_variables = null
 
   request {
     method           = "POST"
@@ -171,7 +169,6 @@ resource "checkly_check" "api-check-3" {
   }
 
   use_global_alert_settings = true
-
 }
 
 # API check with empty basic_auth
