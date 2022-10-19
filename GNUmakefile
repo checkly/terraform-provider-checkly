@@ -23,6 +23,8 @@ dev:
 	mv terraform-provider-checkly ~/.terraform.d/plugins/dev/checkly/checkly/${version}/darwin_${chip}/terraform-provider-checkly_v${version}
 	cd demo && rm -f .terraform.lock.hcl
 	cd demo && TF_LOG=TRACE terraform init -upgrade
+	cd local && rm -f .terraform.lock.hcl
+	cd local && TF_LOG=TRACE terraform init -upgrade
 
 fmt:
 	go fmt ./checkly

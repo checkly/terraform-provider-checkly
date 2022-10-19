@@ -38,7 +38,7 @@ func resourceEnvironmentVariable() *schema.Resource {
 }
 
 func resourceEnvironmentVariableCreate(d *schema.ResourceData, client interface{}) error {
-	envVar, err := enviromentVariableFromResourceData(d)
+	envVar, err := environmentVariableFromResourceData(d)
 	if err != nil {
 		return fmt.Errorf("resourceEnvironmentVariableCreate: translation error: %w", err)
 	}
@@ -52,7 +52,7 @@ func resourceEnvironmentVariableCreate(d *schema.ResourceData, client interface{
 	return resourceEnvironmentVariableRead(d, client)
 }
 
-func enviromentVariableFromResourceData(d *schema.ResourceData) (checkly.EnvironmentVariable, error) {
+func environmentVariableFromResourceData(d *schema.ResourceData) (checkly.EnvironmentVariable, error) {
 	return checkly.EnvironmentVariable{
 		Key:    d.Get("key").(string),
 		Value:  d.Get("value").(string),
@@ -60,7 +60,7 @@ func enviromentVariableFromResourceData(d *schema.ResourceData) (checkly.Environ
 	}, nil
 }
 
-func resourceDataFromEnvironemtnVariable(s *checkly.EnvironmentVariable, d *schema.ResourceData) error {
+func resourceDataFromEnvironmentVariable(s *checkly.EnvironmentVariable, d *schema.ResourceData) error {
 	d.Set("key", s.Key)
 	d.Set("value", s.Value)
 	d.Set("locked", s.Locked)
@@ -80,11 +80,11 @@ func resourceEnvironmentVariableRead(d *schema.ResourceData, client interface{})
 		}
 		return fmt.Errorf("resourceEnvironmentVariableRead: API error: %w", err)
 	}
-	return resourceDataFromEnvironemtnVariable(envVar, d)
+	return resourceDataFromEnvironmentVariable(envVar, d)
 }
 
 func resourceEnvironmentVariableUpdate(d *schema.ResourceData, client interface{}) error {
-	envVar, err := enviromentVariableFromResourceData(d)
+	envVar, err := environmentVariableFromResourceData(d)
 	if err != nil {
 		return fmt.Errorf("resourceEnvironmentVariableUpdate: translation error: %w", err)
 	}
