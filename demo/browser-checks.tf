@@ -35,9 +35,16 @@ resource "checkly_check" "browser-check-2" {
   double_check              = true
   use_global_alert_settings = true
 
-  script = "console.log('test')"
+  script = "console.log(process.env.URL)"
 
   locations = [
-    "us-west-1"
+    "us-west-1",
+    "us-east-1"
   ]
+
+  environment_variable {
+    key = "URL"
+    value = "https://checklyhq.com"
+    locked = false
+  }
 }
