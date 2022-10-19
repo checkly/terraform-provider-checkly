@@ -280,13 +280,12 @@ func resourceCheck() *schema.Resource {
 						"ssl_certificates": {
 							Type:       schema.TypeSet,
 							Optional:   true,
-							Deprecated: "The property `ssl_certificates` is deprecated and it's ignored by the Checkly Public API. It will be removed in a future version.",
+							Deprecated: "This property is deprecated and it's ignored by the Checkly Public API. It will be removed in a future version.",
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"enabled": {
 										Type:        schema.TypeBool,
 										Optional:    true,
-										Default:     false,
 										Description: "Determines if alert notifications should be sent for expiring SSL certificates. Possible values `true`, and `false`. (Default `false`).",
 									},
 									"alert_threshold": {
@@ -576,12 +575,6 @@ func setFromAlertSettings(as checkly.AlertSettings) []tfMap {
 					"interval": as.Reminders.Interval,
 				},
 			},
-			"ssl_certificates": []tfMap{
-				{
-					"enabled":         as.SSLCertificates.Enabled,
-					"alert_threshold": as.SSLCertificates.AlertThreshold,
-				},
-			},
 		},
 	}
 }
@@ -729,11 +722,7 @@ func basicAuthFromSet(s *schema.Set) *checkly.BasicAuth {
 
 func alertSettingsFromSet(s *schema.Set) checkly.AlertSettings {
 	if s.Len() == 0 {
-		return checkly.AlertSettings{
-			SSLCertificates: checkly.SSLCertificates{
-				AlertThreshold: 3,
-			},
-		}
+		return checkly.AlertSettings{}
 	}
 	res := s.List()[0].(tfMap)
 	return checkly.AlertSettings{
@@ -741,7 +730,6 @@ func alertSettingsFromSet(s *schema.Set) checkly.AlertSettings {
 		RunBasedEscalation:  runBasedEscalationFromSet(res["run_based_escalation"].(*schema.Set)),
 		TimeBasedEscalation: timeBasedEscalationFromSet(res["time_based_escalation"].(*schema.Set)),
 		Reminders:           remindersFromSet(res["reminders"].(*schema.Set)),
-		SSLCertificates:     sslCertificatesFromSet(res["ssl_certificates"].(*schema.Set)),
 	}
 }
 
@@ -810,17 +798,6 @@ func remindersFromSet(s *schema.Set) checkly.Reminders {
 	return checkly.Reminders{
 		Amount:   res["amount"].(int),
 		Interval: res["interval"].(int),
-	}
-}
-
-func sslCertificatesFromSet(s *schema.Set) checkly.SSLCertificates {
-	if s.Len() == 0 {
-		return checkly.SSLCertificates{}
-	}
-	res := s.List()[0].(tfMap)
-	return checkly.SSLCertificates{
-		Enabled:        res["enabled"].(bool),
-		AlertThreshold: res["alert_threshold"].(int),
 	}
 }
 
