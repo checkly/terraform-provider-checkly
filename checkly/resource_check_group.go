@@ -405,6 +405,17 @@ func resourceDataFromCheckGroup(g *checkly.Group, d *schema.ResourceData) error 
 	d.Set("activated", g.Activated)
 	d.Set("muted", g.Muted)
 	d.Set("locations", g.Locations)
+	d.Set("double_check", g.DoubleCheck)
+	d.Set("setup_snippet_id", g.SetupSnippetID)
+	d.Set("teardown_snippet_id", g.TearDownSnippetID)
+	d.Set("local_setup_script", g.LocalSetupScript)
+	d.Set("local_teardown_script", g.LocalTearDownScript)
+	d.Set("use_global_alert_settings", g.UseGlobalAlertSettings)
+	d.Set("alert_channel_subscription", g.AlertChannelSubscriptions)
+	d.Set("private_locations", g.PrivateLocations)
+
+	sort.Strings(g.Tags)
+	d.Set("tags", g.Tags)
 
 	environmentVariables := environmentVariablesFromSet(d.Get("environment_variable").([]interface{}))
 	if len(environmentVariables) > 0 {
@@ -413,14 +424,6 @@ func resourceDataFromCheckGroup(g *checkly.Group, d *schema.ResourceData) error 
 		return fmt.Errorf("error setting environment variables for resource %s: %s", d.Id(), err)
 	}
 
-	d.Set("double_check", g.DoubleCheck)
-	sort.Strings(g.Tags)
-	d.Set("tags", g.Tags)
-	d.Set("setup_snippet_id", g.SetupSnippetID)
-	d.Set("teardown_snippet_id", g.TearDownSnippetID)
-	d.Set("local_setup_script", g.LocalSetupScript)
-	d.Set("local_teardown_script", g.LocalTearDownScript)
-
 	if g.RuntimeID != nil {
 		d.Set("runtime_id", *g.RuntimeID)
 	}
@@ -428,12 +431,11 @@ func resourceDataFromCheckGroup(g *checkly.Group, d *schema.ResourceData) error 
 	if err := d.Set("alert_settings", setFromAlertSettings(g.AlertSettings)); err != nil {
 		return fmt.Errorf("error setting alert settings for resource %s: %s", d.Id(), err)
 	}
-	d.Set("use_global_alert_settings", g.UseGlobalAlertSettings)
+
 	if err := d.Set("api_check_defaults", setFromAPICheckDefaults(g.APICheckDefaults)); err != nil {
 		return fmt.Errorf("error setting request for resource %s: %s", d.Id(), err)
 	}
-	d.Set("alert_channel_subscription", g.AlertChannelSubscriptions)
-	d.Set("private_locations", g.PrivateLocations)
+
 	d.SetId(d.Id())
 	return nil
 }
