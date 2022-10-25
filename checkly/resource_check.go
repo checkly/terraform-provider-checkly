@@ -238,7 +238,6 @@ func resourceCheck() *schema.Resource {
 									"failed_run_threshold": {
 										Type:        schema.TypeInt,
 										Optional:    true,
-										Default:     1,
 										Description: "After how many failed consecutive check runs an alert notification should be sent. Possible values are between 1 and 5. (Default `1`).",
 									},
 								},
@@ -252,7 +251,6 @@ func resourceCheck() *schema.Resource {
 									"minutes_failing_threshold": {
 										Type:        schema.TypeInt,
 										Optional:    true,
-										Default:     5,
 										Description: "After how many minutes after a check starts failing an alert should be sent. Possible values are `5`, `10`, `15`, and `30`. (Default `5`).",
 									},
 								},
@@ -443,12 +441,13 @@ func resourceCheckCreate(d *schema.ResourceData, client interface{}) error {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
 	defer cancel()
-	gotCheck, err := client.(checkly.Client).Create(ctx, check)
+	newCheck, err := client.(checkly.Client).Create(ctx, check)
+
 	if err != nil {
 		checkJSON, _ := json.Marshal(check)
 		return fmt.Errorf("API error 1: %w, Check: %s", err, string(checkJSON))
 	}
-	d.SetId(gotCheck.ID)
+	d.SetId(newCheck.ID)
 	return resourceCheckRead(d, client)
 }
 
@@ -497,10 +496,6 @@ func resourceCheckDelete(d *schema.ResourceData, client interface{}) error {
 func resourceDataFromCheck(c *checkly.Check, d *schema.ResourceData) error {
 	d.Set("name", c.Name)
 	d.Set("type", c.Type)
-	d.Set("frequency", c.Frequency)
-	if c.Frequency == 0 {
-		d.Set("frequency_offset", c.FrequencyOffset)
-	}
 	d.Set("activated", c.Activated)
 	d.Set("muted", c.Muted)
 	d.Set("should_fail", c.ShouldFail)
@@ -509,13 +504,18 @@ func resourceDataFromCheck(c *checkly.Check, d *schema.ResourceData) error {
 	d.Set("degraded_response_time", c.DegradedResponseTime)
 	d.Set("max_response_time", c.MaxResponseTime)
 	d.Set("double_check", c.DoubleCheck)
-	sort.Strings(c.Tags)
-	d.Set("tags", c.Tags)
-	d.Set("ssl_check", c.SSLCheck)
 	d.Set("setup_snippet_id", c.SetupSnippetID)
 	d.Set("teardown_snippet_id", c.TearDownSnippetID)
 	d.Set("local_setup_script", c.LocalSetupScript)
 	d.Set("local_teardown_script", c.LocalTearDownScript)
+
+	sort.Strings(c.Tags)
+	d.Set("tags", c.Tags)
+
+	d.Set("frequency", c.Frequency)
+	if c.Frequency == 0 {
+		d.Set("frequency_offset", c.FrequencyOffset)
+	}
 
 	if c.RuntimeID != nil {
 		d.Set("runtime_id", *c.RuntimeID)
@@ -556,26 +556,40 @@ func setFromEnvVars(evs []checkly.EnvironmentVariable) tfMap {
 }
 
 func setFromAlertSettings(as checkly.AlertSettings) []tfMap {
-	return []tfMap{
-		{
-			"escalation_type": as.EscalationType,
-			"run_based_escalation": []tfMap{
-				{
-					"failed_run_threshold": as.RunBasedEscalation.FailedRunThreshold,
+	if as.EscalationType == checkly.RunBased {
+		return []tfMap{
+			{
+				"escalation_type": as.EscalationType,
+				"run_based_escalation": []tfMap{
+					{
+						"failed_run_threshold": as.RunBasedEscalation.FailedRunThreshold,
+					},
+				},
+				"reminders": []tfMap{
+					{
+						"amount":   as.Reminders.Amount,
+						"interval": as.Reminders.Interval,
+					},
 				},
 			},
-			"time_based_escalation": []tfMap{
-				{
-					"minutes_failing_threshold": as.TimeBasedEscalation.MinutesFailingThreshold,
+		}
+	} else {
+		return []tfMap{
+			{
+				"escalation_type": as.EscalationType,
+				"time_based_escalation": []tfMap{
+					{
+						"minutes_failing_threshold": as.TimeBasedEscalation.MinutesFailingThreshold,
+					},
+				},
+				"reminders": []tfMap{
+					{
+						"amount":   as.Reminders.Amount,
+						"interval": as.Reminders.Interval,
+					},
 				},
 			},
-			"reminders": []tfMap{
-				{
-					"amount":   as.Reminders.Amount,
-					"interval": as.Reminders.Interval,
-				},
-			},
-		},
+		}
 	}
 }
 
@@ -676,12 +690,12 @@ func checkFromResourceData(d *schema.ResourceData) (checkly.Check, error) {
 		check.FrequencyOffset = d.Get("frequency_offset").(int)
 
 		if check.Frequency == 0 && (check.FrequencyOffset != 10 && check.FrequencyOffset != 20 && check.FrequencyOffset != 30) {
-			return check, errors.New("When property frequency is 0, frequency_offset must be 10, 20 or 30")
+			return check, errors.New("when property frequency is 0, frequency_offset must be 10, 20 or 30")
 		}
 	}
 
 	if check.Type == checkly.TypeBrowser && check.Frequency == 0 {
-		return check, errors.New("Property frequency could only be 0 for API checks")
+		return check, errors.New("property frequency could only be 0 for API checks")
 	}
 
 	return check, nil
@@ -725,12 +739,18 @@ func alertSettingsFromSet(s *schema.Set) checkly.AlertSettings {
 		return checkly.AlertSettings{}
 	}
 	res := s.List()[0].(tfMap)
-	return checkly.AlertSettings{
-		EscalationType:      res["escalation_type"].(string),
-		RunBasedEscalation:  runBasedEscalationFromSet(res["run_based_escalation"].(*schema.Set)),
-		TimeBasedEscalation: timeBasedEscalationFromSet(res["time_based_escalation"].(*schema.Set)),
-		Reminders:           remindersFromSet(res["reminders"].(*schema.Set)),
+	alertSettings := checkly.AlertSettings{
+		EscalationType: res["escalation_type"].(string),
+		Reminders:      remindersFromSet(res["reminders"].(*schema.Set)),
 	}
+
+	if alertSettings.EscalationType == checkly.RunBased {
+		alertSettings.RunBasedEscalation = runBasedEscalationFromSet(res["run_based_escalation"].(*schema.Set))
+	} else {
+		alertSettings.TimeBasedEscalation = timeBasedEscalationFromSet(res["time_based_escalation"].(*schema.Set))
+	}
+
+	return alertSettings
 }
 
 func alertChannelSubscriptionsFromSet(s []interface{}) []checkly.AlertChannelSubscription {
