@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.6.3](https://github.com/checkly/terraform-provider-checkly/releases/tag/v1.6.3) - 2022-10-26
+
+### Added
+- Support locked environment variables in `Check` and `Group`[#186](https://github.com/checkly/terraform-provider-checkly/issues/186)
+- Add new `Dashboard` fields [#199](https://github.com/checkly/terraform-provider-checkly/issues/199)
+
+### Changed
+- Remove guides from provider documentation [#196](https://github.com/checkly/terraform-provider-checkly/issues/196)
+- Add alternatives auth methods in documentation [#191](https://github.com/checkly/terraform-provider-checkly/issues/191)
+- Follow resource naming convention in examples [#190](https://github.com/checkly/terraform-provider-checkly/issues/190)
+
+
+### Fixed
+- Avoid using all escalation configuration when no required [#202](https://github.com/checkly/terraform-provider-checkly/issues/194)
+- Stop saving deprecated `ssl_certificates` property [#193](https://github.com/checkly/terraform-provider-checkly/issues/193)
+
+
+
 ## [v1.6.2](https://github.com/checkly/terraform-provider-checkly/releases/tag/v1.6.2) - 2022-08-02
 ### Changed
 - Support new check intervals [#ba8eed7](https://github.com/checkly/terraform-provider-checkly/commit/ba8eed7)
