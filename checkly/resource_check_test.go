@@ -367,9 +367,6 @@ var wantCheck = checkly.Check{
 		RunBasedEscalation: checkly.RunBasedEscalation{
 			FailedRunThreshold: 1,
 		},
-		TimeBasedEscalation: checkly.TimeBasedEscalation{
-			MinutesFailingThreshold: 5,
-		},
 		Reminders: checkly.Reminders{
 			Interval: 5,
 		},
@@ -518,9 +515,6 @@ const apiCheck_full = `
 	  }
 	  run_based_escalation {
 		failed_run_threshold = 1
-	  }
-	  time_based_escalation {
-		minutes_failing_threshold = 5
 	  }
 	}
   }
