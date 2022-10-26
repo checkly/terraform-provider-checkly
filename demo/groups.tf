@@ -71,8 +71,10 @@ resource "checkly_check_group" "check-group-3" {
     }
   }
 
-  environment_variables = {
-    ENVTEST = "Hello world"
+  environment_variable {
+    key = "API_KEY"
+    value = "wuZeo4aeQu1ia4aezuiphookagheiwoh"
+    locked = true
   }
 
   alert_settings {

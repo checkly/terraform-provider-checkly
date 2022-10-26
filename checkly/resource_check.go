@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
@@ -122,7 +121,30 @@ func resourceCheck() *schema.Resource {
 			"environment_variables": {
 				Type:        schema.TypeMap,
 				Optional:    true,
+				Deprecated:  "The property `environment_variables` is deprecated and will be removed in a future version. Consider using the new `environment_variable` list.",
 				Description: "Key/value pairs for setting environment variables during check execution. These are only relevant for browser checks. Use global environment variables whenever possible.",
+			},
+			"environment_variable": {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Key/value pairs for setting environment variables during check execution, add locked = true to keep value hidden. These are only relevant for browser checks. Use global environment variables whenever possible.",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"key": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"value": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"locked": {
+							Type:     schema.TypeBool,
+							Optional: true,
+							Default:  false,
+						},
+					},
+				},
 			},
 			"double_check": {
 				Type:        schema.TypeBool,
@@ -216,7 +238,6 @@ func resourceCheck() *schema.Resource {
 									"failed_run_threshold": {
 										Type:        schema.TypeInt,
 										Optional:    true,
-										Default:     1,
 										Description: "After how many failed consecutive check runs an alert notification should be sent. Possible values are between 1 and 5. (Default `1`).",
 									},
 								},
@@ -230,7 +251,6 @@ func resourceCheck() *schema.Resource {
 									"minutes_failing_threshold": {
 										Type:        schema.TypeInt,
 										Optional:    true,
-										Default:     5,
 										Description: "After how many minutes after a check starts failing an alert should be sent. Possible values are `5`, `10`, `15`, and `30`. (Default `5`).",
 									},
 								},
@@ -258,13 +278,12 @@ func resourceCheck() *schema.Resource {
 						"ssl_certificates": {
 							Type:       schema.TypeSet,
 							Optional:   true,
-							Deprecated: "The property `ssl_certificates` is deprecated and it's ignored by the Checkly Public API. It will be removed in a future version.",
+							Deprecated: "This property is deprecated and it's ignored by the Checkly Public API. It will be removed in a future version.",
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"enabled": {
 										Type:        schema.TypeBool,
 										Optional:    true,
-										Default:     false,
 										Description: "Determines if alert notifications should be sent for expiring SSL certificates. Possible values `true`, and `false`. (Default `false`).",
 									},
 									"alert_threshold": {
@@ -422,12 +441,13 @@ func resourceCheckCreate(d *schema.ResourceData, client interface{}) error {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
 	defer cancel()
-	gotCheck, err := client.(checkly.Client).Create(ctx, check)
+	newCheck, err := client.(checkly.Client).Create(ctx, check)
+
 	if err != nil {
 		checkJSON, _ := json.Marshal(check)
 		return fmt.Errorf("API error 1: %w, Check: %s", err, string(checkJSON))
 	}
-	d.SetId(gotCheck.ID)
+	d.SetId(newCheck.ID)
 	return resourceCheckRead(d, client)
 }
 
@@ -476,10 +496,6 @@ func resourceCheckDelete(d *schema.ResourceData, client interface{}) error {
 func resourceDataFromCheck(c *checkly.Check, d *schema.ResourceData) error {
 	d.Set("name", c.Name)
 	d.Set("type", c.Type)
-	d.Set("frequency", c.Frequency)
-	if c.Frequency == 0 {
-		d.Set("frequency_offset", c.FrequencyOffset)
-	}
 	d.Set("activated", c.Activated)
 	d.Set("muted", c.Muted)
 	d.Set("should_fail", c.ShouldFail)
@@ -487,20 +503,29 @@ func resourceDataFromCheck(c *checkly.Check, d *schema.ResourceData) error {
 	d.Set("script", c.Script)
 	d.Set("degraded_response_time", c.DegradedResponseTime)
 	d.Set("max_response_time", c.MaxResponseTime)
-	if err := d.Set("environment_variables", setFromEnvVars(c.EnvironmentVariables)); err != nil {
-		return fmt.Errorf("error setting environment variables for resource %s: %w", d.Id(), err)
-	}
 	d.Set("double_check", c.DoubleCheck)
-	sort.Strings(c.Tags)
-	d.Set("tags", c.Tags)
-	d.Set("ssl_check", c.SSLCheck)
 	d.Set("setup_snippet_id", c.SetupSnippetID)
 	d.Set("teardown_snippet_id", c.TearDownSnippetID)
 	d.Set("local_setup_script", c.LocalSetupScript)
 	d.Set("local_teardown_script", c.LocalTearDownScript)
 
+	sort.Strings(c.Tags)
+	d.Set("tags", c.Tags)
+
+	d.Set("frequency", c.Frequency)
+	if c.Frequency == 0 {
+		d.Set("frequency_offset", c.FrequencyOffset)
+	}
+
 	if c.RuntimeID != nil {
 		d.Set("runtime_id", *c.RuntimeID)
+	}
+
+	environmentVariables := environmentVariablesFromSet(d.Get("environment_variable").([]interface{}))
+	if len(environmentVariables) > 0 {
+		d.Set("environment_variable", c.EnvironmentVariables)
+	} else if err := d.Set("environment_variables", setFromEnvVars(c.EnvironmentVariables)); err != nil {
+		return fmt.Errorf("error setting environment variables for resource %s: %s", d.Id(), err)
 	}
 
 	if err := d.Set("alert_settings", setFromAlertSettings(c.AlertSettings)); err != nil {
@@ -531,32 +556,40 @@ func setFromEnvVars(evs []checkly.EnvironmentVariable) tfMap {
 }
 
 func setFromAlertSettings(as checkly.AlertSettings) []tfMap {
-	return []tfMap{
-		{
-			"escalation_type": as.EscalationType,
-			"run_based_escalation": []tfMap{
-				{
-					"failed_run_threshold": as.RunBasedEscalation.FailedRunThreshold,
+	if as.EscalationType == checkly.RunBased {
+		return []tfMap{
+			{
+				"escalation_type": as.EscalationType,
+				"run_based_escalation": []tfMap{
+					{
+						"failed_run_threshold": as.RunBasedEscalation.FailedRunThreshold,
+					},
+				},
+				"reminders": []tfMap{
+					{
+						"amount":   as.Reminders.Amount,
+						"interval": as.Reminders.Interval,
+					},
 				},
 			},
-			"time_based_escalation": []tfMap{
-				{
-					"minutes_failing_threshold": as.TimeBasedEscalation.MinutesFailingThreshold,
+		}
+	} else {
+		return []tfMap{
+			{
+				"escalation_type": as.EscalationType,
+				"time_based_escalation": []tfMap{
+					{
+						"minutes_failing_threshold": as.TimeBasedEscalation.MinutesFailingThreshold,
+					},
+				},
+				"reminders": []tfMap{
+					{
+						"amount":   as.Reminders.Amount,
+						"interval": as.Reminders.Interval,
+					},
 				},
 			},
-			"reminders": []tfMap{
-				{
-					"amount":   as.Reminders.Amount,
-					"interval": as.Reminders.Interval,
-				},
-			},
-			"ssl_certificates": []tfMap{
-				{
-					"enabled":         as.SSLCertificates.Enabled,
-					"alert_threshold": as.SSLCertificates.AlertThreshold,
-				},
-			},
-		},
+		}
 	}
 }
 
@@ -621,7 +654,6 @@ func checkFromResourceData(d *schema.ResourceData) (checkly.Check, error) {
 		Script:                    d.Get("script").(string),
 		DegradedResponseTime:      d.Get("degraded_response_time").(int),
 		MaxResponseTime:           d.Get("max_response_time").(int),
-		EnvironmentVariables:      envVarsFromMap(d.Get("environment_variables").(tfMap)),
 		DoubleCheck:               d.Get("double_check").(bool),
 		Tags:                      stringsFromSet(d.Get("tags").(*schema.Set)),
 		SSLCheck:                  d.Get("ssl_check").(bool),
@@ -643,6 +675,12 @@ func checkFromResourceData(d *schema.ResourceData) (checkly.Check, error) {
 		check.RuntimeID = &runtimeId
 	}
 
+	environmentVariables, err := getResourceEnvironmentVariables(d)
+	if err != nil {
+		return checkly.Check{}, err
+	}
+	check.EnvironmentVariables = environmentVariables
+
 	privateLocations := stringsFromSet(d.Get("private_locations").(*schema.Set))
 	check.PrivateLocations = &privateLocations
 
@@ -652,12 +690,12 @@ func checkFromResourceData(d *schema.ResourceData) (checkly.Check, error) {
 		check.FrequencyOffset = d.Get("frequency_offset").(int)
 
 		if check.Frequency == 0 && (check.FrequencyOffset != 10 && check.FrequencyOffset != 20 && check.FrequencyOffset != 30) {
-			return check, errors.New("When property frequency is 0, frequency_offset must be 10, 20 or 30")
+			return check, errors.New("when property frequency is 0, frequency_offset must be 10, 20 or 30")
 		}
 	}
 
 	if check.Type == checkly.TypeBrowser && check.Frequency == 0 {
-		return check, errors.New("Property frequency could only be 0 for API checks")
+		return check, errors.New("property frequency could only be 0 for API checks")
 	}
 
 	return check, nil
@@ -698,20 +736,21 @@ func basicAuthFromSet(s *schema.Set) *checkly.BasicAuth {
 
 func alertSettingsFromSet(s *schema.Set) checkly.AlertSettings {
 	if s.Len() == 0 {
-		return checkly.AlertSettings{
-			SSLCertificates: checkly.SSLCertificates{
-				AlertThreshold: 3,
-			},
-		}
+		return checkly.AlertSettings{}
 	}
 	res := s.List()[0].(tfMap)
-	return checkly.AlertSettings{
-		EscalationType:      res["escalation_type"].(string),
-		RunBasedEscalation:  runBasedEscalationFromSet(res["run_based_escalation"].(*schema.Set)),
-		TimeBasedEscalation: timeBasedEscalationFromSet(res["time_based_escalation"].(*schema.Set)),
-		Reminders:           remindersFromSet(res["reminders"].(*schema.Set)),
-		SSLCertificates:     sslCertificatesFromSet(res["ssl_certificates"].(*schema.Set)),
+	alertSettings := checkly.AlertSettings{
+		EscalationType: res["escalation_type"].(string),
+		Reminders:      remindersFromSet(res["reminders"].(*schema.Set)),
 	}
+
+	if alertSettings.EscalationType == checkly.RunBased {
+		alertSettings.RunBasedEscalation = runBasedEscalationFromSet(res["run_based_escalation"].(*schema.Set))
+	} else {
+		alertSettings.TimeBasedEscalation = timeBasedEscalationFromSet(res["time_based_escalation"].(*schema.Set))
+	}
+
+	return alertSettings
 }
 
 func alertChannelSubscriptionsFromSet(s []interface{}) []checkly.AlertChannelSubscription {
@@ -728,6 +767,26 @@ func alertChannelSubscriptionsFromSet(s []interface{}) []checkly.AlertChannelSub
 			ChannelID: int64(chid),
 		})
 	}
+	return res
+}
+
+func environmentVariablesFromSet(s []interface{}) []checkly.EnvironmentVariable {
+	res := []checkly.EnvironmentVariable{}
+	if len(s) == 0 {
+		return res
+	}
+	for _, it := range s {
+		tm := it.(tfMap)
+		key := tm["key"].(string)
+		value := tm["value"].(string)
+		locked := tm["locked"].(bool)
+		res = append(res, checkly.EnvironmentVariable{
+			Key:    key,
+			Value:  value,
+			Locked: locked,
+		})
+	}
+
 	return res
 }
 
@@ -762,17 +821,6 @@ func remindersFromSet(s *schema.Set) checkly.Reminders {
 	}
 }
 
-func sslCertificatesFromSet(s *schema.Set) checkly.SSLCertificates {
-	if s.Len() == 0 {
-		return checkly.SSLCertificates{}
-	}
-	res := s.List()[0].(tfMap)
-	return checkly.SSLCertificates{
-		Enabled:        res["enabled"].(bool),
-		AlertThreshold: res["alert_threshold"].(int),
-	}
-}
-
 func requestFromSet(s *schema.Set) checkly.Request {
 	if s.Len() == 0 {
 		return checkly.Request{}
@@ -792,17 +840,6 @@ func requestFromSet(s *schema.Set) checkly.Request {
 	}
 }
 
-func mustParseRFC3339Time(s string) time.Time {
-	if s == "" {
-		return time.Time{}
-	}
-	t, err := time.Parse(time.RFC3339, s)
-	if err != nil {
-		panic(err)
-	}
-	return t
-}
-
 func envVarsFromMap(m map[string]interface{}) []checkly.EnvironmentVariable {
 	r := make([]checkly.EnvironmentVariable, 0, len(m))
 	for k, v := range m {
@@ -810,10 +847,12 @@ func envVarsFromMap(m map[string]interface{}) []checkly.EnvironmentVariable {
 		if !ok {
 			panic(fmt.Errorf("could not convert environment variable value %v to string", v))
 		}
+
 		r = append(r, checkly.EnvironmentVariable{
 			Key:   k,
 			Value: s,
 		})
+
 	}
 	return r
 }
@@ -831,4 +870,19 @@ func keyValuesFromMap(m map[string]interface{}) []checkly.KeyValue {
 		})
 	}
 	return r
+}
+
+func getResourceEnvironmentVariables(d *schema.ResourceData) ([]checkly.EnvironmentVariable, error) {
+	deprecatedEnvironmentVariables := envVarsFromMap(d.Get("environment_variables").(tfMap))
+	environmentVariables := environmentVariablesFromSet(d.Get("environment_variable").([]interface{}))
+
+	if len(environmentVariables) > 0 && len(deprecatedEnvironmentVariables) > 0 {
+		return nil, errors.New("can't use both \"environment_variables\" and \"environment_variable\" on checkly_check_group resource")
+	}
+
+	if len(environmentVariables) > 0 {
+		return environmentVariables, nil
+	}
+
+	return deprecatedEnvironmentVariables, nil
 }

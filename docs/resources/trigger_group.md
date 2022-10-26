@@ -13,12 +13,12 @@ description: |-
 ## Example Usage
 
 ```terraform
-resource "checkly_trigger_group" "test-trigger-group" {
+resource "checkly_trigger_group" "test_trigger_group" {
   group_id = "215"
 }
 
-output "test-trigger-group-url" {
-  value = checkly_trigger_group.test-trigger-group.url
+output "test_trigger_group_url" {
+  value = checkly_trigger_group.test_trigger_group.url
 }
 ```
 

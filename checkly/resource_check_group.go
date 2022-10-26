@@ -65,7 +65,30 @@ func resourceCheckGroup() *schema.Resource {
 			"environment_variables": {
 				Type:        schema.TypeMap,
 				Optional:    true,
+				Deprecated:  "The property `environment_variables` is deprecated and will be removed in a future version. Consider using the new `environment_variable` list.",
 				Description: "Key/value pairs for setting environment variables during check execution. These are only relevant for browser checks. Use global environment variables whenever possible.",
+			},
+			"environment_variable": {
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "Key/value pairs for setting environment variables during check execution, add locked = true to keep value hidden. These are only relevant for browser checks. Use global environment variables whenever possible.",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"key": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"value": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"locked": {
+							Type:     schema.TypeBool,
+							Optional: true,
+							Default:  false,
+						},
+					},
+				},
 			},
 			"double_check": {
 				Type:        schema.TypeBool,
@@ -184,13 +207,12 @@ func resourceCheckGroup() *schema.Resource {
 						"ssl_certificates": {
 							Type:       schema.TypeSet,
 							Optional:   true,
-							Deprecated: "The property `ssl_certificates` is deprecated and it's ignored by the Checkly Public API. It will be removed in a future version.",
+							Deprecated: "This property is deprecated and it's ignored by the Checkly Public API. It will be removed in a future version.",
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"enabled": {
 										Type:        schema.TypeBool,
 										Optional:    true,
-										Default:     false,
 										Description: "Determines if alert notifications should be sent for expiring SSL certificates.",
 									},
 									"alert_threshold": {
@@ -383,16 +405,24 @@ func resourceDataFromCheckGroup(g *checkly.Group, d *schema.ResourceData) error 
 	d.Set("activated", g.Activated)
 	d.Set("muted", g.Muted)
 	d.Set("locations", g.Locations)
-	if err := d.Set("environment_variables", setFromEnvVars(g.EnvironmentVariables)); err != nil {
-		return fmt.Errorf("error setting environment variables for resource %s: %s", d.Id(), err)
-	}
 	d.Set("double_check", g.DoubleCheck)
-	sort.Strings(g.Tags)
-	d.Set("tags", g.Tags)
 	d.Set("setup_snippet_id", g.SetupSnippetID)
 	d.Set("teardown_snippet_id", g.TearDownSnippetID)
 	d.Set("local_setup_script", g.LocalSetupScript)
 	d.Set("local_teardown_script", g.LocalTearDownScript)
+	d.Set("use_global_alert_settings", g.UseGlobalAlertSettings)
+	d.Set("alert_channel_subscription", g.AlertChannelSubscriptions)
+	d.Set("private_locations", g.PrivateLocations)
+
+	sort.Strings(g.Tags)
+	d.Set("tags", g.Tags)
+
+	environmentVariables := environmentVariablesFromSet(d.Get("environment_variable").([]interface{}))
+	if len(environmentVariables) > 0 {
+		d.Set("environment_variable", g.EnvironmentVariables)
+	} else if err := d.Set("environment_variables", setFromEnvVars(g.EnvironmentVariables)); err != nil {
+		return fmt.Errorf("error setting environment variables for resource %s: %s", d.Id(), err)
+	}
 
 	if g.RuntimeID != nil {
 		d.Set("runtime_id", *g.RuntimeID)
@@ -401,12 +431,11 @@ func resourceDataFromCheckGroup(g *checkly.Group, d *schema.ResourceData) error 
 	if err := d.Set("alert_settings", setFromAlertSettings(g.AlertSettings)); err != nil {
 		return fmt.Errorf("error setting alert settings for resource %s: %s", d.Id(), err)
 	}
-	d.Set("use_global_alert_settings", g.UseGlobalAlertSettings)
+
 	if err := d.Set("api_check_defaults", setFromAPICheckDefaults(g.APICheckDefaults)); err != nil {
 		return fmt.Errorf("error setting request for resource %s: %s", d.Id(), err)
 	}
-	d.Set("alert_channel_subscription", g.AlertChannelSubscriptions)
-	d.Set("private_locations", g.PrivateLocations)
+
 	d.SetId(d.Id())
 	return nil
 }
@@ -419,6 +448,7 @@ func checkGroupFromResourceData(d *schema.ResourceData) (checkly.Group, error) {
 		}
 		ID = 0
 	}
+
 	group := checkly.Group{
 		ID:                        ID,
 		Name:                      d.Get("name").(string),
@@ -426,7 +456,6 @@ func checkGroupFromResourceData(d *schema.ResourceData) (checkly.Group, error) {
 		Activated:                 d.Get("activated").(bool),
 		Muted:                     d.Get("muted").(bool),
 		Locations:                 stringsFromSet(d.Get("locations").(*schema.Set)),
-		EnvironmentVariables:      envVarsFromMap(d.Get("environment_variables").(tfMap)),
 		DoubleCheck:               d.Get("double_check").(bool),
 		Tags:                      stringsFromSet(d.Get("tags").(*schema.Set)),
 		SetupSnippetID:            int64(d.Get("setup_snippet_id").(int)),
@@ -446,18 +475,16 @@ func checkGroupFromResourceData(d *schema.ResourceData) (checkly.Group, error) {
 		group.RuntimeID = &runtimeId
 	}
 
+	environmentVariables, err := getResourceEnvironmentVariables(d)
+	if err != nil {
+		return checkly.Group{}, err
+	}
+	group.EnvironmentVariables = environmentVariables
+
 	privateLocations := stringsFromSet(d.Get("private_locations").(*schema.Set))
 	group.PrivateLocations = &privateLocations
 
 	return group, nil
-}
-
-func stringsFromSet2(set *schema.Set) []string {
-	r := make([]string, set.Len())
-	for i, item := range set.List() {
-		r[i] = item.(string)
-	}
-	return r
 }
 
 func setFromAPICheckDefaults(a checkly.APICheckDefaults) []tfMap {

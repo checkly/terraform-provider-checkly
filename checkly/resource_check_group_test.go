@@ -70,16 +70,9 @@ var wantGroup = checkly.Group{
 		RunBasedEscalation: checkly.RunBasedEscalation{
 			FailedRunThreshold: 1,
 		},
-		TimeBasedEscalation: checkly.TimeBasedEscalation{
-			MinutesFailingThreshold: 5,
-		},
 		Reminders: checkly.Reminders{
 			Amount:   0,
 			Interval: 5,
-		},
-		SSLCertificates: checkly.SSLCertificates{
-			Enabled:        true,
-			AlertThreshold: 30,
 		},
 	},
 	LocalSetupScript:          "setup-test",
@@ -282,21 +275,6 @@ func TestAccCheckGroupFull(t *testing.T) {
 				),
 				testCheckResourceAttrExpr(
 					"checkly_check_group.test",
-					"alert_settings.*.ssl_certificates.#",
-					"1",
-				),
-				testCheckResourceAttrExpr(
-					"checkly_check_group.test",
-					"alert_settings.*.ssl_certificates.*.enabled",
-					"false",
-				),
-				testCheckResourceAttrExpr(
-					"checkly_check_group.test",
-					"alert_settings.*.time_based_escalation.*.minutes_failing_threshold",
-					"5",
-				),
-				testCheckResourceAttrExpr(
-					"checkly_check_group.test",
 					"api_check_defaults.#",
 					"1",
 				),
@@ -434,12 +412,6 @@ const testCheckGroup_full = `
 	  run_based_escalation {
 		failed_run_threshold = 1
 	  }
-	  time_based_escalation {
-		minutes_failing_threshold = 5
-	  }
-	  ssl_certificates {
-		enabled         = false
-	  }
 	  reminders {
 		amount   = 2
 		interval = 5
@@ -447,41 +419,5 @@ const testCheckGroup_full = `
 	}
 	local_setup_script    = "setup-test"
 	local_teardown_script = "teardown-test"
-  }
-`
-
-const testCheck_groupWithChecks = `
-  resource "checkly_check" "test" {
-	name      = "test"
-	type      = "API"
-	activated = true
-	muted     = true
-	frequency = 720
-	locations = [ "eu-central-1", "us-east-2" ]
-	request {
-	  method           = "GET"
-	  url              = "https://api.checklyhq.com/public-stats"
-	  follow_redirects = true
-	}
-	group_id    = checkly_check_group.check-group-1.id
-	group_order = 1 #The group_order attribute specifies in which order the checks will be executed: 1, 2, 3, etc.
-  }
-`
-
-const testCheck_checkInGroup = `
-  resource "checkly_check" "test" {
-	name      = "test"
-	type      = "API"
-	activated = true
-	muted     = true
-	frequency = 720
-	locations = [ "eu-central-1", "us-east-2" ]
-	request {
-	  method           = "GET"
-	  url              = "https://api.checklyhq.com/public-stats"
-	  follow_redirects = true
-	}
-	group_id    = checkly_check_group.check-group-1.id
-	group_order = 2
   }
 `

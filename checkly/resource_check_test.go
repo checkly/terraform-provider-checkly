@@ -367,15 +367,8 @@ var wantCheck = checkly.Check{
 		RunBasedEscalation: checkly.RunBasedEscalation{
 			FailedRunThreshold: 1,
 		},
-		TimeBasedEscalation: checkly.TimeBasedEscalation{
-			MinutesFailingThreshold: 5,
-		},
 		Reminders: checkly.Reminders{
 			Interval: 5,
-		},
-		SSLCertificates: checkly.SSLCertificates{
-			Enabled:        false,
-			AlertThreshold: 3,
 		},
 	},
 	UseGlobalAlertSettings: false,
@@ -522,12 +515,6 @@ const apiCheck_full = `
 	  }
 	  run_based_escalation {
 		failed_run_threshold = 1
-	  }
-	  ssl_certificates {
-		enabled         = false
-	  }
-	  time_based_escalation {
-		minutes_failing_threshold = 5
 	  }
 	}
   }
