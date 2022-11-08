@@ -736,7 +736,12 @@ func basicAuthFromSet(s *schema.Set) *checkly.BasicAuth {
 
 func alertSettingsFromSet(s *schema.Set) checkly.AlertSettings {
 	if s.Len() == 0 {
-		return checkly.AlertSettings{}
+		return checkly.AlertSettings{
+			EscalationType: checkly.RunBased,
+			RunBasedEscalation: checkly.RunBasedEscalation{
+				FailedRunThreshold: 1,
+			},
+		}
 	}
 	res := s.List()[0].(tfMap)
 	alertSettings := checkly.AlertSettings{

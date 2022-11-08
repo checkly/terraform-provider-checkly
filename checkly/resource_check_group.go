@@ -155,6 +155,7 @@ func resourceCheckGroup() *schema.Resource {
 						"escalation_type": {
 							Type:        schema.TypeString,
 							Optional:    true,
+							Default:     checkly.RunBased,
 							Description: "Determines what type of escalation to use. Possible values are `RUN_BASED` or `TIME_BASED`.",
 						},
 						"run_based_escalation": {
@@ -165,7 +166,6 @@ func resourceCheckGroup() *schema.Resource {
 									"failed_run_threshold": {
 										Type:        schema.TypeInt,
 										Optional:    true,
-										Default:     1,
 										Description: "After how many failed consecutive check runs an alert notification should be sent. Possible values are between 1 and 5. (Default `1`).",
 									},
 								},
@@ -179,7 +179,6 @@ func resourceCheckGroup() *schema.Resource {
 									"minutes_failing_threshold": {
 										Type:        schema.TypeInt,
 										Optional:    true,
-										Default:     5,
 										Description: "After how many minutes after a check starts failing an alert should be sent. Possible values are `5`, `10`, `15`, and `30`. (Default `5`).",
 									},
 								},
@@ -410,7 +409,6 @@ func resourceDataFromCheckGroup(g *checkly.Group, d *schema.ResourceData) error 
 	d.Set("teardown_snippet_id", g.TearDownSnippetID)
 	d.Set("local_setup_script", g.LocalSetupScript)
 	d.Set("local_teardown_script", g.LocalTearDownScript)
-	d.Set("use_global_alert_settings", g.UseGlobalAlertSettings)
 	d.Set("alert_channel_subscription", g.AlertChannelSubscriptions)
 	d.Set("private_locations", g.PrivateLocations)
 
@@ -431,6 +429,7 @@ func resourceDataFromCheckGroup(g *checkly.Group, d *schema.ResourceData) error 
 	if err := d.Set("alert_settings", setFromAlertSettings(g.AlertSettings)); err != nil {
 		return fmt.Errorf("error setting alert settings for resource %s: %s", d.Id(), err)
 	}
+	d.Set("use_global_alert_settings", g.UseGlobalAlertSettings)
 
 	if err := d.Set("api_check_defaults", setFromAPICheckDefaults(g.APICheckDefaults)); err != nil {
 		return fmt.Errorf("error setting request for resource %s: %s", d.Id(), err)
