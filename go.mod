@@ -7,7 +7,7 @@ require (
 	github.com/checkly/checkly-go-sdk v1.6.2
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/google/go-cmp v0.5.9
-	github.com/gruntwork-io/terratest v0.40.24
+	github.com/gruntwork-io/terratest v0.41.6
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.12.0
 	github.com/hashicorp/yamux v0.0.0-20190923154419-df201c70410d // indirect
 	github.com/mattn/go-colorable v0.1.12 // indirect
