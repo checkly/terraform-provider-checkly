@@ -33,6 +33,7 @@ func resourcePrivateLocation() *schema.Resource {
 			"icon": {
 				Type:        schema.TypeString,
 				Optional:    true,
+				Default:	 "location",
 				Description: "Icon assigned to the private location.",
 			},
 			"keys": {
