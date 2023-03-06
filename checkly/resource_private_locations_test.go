@@ -25,7 +25,7 @@ func TestAccPrivateLocationSuccess(t *testing.T) {
 	config := `resource "checkly_private_location" "test" {
 		name     = "New Private Location"
 		slug_name   = "new-private-location"
-		icon       	= "location"
+		icon       	= "bell-fill"
 	}`
 	accTestCase(t, []resource.TestStep{
 		{
@@ -43,6 +43,35 @@ func TestAccPrivateLocationSuccess(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_private_location.test",
+					"icon",
+					"bell-fill",
+				),
+			),
+		},
+	})
+}
+
+func TestAccPrivateLocationDefaultIcon(t *testing.T) {
+	config := `resource "checkly_private_location" "without_icon" {
+		name     = "New Private Location"
+		slug_name   = "new-private-location"
+	}`
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: config,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_private_location.without_icon",
+					"name",
+					"New Private Location",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_private_location.without_icon",
+					"slug_name",
+					"new-private-location",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_private_location.without_icon",
 					"icon",
 					"location",
 				),
