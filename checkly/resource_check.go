@@ -360,12 +360,27 @@ func resourceCheck() *schema.Resource {
 						"body": {
 							Type:        schema.TypeString,
 							Optional:    true,
-							Description: "Possible values `NONE`, `JSON`, `FORM`, `RAW`, and `GRAPHQL`.",
+							Description: "The body of the request.",
 						},
 						"body_type": {
-							Type:     schema.TypeString,
-							Optional: true,
-							Default:  "NONE",
+							Type:        schema.TypeString,
+							Optional:    true,
+							Default:     "NONE",
+							Description: "The `Content-Type` header of the request. Possible values `NONE`, `JSON`, `FORM`, `RAW`, and `GRAPHQL`.",
+							ValidateFunc: func(value interface{}, key string) (warns []string, errs []error) {
+								v := value.(string)
+								isValid := false
+								options := []string{"NONE", "JSON", "FORM", "RAW", "GRAPHQL"}
+								for _, option := range options {
+									if v == option {
+										isValid = true
+									}
+								}
+								if !isValid {
+									errs = append(errs, fmt.Errorf("%q must be one of %v, got %s", key, options, v))
+								}
+								return warns, errs
+							},
 						},
 						"assertion": {
 							Type:     schema.TypeSet,
