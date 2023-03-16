@@ -95,7 +95,6 @@ resource "checkly_check" "example_check" {
 ### Optional
 
 - `email` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--email))
-- `id` (String) The ID of this resource.
 - `opsgenie` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--opsgenie))
 - `pagerduty` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--pagerduty))
 - `send_degraded` (Boolean) (Default `false`)
@@ -106,6 +105,10 @@ resource "checkly_check" "example_check" {
 - `ssl_expiry` (Boolean) (Default `false`)
 - `ssl_expiry_threshold` (Number) Value must be between 1 and 30 (Default `30`)
 - `webhook` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--webhook))
+
+### Read-Only
+
+- `id` (String) The ID of this resource.
 
 <a id="nestedblock--email"></a>
 ### Nested Schema for `email`

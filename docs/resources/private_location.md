@@ -3,7 +3,7 @@
 page_title: "checkly_private_location Resource - terraform-provider-checkly"
 subcategory: ""
 description: |-
-
+  
 ---
 
 # checkly_private_location (Resource)
@@ -13,10 +13,9 @@ description: |-
 ## Example Usage
 
 ```terraform
-# Simple Private Location example
 resource "checkly_private_location" "location" {
-  name = "New Private Location"
-  slug_name = "new-private-location"
+  name          = "New Private Location"
+  slug_name     = "new-private-location"
 }
 ```
 
@@ -25,9 +24,16 @@ resource "checkly_private_location" "location" {
 
 ### Required
 
-- `name` (String)
-- `slug_name` (String)
+- `name` (String) The private location name.
+- `slug_name` (String) Valid slug name.
 
 ### Optional
 
-- `icon` (String) The icon that will represent the private location.
+- `icon` (String) Icon assigned to the private location.
+
+### Read-Only
+
+- `id` (String) The ID of this resource.
+- `keys` (Set of String, Sensitive) Private location API keys.
+
+

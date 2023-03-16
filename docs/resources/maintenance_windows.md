@@ -13,7 +13,7 @@ description: |-
 ## Example Usage
 
 ```terraform
-resource "checkly_maintenance_windows" "maintenance_1" {
+resource "checkly_maintenance_windows" "maintenance-1" {
   name            = "Maintenance Windows"
   starts_at       = "2014-08-24T00:00:00.000Z"
   ends_at         = "2014-08-25T00:00:00.000Z"
@@ -37,10 +37,13 @@ resource "checkly_maintenance_windows" "maintenance_1" {
 
 ### Optional
 
-- `id` (String) The ID of this resource.
 - `repeat_ends_at` (String) The date on which the maintenance window should stop repeating.
 - `repeat_interval` (Number) The repeat interval of the maintenance window from the first occurrence.
 - `repeat_unit` (String) The repeat cadence for the maintenance window. Possible values `DAY`, `WEEK` and `MONTH`.
 - `tags` (Set of String) The names of the checks and groups maintenance window should apply to.
+
+### Read-Only
+
+- `id` (String) The ID of this resource.
 
 

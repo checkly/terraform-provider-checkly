@@ -31,8 +31,11 @@ output "test_trigger_check_url" {
 
 ### Optional
 
-- `id` (String) The ID of this resource.
 - `token` (String) The token value created to trigger the check
 - `url` (String) The request URL to trigger the check run.
+
+### Read-Only
+
+- `id` (String) The ID of this resource.
 
 

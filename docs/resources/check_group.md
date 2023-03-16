@@ -134,18 +134,22 @@ resource "checkly_check_group" "test_group1" {
 - `alert_settings` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--alert_settings))
 - `api_check_defaults` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--api_check_defaults))
 - `double_check` (Boolean) Setting this to `true` will trigger a retry when a check fails from the failing region and another, randomly selected region before marking the check as failed.
-- `environment_variables` (Map of String) Key/value pairs for setting environment variables during check execution. These are only relevant for browser checks. Use global environment variables whenever possible.
-- `id` (String) The ID of this resource.
+- `environment_variable` (Block List) Key/value pairs for setting environment variables during check execution, add locked = true to keep value hidden. These are only relevant for browser checks. Use global environment variables whenever possible. (see [below for nested schema](#nestedblock--environment_variable))
+- `environment_variables` (Map of String, Deprecated) Key/value pairs for setting environment variables during check execution. These are only relevant for browser checks. Use global environment variables whenever possible.
 - `local_setup_script` (String) A valid piece of Node.js code to run in the setup phase of an API check in this group.
 - `local_teardown_script` (String) A valid piece of Node.js code to run in the teardown phase of an API check in this group.
+- `locations` (Set of String) An array of one or more data center locations where to run the checks.
 - `muted` (Boolean) Determines if any notifications will be sent out when a check in this group fails and/or recovers.
+- `private_locations` (Set of String) An array of one or more private locations slugs.
 - `runtime_id` (String) The id of the runtime to use for this group.
 - `setup_snippet_id` (Number) An ID reference to a snippet to use in the setup phase of an API check.
 - `tags` (Set of String) Tags for organizing and filtering checks.
 - `teardown_snippet_id` (Number) An ID reference to a snippet to use in the teardown phase of an API check.
 - `use_global_alert_settings` (Boolean) When true, the account level alert settings will be used, not the alert setting defined on this check group.
-- `private_locations` (Set of String) Private locations assigned to the group.
-- `locations` (Set of String) An array of one or more data center locations where to run the checks.
+
+### Read-Only
+
+- `id` (String) The ID of this resource.
 
 <a id="nestedblock--alert_channel_subscription"></a>
 ### Nested Schema for `alert_channel_subscription`
@@ -237,5 +241,19 @@ Required:
 
 - `password` (String)
 - `username` (String)
+
+
+
+<a id="nestedblock--environment_variable"></a>
+### Nested Schema for `environment_variable`
+
+Required:
+
+- `key` (String)
+- `value` (String)
+
+Optional:
+
+- `locked` (Boolean)
 
 
