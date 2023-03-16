@@ -1,34 +1,42 @@
-default: testacc
-version="0.0.0-canary"
+default: build
 
+build:
+	go build -v ./...
+
+install: build
+	go install -v ./...
+
+lint:
+	golangci-lint run
+
+generate:
+	go generate ./...
+
+fmt:
+	gofmt -s -w -e .
+	terraform fmt
+
+version=0.0.0
 chip=amd64
+name=terraform-provider-checkly
 ifeq ($(shell uname -m), arm64)
   chip=arm64
 endif
 
-# Run acceptance tests
-.PHONY: testacc
-testacc:
-	TF_ACC=1 go test ./... -v $(TESTARGS) -timeout 120m
-
-local-sdk:
-	go mod edit -replace github.com/checkly/checkly-go-sdk=../checkly-go-sdk
-
 dev:
-	# for dev purposes only, build the provider and install
-	# it as dev/checkly/check + version number
-	go build -o terraform-provider-checkly
+	go build -o ${name}
 	mkdir -p ~/.terraform.d/plugins/dev/checkly/checkly/${version}/darwin_${chip}/
-	chmod +x terraform-provider-checkly
-	mv terraform-provider-checkly ~/.terraform.d/plugins/dev/checkly/checkly/${version}/darwin_${chip}/terraform-provider-checkly_v${version}
-	cd demo && rm -f .terraform.lock.hcl
+	chmod +x ${name}
+	mv ${name} ~/.terraform.d/plugins/dev/checkly/checkly/${version}/darwin_${chip}/${name}_v${version}
+	cd demo && rm -f .terraform.lock.hcl terraform.tfstate terraform.tfstate.backup
 	cd demo && TF_LOG=TRACE terraform init -upgrade
-	cd local && rm -f .terraform.lock.hcl
+	cd local && rm -f .terraform.lock.hcl terraform.tfstate terraform.tfstate.backup
 	cd local && TF_LOG=TRACE terraform init -upgrade
 
-fmt:
-	go fmt ./checkly
-	terraform fmt
+test:
+	go test -v -cover -timeout=120s -parallel=4 ./...
 
-doc:
-	./tools/tfplugindocs
+testacc:
+	TF_ACC=1 go test -v -cover -timeout 120m ./...
+
+.PHONY: build install lint generate fmt test testacc
