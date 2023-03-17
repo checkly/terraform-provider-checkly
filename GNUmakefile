@@ -32,3 +32,6 @@ fmt:
 
 doc:
 	./tools/tfplugindocs
+
+generate:
+	go generate ./...

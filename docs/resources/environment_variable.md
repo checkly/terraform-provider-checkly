@@ -36,7 +36,10 @@ resource "checkly_environment_variable" "variable_2" {
 
 ### Optional
 
-- `id` (String) The ID of this resource.
 - `locked` (Boolean)
+
+### Read-Only
+
+- `id` (String) The ID of this resource.
 
 

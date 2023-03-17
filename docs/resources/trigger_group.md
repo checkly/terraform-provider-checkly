@@ -31,8 +31,11 @@ output "test_trigger_group_url" {
 
 ### Optional
 
-- `id` (String) The ID of this resource.
 - `token` (String) The token value created to trigger the group
 - `url` (String) The request URL to trigger the group run.
+
+### Read-Only
+
+- `id` (String) The ID of this resource.
 
 
