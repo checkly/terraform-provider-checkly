@@ -68,9 +68,9 @@ resource "checkly_alert_channel" "webhook_ac" {
 
 resource "checkly_alert_channel" "firehydrant_ac" {
   webhook {
-    name   = "firehydrant"
-    method = "post"
-    template       = <<EOT
+    name         = "firehydrant"
+    method       = "post"
+    template     = <<EOT
 {
   "event": "{{ALERT_TITLE}}",
   "link": "{{RESULT_LINK}}",
@@ -81,7 +81,7 @@ resource "checkly_alert_channel" "firehydrant_ac" {
   "check_result_id": "{{CHECK_RESULT_ID}}"
 },
     EOT
-    url            = "https://app.firehydrant.io/integrations/alerting/webhooks/2/checkly"
-    webhook_type   = "WEBHOOK_FIREHYDRANT"
+    url          = "https://app.firehydrant.io/integrations/alerting/webhooks/2/checkly"
+    webhook_type = "WEBHOOK_FIREHYDRANT"
   }
 }

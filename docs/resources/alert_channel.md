@@ -53,7 +53,7 @@ resource "checkly_alert_channel" "opsgenie_ac" {
   }
 }
 
-# An Pagerduty alert channel
+# A Pagerduty alert channel
 resource "checkly_alert_channel" "pagerduty_ac" {
   pagerduty {
     account      = "checkly"
@@ -62,7 +62,7 @@ resource "checkly_alert_channel" "pagerduty_ac" {
   }
 }
 
-# An Webhook alert channel
+# A Webhook alert channel
 resource "checkly_alert_channel" "webhook_ac" {
   webhook {
     name = "foo"
@@ -70,6 +70,27 @@ resource "checkly_alert_channel" "webhook_ac" {
     template = "footemplate"
     url = "https://example.com/foo"
     webhook_secret = "foosecret"
+  }
+}
+
+# A Firehydran alert channel integration
+resource "checkly_alert_channel" "firehydrant_ac" {
+  webhook {
+    name         = "firehydrant"
+    method       = "post"
+    template     = <<EOT
+{
+  "event": "{{ALERT_TITLE}}",
+  "link": "{{RESULT_LINK}}",
+  "check_id": "{{CHECK_ID}}",
+  "check_type": "{{CHECK_TYPE}}",
+  "alert_type": "{{ALERT_TYPE}}",
+  "started_at": "{{STARTED_AT}}",
+  "check_result_id": "{{CHECK_RESULT_ID}}"
+},
+    EOT
+    url          = "https://app.firehydrant.io/integrations/alerting/webhooks/2/checkly"
+    webhook_type = "WEBHOOK_FIREHYDRANT"
   }
 }
 
@@ -175,5 +196,6 @@ Optional:
 - `query_parameters` (Map of String)
 - `template` (String)
 - `webhook_secret` (String)
+- `webhook_type` (String) Type of the webhook. Possible values are 'WEBHOOK_DISCORD', 'WEBHOOK_FIREHYDRANT', 'WEBHOOK_GITLAB_ALERT', 'WEBHOOK_SPIKESH', 'WEBHOOK_SPLUNK', 'WEBHOOK_MSTEAMS' and 'WEBHOOK_TELEGRAM'.
 
 
