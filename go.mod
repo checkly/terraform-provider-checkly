@@ -3,7 +3,7 @@ module github.com/checkly/terraform-provider-checkly
 go 1.18
 
 require (
-	github.com/checkly/checkly-go-sdk v1.6.2
+	github.com/checkly/checkly-go-sdk v1.6.3
 	github.com/google/go-cmp v0.5.9
 	github.com/gruntwork-io/terratest v0.41.12
 	github.com/hashicorp/terraform-plugin-docs v0.14.1
