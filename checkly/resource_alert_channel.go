@@ -28,6 +28,7 @@ const (
 	AcFieldWebhookTemplate      = "template"
 	AcFieldWebhookURL           = "url"
 	AcFieldWebhookSecret        = "webhook_secret"
+	AcFieldWebhookType          = "webhook_type"
 	AcFieldOpsgenie             = "opsgenie"
 	AcFieldOpsgenieName         = "name"
 	AcFieldOpsgenieAPIKey       = "api_key"
@@ -150,6 +151,25 @@ func resourceAlertChannel() *schema.Resource {
 						AcFieldWebhookSecret: {
 							Type:     schema.TypeString,
 							Optional: true,
+						},
+						AcFieldWebhookType: {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "Type of the webhook. Possible values are 'WEBHOOK_DISCORD', 'WEBHOOK_FIREHYDRANT', 'WEBHOOK_GITLAB_ALERT', 'WEBHOOK_SPIKESH', 'WEBHOOK_SPLUNK', 'WEBHOOK_MSTEAMS' and 'WEBHOOK_TELEGRAM'.",
+							ValidateFunc: func(value interface{}, key string) (warns []string, errs []error) {
+								v := value.(string)
+								isValid := false
+								options := []string{"WEBHOOK_DISCORD", "WEBHOOK_FIREHYDRANT", "WEBHOOK_GITLAB_ALERT", "WEBHOOK_SPIKESH", "WEBHOOK_SPLUNK", "WEBHOOK_MSTEAMS", "WEBHOOK_TELEGRAM"}
+								for _, option := range options {
+									if v == option {
+										isValid = true
+									}
+								}
+								if !isValid {
+									errs = append(errs, fmt.Errorf("%q must be one of %v, got %s", key, options, v))
+								}
+								return warns, errs
+							},
 						},
 					},
 				},
@@ -423,6 +443,7 @@ func alertChannelConfigFromSet(channelType string, s *schema.Set) (interface{}, 
 			Template:        cfg[AcFieldWebhookTemplate].(string),
 			URL:             cfg[AcFieldWebhookURL].(string),
 			WebhookSecret:   cfg[AcFieldWebhookSecret].(string),
+			WebhookType:     cfg[AcFieldWebhookType].(string),
 			Headers:         keyValuesFromMap(cfg[AcFieldWebhookHeaders].(tfMap)),
 			QueryParameters: keyValuesFromMap(cfg[AcFieldWebhookQueryParams].(tfMap)),
 		}, nil
@@ -478,6 +499,7 @@ func setFromWebhook(cfg *checkly.AlertChannelWebhook) []tfMap {
 			AcFieldWebhookTemplate:    cfg.Template,
 			AcFieldWebhookURL:         cfg.URL,
 			AcFieldWebhookSecret:      cfg.WebhookSecret,
+			AcFieldWebhookType:        cfg.WebhookType,
 		},
 	}
 }

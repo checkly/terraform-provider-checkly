@@ -129,8 +129,8 @@ resource "checkly_check" "api-check-3" {
     "eu-central-1",
     "us-east-2",
   ]
-  max_response_time     = 18000
-  muted                 = true
+  max_response_time = 18000
+  muted             = true
 
   request {
     method           = "POST"
