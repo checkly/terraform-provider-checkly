@@ -7,7 +7,7 @@ require (
 	github.com/checkly/checkly-go-sdk v1.6.3
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/google/go-cmp v0.5.9
-	github.com/gruntwork-io/terratest v0.41.16
+	github.com/gruntwork-io/terratest v0.41.18
 	github.com/hashicorp/terraform-plugin-docs v0.14.1
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.12.0
 )
