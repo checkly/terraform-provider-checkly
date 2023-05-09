@@ -1,5 +1,5 @@
 <p>
-  <img height="128" src="https://www.checklyhq.com/images/footer-logo.svg" align="right" />
+  <img height="128" src="https://cdn.checklyhq.com/logos/racoon_logo.svg" align="right" />
   <h1>Checkly Terraform Provider</h1>
 </p>
 
@@ -37,10 +37,10 @@ Please make sure to read the [Contributing Guide](https://github.com/checkly/ter
 <br>
 <p align="center">
   <a href="https://checklyhq.com?utm_source=github&utm_medium=sponsor-logo-github&utm_campaign=headless-recorder" target="_blank">
-  <img width="100px" src="https://www.checklyhq.com/images/text_racoon_logo.svg" alt="Checkly" />
+  <img width="100px" src="https://cdn.checklyhq.com/logos/checkly_racoon_logo_horizontal.svg" alt="Checkly" />
   </a>
   <br />
-  <i><sub>Delightful Active Monitoring for Developers</sub></i>
+  <i><sub>Code, test, and deploy synthetic monitoring at scale</sub></i>
   <br>
   <b><sub>From Checkly with ♥️</sub></b>
 <p>
