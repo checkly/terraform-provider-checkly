@@ -336,3 +336,10 @@ Required:
 - `username` (String)
 
 
+## Import
+
+Import is supported using the following syntax:
+
+```shell
+$ terraform import checkly_check.example <check_id>
+```
