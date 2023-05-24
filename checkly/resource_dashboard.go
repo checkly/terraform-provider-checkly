@@ -138,6 +138,21 @@ func resourceDashboard() *schema.Resource {
 				Default:     false,
 				Description: "Set when to use AND operator for fetching dashboard tags.",
 			},
+			"is_private": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Set your dashboard as private and generate key.",
+			},
+			"keys": {
+				Type:      schema.TypeSet,
+				Computed:  true,
+				Sensitive: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Description: "Dashboard API key.",
+			},
 		},
 	}
 }
@@ -158,6 +173,7 @@ func dashboardFromResourceData(d *schema.ResourceData) (checkly.Dashboard, error
 		HideTags:           d.Get("hide_tags").(bool),
 		Width:              d.Get("width").(string),
 		UseTagsAndOperator: d.Get("use_tags_and_operator").(bool),
+		IsPrivate:          d.Get("is_private").(bool),
 		Tags:               stringsFromSet(d.Get("tags").(*schema.Set)),
 	}
 
@@ -182,6 +198,7 @@ func resourceDataFromDashboard(s *checkly.Dashboard, d *schema.ResourceData) err
 	d.Set("tags", s.Tags)
 	d.Set("width", s.Width)
 	d.Set("use_tags_and_operator", s.UseTagsAndOperator)
+	d.Set("is_private", s.IsPrivate)
 	return nil
 }
 
@@ -199,6 +216,9 @@ func resourceDashboardCreate(d *schema.ResourceData, client interface{}) error {
 	}
 
 	d.SetId(result.DashboardID)
+
+	var keys = []string{result.Keys[0].RawKey}
+	d.Set("keys", keys)
 	return resourceDashboardRead(d, client)
 }
 
