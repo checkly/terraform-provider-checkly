@@ -217,8 +217,10 @@ func resourceDashboardCreate(d *schema.ResourceData, client interface{}) error {
 
 	d.SetId(result.DashboardID)
 
-	var keys = []string{result.Keys[0].RawKey}
-	d.Set("keys", keys)
+	if dashboard.IsPrivate {
+		var keys = []string{result.Keys[0].RawKey}
+		d.Set("keys", keys)
+	}
 	return resourceDashboardRead(d, client)
 }
 
