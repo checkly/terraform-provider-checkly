@@ -144,14 +144,12 @@ func resourceDashboard() *schema.Resource {
 				Default:     false,
 				Description: "Set your dashboard as private and generate key.",
 			},
-			"keys": {
-				Type:      schema.TypeSet,
+			// moving to TypeString here since https://github.com/hashicorp/terraform-plugin-sdk/issues/792
+			"key": {
+				Type:      schema.TypeString,
 				Computed:  true,
 				Sensitive: true,
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-				},
-				Description: "Dashboard API key.",
+				Description: "The access key when the dashboard is private.",
 			},
 		},
 	}
@@ -199,6 +197,18 @@ func resourceDataFromDashboard(s *checkly.Dashboard, d *schema.ResourceData) err
 	d.Set("width", s.Width)
 	d.Set("use_tags_and_operator", s.UseTagsAndOperator)
 	d.Set("is_private", s.IsPrivate)
+
+	// if the dashboard is private, we either do nothing
+	// or set the key to a new value if there is any
+	if s.IsPrivate {
+	  if len(s.Keys) > 0 {
+			d.Set("key", s.Keys[0].RawKey)
+		}
+	} else {
+		// if the dashboard is public, remove the key
+		d.Set("key", nil)
+	}
+
 	return nil
 }
 
@@ -217,11 +227,9 @@ func resourceDashboardCreate(d *schema.ResourceData, client interface{}) error {
 
 	d.SetId(result.DashboardID)
 
-	if dashboard.IsPrivate {
-		var keys = []string{result.Keys[0].RawKey}
-		d.Set("keys", keys)
-	}
-	return resourceDashboardRead(d, client)
+	// we cannot take the detour through resourceDashboardRead since
+	// we would not get the keys back from an additional GET call
+	return resourceDataFromDashboard(result, d)
 }
 
 func resourceDashboardUpdate(d *schema.ResourceData, client interface{}) error {
@@ -236,7 +244,10 @@ func resourceDashboardUpdate(d *schema.ResourceData, client interface{}) error {
 		return fmt.Errorf("resourceDashboardUpdate: API error: %w", err)
 	}
 	d.SetId(result.DashboardID)
-	return resourceDashboardRead(d, client)
+
+	// we cannot take the detour through resourceDashboardRead since
+	// we would not get the keys back from an additional GET call
+	return resourceDataFromDashboard(result, d)
 }
 
 func resourceDashboardDelete(d *schema.ResourceData, client interface{}) error {
