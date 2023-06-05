@@ -144,11 +144,11 @@ func resourceDashboard() *schema.Resource {
 				Default:     false,
 				Description: "Set your dashboard as private and generate key.",
 			},
-			// moving to TypeString here since https://github.com/hashicorp/terraform-plugin-sdk/issues/792
+			// moving to TypeString here https://github.com/hashicorp/terraform-plugin-sdk/issues/792
 			"key": {
-				Type:      schema.TypeString,
-				Computed:  true,
-				Sensitive: true,
+				Type:        schema.TypeString,
+				Computed:    true,
+				Sensitive:   true,
 				Description: "The access key when the dashboard is private.",
 			},
 		},
@@ -201,7 +201,7 @@ func resourceDataFromDashboard(s *checkly.Dashboard, d *schema.ResourceData) err
 	// if the dashboard is private, we either do nothing
 	// or set the key to a new value if there is any
 	if s.IsPrivate {
-	  if len(s.Keys) > 0 {
+		if len(s.Keys) > 0 {
 			d.Set("key", s.Keys[0].RawKey)
 		}
 	} else {
