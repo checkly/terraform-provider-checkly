@@ -44,6 +44,7 @@ resource "checkly_dashboard" "dashboard_1" {
 - `favicon` (String) A URL pointing to an image file to use as browser favicon.
 - `header` (String) A piece of text displayed at the top of your dashboard.
 - `hide_tags` (Boolean) Show or hide the tags on the dashboard.
+- `is_private` (Boolean) Set your dashboard as private and generate key.
 - `link` (String) A link to for the dashboard logo.
 - `logo` (String) A URL pointing to an image file to use for the dashboard logo.
 - `paginate` (Boolean) Determines if pagination is on or off.
@@ -51,11 +52,11 @@ resource "checkly_dashboard" "dashboard_1" {
 - `refresh_rate` (Number) How often to refresh the dashboard in seconds. Possible values `60`, '300' and `600`.
 - `tags` (Set of String) A list of one or more tags that filter which checks to display on the dashboard.
 - `use_tags_and_operator` (Boolean) Set when to use AND operator for fetching dashboard tags.
-- `is_private` (Boolean) Set your dashboard as private and generate key.
 - `width` (String) Determines whether to use the full screen or focus in the center. Possible values `FULL` and `960PX`.
 
 ### Read-Only
 
 - `id` (String) The ID of this resource.
-- `keys` (Set of String, Sensitive) Dashboard API keys.
+- `key` (String, Sensitive) The access key when the dashboard is private.
+
 
