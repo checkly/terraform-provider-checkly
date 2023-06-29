@@ -43,6 +43,9 @@ const (
 	AcFieldSendDegraded         = "send_degraded"
 	AcFieldSSLExpiry            = "ssl_expiry"
 	AcFieldSSLExpiryThreshold   = "ssl_expiry_threshold"
+	AcFieldCall                 = "call"
+	AcFieldCallName             = "name"
+	AcFieldCallNumber           = "number"
 )
 
 func resourceAlertChannel() *schema.Resource {
@@ -101,6 +104,25 @@ func resourceAlertChannel() *schema.Resource {
 							Description: "The name of this alert channel",
 						},
 						AcFieldSMSNumber: {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The mobile number to receive the alerts",
+						},
+					},
+				},
+			},
+			AcFieldCall: {
+				Type:     schema.TypeSet,
+				Optional: true,
+				MaxItems: 1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						AcFieldCallName: {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "The name of this alert channel",
+						},
+						AcFieldCallNumber: {
 							Type:        schema.TypeString,
 							Required:    true,
 							Description: "The mobile number to receive the alerts",
@@ -334,6 +356,7 @@ func resourceAlertChannelDelete(d *schema.ResourceData, client interface{}) erro
 func resourceDataFromAlertChannel(it *checkly.AlertChannel, d *schema.ResourceData) error {
 	d.Set(AcFieldEmail, setFromEmail(it.Email))
 	d.Set(AcFieldSMS, setFromSMS(it.SMS))
+	d.Set(AcFieldCall, setFromCall(it.CALL))
 	d.Set(AcFieldSlack, setFromSlack(it.Slack))
 	d.Set(AcFieldWebhook, setFromWebhook(it.Webhook))
 	d.Set(AcFieldOpsgenie, setFromOpsgenie(it.Opsgenie))
@@ -383,7 +406,7 @@ func alertChannelFromResourceData(d *schema.ResourceData) (checkly.AlertChannel,
 		ac.SSLExpiryThreshold = &i
 	}
 
-	fields := []string{AcFieldEmail, AcFieldSMS, AcFieldSlack, AcFieldWebhook, AcFieldOpsgenie, AcFieldPagerduty}
+	fields := []string{AcFieldEmail, AcFieldSMS, AcFieldCall, AcFieldSlack, AcFieldWebhook, AcFieldOpsgenie, AcFieldPagerduty}
 	setCount := 0
 	for _, field := range fields {
 		cfgSet := (d.Get(field)).(*schema.Set)
@@ -417,6 +440,11 @@ func alertChannelConfigFromSet(channelType string, s *schema.Set) (interface{}, 
 		return &checkly.AlertChannelSMS{
 			Name:   cfg[AcFieldSMSName].(string),
 			Number: cfg[AcFieldSMSNumber].(string),
+		}, nil
+	case checkly.AlertTypeCall:
+		return &checkly.AlertChannelCall{
+			Name:   cfg[AcFieldCallName].(string),
+			Number: cfg[AcFieldCallNumber].(string),
 		}, nil
 	case checkly.AlertTypeSlack:
 		return &checkly.AlertChannelSlack{
@@ -470,6 +498,18 @@ func setFromSMS(cfg *checkly.AlertChannelSMS) []tfMap {
 		{
 			AcFieldSMSName:   cfg.Name,
 			AcFieldSMSNumber: cfg.Number,
+		},
+	}
+}
+
+func setFromCall(cfg *checkly.AlertChannelCall) []tfMap {
+	if cfg == nil {
+		return []tfMap{}
+	}
+	return []tfMap{
+		{
+			AcFieldCallName:   cfg.Name,
+			AcFieldCallNumber: cfg.Number,
 		},
 	}
 }
