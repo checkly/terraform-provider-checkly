@@ -115,6 +115,7 @@ resource "checkly_check" "example_check" {
 
 ### Optional
 
+- `call` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--call))
 - `email` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--email))
 - `opsgenie` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--opsgenie))
 - `pagerduty` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--pagerduty))
@@ -130,6 +131,15 @@ resource "checkly_check" "example_check" {
 ### Read-Only
 
 - `id` (String) The ID of this resource.
+
+<a id="nestedblock--call"></a>
+### Nested Schema for `call`
+
+Required:
+
+- `name` (String) The name of this alert channel
+- `number` (String) The mobile number to receive the alerts
+
 
 <a id="nestedblock--email"></a>
 ### Nested Schema for `email`
