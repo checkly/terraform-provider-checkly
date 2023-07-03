@@ -30,6 +30,14 @@ resource "checkly_alert_channel" "sms_ac" {
   }
 }
 
+# Phone Call Alert Channel
+resource "checkly_alert_channel" "call_ac" {
+  call {
+    name   = "phone call alert"
+    number = "+4917512345678"
+  }
+}
+
 # Opsgenie Alert Channel
 resource "checkly_alert_channel" "opsgenie_ac" {
   opsgenie {
