@@ -41,9 +41,9 @@ func accTestCase(t *testing.T, steps []resource.TestStep) {
 	})
 }
 
-//test resource using regular expressions
-//this helps testing arrays which have irregular indices;
-//needed because we get things like "alert_settings.2888461220.escalation_type": "RUN_BASED"
+// test resource using regular expressions
+// this helps testing arrays which have irregular indices;
+// needed because we get things like "alert_settings.2888461220.escalation_type": "RUN_BASED"
 func testCheckResourceAttrExpr(resource, attrExpr, value string) func(s *terraform.State) error {
 	return func(s *terraform.State) error {
 		if len(s.Modules) < 1 {

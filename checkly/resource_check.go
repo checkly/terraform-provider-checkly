@@ -317,6 +317,39 @@ func resourceCheck() *schema.Resource {
 				Optional:    true,
 				Description: "When true, the account level alert settings will be used, not the alert setting defined on this check.",
 			},
+			"heartbeat": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				MaxItems: 1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"period": {
+							Type:     schema.TypeInt,
+							Required: true,
+						},
+						"period_unit": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"grace": {
+							Type:     schema.TypeInt,
+							Required: true,
+						},
+						"grace_unit": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"ping_token": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"alert_after": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+					},
+				},
+			},
 			"request": {
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -554,6 +587,14 @@ func resourceDataFromCheck(c *checkly.Check, d *schema.ResourceData) error {
 			return fmt.Errorf("error setting request for resource %s: %w", d.Id(), err)
 		}
 	}
+
+	if c.Type == checkly.TypeHeartbeat {
+		err := d.Set("heartbeat", setFromHeartbeat(c.Heartbeat))
+		if err != nil {
+			return fmt.Errorf("error setting heartbeat for resource %s: %w %w", d.Id(), err, c.Heartbeat)
+		}
+	}
+
 	d.Set("group_id", c.GroupID)
 	d.Set("group_order", c.GroupOrder)
 	d.Set("private_locations", c.PrivateLocations)
@@ -606,6 +647,17 @@ func setFromAlertSettings(as checkly.AlertSettings) []tfMap {
 			},
 		}
 	}
+}
+
+func setFromHeartbeat(r checkly.Heartbeat) []tfMap {
+    s := tfMap{}
+	s["period"] = r.Period
+	s["period_unit"] = r.PeriodUnit
+	s["grace_unit"] = r.GraceUnit
+	s["grace"] = r.Grace
+	s["ping_token"] = r.PingToken
+	s["alert_after"] = r.AlertAfter
+	return []tfMap{s}
 }
 
 func setFromRequest(r checkly.Request) []tfMap {
@@ -707,6 +759,11 @@ func checkFromResourceData(d *schema.ResourceData) (checkly.Check, error) {
 		if check.Frequency == 0 && (check.FrequencyOffset != 10 && check.FrequencyOffset != 20 && check.FrequencyOffset != 30) {
 			return check, errors.New("when property frequency is 0, frequency_offset must be 10, 20 or 30")
 		}
+	}
+
+	if check.Type == checkly.TypeHeartbeat {
+		// this will prevent subsequent apply from causing a tf config change in browser checks
+		check.Heartbeat = heartbeatFromSet(d.Get("heartbeat").(*schema.Set))
 	}
 
 	if check.Type == checkly.TypeBrowser && check.Frequency == 0 {
@@ -838,6 +895,21 @@ func remindersFromSet(s *schema.Set) checkly.Reminders {
 	return checkly.Reminders{
 		Amount:   res["amount"].(int),
 		Interval: res["interval"].(int),
+	}
+}
+
+func heartbeatFromSet(s *schema.Set) checkly.Heartbeat {
+	if s.Len() == 0 {
+		return checkly.Heartbeat{}
+	}
+	res := s.List()[0].(tfMap)
+	return checkly.Heartbeat{
+		Period:     res["period"].(int),
+		PeriodUnit: res["period_unit"].(string),
+		Grace:      res["grace"].(int),
+		GraceUnit:  res["grace_unit"].(string),
+		PingToken:  res["ping_token"].(string),
+		AlertAfter: res["alert_after"].(string),
 	}
 }
 
