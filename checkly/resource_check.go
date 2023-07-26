@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
@@ -330,6 +331,20 @@ func resourceCheck() *schema.Resource {
 						"period_unit": {
 							Type:     schema.TypeString,
 							Required: true,
+							ValidateFunc: func(value interface{}, key string) (warns []string, errs []error) {
+								v := value.(string)
+								isValid := false
+								options := []string{"seconds", "minutes", "days"}
+								for _, option := range options {
+									if v == option {
+										isValid = true
+									}
+								}
+								if !isValid {
+									errs = append(errs, fmt.Errorf("%q must be one of %v, got %s", key, options, v))
+								}
+								return warns, errs
+							},
 						},
 						"grace": {
 							Type:     schema.TypeInt,
@@ -338,6 +353,20 @@ func resourceCheck() *schema.Resource {
 						"grace_unit": {
 							Type:     schema.TypeString,
 							Required: true,
+							ValidateFunc: func(value interface{}, key string) (warns []string, errs []error) {
+								v := value.(string)
+								isValid := false
+								options := []string{"seconds", "minutes", "days"}
+								for _, option := range options {
+									if v == option {
+										isValid = true
+									}
+								}
+								if !isValid {
+									errs = append(errs, fmt.Errorf("%q must be one of %v, got %s", key, options, v))
+								}
+								return warns, errs
+							},
 						},
 						"ping_token": {
 							Type:     schema.TypeString,
@@ -650,7 +679,7 @@ func setFromAlertSettings(as checkly.AlertSettings) []tfMap {
 }
 
 func setFromHeartbeat(r checkly.Heartbeat) []tfMap {
-    s := tfMap{}
+	s := tfMap{}
 	s["period"] = r.Period
 	s["period_unit"] = r.PeriodUnit
 	s["grace_unit"] = r.GraceUnit
@@ -764,6 +793,55 @@ func checkFromResourceData(d *schema.ResourceData) (checkly.Check, error) {
 	if check.Type == checkly.TypeHeartbeat {
 		// this will prevent subsequent apply from causing a tf config change in browser checks
 		check.Heartbeat = heartbeatFromSet(d.Get("heartbeat").(*schema.Set))
+
+		// Period / Grace validation
+		periodDaysInHours := 0
+		periodHours := 0
+		periodMinutes := 0
+		periodSseconds := 0
+		graceDaysInHours := 0
+		graceHours := 0
+		graceMinutes := 0
+		graceSseconds := 0
+
+		if check.Heartbeat.PeriodUnit == "days" {
+			periodDaysInHours = check.Heartbeat.Period * 24
+		} else if check.Heartbeat.PeriodUnit == "hours" {
+			periodHours = check.Heartbeat.Period
+		} else if check.Heartbeat.PeriodUnit == "minutes" {
+			periodMinutes = check.Heartbeat.Period
+		} else {
+			periodSseconds = check.Heartbeat.Period
+		}
+
+		if check.Heartbeat.GraceUnit == "days" {
+			graceDaysInHours = check.Heartbeat.Grace * 24
+		} else if check.Heartbeat.GraceUnit == "hours" {
+			graceHours = check.Heartbeat.Grace
+		} else if check.Heartbeat.GraceUnit == "minutes" {
+			graceMinutes = check.Heartbeat.Grace
+		} else {
+			graceSseconds = check.Heartbeat.Grace
+		}
+
+		now := time.Now().Local()
+		addedTimePeriod := time.Now().Local().Add(
+			time.Hour*time.Duration(periodDaysInHours+periodHours) +
+				time.Minute*time.Duration(periodMinutes) +
+				time.Second*time.Duration(periodSseconds))
+		addedTimeGrace := time.Now().Local().Add(
+			time.Hour*time.Duration(graceDaysInHours+graceHours) +
+				time.Minute*time.Duration(graceMinutes) +
+				time.Second*time.Duration(graceSseconds))
+
+		if addedTimePeriod.Sub(now).Hours()/float64(24) > 365 || addedTimePeriod.Sub(now).Seconds() < 30 {
+			return check, errors.New(fmt.Sprintf("period must be between 30 seconds and 365 days"))
+
+		}
+
+		if addedTimeGrace.Sub(now).Hours()/float64(24) > 365 {
+			return check, errors.New("grace must be less than 365 days")
+		}
 	}
 
 	if check.Type == checkly.TypeBrowser && check.Frequency == 0 {
