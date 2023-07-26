@@ -836,7 +836,6 @@ func checkFromResourceData(d *schema.ResourceData) (checkly.Check, error) {
 
 		if addedTimePeriod.Sub(now).Hours()/float64(24) > 365 || addedTimePeriod.Sub(now).Seconds() < 30 {
 			return check, errors.New(fmt.Sprintf("period must be between 30 seconds and 365 days"))
-
 		}
 
 		if addedTimeGrace.Sub(now).Hours()/float64(24) > 365 {
