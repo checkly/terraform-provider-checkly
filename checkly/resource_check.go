@@ -371,10 +371,7 @@ func resourceCheck() *schema.Resource {
 						"ping_token": {
 							Type:     schema.TypeString,
 							Optional: true,
-						},
-						"alert_after": {
-							Type:     schema.TypeString,
-							Optional: true,
+							Computed: true,
 						},
 					},
 				},
@@ -685,7 +682,6 @@ func setFromHeartbeat(r checkly.Heartbeat) []tfMap {
 	s["grace_unit"] = r.GraceUnit
 	s["grace"] = r.Grace
 	s["ping_token"] = r.PingToken
-	s["alert_after"] = r.AlertAfter
 	return []tfMap{s}
 }
 
@@ -986,7 +982,6 @@ func heartbeatFromSet(s *schema.Set) checkly.Heartbeat {
 		Grace:      res["grace"].(int),
 		GraceUnit:  res["grace_unit"].(string),
 		PingToken:  res["ping_token"].(string),
-		AlertAfter: res["alert_after"].(string),
 	}
 }
 
