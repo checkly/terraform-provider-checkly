@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
@@ -39,16 +38,28 @@ func resourceCheck() *schema.Resource {
 				Description: "The type of the check. Possible values are `API`, and `BROWSER`.",
 			},
 			"frequency": {
-				Type:        schema.TypeInt,
-				Optional:    true,
-				Computed:    true,
-				Description: "The frequency in minutes to run the check. Possible values are `0`, `1`, `2`, `5`, `10`, `15`, `30`, `60`, `120`, `180`, `360`, `720`, and `1440`. This is required for Browser and API checks.",
+				Type:     schema.TypeInt,
+				Required: true,
+				ValidateFunc: func(val interface{}, key string) (warns []string, errs []error) {
+					v := val.(int)
+					valid := false
+					validFreqs := []int{0, 1, 2, 5, 10, 15, 30, 60, 120, 180, 360, 720, 1440}
+					for _, i := range validFreqs {
+						if v == i {
+							valid = true
+						}
+					}
+					if !valid {
+						errs = append(errs, fmt.Errorf("%q must be one of %v, got %d", key, validFreqs, v))
+					}
+					return warns, errs
+				},
+				Description: "The frequency in minutes to run the check. Possible values are `0`, `1`, `2`, `5`, `10`, `15`, `30`, `60`, `120`, `180`, `360`, `720`, and `1440`.",
 			},
 			"frequency_offset": {
 				Type:        schema.TypeInt,
 				Optional:    true,
-				Computed:    true,
-				Description: "This property only valid for API high frequency checks. To create a high frequency check, the property `frequency` must be `0` and `frequency_offset` could be `10`, `20` or `30`.",
+				Description: "This property only valid for API high frequency checks. To create a hight frequency check, the property `frequency` must be `0` and `frequency_offset` could be `10`, `20` or `30`.",
 			},
 			"activated": {
 				Type:        schema.TypeBool,
@@ -306,64 +317,6 @@ func resourceCheck() *schema.Resource {
 				Optional:    true,
 				Description: "When true, the account level alert settings will be used, not the alert setting defined on this check.",
 			},
-			"heartbeat": {
-				Type:     schema.TypeSet,
-				Optional: true,
-				MaxItems: 1,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"period": {
-							Type:     schema.TypeInt,
-							Required: true,
-						},
-						"period_unit": {
-							Type:     schema.TypeString,
-							Required: true,
-							ValidateFunc: func(value interface{}, key string) (warns []string, errs []error) {
-								v := value.(string)
-								isValid := false
-								options := []string{"seconds", "minutes", "days"}
-								for _, option := range options {
-									if v == option {
-										isValid = true
-									}
-								}
-								if !isValid {
-									errs = append(errs, fmt.Errorf("%q must be one of %v, got %s", key, options, v))
-								}
-								return warns, errs
-							},
-						},
-						"grace": {
-							Type:     schema.TypeInt,
-							Required: true,
-						},
-						"grace_unit": {
-							Type:     schema.TypeString,
-							Required: true,
-							ValidateFunc: func(value interface{}, key string) (warns []string, errs []error) {
-								v := value.(string)
-								isValid := false
-								options := []string{"seconds", "minutes", "days"}
-								for _, option := range options {
-									if v == option {
-										isValid = true
-									}
-								}
-								if !isValid {
-									errs = append(errs, fmt.Errorf("%q must be one of %v, got %s", key, options, v))
-								}
-								return warns, errs
-							},
-						},
-						"ping_token": {
-							Type:     schema.TypeString,
-							Optional: true,
-							Computed: true,
-						},
-					},
-				},
-			},
 			"request": {
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -601,14 +554,6 @@ func resourceDataFromCheck(c *checkly.Check, d *schema.ResourceData) error {
 			return fmt.Errorf("error setting request for resource %s: %w", d.Id(), err)
 		}
 	}
-
-	if c.Type == checkly.TypeHeartbeat {
-		err := d.Set("heartbeat", setFromHeartbeat(c.Heartbeat))
-		if err != nil {
-			return fmt.Errorf("error setting heartbeat for resource %s: %w %w", d.Id(), err, c.Heartbeat)
-		}
-	}
-
 	d.Set("group_id", c.GroupID)
 	d.Set("group_order", c.GroupOrder)
 	d.Set("private_locations", c.PrivateLocations)
@@ -661,16 +606,6 @@ func setFromAlertSettings(as checkly.AlertSettings) []tfMap {
 			},
 		}
 	}
-}
-
-func setFromHeartbeat(r checkly.Heartbeat) []tfMap {
-	s := tfMap{}
-	s["period"] = r.Period
-	s["period_unit"] = r.PeriodUnit
-	s["grace_unit"] = r.GraceUnit
-	s["grace"] = r.Grace
-	s["ping_token"] = r.PingToken
-	return []tfMap{s}
 }
 
 func setFromRequest(r checkly.Request) []tfMap {
@@ -774,79 +709,8 @@ func checkFromResourceData(d *schema.ResourceData) (checkly.Check, error) {
 		}
 	}
 
-	if check.Type == checkly.TypeHeartbeat {
-		// this will prevent subsequent apply from causing a tf config change in browser checks
-		check.Heartbeat = heartbeatFromSet(d.Get("heartbeat").(*schema.Set))
-
-		// Period / Grace validation
-		periodDaysInHours := 0
-		periodHours := 0
-		periodMinutes := 0
-		periodSseconds := 0
-		graceDaysInHours := 0
-		graceHours := 0
-		graceMinutes := 0
-		graceSseconds := 0
-
-		if check.Heartbeat.PeriodUnit == "days" {
-			periodDaysInHours = check.Heartbeat.Period * 24
-		} else if check.Heartbeat.PeriodUnit == "hours" {
-			periodHours = check.Heartbeat.Period
-		} else if check.Heartbeat.PeriodUnit == "minutes" {
-			periodMinutes = check.Heartbeat.Period
-		} else {
-			periodSseconds = check.Heartbeat.Period
-		}
-
-		if check.Heartbeat.GraceUnit == "days" {
-			graceDaysInHours = check.Heartbeat.Grace * 24
-		} else if check.Heartbeat.GraceUnit == "hours" {
-			graceHours = check.Heartbeat.Grace
-		} else if check.Heartbeat.GraceUnit == "minutes" {
-			graceMinutes = check.Heartbeat.Grace
-		} else {
-			graceSseconds = check.Heartbeat.Grace
-		}
-
-		now := time.Now().Local()
-		addedTimePeriod := time.Now().Local().Add(
-			time.Hour*time.Duration(periodDaysInHours+periodHours) +
-				time.Minute*time.Duration(periodMinutes) +
-				time.Second*time.Duration(periodSseconds))
-		addedTimeGrace := time.Now().Local().Add(
-			time.Hour*time.Duration(graceDaysInHours+graceHours) +
-				time.Minute*time.Duration(graceMinutes) +
-				time.Second*time.Duration(graceSseconds))
-
-		if addedTimePeriod.Sub(now).Hours()/float64(24) > 365 || addedTimePeriod.Sub(now).Seconds() < 30 {
-			return check, errors.New(fmt.Sprintf("period must be between 30 seconds and 365 days"))
-		}
-
-		if addedTimeGrace.Sub(now).Hours()/float64(24) > 365 {
-			return check, errors.New("grace must be less than 365 days")
-		}
-	}
-
-	// Heartbeat don't need Frequency
-	if check.Type == checkly.TypeBrowser || check.Type == checkly.TypeAPI {
-
-		// Check Frequency if Browser check
-		if check.Type == checkly.TypeBrowser && check.Frequency == 0 {
-			return check, errors.New("property frequency could only be 0 for API checks. Set a frequency if you did not or update it to match frequencies allowed for browser checks.")
-		}
-
-		valid := false
-		validFreqs := []int{0, 1, 2, 5, 10, 15, 30, 60, 120, 180, 360, 720, 1440}
-		for _, i := range validFreqs {
-			if check.Frequency == i {
-				valid = true
-			}
-		}
-
-		if !valid {
-			return check, fmt.Errorf("frequency must be one of %v, got %d", validFreqs, check.Frequency)
-		}
-
+	if check.Type == checkly.TypeBrowser && check.Frequency == 0 {
+		return check, errors.New("property frequency could only be 0 for API checks")
 	}
 
 	return check, nil
@@ -974,20 +838,6 @@ func remindersFromSet(s *schema.Set) checkly.Reminders {
 	return checkly.Reminders{
 		Amount:   res["amount"].(int),
 		Interval: res["interval"].(int),
-	}
-}
-
-func heartbeatFromSet(s *schema.Set) checkly.Heartbeat {
-	if s.Len() == 0 {
-		return checkly.Heartbeat{}
-	}
-	res := s.List()[0].(tfMap)
-	return checkly.Heartbeat{
-		Period:     res["period"].(int),
-		PeriodUnit: res["period_unit"].(string),
-		Grace:      res["grace"].(int),
-		GraceUnit:  res["grace_unit"].(string),
-		PingToken:  res["ping_token"].(string),
 	}
 }
 
