@@ -42,7 +42,7 @@ func TestAccHeartbeatCheckInvalidInputs(t *testing.T) {
 func TestAccHeartbeatCheckMissingHeartbeatBlock(t *testing.T) {
 	config := `resource "checkly_heartbeat" "test" {
 		activated = true
-		name = "browser check"
+		name = "heartbeat check"
 	}`
 	accTestCase(t, []resource.TestStep{
 		{
@@ -55,7 +55,7 @@ func TestAccHeartbeatCheckMissingHeartbeatBlock(t *testing.T) {
 func TestAccHeartbeatCheckMissingHeartbeatFields(t *testing.T) {
 	config := `resource "checkly_heartbeat" "test" {
 		activated = true
-		name = "browser check"
+		name = "heartbeat check"
 		heartbeat {
 
 		}
@@ -83,7 +83,7 @@ func TestAccHeartbeatCheckMissingHeartbeatFields(t *testing.T) {
 func TestAccHeartbeatCheckPeriodTooBig(t *testing.T) {
 	config := `resource "checkly_heartbeat" "test" {
 		activated = true
-		name = "browser check"
+		name = "heartbeat check"
 		heartbeat {
 			period = 366
 			period_unit = "days"
@@ -102,7 +102,7 @@ func TestAccHeartbeatCheckPeriodTooBig(t *testing.T) {
 func TestAccHeartbeatCheckPeriodTooSmall(t *testing.T) {
 	config := `resource "checkly_heartbeat" "test" {
 		activated = true
-		name = "browser check"
+		name = "heartbeat check"
 		heartbeat {
 			period = 5
 			period_unit = "seconds"
@@ -121,7 +121,7 @@ func TestAccHeartbeatCheckPeriodTooSmall(t *testing.T) {
 func TestAccHeartbeatCheckInvalidPeriodUnit(t *testing.T) {
 	config := `resource "checkly_heartbeat" "test" {
 		activated = true
-		name = "browser check"
+		name = "heartbeat check"
 		heartbeat {
 			period = 5
 			period_unit = "lightyear"
@@ -140,7 +140,7 @@ func TestAccHeartbeatCheckInvalidPeriodUnit(t *testing.T) {
 func TestAccHeartbeatCheckInvalidGraceUnit(t *testing.T) {
 	config := `resource "checkly_heartbeat" "test" {
 		activated = true
-		name = "browser check"
+		name = "heartbeat check"
 		heartbeat {
 			period = 5
 			period_unit = "days"
@@ -152,6 +152,41 @@ func TestAccHeartbeatCheckInvalidGraceUnit(t *testing.T) {
 		{
 			Config:      config,
 			ExpectError: regexp.MustCompile(`"heartbeat\.0\.grace_unit" must be one of \[seconds minutes days\], got lightyear`),
+		},
+	})
+}
+
+func TestAccHeartbeatCheckCreate(t *testing.T) {
+	config := `resource "checkly_heartbeat" "test" {
+		activated = true
+		name = "heartbeat check"
+		heartbeat {
+			period = 5
+			period_unit = "days"
+			grace = 0
+			grace_unit = "seconds"
+		}
+	}`
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: config,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_heartbeat.test",
+					"name",
+					"heartbeat check",
+				),
+				testCheckResourceAttrExpr(
+					"checkly_heartbeat.test",
+					"heartbeat.*.period",
+					"5",
+				),
+				testCheckResourceAttrExpr(
+					"checkly_heartbeat.test",
+					"heartbeat.*.period_unit",
+					"days",
+				),
+			),
 		},
 	})
 }
