@@ -39,28 +39,16 @@ func resourceCheck() *schema.Resource {
 				Description: "The type of the check. Possible values are `API`, and `BROWSER`.",
 			},
 			"frequency": {
-				Type:     schema.TypeInt,
-				Required: true,
-				ValidateFunc: func(val interface{}, key string) (warns []string, errs []error) {
-					v := val.(int)
-					valid := false
-					validFreqs := []int{0, 1, 2, 5, 10, 15, 30, 60, 120, 180, 360, 720, 1440}
-					for _, i := range validFreqs {
-						if v == i {
-							valid = true
-						}
-					}
-					if !valid {
-						errs = append(errs, fmt.Errorf("%q must be one of %v, got %d", key, validFreqs, v))
-					}
-					return warns, errs
-				},
-				Description: "The frequency in minutes to run the check. Possible values are `0`, `1`, `2`, `5`, `10`, `15`, `30`, `60`, `120`, `180`, `360`, `720`, and `1440`.",
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Computed:    true,
+				Description: "The frequency in minutes to run the check. Possible values are `0`, `1`, `2`, `5`, `10`, `15`, `30`, `60`, `120`, `180`, `360`, `720`, and `1440`. This is required for Browser and API checks.",
 			},
 			"frequency_offset": {
 				Type:        schema.TypeInt,
 				Optional:    true,
-				Description: "This property only valid for API high frequency checks. To create a hight frequency check, the property `frequency` must be `0` and `frequency_offset` could be `10`, `20` or `30`.",
+				Computed:    true,
+				Description: "This property only valid for API high frequency checks. To create a high frequency check, the property `frequency` must be `0` and `frequency_offset` could be `10`, `20` or `30`.",
 			},
 			"activated": {
 				Type:        schema.TypeBool,
@@ -839,8 +827,26 @@ func checkFromResourceData(d *schema.ResourceData) (checkly.Check, error) {
 		}
 	}
 
-	if check.Type == checkly.TypeBrowser && check.Frequency == 0 {
-		return check, errors.New("property frequency could only be 0 for API checks")
+	// Heartbeat don't need Frequency
+	if check.Type == checkly.TypeBrowser || check.Type == checkly.TypeAPI {
+
+		// Check Frequency if Browser check
+		if check.Type == checkly.TypeBrowser && check.Frequency == 0 {
+			return check, errors.New("property frequency could only be 0 for API checks. Set a frequency if you did not or update it to match frequencies allowed for browser checks.")
+		}
+
+		valid := false
+		validFreqs := []int{0, 1, 2, 5, 10, 15, 30, 60, 120, 180, 360, 720, 1440}
+		for _, i := range validFreqs {
+			if check.Frequency == i {
+				valid = true
+			}
+		}
+
+		if !valid {
+			return check, fmt.Errorf("frequency must be one of %v, got %d", validFreqs, check.Frequency)
+		}
+
 	}
 
 	return check, nil
