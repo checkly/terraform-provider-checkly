@@ -11,3 +11,4 @@ dist/*
 *.tfvars
 __debug_bin
 local/*
+.idea

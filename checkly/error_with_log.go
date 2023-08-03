@@ -5,10 +5,10 @@ import (
 	"fmt"
 )
 
-//ErrorLog defines ErrorLog type
+// ErrorLog defines ErrorLog type
 type ErrorLog map[string]interface{}
 
-//ErrorWithLog defines checkly error type
+// ErrorWithLog defines checkly error type
 type ErrorWithLog struct {
 	Err  string
 	Data *ErrorLog
