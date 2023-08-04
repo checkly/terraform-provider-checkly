@@ -218,6 +218,7 @@ resource "checkly_check" "example_check" {
 - `setup_snippet_id` (Number) An ID reference to a snippet to use in the setup phase of an API check.
 - `should_fail` (Boolean) Allows to invert the behaviour of when a check is considered to fail. Allows for validating error status like 404.
 - `ssl_check` (Boolean, Deprecated) Determines if the SSL certificate should be validated for expiry.
+- `ssl_check_domain` (String) A valid fully qualified domain name (FQDN) to check its SSL certificate.
 - `tags` (Set of String) A list of tags for organizing and filtering checks.
 - `teardown_snippet_id` (Number) An ID reference to a snippet to use in the teardown phase of an API check.
 - `use_global_alert_settings` (Boolean) When true, the account level alert settings will be used, not the alert setting defined on this check.

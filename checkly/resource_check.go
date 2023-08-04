@@ -165,6 +165,11 @@ func resourceCheck() *schema.Resource {
 				Deprecated:  "The property `ssl_check` is deprecated and it's ignored by the Checkly Public API. It will be removed in a future version.",
 				Description: "Determines if the SSL certificate should be validated for expiry.",
 			},
+			"ssl_check_domain": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "A valid fully qualified domain name (FQDN) to check its SSL certificate.",
+			},
 			"setup_snippet_id": {
 				Type:        schema.TypeInt,
 				Optional:    true,
@@ -672,6 +677,7 @@ func checkFromResourceData(d *schema.ResourceData) (checkly.Check, error) {
 		DoubleCheck:               d.Get("double_check").(bool),
 		Tags:                      stringsFromSet(d.Get("tags").(*schema.Set)),
 		SSLCheck:                  d.Get("ssl_check").(bool),
+		SSLCheckDomain:            d.Get("ssl_check_domain").(string),
 		SetupSnippetID:            int64(d.Get("setup_snippet_id").(int)),
 		TearDownSnippetID:         int64(d.Get("teardown_snippet_id").(int)),
 		LocalSetupScript:          d.Get("local_setup_script").(string),
