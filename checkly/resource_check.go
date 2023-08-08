@@ -541,6 +541,10 @@ func resourceDataFromCheck(c *checkly.Check, d *schema.ResourceData) error {
 		d.Set("runtime_id", *c.RuntimeID)
 	}
 
+	if c.SSLCheckDomain != "" {
+		d.Set("ssl_check_domain", c.SSLCheckDomain)
+	}
+
 	environmentVariables := environmentVariablesFromSet(d.Get("environment_variable").([]interface{}))
 	if len(environmentVariables) > 0 {
 		d.Set("environment_variable", c.EnvironmentVariables)
