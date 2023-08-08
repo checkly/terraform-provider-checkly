@@ -713,6 +713,10 @@ func checkFromResourceData(d *schema.ResourceData) (checkly.Check, error) {
 		if check.Frequency == 0 && (check.FrequencyOffset != 10 && check.FrequencyOffset != 20 && check.FrequencyOffset != 30) {
 			return check, errors.New("when property frequency is 0, frequency_offset must be 10, 20 or 30")
 		}
+
+		if check.SSLCheckDomain != "" {
+			return check, errors.New("ssl_check_domain is allowed only for Browser checks")
+		}
 	}
 
 	if check.Type == checkly.TypeBrowser && check.Frequency == 0 {
