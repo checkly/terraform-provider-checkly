@@ -11,7 +11,7 @@ resource "checkly_check" "browser-check-1" {
     "us-west-1"
   ]
 
-  runtime_id = "2020.01"
+  runtime_id = "2023.02"
 
   script = <<EOT
 const assert = require("chai").assert;

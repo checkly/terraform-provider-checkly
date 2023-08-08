@@ -10,17 +10,17 @@ terraform {
     }
   }
 }
-variable "api_key" {
+variable "checkly_api_key" {
 }
 
-variable "account_id" {
+variable "checkly_account_id" {
 }
 
-variable "api_url" {
+variable "checkly_api_url" {
 }
 
 provider "checkly" {
-  api_key    = var.api_key
-  account_id = var.account_id
-  api_url    = var.api_url
+  api_key    = var.checkly_api_key
+  account_id = var.checkly_account_id
+  api_url    = var.checkly_api_url
 }
