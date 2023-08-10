@@ -166,4 +166,4 @@ resource "checkly_check" "example_check" {
 
 #   runtime_id = "2023.02"
 #   script = data.local_file.browser_script.content
-# }
+# } 
