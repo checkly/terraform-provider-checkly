@@ -119,19 +119,18 @@ resource "checkly_check" "browser_check_1" {
     "us-west-1"
   ]
 
-  runtime_id = "2021.06"
+  runtime_id = "2023.02"
 
   script = <<EOT
-const assert = require("chai").assert;
-const puppeteer = require("puppeteer");
+const { expect, test } = require('@playwright/test')
 
-const browser = await puppeteer.launch();
-const page = await browser.newPage();
-await page.goto("https://google.com/");
-const title = await page.title();
+test.use({ actionTimeout: 10000 })
 
-assert.equal(title, "Google");
-await browser.close();
+test('visit page and take screenshot', async ({ page }) => {
+    const response = await page.goto(process.env.ENVIRONMENT_URL || 'https://checklyhq.com')
+    await page.screenshot({ path: 'screenshot.jpg' })
+    expect(response.status(), 'should respond with correct status code').toBeLessThan(400)
+})
 EOT
 }
 
@@ -180,7 +179,7 @@ resource "checkly_check" "example_check" {
 #     "us-west-1"
 #   ]
 
-#   runtime_id = "2021.06"
+#   runtime_id = "2023.02"
 #   script = data.local_file.browser_script.content
 # }
 ```
