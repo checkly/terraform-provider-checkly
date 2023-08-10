@@ -165,6 +165,11 @@ func resourceCheck() *schema.Resource {
 				Deprecated:  "The property `ssl_check` is deprecated and it's ignored by the Checkly Public API. It will be removed in a future version.",
 				Description: "Determines if the SSL certificate should be validated for expiry.",
 			},
+			"ssl_check_domain": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "A valid fully qualified domain name (FQDN) to check its SSL certificate.",
+			},
 			"setup_snippet_id": {
 				Type:        schema.TypeInt,
 				Optional:    true,
@@ -536,6 +541,11 @@ func resourceDataFromCheck(c *checkly.Check, d *schema.ResourceData) error {
 		d.Set("runtime_id", *c.RuntimeID)
 	}
 
+	// ssl_check_domain is only supported for Browser checks
+	if c.Type == "BROWSER" && c.SSLCheckDomain != "" {
+		d.Set("ssl_check_domain", c.Type)
+	}
+
 	environmentVariables := environmentVariablesFromSet(d.Get("environment_variable").([]interface{}))
 	if len(environmentVariables) > 0 {
 		d.Set("environment_variable", c.EnvironmentVariables)
@@ -672,6 +682,7 @@ func checkFromResourceData(d *schema.ResourceData) (checkly.Check, error) {
 		DoubleCheck:               d.Get("double_check").(bool),
 		Tags:                      stringsFromSet(d.Get("tags").(*schema.Set)),
 		SSLCheck:                  d.Get("ssl_check").(bool),
+		SSLCheckDomain:            d.Get("ssl_check_domain").(string),
 		SetupSnippetID:            int64(d.Get("setup_snippet_id").(int)),
 		TearDownSnippetID:         int64(d.Get("teardown_snippet_id").(int)),
 		LocalSetupScript:          d.Get("local_setup_script").(string),
@@ -706,6 +717,10 @@ func checkFromResourceData(d *schema.ResourceData) (checkly.Check, error) {
 
 		if check.Frequency == 0 && (check.FrequencyOffset != 10 && check.FrequencyOffset != 20 && check.FrequencyOffset != 30) {
 			return check, errors.New("when property frequency is 0, frequency_offset must be 10, 20 or 30")
+		}
+
+		if check.SSLCheckDomain != "" {
+			return check, errors.New("ssl_check_domain is allowed only for Browser checks")
 		}
 	}
 
