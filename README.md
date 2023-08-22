@@ -1,7 +1,4 @@
-<p>
-  <img height="128" src="https://cdn.checklyhq.com/logos/racoon_logo.svg" align="right" />
-  <h1>Checkly Terraform Provider</h1>
-</p>
+# Checkly Terraform Provider
 
 ![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)
 [![Tests](https://github.com/checkly/terraform-provider-checkly/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/checkly/terraform-provider-checkly/actions/workflows/test.yml)
@@ -34,13 +31,3 @@ Please make sure to read the [Contributing Guide](https://github.com/checkly/ter
 
 [MIT](https://github.com/checkly/terraform-checkly-provider/blob/main/LICENSE)
 
-<br>
-<p align="center">
-  <a href="https://cdn.checklyhq.com/logos/checkly_racoon_logo_horizontal.svg" target="_blank">
-  <img width="100px" src="https://www.checklyhq.com/images/text_racoon_logo.svg" alt="Checkly" />
-  </a>
-  <br />
-  <i><sub>Code, test, and deploy synthetic monitoring at scale</sub></i>
-  <br>
-  <b><sub>From Checkly with ♥️</sub></b>
-<p>
