@@ -331,6 +331,48 @@ func resourceCheckGroup() *schema.Resource {
 					},
 				},
 			},
+			"retry_strategy": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Computed: true,
+				MaxItems: 1,
+				DefaultFunc: func() (interface{}, error) {
+					return []tfMap{}, nil
+				},
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"type": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Determines which type of retry strategy to use. Possible values are `FIXED`, `LINEAR`, or `EXPONENTIAL`.",
+						},
+						"base_backoff_seconds": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Default:     60,
+							Description: "The number of seconds to wait before the first retry attempt.",
+						},
+						"max_attempts": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Default:     2,
+							Description: "The maximum number of attempts to retry the check. Value must be between 1 and 10.",
+						},
+						"max_duration_seconds": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Default:     600,
+							Description: "The total amount of time to continue retrying the check (maximum 600 seconds).",
+						},
+						"same_region": {
+							Type:        schema.TypeBool,
+							Optional:    true,
+							Default:     true,
+							Description: "Whether retries should be run in the same region as the initial check run.",
+						},
+					},
+				},
+			},
 		},
 	}
 }
@@ -435,6 +477,8 @@ func resourceDataFromCheckGroup(g *checkly.Group, d *schema.ResourceData) error 
 		return fmt.Errorf("error setting request for resource %s: %s", d.Id(), err)
 	}
 
+	d.Set("retry_strategy", setFromRetryStrategy(g.RetryStrategy))
+
 	d.SetId(d.Id())
 	return nil
 }
@@ -465,6 +509,7 @@ func checkGroupFromResourceData(d *schema.ResourceData) (checkly.Group, error) {
 		UseGlobalAlertSettings:    d.Get("use_global_alert_settings").(bool),
 		APICheckDefaults:          apiCheckDefaultsFromSet(d.Get("api_check_defaults").(*schema.Set)),
 		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(d.Get("alert_channel_subscription").([]interface{})),
+		RetryStrategy:             retryStrategyFromSet(d.Get("retry_strategy").(*schema.Set)),
 	}
 
 	runtimeId := d.Get("runtime_id").(string)

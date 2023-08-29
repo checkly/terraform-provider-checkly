@@ -157,6 +157,7 @@ resource "checkly_check_group" "test_group1" {
 - `locations` (Set of String) An array of one or more data center locations where to run the checks.
 - `muted` (Boolean) Determines if any notifications will be sent out when a check in this group fails and/or recovers.
 - `private_locations` (Set of String) An array of one or more private locations slugs.
+- `retry_strategy` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--retry_strategy))
 - `runtime_id` (String) The id of the runtime to use for this group.
 - `setup_snippet_id` (Number) An ID reference to a snippet to use in the setup phase of an API check.
 - `tags` (Set of String) Tags for organizing and filtering checks.
@@ -271,5 +272,20 @@ Required:
 Optional:
 
 - `locked` (Boolean)
+
+
+<a id="nestedblock--retry_strategy"></a>
+### Nested Schema for `retry_strategy`
+
+Required:
+
+- `type` (String) Determines which type of retry strategy to use. Possible values are `FIXED`, `LINEAR`, or `EXPONENTIAL`.
+
+Optional:
+
+- `base_backoff_seconds` (Number) The number of seconds to wait before the first retry attempt.
+- `max_attempts` (Number) The maximum number of attempts to retry the check. Value must be between 1 and 10.
+- `max_duration_seconds` (Number) The total amount of time to continue retrying the check (maximum 600 seconds).
+- `same_region` (Boolean) Whether retries should be run in the same region as the initial check run.
 
 

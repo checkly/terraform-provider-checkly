@@ -450,6 +450,48 @@ func resourceCheck() *schema.Resource {
 				Optional:    true,
 				Description: "The position of this check in a check group. It determines in what order checks are run when a group is triggered from the API or from CI/CD.",
 			},
+			"retry_strategy": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Computed: true,
+				MaxItems: 1,
+				DefaultFunc: func() (interface{}, error) {
+					return []tfMap{}, nil
+				},
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"type": {
+							Type:        schema.TypeString,
+							Required:    true,
+							Description: "Determines which type of retry strategy to use. Possible values are `FIXED`, `LINEAR`, or `EXPONENTIAL`.",
+						},
+						"base_backoff_seconds": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Default:     60,
+							Description: "The number of seconds to wait before the first retry attempt.",
+						},
+						"max_attempts": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Default:     2,
+							Description: "The maximum number of attempts to retry the check. Value must be between 1 and 10.",
+						},
+						"max_duration_seconds": {
+							Type:        schema.TypeInt,
+							Optional:    true,
+							Default:     600,
+							Description: "The total amount of time to continue retrying the check (maximum 600 seconds).",
+						},
+						"same_region": {
+							Type:        schema.TypeBool,
+							Optional:    true,
+							Default:     true,
+							Description: "Whether retries should be run in the same region as the initial check run.",
+						},
+					},
+				},
+			},
 		},
 	}
 }
@@ -568,6 +610,7 @@ func resourceDataFromCheck(c *checkly.Check, d *schema.ResourceData) error {
 	d.Set("group_order", c.GroupOrder)
 	d.Set("private_locations", c.PrivateLocations)
 	d.Set("alert_channel_subscription", c.AlertChannelSubscriptions)
+	d.Set("retry_strategy", setFromRetryStrategy(c.RetryStrategy))
 	d.SetId(d.Id())
 	return nil
 }
@@ -666,6 +709,21 @@ func setFromBasicAuth(b *checkly.BasicAuth) []tfMap {
 	}
 }
 
+func setFromRetryStrategy(rs *checkly.RetryStrategy) []tfMap {
+	if rs == nil {
+		return []tfMap{}
+	}
+	return []tfMap{
+		{
+			"type":                 rs.Type,
+			"base_backoff_seconds": rs.BaseBackoffSeconds,
+			"max_attempts":         rs.MaxAttempts,
+			"max_duration_seconds": rs.MaxDurationSeconds,
+			"same_region":          rs.SameRegion,
+		},
+	}
+}
+
 func checkFromResourceData(d *schema.ResourceData) (checkly.Check, error) {
 	check := checkly.Check{
 		ID:                        d.Id(),
@@ -692,6 +750,7 @@ func checkFromResourceData(d *schema.ResourceData) (checkly.Check, error) {
 		GroupID:                   int64(d.Get("group_id").(int)),
 		GroupOrder:                d.Get("group_order").(int),
 		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(d.Get("alert_channel_subscription").([]interface{})),
+		RetryStrategy:             retryStrategyFromSet(d.Get("retry_strategy").(*schema.Set)),
 	}
 
 	runtimeId := d.Get("runtime_id").(string)
@@ -786,6 +845,20 @@ func alertSettingsFromSet(s *schema.Set) checkly.AlertSettings {
 	}
 
 	return alertSettings
+}
+
+func retryStrategyFromSet(s *schema.Set) *checkly.RetryStrategy {
+	if s.Len() == 0 {
+		return nil
+	}
+	res := s.List()[0].(tfMap)
+	return &checkly.RetryStrategy{
+		Type:               res["type"].(string),
+		BaseBackoffSeconds: res["base_backoff_seconds"].(int),
+		MaxAttempts:        res["max_attempts"].(int),
+		MaxDurationSeconds: res["max_duration_seconds"].(int),
+		SameRegion:         res["same_region"].(bool),
+	}
 }
 
 func alertChannelSubscriptionsFromSet(s []interface{}) []checkly.AlertChannelSubscription {
