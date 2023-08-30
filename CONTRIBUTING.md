@@ -132,6 +132,28 @@ Use [terraform-plugin-docs](https://github.com/hashicorp/terraform-plugin-docs) 
 $ make doc
 ```
 
+There currently isn't special support for running examples. To check that one of the examples is working, copy in `provider.tf` file to the particular example directory (f.ex. `examples/resources/checkly_alert_channel`). You can then run `terraform init`, `terraform plan` and `terraform apply` to test.
+```terraform
+# provider.tf
+
+variable "checkly_api_key" {}
+variable "checkly_account_id" {}
+
+terraform {
+  required_providers {
+    checkly = {
+      source = "checkly/checkly"
+      version = "1.6.9"
+    }
+  }
+}
+
+provider "checkly" {
+  api_key = var.checkly_api_key
+  account_id = var.checkly_account_id
+  
+```
+
 ### `make testacc`
 Run acceptance tests (all test must pass in order to merge a PR).
 ```sh

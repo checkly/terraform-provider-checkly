@@ -1,5 +1,5 @@
 resource "checkly_dashboard" "dashboard_1" {
-  custom_url      = "checkly"
+  custom_url      = "checkly" # Should be updated to a unique value. Otherwise, there will be a 409 conflict error.
   custom_domain   = "status.example.com"
   logo            = "https://www.checklyhq.com/logo.png"
   header          = "Public dashboard"
