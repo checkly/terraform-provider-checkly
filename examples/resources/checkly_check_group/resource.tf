@@ -39,9 +39,19 @@ resource "checkly_check_group" "test_group1" {
       password = "pass"
     }
   }
-  environment_variables = {
-    ENVTEST = "Hello world"
+
+  environment_variable {
+    key    = "TEST_ENV_VAR"
+    value  = "Hello world"
+    locked = false
   }
+
+  environment_variable {
+    key    = "ADDITIONAL_ENV_VAR"
+    value  = "test value"
+    locked = true
+  }
+
   double_check              = true
   use_global_alert_settings = false
 
@@ -50,10 +60,6 @@ resource "checkly_check_group" "test_group1" {
 
     run_based_escalation {
       failed_run_threshold = 1
-    }
-
-    time_based_escalation {
-      minutes_failing_threshold = 5
     }
 
     reminders {
@@ -67,8 +73,18 @@ resource "checkly_check_group" "test_group1" {
 
 # Add a check to a group
 resource "checkly_check" "test_check1" {
-  name                      = "My test check 1"
+  name        = "My test check 1"
+  type        = "API"
+  activated   = true
+  frequency   = 1
 
+  locations = [
+    "us-west-1"
+  ]
+
+  request {
+    url              = "https://api.example.com/"
+  }
   group_id    = checkly_check_group.test_group1.id
   group_order = 1
 }

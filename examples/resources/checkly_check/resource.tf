@@ -48,10 +48,6 @@ resource "checkly_check" "example_check_2" {
       failed_run_threshold = 1
     }
 
-    time_based_escalation {
-      minutes_failing_threshold = 5
-    }
-
     reminders {
       amount = 1
     }
