@@ -203,7 +203,7 @@ resource "checkly_check" "example_check" {
 - `alert_channel_subscription` (Block List) (see [below for nested schema](#nestedblock--alert_channel_subscription))
 - `alert_settings` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--alert_settings))
 - `degraded_response_time` (Number) The response time in milliseconds starting from which a check should be considered degraded. Possible values are between 0 and 30000. (Default `15000`).
-- `double_check` (Boolean) Setting this to `true` will trigger a retry when a check fails from the failing region and another, randomly selected region before marking the check as failed.
+- `double_check` (Boolean, Deprecated) Setting this to `true` will trigger a retry when a check fails from the failing region and another, randomly selected region before marking the check as failed.
 - `environment_variable` (Block List) Key/value pairs for setting environment variables during check execution, add locked = true to keep value hidden. These are only relevant for browser checks. Use global environment variables whenever possible. (see [below for nested schema](#nestedblock--environment_variable))
 - `environment_variables` (Map of String, Deprecated) Key/value pairs for setting environment variables during check execution. These are only relevant for browser checks. Use global environment variables whenever possible.
 - `frequency_offset` (Number) This property only valid for API high frequency checks. To create a hight frequency check, the property `frequency` must be `0` and `frequency_offset` could be `10`, `20` or `30`.
@@ -216,7 +216,7 @@ resource "checkly_check" "example_check" {
 - `muted` (Boolean) Determines if any notifications will be sent out when a check fails/degrades/recovers.
 - `private_locations` (Set of String) An array of one or more private locations slugs.
 - `request` (Block Set, Max: 1) An API check might have one request config. (see [below for nested schema](#nestedblock--request))
-- `retry_strategy` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--retry_strategy))
+- `retry_strategy` (Block Set, Max: 1) A strategy for retrying failed check runs. (see [below for nested schema](#nestedblock--retry_strategy))
 - `runtime_id` (String) The id of the runtime to use for this check.
 - `script` (String) A valid piece of Node.js JavaScript code describing a browser interaction with the Puppeteer/Playwright framework or a reference to an external JavaScript file.
 - `setup_snippet_id` (Number) An ID reference to a snippet to use in the setup phase of an API check.

@@ -150,6 +150,7 @@ func resourceCheck() *schema.Resource {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Description: "Setting this to `true` will trigger a retry when a check fails from the failing region and another, randomly selected region before marking the check as failed.",
+				Deprecated: "The property `double_check` is deprecated and will be removed in a future version. To enable retries for failed check runs, use the `retry_strategy` property instead.",
 			},
 			"tags": {
 				Type:     schema.TypeSet,
@@ -458,6 +459,7 @@ func resourceCheck() *schema.Resource {
 				DefaultFunc: func() (interface{}, error) {
 					return []tfMap{}, nil
 				},
+				Description: "A strategy for retrying failed check runs.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"type": {
