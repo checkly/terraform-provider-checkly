@@ -68,6 +68,14 @@ resource "checkly_check" "example_check_2" {
     }
   }
 
+  retry_strategy {
+    type = "FIXED"
+    base_backoff_seconds = 60
+    max_duration_seconds = 600
+    max_attempts = 3
+    same_region = false
+  }
+
   request {
     follow_redirects = true
     skip_ssl         = false
@@ -208,6 +216,7 @@ resource "checkly_check" "example_check" {
 - `muted` (Boolean) Determines if any notifications will be sent out when a check fails/degrades/recovers.
 - `private_locations` (Set of String) An array of one or more private locations slugs.
 - `request` (Block Set, Max: 1) An API check might have one request config. (see [below for nested schema](#nestedblock--request))
+- `retry_strategy` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--retry_strategy))
 - `runtime_id` (String) The id of the runtime to use for this check.
 - `script` (String) A valid piece of Node.js JavaScript code describing a browser interaction with the Puppeteer/Playwright framework or a reference to an external JavaScript file.
 - `setup_snippet_id` (Number) An ID reference to a snippet to use in the setup phase of an API check.
@@ -330,5 +339,21 @@ Required:
 
 - `password` (String)
 - `username` (String)
+
+
+
+<a id="nestedblock--retry_strategy"></a>
+### Nested Schema for `retry_strategy`
+
+Required:
+
+- `type` (String) Determines which type of retry strategy to use. Possible values are `FIXED`, `LINEAR`, or `EXPONENTIAL`.
+
+Optional:
+
+- `base_backoff_seconds` (Number) The number of seconds to wait before the first retry attempt.
+- `max_attempts` (Number) The maximum number of attempts to retry the check. Value must be between 1 and 10.
+- `max_duration_seconds` (Number) The total amount of time to continue retrying the check (maximum 600 seconds).
+- `same_region` (Boolean) Whether retries should be run in the same region as the initial check run.
 
 
