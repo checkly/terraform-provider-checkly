@@ -67,7 +67,6 @@ resource "checkly_check_group" "test_group1" {
     locked = true
   }
 
-  double_check              = true
   use_global_alert_settings = false
 
   alert_settings {
