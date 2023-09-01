@@ -20,7 +20,6 @@ resource "checkly_check" "example_check" {
   activated                 = true
   should_fail               = false
   frequency                 = 1
-  double_check              = true
   use_global_alert_settings = true
 
   locations = [
@@ -46,7 +45,6 @@ resource "checkly_check" "example_check_2" {
   activated              = true
   should_fail            = true
   frequency              = 1
-  double_check           = true
   degraded_response_time = 5000
   max_response_time      = 10000
 
@@ -117,7 +115,6 @@ resource "checkly_check" "browser_check_1" {
   activated                 = true
   should_fail               = false
   frequency                 = 10
-  double_check              = true
   use_global_alert_settings = true
   locations = [
     "us-west-1"
@@ -177,7 +174,6 @@ resource "checkly_check" "example_check" {
 #   activated                 = true
 #   should_fail               = false
 #   frequency                 = 10
-#   double_check              = true
 #   use_global_alert_settings = true
 #   locations = [
 #     "us-west-1"

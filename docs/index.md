@@ -37,7 +37,7 @@ terraform {
   required_providers {
     checkly = {
       source = "checkly/checkly"
-      version = "1.6.10"
+      version = "1.7.1"
     }
   }
 }
@@ -55,7 +55,6 @@ resource "checkly_check" "example_check" {
   activated                 = true
   should_fail               = false
   frequency                 = 10
-  double_check              = true
   use_global_alert_settings = true
 
   locations = [
