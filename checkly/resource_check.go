@@ -473,11 +473,11 @@ func resourceCheck() *schema.Resource {
 							Default:     60,
 							Description: "The number of seconds to wait before the first retry attempt.",
 						},
-						"max_attempts": {
+						"max_retries": {
 							Type:        schema.TypeInt,
 							Optional:    true,
 							Default:     2,
-							Description: "The maximum number of attempts to retry the check. Value must be between 1 and 10.",
+							Description: "The maximum number of times to retry the check. Value must be between 1 and 10.",
 						},
 						"max_duration_seconds": {
 							Type:        schema.TypeInt,
@@ -719,7 +719,7 @@ func setFromRetryStrategy(rs *checkly.RetryStrategy) []tfMap {
 		{
 			"type":                 rs.Type,
 			"base_backoff_seconds": rs.BaseBackoffSeconds,
-			"max_attempts":         rs.MaxAttempts,
+			"max_retries":          rs.MaxRetries,
 			"max_duration_seconds": rs.MaxDurationSeconds,
 			"same_region":          rs.SameRegion,
 		},
@@ -857,7 +857,7 @@ func retryStrategyFromSet(s *schema.Set) *checkly.RetryStrategy {
 	return &checkly.RetryStrategy{
 		Type:               res["type"].(string),
 		BaseBackoffSeconds: res["base_backoff_seconds"].(int),
-		MaxAttempts:        res["max_attempts"].(int),
+		MaxRetries:         res["max_retries"].(int),
 		MaxDurationSeconds: res["max_duration_seconds"].(int),
 		SameRegion:         res["same_region"].(bool),
 	}
