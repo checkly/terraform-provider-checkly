@@ -72,7 +72,7 @@ resource "checkly_check" "example_check_2" {
     type = "FIXED"
     base_backoff_seconds = 60
     max_duration_seconds = 600
-    max_attempts = 3
+    max_retries = 3
     same_region = false
   }
 
@@ -352,8 +352,8 @@ Required:
 Optional:
 
 - `base_backoff_seconds` (Number) The number of seconds to wait before the first retry attempt.
-- `max_attempts` (Number) The maximum number of attempts to retry the check. Value must be between 1 and 10.
 - `max_duration_seconds` (Number) The total amount of time to continue retrying the check (maximum 600 seconds).
+- `max_retries` (Number) The maximum number of times to retry the check. Value must be between 1 and 10.
 - `same_region` (Boolean) Whether retries should be run in the same region as the initial check run.
 
 

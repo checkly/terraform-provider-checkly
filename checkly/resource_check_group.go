@@ -354,11 +354,11 @@ func resourceCheckGroup() *schema.Resource {
 							Default:     60,
 							Description: "The number of seconds to wait before the first retry attempt.",
 						},
-						"max_attempts": {
+						"max_retries": {
 							Type:        schema.TypeInt,
 							Optional:    true,
 							Default:     2,
-							Description: "The maximum number of attempts to retry the check. Value must be between 1 and 10.",
+							Description: "The maximum number of times to retry the check. Value must be between 1 and 10.",
 						},
 						"max_duration_seconds": {
 							Type:        schema.TypeInt,

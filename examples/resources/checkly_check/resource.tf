@@ -57,7 +57,7 @@ resource "checkly_check" "example_check_2" {
     type = "FIXED"
     base_backoff_seconds = 60
     max_duration_seconds = 600
-    max_attempts = 3
+    max_retries = 3
     same_region = false
   }
 
