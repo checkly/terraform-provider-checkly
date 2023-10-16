@@ -533,7 +533,7 @@ func resourceCheckCreate(d *schema.ResourceData, client interface{}) error {
 func resourceCheckRead(d *schema.ResourceData, client interface{}) error {
 	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
 	defer cancel()
-	check, err := client.(checkly.Client).Get(ctx, d.Id())
+	check, err := client.(checkly.Client).GetCheck(ctx, d.Id())
 	if err != nil {
 		if strings.Contains(err.Error(), "404") {
 			//if resource is deleted remotely, then mark it as
@@ -554,7 +554,7 @@ func resourceCheckUpdate(d *schema.ResourceData, client interface{}) error {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
 	defer cancel()
-	_, err = client.(checkly.Client).Update(ctx, check.ID, check)
+	_, err = client.(checkly.Client).UpdateCheck(ctx, check.ID, check)
 	if err != nil {
 		checkJSON, _ := json.Marshal(check)
 		return fmt.Errorf("API error 3: Couldn't update check, Error: %w, \nCheck: %s", err, checkJSON)
@@ -566,7 +566,7 @@ func resourceCheckUpdate(d *schema.ResourceData, client interface{}) error {
 func resourceCheckDelete(d *schema.ResourceData, client interface{}) error {
 	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
 	defer cancel()
-	if err := client.(checkly.Client).Delete(ctx, d.Id()); err != nil {
+	if err := client.(checkly.Client).DeleteCheck(ctx, d.Id()); err != nil {
 		return fmt.Errorf("API error 4: Couldn't delete Check %s, Error: %w", d.Id(), err)
 	}
 	return nil
