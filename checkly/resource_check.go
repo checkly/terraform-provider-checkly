@@ -35,7 +35,7 @@ func resourceCheck() *schema.Resource {
 			"type": {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "The type of the check. Possible values are `API`, and `BROWSER`.",
+				Description: "The type of the check. Possible values are `API`, `BROWSER`, and `MULTI_STEP`.",
 			},
 			"frequency": {
 				Type:     schema.TypeInt,
@@ -505,7 +505,22 @@ func resourceCheckCreate(d *schema.ResourceData, client interface{}) error {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
 	defer cancel()
-	newCheck, err := client.(checkly.Client).Create(ctx, check)
+
+	if check.Type == "MULTI_STEP" {
+
+		checkRuntime, err := client.(checkly.Client).GetRuntime(ctx, *check.RuntimeID)
+
+		if err != nil {
+			return fmt.Errorf("API error while fetching runtimes: %w", err)
+		}
+
+		if !checkRuntime.MultiStepSupport {
+			return fmt.Errorf("runtime %s does not support MUTLI_STEP checks", *check.RuntimeID)
+		}
+
+	}
+
+	newCheck, err := client.(checkly.Client).CreateCheck(ctx, check)
 
 	if err != nil {
 		checkJSON, _ := json.Marshal(check)
