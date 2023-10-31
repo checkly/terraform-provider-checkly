@@ -510,7 +510,7 @@ const multiStepCheck_basic = `
 		double_check              = true
 		use_global_alert_settings = true
 		locations                 = [ "us-east-1", "eu-central-1" ]
-		tags                      = [ "browser", "e2e" ]
+		tags                      = [ "api", "multi-step" ]
 		runtime_id				  = "2023.09"
 		script                    = "console.log('test')"
 	}
