@@ -212,6 +212,75 @@ func TestAccApiCheckBasic(t *testing.T) {
 	})
 }
 
+func TestAccMultiStepCheckBasic(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: multiStepCheck_basic,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check.test",
+					"name",
+					"MultiStep Check",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test",
+					"type",
+					"MULTI_STEP",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test",
+					"runtime_id",
+					"2023.09",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test",
+					"activated",
+					"true",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test",
+					"script",
+					"console.log('test')",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test",
+					"locations.#",
+					"2",
+				),
+				testCheckResourceAttrExpr(
+					"checkly_check.test",
+					"locations.*",
+					"us-east-1",
+				),
+				testCheckResourceAttrExpr(
+					"checkly_check.test",
+					"locations.*",
+					"eu-central-1",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test",
+					"tags.#",
+					"2",
+				),
+				testCheckResourceAttrExpr(
+					"checkly_check.test",
+					"tags.*",
+					"browser",
+				),
+				testCheckResourceAttrExpr(
+					"checkly_check.test",
+					"tags.*",
+					"e2e",
+				),
+				resource.TestCheckNoResourceAttr(
+					"checkly_check.test",
+					"request",
+				),
+			),
+		},
+	})
+}
+
 func TestAccApiCheckFull(t *testing.T) {
 	accTestCase(t, []resource.TestStep{
 		{
@@ -431,6 +500,22 @@ const browserCheck_basic = `
 		script                    = "console.log('test')"
 	}
 `
+const multiStepCheck_basic = `
+	resource "checkly_check" "test" {
+		name                      = "MultiStep Check"
+		type                      = "MULTI_STEP"
+		activated                 = true
+		should_fail               = false
+		frequency                 = 720
+		double_check              = true
+		use_global_alert_settings = true
+		locations                 = [ "us-east-1", "eu-central-1" ]
+		tags                      = [ "api", "multi-step" ]
+		runtime_id				  = "2023.09"
+		script                    = "console.log('test')"
+	}
+`
+
 const apiCheck_basic = `
 	resource "checkly_check" "test" {
 	  name                      = "API Check 1"

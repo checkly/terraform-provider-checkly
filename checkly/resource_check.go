@@ -35,7 +35,7 @@ func resourceCheck() *schema.Resource {
 			"type": {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "The type of the check. Possible values are `API`, and `BROWSER`.",
+				Description: "The type of the check. Possible values are `API`, `BROWSER`, and `MULTI_STEP`.",
 			},
 			"frequency": {
 				Type:     schema.TypeInt,
@@ -505,7 +505,22 @@ func resourceCheckCreate(d *schema.ResourceData, client interface{}) error {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
 	defer cancel()
-	newCheck, err := client.(checkly.Client).Create(ctx, check)
+
+	if check.Type == "MULTI_STEP" {
+
+		checkRuntime, err := client.(checkly.Client).GetRuntime(ctx, *check.RuntimeID)
+
+		if err != nil {
+			return fmt.Errorf("API error while fetching runtimes: %w", err)
+		}
+
+		if !checkRuntime.MultiStepSupport {
+			return fmt.Errorf("runtime %s does not support MUTLI_STEP checks", *check.RuntimeID)
+		}
+
+	}
+
+	newCheck, err := client.(checkly.Client).CreateCheck(ctx, check)
 
 	if err != nil {
 		checkJSON, _ := json.Marshal(check)
@@ -518,7 +533,7 @@ func resourceCheckCreate(d *schema.ResourceData, client interface{}) error {
 func resourceCheckRead(d *schema.ResourceData, client interface{}) error {
 	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
 	defer cancel()
-	check, err := client.(checkly.Client).Get(ctx, d.Id())
+	check, err := client.(checkly.Client).GetCheck(ctx, d.Id())
 	if err != nil {
 		if strings.Contains(err.Error(), "404") {
 			//if resource is deleted remotely, then mark it as
@@ -539,7 +554,7 @@ func resourceCheckUpdate(d *schema.ResourceData, client interface{}) error {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
 	defer cancel()
-	_, err = client.(checkly.Client).Update(ctx, check.ID, check)
+	_, err = client.(checkly.Client).UpdateCheck(ctx, check.ID, check)
 	if err != nil {
 		checkJSON, _ := json.Marshal(check)
 		return fmt.Errorf("API error 3: Couldn't update check, Error: %w, \nCheck: %s", err, checkJSON)
@@ -551,7 +566,7 @@ func resourceCheckUpdate(d *schema.ResourceData, client interface{}) error {
 func resourceCheckDelete(d *schema.ResourceData, client interface{}) error {
 	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
 	defer cancel()
-	if err := client.(checkly.Client).Delete(ctx, d.Id()); err != nil {
+	if err := client.(checkly.Client).DeleteCheck(ctx, d.Id()); err != nil {
 		return fmt.Errorf("API error 4: Couldn't delete Check %s, Error: %w", d.Id(), err)
 	}
 	return nil
