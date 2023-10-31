@@ -192,7 +192,7 @@ resource "checkly_check" "example_check" {
 - `activated` (Boolean) Determines if the check is running or not. Possible values `true`, and `false`.
 - `frequency` (Number) The frequency in minutes to run the check. Possible values are `0`, `1`, `2`, `5`, `10`, `15`, `30`, `60`, `120`, `180`, `360`, `720`, and `1440`.
 - `name` (String) The name of the check.
-- `type` (String) The type of the check. Possible values are `API`, and `BROWSER`.
+- `type` (String) The type of the check. Possible values are `API`, `BROWSER`, and `MULTI_STEP`.
 
 ### Optional
 
