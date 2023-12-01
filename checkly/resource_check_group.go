@@ -43,6 +43,11 @@ func resourceCheckGroup() *schema.Resource {
 				Optional:    true,
 				Description: "Determines if any notifications will be sent out when a check in this group fails and/or recovers.",
 			},
+			"run_parallel": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "Determines if the checks in the group should run in all selected locations in parallel or round-robin.",
+			},
 			"locations": {
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -447,6 +452,7 @@ func resourceDataFromCheckGroup(g *checkly.Group, d *schema.ResourceData) error 
 	d.Set("concurrency", g.Concurrency)
 	d.Set("activated", g.Activated)
 	d.Set("muted", g.Muted)
+	d.Set("run_parallel", g.RunParallel)
 	d.Set("locations", g.Locations)
 	d.Set("double_check", g.DoubleCheck)
 	d.Set("setup_snippet_id", g.SetupSnippetID)
@@ -500,6 +506,7 @@ func checkGroupFromResourceData(d *schema.ResourceData) (checkly.Group, error) {
 		Concurrency:               d.Get("concurrency").(int),
 		Activated:                 d.Get("activated").(bool),
 		Muted:                     d.Get("muted").(bool),
+		RunParallel:               d.Get("run_parallel").(bool),
 		Locations:                 stringsFromSet(d.Get("locations").(*schema.Set)),
 		DoubleCheck:               d.Get("double_check").(bool),
 		Tags:                      stringsFromSet(d.Get("tags").(*schema.Set)),
