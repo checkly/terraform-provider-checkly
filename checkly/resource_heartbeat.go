@@ -163,7 +163,7 @@ func resourceHeartbeat() *schema.Resource {
 							ValidateFunc: func(value interface{}, key string) (warns []string, errs []error) {
 								v := value.(string)
 								isValid := false
-								options := []string{"seconds", "minutes", "days"}
+								options := []string{"seconds", "minutes", "hours", "days"}
 								for _, option := range options {
 									if v == option {
 										isValid = true
@@ -185,7 +185,7 @@ func resourceHeartbeat() *schema.Resource {
 							ValidateFunc: func(value interface{}, key string) (warns []string, errs []error) {
 								v := value.(string)
 								isValid := false
-								options := []string{"seconds", "minutes", "days"}
+								options := []string{"seconds", "minutes", "hours", "days"}
 								for _, option := range options {
 									if v == option {
 										isValid = true
