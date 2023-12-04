@@ -38,10 +38,10 @@ Heartbeats allows you to monitor your cron jobs and set up alerting, so you get 
 
 Required:
 
-- `grace` (Number) How long Checkly should wait before triggering any alerts when a ping does not arrive within the set period. (Default `30`)
-- `grace_unit` (String) Possible values `seconds`, `minutes`, `hours` and `days`. (Default `minutes`)
-- `period` (Number) How often you expect a ping to the ping URL. (Default `1`)
-- `period_unit` (String) Possible values `seconds`, `minutes`, `hours` and `days`. (Default `hours`)
+- `grace` (Number) How long Checkly should wait before triggering any alerts when a ping does not arrive within the set period.
+- `grace_unit` (String) Possible values `seconds`, `minutes`, `hours` and `days`.
+- `period` (Number) How often you expect a ping to the ping URL.
+- `period_unit` (String) Possible values `seconds`, `minutes`, `hours` and `days`.
 
 Optional:
 
