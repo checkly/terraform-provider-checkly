@@ -156,6 +156,8 @@ func resourceHeartbeat() *schema.Resource {
 						"period": {
 							Type:     schema.TypeInt,
 							Required: true,
+							Default:  1,
+							Description: "How often you expect a ping to the ping URL. (Default `1`)",
 						},
 						"period_unit": {
 							Type:     schema.TypeString,
@@ -174,10 +176,14 @@ func resourceHeartbeat() *schema.Resource {
 								}
 								return warns, errs
 							},
+							Default: "hours",
+							Description: "Possible values `seconds`, `minutes`, `hours` and `days`. (Default `hours`)",
 						},
 						"grace": {
 							Type:     schema.TypeInt,
 							Required: true,
+							Default:  30,
+							Description: "How long Checkly should wait before triggering any alerts when a ping does not arrive within the set period. (Default `30`)",
 						},
 						"grace_unit": {
 							Type:     schema.TypeString,
@@ -196,11 +202,14 @@ func resourceHeartbeat() *schema.Resource {
 								}
 								return warns, errs
 							},
+							Default: "minutes",
+							Description: "Possible values `seconds`, `minutes`, `hours` and `days`. (Default `minutes`)",
 						},
 						"ping_token": {
 							Type:     schema.TypeString,
 							Optional: true,
 							Computed: true,
+							Description: "Custom token to generate your ping URL. Checkly will expect a ping to `https://ping.checklyhq.com/[PING_TOKEN]`.",
 						},
 					},
 				},
