@@ -231,14 +231,8 @@ github.com/bgentry/speakeasy v0.1.0/go.mod h1:+zsyZBPWlz7T6j88CTgSN5bM796AkVf0kB
 github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=
 github.com/cespare/xxhash v1.1.0/go.mod h1:XrSqR1VqqWfGrhpAt58auRo0WTKS1nRRg3ghfAqPWnc=
 github.com/cespare/xxhash/v2 v2.1.1/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XLFGgcrjCOs=
-github.com/checkly/checkly-go-sdk v1.6.7 h1:OhTsFwFKZYV9LsYyV1SuoU0Ql113Zk1D+JBTt+uVm7c=
-github.com/checkly/checkly-go-sdk v1.6.7/go.mod h1:Pd6tBOggAe41NnCU5KwqA8JvD6J20/IctszT2E0AvHo=
-github.com/checkly/checkly-go-sdk v1.6.8 h1:7rQ+zrwlLYYOc0u5jxDT1+atLFnwWmaqJluDLJtrjW0=
-github.com/checkly/checkly-go-sdk v1.6.8/go.mod h1:Pd6tBOggAe41NnCU5KwqA8JvD6J20/IctszT2E0AvHo=
-github.com/checkly/checkly-go-sdk v1.6.9 h1:2Cfr2I0VnHmB4oL7BOw25WYuyz5Lm04N50k1HUsX2Lk=
-github.com/checkly/checkly-go-sdk v1.6.9/go.mod h1:Pd6tBOggAe41NnCU5KwqA8JvD6J20/IctszT2E0AvHo=
-github.com/checkly/checkly-go-sdk v1.7.0 h1:3BXWIE1YjXfWTwuhZ5bE6QkcfJbchFE/Y/pPaQtT0+c=
-github.com/checkly/checkly-go-sdk v1.7.0/go.mod h1:Pd6tBOggAe41NnCU5KwqA8JvD6J20/IctszT2E0AvHo=
+github.com/checkly/checkly-go-sdk v1.7.1 h1:6pIu821nf2OjzdaZ8hfNGKcIMaVLzaU7JWDJlk66XGM=
+github.com/checkly/checkly-go-sdk v1.7.1/go.mod h1:Pd6tBOggAe41NnCU5KwqA8JvD6J20/IctszT2E0AvHo=
 github.com/cheggaaa/pb v1.0.27/go.mod h1:pQciLPpbU0oxA0h+VJYYLxO+XeDQb5pZijXscXHm81s=
 github.com/chzyer/logex v1.1.10/go.mod h1:+Ywpsq7O8HXn0nuIou7OrIPyXbp3wmkHB+jjWRnGsAI=
 github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e/go.mod h1:nSuG5e5PlCu98SY8svDHJxuZscDgtXS6KTTbou5AhLI=
