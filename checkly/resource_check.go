@@ -76,6 +76,11 @@ func resourceCheck() *schema.Resource {
 				Optional:    true,
 				Description: "Allows to invert the behaviour of when a check is considered to fail. Allows for validating error status like 404.",
 			},
+			"run_parallel": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "Determines if the check should run in all selected locations in parallel or round-robin.",
+			},
 			"locations": {
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -578,6 +583,7 @@ func resourceDataFromCheck(c *checkly.Check, d *schema.ResourceData) error {
 	d.Set("activated", c.Activated)
 	d.Set("muted", c.Muted)
 	d.Set("should_fail", c.ShouldFail)
+	d.Set("run_parallel", c.RunParallel)
 	d.Set("locations", c.Locations)
 	d.Set("script", c.Script)
 	d.Set("degraded_response_time", c.DegradedResponseTime)
@@ -750,6 +756,7 @@ func checkFromResourceData(d *schema.ResourceData) (checkly.Check, error) {
 		Activated:                 d.Get("activated").(bool),
 		Muted:                     d.Get("muted").(bool),
 		ShouldFail:                d.Get("should_fail").(bool),
+		RunParallel:               d.Get("run_parallel").(bool),
 		Locations:                 stringsFromSet(d.Get("locations").(*schema.Set)),
 		Script:                    d.Get("script").(string),
 		DegradedResponseTime:      d.Get("degraded_response_time").(int),
