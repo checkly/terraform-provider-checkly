@@ -156,6 +156,7 @@ func resourceHeartbeat() *schema.Resource {
 						"period": {
 							Type:     schema.TypeInt,
 							Required: true,
+							Description: "How often you expect a ping to the ping URL.",
 						},
 						"period_unit": {
 							Type:     schema.TypeString,
@@ -163,7 +164,7 @@ func resourceHeartbeat() *schema.Resource {
 							ValidateFunc: func(value interface{}, key string) (warns []string, errs []error) {
 								v := value.(string)
 								isValid := false
-								options := []string{"seconds", "minutes", "days"}
+								options := []string{"seconds", "minutes", "hours", "days"}
 								for _, option := range options {
 									if v == option {
 										isValid = true
@@ -174,10 +175,12 @@ func resourceHeartbeat() *schema.Resource {
 								}
 								return warns, errs
 							},
+							Description: "Possible values `seconds`, `minutes`, `hours` and `days`.",
 						},
 						"grace": {
 							Type:     schema.TypeInt,
 							Required: true,
+							Description: "How long Checkly should wait before triggering any alerts when a ping does not arrive within the set period.",
 						},
 						"grace_unit": {
 							Type:     schema.TypeString,
@@ -185,7 +188,7 @@ func resourceHeartbeat() *schema.Resource {
 							ValidateFunc: func(value interface{}, key string) (warns []string, errs []error) {
 								v := value.(string)
 								isValid := false
-								options := []string{"seconds", "minutes", "days"}
+								options := []string{"seconds", "minutes", "hours", "days"}
 								for _, option := range options {
 									if v == option {
 										isValid = true
@@ -196,11 +199,13 @@ func resourceHeartbeat() *schema.Resource {
 								}
 								return warns, errs
 							},
+							Description: "Possible values `seconds`, `minutes`, `hours` and `days`.",
 						},
 						"ping_token": {
 							Type:     schema.TypeString,
 							Optional: true,
 							Computed: true,
+							Description: "Custom token to generate your ping URL. Checkly will expect a ping to `https://ping.checklyhq.com/[PING_TOKEN]`.",
 						},
 					},
 				},
