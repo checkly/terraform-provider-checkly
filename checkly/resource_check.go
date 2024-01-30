@@ -205,7 +205,7 @@ func resourceCheck() *schema.Resource {
 			"alert_channel_subscription": {
 				Type:        schema.TypeList,
 				Optional:    true,
-				Description: "An array of channel ID and if it's activated or not. If you don't set at least one alert subscription for your check, we won't be able to alert you in case something goes wrong with it.",
+				Description: "An array of channel IDs and whether they're activated or not. If you don't set at least one alert subscription for your check, we won't be able to alert you in case something goes wrong with it.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"channel_id": {
