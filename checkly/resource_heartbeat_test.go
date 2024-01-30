@@ -132,7 +132,7 @@ func TestAccHeartbeatCheckInvalidPeriodUnit(t *testing.T) {
 	accTestCase(t, []resource.TestStep{
 		{
 			Config:      config,
-			ExpectError: regexp.MustCompile(`"heartbeat\.0\.period_unit" must be one of \[seconds minutes days\], got lightyear`),
+			ExpectError: regexp.MustCompile(`"heartbeat\.0\.period_unit" must be one of \[seconds minutes hours days\], got lightyear`),
 		},
 	})
 }
@@ -151,7 +151,7 @@ func TestAccHeartbeatCheckInvalidGraceUnit(t *testing.T) {
 	accTestCase(t, []resource.TestStep{
 		{
 			Config:      config,
-			ExpectError: regexp.MustCompile(`"heartbeat\.0\.grace_unit" must be one of \[seconds minutes days\], got lightyear`),
+			ExpectError: regexp.MustCompile(`"heartbeat\.0\.grace_unit" must be one of \[seconds minutes hours days\], got lightyear`),
 		},
 	})
 }

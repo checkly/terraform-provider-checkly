@@ -157,6 +157,7 @@ resource "checkly_check_group" "test_group1" {
 - `muted` (Boolean) Determines if any notifications will be sent out when a check in this group fails and/or recovers.
 - `private_locations` (Set of String) An array of one or more private locations slugs.
 - `retry_strategy` (Block Set, Max: 1) A strategy for retrying failed check runs. (see [below for nested schema](#nestedblock--retry_strategy))
+- `run_parallel` (Boolean) Determines if the checks in the group should run in all selected locations in parallel or round-robin.
 - `runtime_id` (String) The id of the runtime to use for this group.
 - `setup_snippet_id` (Number) An ID reference to a snippet to use in the setup phase of an API check.
 - `tags` (Set of String) Tags for organizing and filtering checks.
