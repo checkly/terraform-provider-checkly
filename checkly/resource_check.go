@@ -155,7 +155,7 @@ func resourceCheck() *schema.Resource {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Description: "Setting this to `true` will trigger a retry when a check fails from the failing region and another, randomly selected region before marking the check as failed.",
-				Deprecated: "The property `double_check` is deprecated and will be removed in a future version. To enable retries for failed check runs, use the `retry_strategy` property instead.",
+				Deprecated:  "The property `double_check` is deprecated and will be removed in a future version. To enable retries for failed check runs, use the `retry_strategy` property instead.",
 			},
 			"tags": {
 				Type:     schema.TypeSet,
@@ -203,8 +203,9 @@ func resourceCheck() *schema.Resource {
 				Description: "The id of the runtime to use for this check.",
 			},
 			"alert_channel_subscription": {
-				Type:     schema.TypeList,
-				Optional: true,
+				Type:        schema.TypeList,
+				Optional:    true,
+				Description: "An array of channel IDs and whether they're activated or not. If you don't set at least one alert subscription for your check, we won't be able to alert you in case something goes wrong with it.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"channel_id": {
