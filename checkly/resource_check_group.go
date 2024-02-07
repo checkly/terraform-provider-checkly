@@ -209,6 +209,26 @@ func resourceCheckGroup() *schema.Resource {
 								},
 							},
 						},
+						"parallel_run_failure_threshold": {
+							Type:     schema.TypeSet,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"enabled": {
+										Type:        schema.TypeBool,
+										Optional:    true,
+										Default:     false,
+										Description: "Applicable only for checks scheduled in parallel in multiple locations.",
+									},
+									"percentage": {
+										Type:        schema.TypeInt,
+										Optional:    true,
+										Default:     10,
+										Description: "Possible values are `10`, `20`, `30`, `40`, `50`, `60`, `70`, `80`, `100`, and `100`. (Default `10`).",
+									},
+								},
+							},
+						},
 						"ssl_certificates": {
 							Type:       schema.TypeSet,
 							Optional:   true,

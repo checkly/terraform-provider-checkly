@@ -287,6 +287,26 @@ func resourceCheck() *schema.Resource {
 								},
 							},
 						},
+						"parallel_run_failure_threshold": {
+							Type:     schema.TypeSet,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"enabled": {
+										Type:        schema.TypeBool,
+										Optional:    true,
+										Default:     false,
+										Description: "Applicable only for checks scheduled in parallel in multiple locations.",
+									},
+									"percentage": {
+										Type:        schema.TypeInt,
+										Optional:    true,
+										Default:     10,
+										Description: "Possible values are `10`, `20`, `30`, `40`, `50`, `60`, `70`, `80`, `100`, and `100`. (Default `10`).",
+									},
+								},
+							},
+						},
 						"ssl_certificates": {
 							Type:       schema.TypeSet,
 							Optional:   true,
@@ -663,6 +683,12 @@ func setFromAlertSettings(as checkly.AlertSettings) []tfMap {
 						"interval": as.Reminders.Interval,
 					},
 				},
+				"parallel_run_failure_threshold": []tfMap{
+					{
+						"enabled":    as.ParallelRunFailureThreshold.Enabled,
+						"percentage": as.ParallelRunFailureThreshold.Percentage,
+					},
+				},
 			},
 		}
 	} else {
@@ -678,6 +704,12 @@ func setFromAlertSettings(as checkly.AlertSettings) []tfMap {
 					{
 						"amount":   as.Reminders.Amount,
 						"interval": as.Reminders.Interval,
+					},
+				},
+				"parallel_run_failure_threshold": []tfMap{
+					{
+						"enabled":    as.ParallelRunFailureThreshold.Enabled,
+						"percentage": as.ParallelRunFailureThreshold.Percentage,
 					},
 				},
 			},
@@ -859,8 +891,9 @@ func alertSettingsFromSet(s *schema.Set) checkly.AlertSettings {
 	}
 	res := s.List()[0].(tfMap)
 	alertSettings := checkly.AlertSettings{
-		EscalationType: res["escalation_type"].(string),
-		Reminders:      remindersFromSet(res["reminders"].(*schema.Set)),
+		EscalationType:              res["escalation_type"].(string),
+		Reminders:                   remindersFromSet(res["reminders"].(*schema.Set)),
+		ParallelRunFailureThreshold: parallelRunFailureThresholdFromSet(res["parallel_run_failure_threshold"].(*schema.Set)),
 	}
 
 	if alertSettings.EscalationType == checkly.RunBased {
@@ -951,6 +984,17 @@ func remindersFromSet(s *schema.Set) checkly.Reminders {
 	return checkly.Reminders{
 		Amount:   res["amount"].(int),
 		Interval: res["interval"].(int),
+	}
+}
+
+func parallelRunFailureThresholdFromSet(s *schema.Set) checkly.ParallelRunFailureThreshold {
+	if s.Len() == 0 {
+		return checkly.ParallelRunFailureThreshold{}
+	}
+	res := s.List()[0].(tfMap)
+	return checkly.ParallelRunFailureThreshold{
+		Enabled:    res["enabled"].(bool),
+		Percentage: res["percentage"].(int),
 	}
 }
 
