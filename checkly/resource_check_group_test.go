@@ -416,6 +416,10 @@ const testCheckGroup_full = `
 		amount   = 2
 		interval = 5
 	  }
+		parallel_run_failure_threshold {
+		enabled = false
+		percentage = 10
+		}
 	}
 	local_setup_script    = "setup-test"
 	local_teardown_script = "teardown-test"
