@@ -601,6 +601,10 @@ const apiCheck_full = `
 	  run_based_escalation {
 		failed_run_threshold = 1
 	  }
+		parallel_run_failure_threshold {
+		enabled = false
+		percentage = 10
+		}
 	}
   }
 `

@@ -183,10 +183,20 @@ Required:
 Optional:
 
 - `escalation_type` (String) Determines what type of escalation to use. Possible values are `RUN_BASED` or `TIME_BASED`.
+- `parallel_run_failure_threshold` (Block Set) (see [below for nested schema](#nestedblock--alert_settings--parallel_run_failure_threshold))
 - `reminders` (Block Set) (see [below for nested schema](#nestedblock--alert_settings--reminders))
 - `run_based_escalation` (Block Set) (see [below for nested schema](#nestedblock--alert_settings--run_based_escalation))
 - `ssl_certificates` (Block Set, Deprecated) (see [below for nested schema](#nestedblock--alert_settings--ssl_certificates))
 - `time_based_escalation` (Block Set) (see [below for nested schema](#nestedblock--alert_settings--time_based_escalation))
+
+<a id="nestedblock--alert_settings--parallel_run_failure_threshold"></a>
+### Nested Schema for `alert_settings.parallel_run_failure_threshold`
+
+Optional:
+
+- `enabled` (Boolean) Applicable only for checks scheduled in parallel in multiple locations.
+- `percentage` (Number) Possible values are `10`, `20`, `30`, `40`, `50`, `60`, `70`, `80`, `100`, and `100`. (Default `10`).
+
 
 <a id="nestedblock--alert_settings--reminders"></a>
 ### Nested Schema for `alert_settings.reminders`
