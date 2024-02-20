@@ -629,7 +629,7 @@ func resourceDataFromCheck(c *checkly.Check, d *schema.ResourceData) error {
 
 	// ssl_check_domain is only supported for Browser checks
 	if c.Type == "BROWSER" && c.SSLCheckDomain != "" {
-		d.Set("ssl_check_domain", c.Type)
+		d.Set("ssl_check_domain", c.SSLCheckDomain)
 	}
 
 	environmentVariables := environmentVariablesFromSet(d.Get("environment_variable").([]interface{}))
