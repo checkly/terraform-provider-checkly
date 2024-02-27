@@ -529,23 +529,14 @@ func resourceCheckCreate(d *schema.ResourceData, client interface{}) error {
 	if err != nil {
 		return fmt.Errorf("translation error: %w", err)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
-	defer cancel()
 
-	if check.Type == "MULTI_STEP" {
-
-		checkRuntime, err := client.(checkly.Client).GetRuntime(ctx, *check.RuntimeID)
-
-		if err != nil {
-			return fmt.Errorf("API error while fetching runtimes: %w", err)
-		}
-
-		if !checkRuntime.MultiStepSupport {
-			return fmt.Errorf("runtime %s does not support MUTLI_STEP checks", *check.RuntimeID)
-		}
-
+	validationErr := validateRuntimeSupport(check, client)
+	if validationErr != nil {
+		return validationErr
 	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
+	defer cancel()
 	newCheck, err := client.(checkly.Client).CreateCheck(ctx, check)
 
 	if err != nil {
@@ -578,6 +569,12 @@ func resourceCheckUpdate(d *schema.ResourceData, client interface{}) error {
 	if err != nil {
 		return fmt.Errorf("translation error: %w", err)
 	}
+
+	validationErr := validateRuntimeSupport(check, client)
+	if validationErr != nil {
+		return validationErr
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
 	defer cancel()
 	_, err = client.(checkly.Client).UpdateCheck(ctx, check.ID, check)
@@ -1062,4 +1059,24 @@ func getResourceEnvironmentVariables(d *schema.ResourceData) ([]checkly.Environm
 	}
 
 	return deprecatedEnvironmentVariables, nil
+}
+
+func validateRuntimeSupport(check checkly.Check, client interface{}) error {
+	// If the check has a runtime ID set, then validate that the runtime supports multistep.
+	// Note that if the runtime ID is coming from the account defaults or group, then we don't validate it.
+	// Adding validation there as well would be a nice improvement, though.
+	if check.Type == "MULTI_STEP" && check.RuntimeID != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
+		defer cancel()
+		checkRuntime, err := client.(checkly.Client).GetRuntime(ctx, *check.RuntimeID)
+
+		if err != nil {
+			return fmt.Errorf("API error while fetching runtimes: %w", err)
+		}
+
+		if !checkRuntime.MultiStepSupport {
+			return fmt.Errorf("runtime %s does not support MULTI_STEP checks", *check.RuntimeID)
+		}
+	}
+	return nil
 }

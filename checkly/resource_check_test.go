@@ -212,6 +212,39 @@ func TestAccApiCheckBasic(t *testing.T) {
 	})
 }
 
+func TestAccMultiStepCheckRuntimeValidation(t *testing.T) {
+	unsupportedRuntime := `resource "checkly_check" "test" {
+		name = "test"
+		type = "MULTI_STEP"
+		activated = true
+		frequency = 5
+		locations = ["eu-central-1"]
+		script = "console.log('test')"
+		runtime_id = "2023.02"
+	}`
+	noSpecifiedRuntime := `resource "checkly_check" "test" {
+		name = "test"
+		type = "MULTI_STEP"
+		activated = true
+		frequency = 5
+		locations = ["eu-central-1"]
+		script = "console.log('test')"
+	}`
+	accTestCase(t, []resource.TestStep{
+		{
+			Config:      unsupportedRuntime,
+			ExpectError: regexp.MustCompile("Error: runtime 2023.02 does not support MULTI_STEP checks"),
+		},
+		{
+			Config: noSpecifiedRuntime,
+			Check: resource.TestCheckNoResourceAttr(
+				"checkly_check.test",
+				"runtime_id",
+			),
+		},
+	})
+}
+
 func TestAccMultiStepCheckBasic(t *testing.T) {
 	accTestCase(t, []resource.TestStep{
 		{
