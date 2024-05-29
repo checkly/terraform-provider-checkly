@@ -174,8 +174,8 @@ func resourceHeartbeat() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"period": {
-							Type:     schema.TypeInt,
-							Required: true,
+							Type:        schema.TypeInt,
+							Required:    true,
 							Description: "How often you expect a ping to the ping URL.",
 						},
 						"period_unit": {
@@ -198,8 +198,8 @@ func resourceHeartbeat() *schema.Resource {
 							Description: "Possible values `seconds`, `minutes`, `hours` and `days`.",
 						},
 						"grace": {
-							Type:     schema.TypeInt,
-							Required: true,
+							Type:        schema.TypeInt,
+							Required:    true,
 							Description: "How long Checkly should wait before triggering any alerts when a ping does not arrive within the set period.",
 						},
 						"grace_unit": {
@@ -222,9 +222,9 @@ func resourceHeartbeat() *schema.Resource {
 							Description: "Possible values `seconds`, `minutes`, `hours` and `days`.",
 						},
 						"ping_token": {
-							Type:     schema.TypeString,
-							Optional: true,
-							Computed: true,
+							Type:        schema.TypeString,
+							Optional:    true,
+							Computed:    true,
 							Description: "Custom token to generate your ping URL. Checkly will expect a ping to `https://ping.checklyhq.com/[PING_TOKEN]`.",
 						},
 					},
@@ -317,7 +317,7 @@ func heartbeatCheckFromResourceData(d *schema.ResourceData) (checkly.HeartbeatCh
 		Activated:                 d.Get("activated").(bool),
 		Muted:                     d.Get("muted").(bool),
 		Tags:                      stringsFromSet(d.Get("tags").(*schema.Set)),
-		AlertSettings:             alertSettingsFromSet(d.Get("alert_settings").(*schema.Set)),
+		AlertSettings:             alertSettingsFromSet(d.Get("alert_settings").([]interface{})),
 		UseGlobalAlertSettings:    d.Get("use_global_alert_settings").(bool),
 		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(d.Get("alert_channel_subscription").([]interface{})),
 	}
