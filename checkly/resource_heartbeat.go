@@ -49,7 +49,7 @@ func resourceHeartbeat() *schema.Resource {
 				Description: "A list of tags for organizing and filtering checks.",
 			},
 			"alert_settings": {
-				Type:     schema.TypeSet,
+				Type:     schema.TypeList,
 				Optional: true,
 				Computed: true,
 				MaxItems: 1,
@@ -61,8 +61,9 @@ func resourceHeartbeat() *schema.Resource {
 							Description: "Determines what type of escalation to use. Possible values are `RUN_BASED` or `TIME_BASED`.",
 						},
 						"run_based_escalation": {
-							Type:     schema.TypeSet,
+							Type:     schema.TypeList,
 							Optional: true,
+							Computed: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"failed_run_threshold": {
@@ -74,8 +75,9 @@ func resourceHeartbeat() *schema.Resource {
 							},
 						},
 						"time_based_escalation": {
-							Type:     schema.TypeSet,
+							Type:     schema.TypeList,
 							Optional: true,
+							Computed: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"minutes_failing_threshold": {
@@ -87,8 +89,9 @@ func resourceHeartbeat() *schema.Resource {
 							},
 						},
 						"reminders": {
-							Type:     schema.TypeSet,
+							Type:     schema.TypeList,
 							Optional: true,
+							Computed: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"amount": {
@@ -106,8 +109,9 @@ func resourceHeartbeat() *schema.Resource {
 							},
 						},
 						"parallel_run_failure_threshold": {
-							Type:     schema.TypeSet,
+							Type:     schema.TypeList,
 							Optional: true,
+							Computed: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"enabled": {
