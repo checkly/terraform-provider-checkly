@@ -24,7 +24,7 @@ Heartbeats allows you to monitor your cron jobs and set up alerting, so you get 
 ### Optional
 
 - `alert_channel_subscription` (Block List) (see [below for nested schema](#nestedblock--alert_channel_subscription))
-- `alert_settings` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--alert_settings))
+- `alert_settings` (Block List, Max: 1) (see [below for nested schema](#nestedblock--alert_settings))
 - `muted` (Boolean) Determines if any notifications will be sent out when a check fails/degrades/recovers.
 - `tags` (Set of String) A list of tags for organizing and filtering checks.
 - `use_global_alert_settings` (Boolean) When true, the account level alert settings will be used, not the alert setting defined on this check.
@@ -63,11 +63,11 @@ Required:
 Optional:
 
 - `escalation_type` (String) Determines what type of escalation to use. Possible values are `RUN_BASED` or `TIME_BASED`.
-- `parallel_run_failure_threshold` (Block Set) (see [below for nested schema](#nestedblock--alert_settings--parallel_run_failure_threshold))
-- `reminders` (Block Set) (see [below for nested schema](#nestedblock--alert_settings--reminders))
-- `run_based_escalation` (Block Set) (see [below for nested schema](#nestedblock--alert_settings--run_based_escalation))
+- `parallel_run_failure_threshold` (Block List) (see [below for nested schema](#nestedblock--alert_settings--parallel_run_failure_threshold))
+- `reminders` (Block List) (see [below for nested schema](#nestedblock--alert_settings--reminders))
+- `run_based_escalation` (Block List) (see [below for nested schema](#nestedblock--alert_settings--run_based_escalation))
 - `ssl_certificates` (Block Set, Deprecated) (see [below for nested schema](#nestedblock--alert_settings--ssl_certificates))
-- `time_based_escalation` (Block Set) (see [below for nested schema](#nestedblock--alert_settings--time_based_escalation))
+- `time_based_escalation` (Block List) (see [below for nested schema](#nestedblock--alert_settings--time_based_escalation))
 
 <a id="nestedblock--alert_settings--parallel_run_failure_threshold"></a>
 ### Nested Schema for `alert_settings.parallel_run_failure_threshold`
