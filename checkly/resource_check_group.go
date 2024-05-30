@@ -99,7 +99,7 @@ func resourceCheckGroup() *schema.Resource {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Description: "Setting this to `true` will trigger a retry when a check fails from the failing region and another, randomly selected region before marking the check as failed.",
-				Deprecated: "The property `double_check` is deprecated and will be removed in a future version. To enable retries for failed check runs, use the `retry_strategy` property instead.",
+				Deprecated:  "The property `double_check` is deprecated and will be removed in a future version. To enable retries for failed check runs, use the `retry_strategy` property instead.",
 			},
 			"tags": {
 				Type:     schema.TypeSet,
@@ -152,7 +152,7 @@ func resourceCheckGroup() *schema.Resource {
 				},
 			},
 			"alert_settings": {
-				Type:     schema.TypeSet,
+				Type:     schema.TypeList,
 				Optional: true,
 				Computed: true,
 				MaxItems: 1,
@@ -165,8 +165,9 @@ func resourceCheckGroup() *schema.Resource {
 							Description: "Determines what type of escalation to use. Possible values are `RUN_BASED` or `TIME_BASED`.",
 						},
 						"run_based_escalation": {
-							Type:     schema.TypeSet,
+							Type:     schema.TypeList,
 							Optional: true,
+							Computed: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"failed_run_threshold": {
@@ -178,8 +179,9 @@ func resourceCheckGroup() *schema.Resource {
 							},
 						},
 						"time_based_escalation": {
-							Type:     schema.TypeSet,
+							Type:     schema.TypeList,
 							Optional: true,
+							Computed: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"minutes_failing_threshold": {
@@ -191,8 +193,9 @@ func resourceCheckGroup() *schema.Resource {
 							},
 						},
 						"reminders": {
-							Type:     schema.TypeSet,
+							Type:     schema.TypeList,
 							Optional: true,
+							Computed: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"amount": {
@@ -210,8 +213,9 @@ func resourceCheckGroup() *schema.Resource {
 							},
 						},
 						"parallel_run_failure_threshold": {
-							Type:     schema.TypeSet,
+							Type:     schema.TypeList,
 							Optional: true,
+							Computed: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"enabled": {
@@ -534,7 +538,7 @@ func checkGroupFromResourceData(d *schema.ResourceData) (checkly.Group, error) {
 		TearDownSnippetID:         int64(d.Get("teardown_snippet_id").(int)),
 		LocalSetupScript:          d.Get("local_setup_script").(string),
 		LocalTearDownScript:       d.Get("local_teardown_script").(string),
-		AlertSettings:             alertSettingsFromSet(d.Get("alert_settings").(*schema.Set)),
+		AlertSettings:             alertSettingsFromSet(d.Get("alert_settings").([]interface{})),
 		UseGlobalAlertSettings:    d.Get("use_global_alert_settings").(bool),
 		APICheckDefaults:          apiCheckDefaultsFromSet(d.Get("api_check_defaults").(*schema.Set)),
 		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(d.Get("alert_channel_subscription").([]interface{})),

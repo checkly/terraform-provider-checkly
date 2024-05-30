@@ -231,7 +231,7 @@ func resourceCheck() *schema.Resource {
 				Description: "An array of one or more private locations slugs.",
 			},
 			"alert_settings": {
-				Type:     schema.TypeSet,
+				Type:     schema.TypeList,
 				Optional: true,
 				Computed: true,
 				MaxItems: 1,
@@ -243,8 +243,9 @@ func resourceCheck() *schema.Resource {
 							Description: "Determines what type of escalation to use. Possible values are `RUN_BASED` or `TIME_BASED`.",
 						},
 						"run_based_escalation": {
-							Type:     schema.TypeSet,
+							Type:     schema.TypeList,
 							Optional: true,
+							Computed: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"failed_run_threshold": {
@@ -256,8 +257,9 @@ func resourceCheck() *schema.Resource {
 							},
 						},
 						"time_based_escalation": {
-							Type:     schema.TypeSet,
+							Type:     schema.TypeList,
 							Optional: true,
+							Computed: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"minutes_failing_threshold": {
@@ -269,8 +271,9 @@ func resourceCheck() *schema.Resource {
 							},
 						},
 						"reminders": {
-							Type:     schema.TypeSet,
+							Type:     schema.TypeList,
 							Optional: true,
+							Computed: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"amount": {
@@ -288,8 +291,9 @@ func resourceCheck() *schema.Resource {
 							},
 						},
 						"parallel_run_failure_threshold": {
-							Type:     schema.TypeSet,
+							Type:     schema.TypeList,
 							Optional: true,
+							Computed: true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"enabled": {
@@ -799,7 +803,7 @@ func checkFromResourceData(d *schema.ResourceData) (checkly.Check, error) {
 		TearDownSnippetID:         int64(d.Get("teardown_snippet_id").(int)),
 		LocalSetupScript:          d.Get("local_setup_script").(string),
 		LocalTearDownScript:       d.Get("local_teardown_script").(string),
-		AlertSettings:             alertSettingsFromSet(d.Get("alert_settings").(*schema.Set)),
+		AlertSettings:             alertSettingsFromSet(d.Get("alert_settings").([]interface{})),
 		UseGlobalAlertSettings:    d.Get("use_global_alert_settings").(bool),
 		GroupID:                   int64(d.Get("group_id").(int)),
 		GroupOrder:                d.Get("group_order").(int),
@@ -877,8 +881,8 @@ func basicAuthFromSet(s *schema.Set) *checkly.BasicAuth {
 	}
 }
 
-func alertSettingsFromSet(s *schema.Set) checkly.AlertSettings {
-	if s.Len() == 0 {
+func alertSettingsFromSet(s []interface{}) checkly.AlertSettings {
+	if len(s) == 0 {
 		return checkly.AlertSettings{
 			EscalationType: checkly.RunBased,
 			RunBasedEscalation: checkly.RunBasedEscalation{
@@ -886,17 +890,17 @@ func alertSettingsFromSet(s *schema.Set) checkly.AlertSettings {
 			},
 		}
 	}
-	res := s.List()[0].(tfMap)
+	res := s[0].(tfMap)
 	alertSettings := checkly.AlertSettings{
 		EscalationType:              res["escalation_type"].(string),
-		Reminders:                   remindersFromSet(res["reminders"].(*schema.Set)),
-		ParallelRunFailureThreshold: parallelRunFailureThresholdFromSet(res["parallel_run_failure_threshold"].(*schema.Set)),
+		Reminders:                   remindersFromSet(res["reminders"].([]interface{})),
+		ParallelRunFailureThreshold: parallelRunFailureThresholdFromSet(res["parallel_run_failure_threshold"].([]interface{})),
 	}
 
 	if alertSettings.EscalationType == checkly.RunBased {
-		alertSettings.RunBasedEscalation = runBasedEscalationFromSet(res["run_based_escalation"].(*schema.Set))
+		alertSettings.RunBasedEscalation = runBasedEscalationFromSet(res["run_based_escalation"].([]interface{}))
 	} else {
-		alertSettings.TimeBasedEscalation = timeBasedEscalationFromSet(res["time_based_escalation"].(*schema.Set))
+		alertSettings.TimeBasedEscalation = timeBasedEscalationFromSet(res["time_based_escalation"].([]interface{}))
 	}
 
 	return alertSettings
@@ -953,42 +957,42 @@ func environmentVariablesFromSet(s []interface{}) []checkly.EnvironmentVariable 
 	return res
 }
 
-func runBasedEscalationFromSet(s *schema.Set) checkly.RunBasedEscalation {
-	if s.Len() == 0 {
+func runBasedEscalationFromSet(s []interface{}) checkly.RunBasedEscalation {
+	if len(s) == 0 {
 		return checkly.RunBasedEscalation{}
 	}
-	res := s.List()[0].(tfMap)
+	res := s[0].(tfMap)
 	return checkly.RunBasedEscalation{
 		FailedRunThreshold: res["failed_run_threshold"].(int),
 	}
 }
 
-func timeBasedEscalationFromSet(s *schema.Set) checkly.TimeBasedEscalation {
-	if s.Len() == 0 {
+func timeBasedEscalationFromSet(s []interface{}) checkly.TimeBasedEscalation {
+	if len(s) == 0 {
 		return checkly.TimeBasedEscalation{}
 	}
-	res := s.List()[0].(tfMap)
+	res := s[0].(tfMap)
 	return checkly.TimeBasedEscalation{
 		MinutesFailingThreshold: res["minutes_failing_threshold"].(int),
 	}
 }
 
-func remindersFromSet(s *schema.Set) checkly.Reminders {
-	if s.Len() == 0 {
+func remindersFromSet(s []interface{}) checkly.Reminders {
+	if len(s) == 0 {
 		return checkly.Reminders{}
 	}
-	res := s.List()[0].(tfMap)
+	res := s[0].(tfMap)
 	return checkly.Reminders{
 		Amount:   res["amount"].(int),
 		Interval: res["interval"].(int),
 	}
 }
 
-func parallelRunFailureThresholdFromSet(s *schema.Set) checkly.ParallelRunFailureThreshold {
-	if s.Len() == 0 {
+func parallelRunFailureThresholdFromSet(s []interface{}) checkly.ParallelRunFailureThreshold {
+	if len(s) == 0 {
 		return checkly.ParallelRunFailureThreshold{}
 	}
-	res := s.List()[0].(tfMap)
+	res := s[0].(tfMap)
 	return checkly.ParallelRunFailureThreshold{
 		Enabled:    res["enabled"].(bool),
 		Percentage: res["percentage"].(int),
