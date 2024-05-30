@@ -146,7 +146,7 @@ resource "checkly_check_group" "test_group1" {
 ### Optional
 
 - `alert_channel_subscription` (Block List) (see [below for nested schema](#nestedblock--alert_channel_subscription))
-- `alert_settings` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--alert_settings))
+- `alert_settings` (Block List, Max: 1) (see [below for nested schema](#nestedblock--alert_settings))
 - `api_check_defaults` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--api_check_defaults))
 - `double_check` (Boolean, Deprecated) Setting this to `true` will trigger a retry when a check fails from the failing region and another, randomly selected region before marking the check as failed.
 - `environment_variable` (Block List) Key/value pairs for setting environment variables during check execution, add locked = true to keep value hidden. These are only relevant for browser checks. Use global environment variables whenever possible. (see [below for nested schema](#nestedblock--environment_variable))
@@ -183,11 +183,11 @@ Required:
 Optional:
 
 - `escalation_type` (String) Determines what type of escalation to use. Possible values are `RUN_BASED` or `TIME_BASED`.
-- `parallel_run_failure_threshold` (Block Set) (see [below for nested schema](#nestedblock--alert_settings--parallel_run_failure_threshold))
-- `reminders` (Block Set) (see [below for nested schema](#nestedblock--alert_settings--reminders))
-- `run_based_escalation` (Block Set) (see [below for nested schema](#nestedblock--alert_settings--run_based_escalation))
+- `parallel_run_failure_threshold` (Block List) (see [below for nested schema](#nestedblock--alert_settings--parallel_run_failure_threshold))
+- `reminders` (Block List) (see [below for nested schema](#nestedblock--alert_settings--reminders))
+- `run_based_escalation` (Block List) (see [below for nested schema](#nestedblock--alert_settings--run_based_escalation))
 - `ssl_certificates` (Block Set, Deprecated) (see [below for nested schema](#nestedblock--alert_settings--ssl_certificates))
-- `time_based_escalation` (Block Set) (see [below for nested schema](#nestedblock--alert_settings--time_based_escalation))
+- `time_based_escalation` (Block List) (see [below for nested schema](#nestedblock--alert_settings--time_based_escalation))
 
 <a id="nestedblock--alert_settings--parallel_run_failure_threshold"></a>
 ### Nested Schema for `alert_settings.parallel_run_failure_threshold`
