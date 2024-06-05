@@ -124,3 +124,5 @@ Optional:
 Optional:
 
 - `minutes_failing_threshold` (Number) After how many minutes after a check starts failing an alert should be sent. Possible values are `5`, `10`, `15`, and `30`. (Default `5`).
+
+
