@@ -321,6 +321,7 @@ Optional:
 - `body_type` (String) The `Content-Type` header of the request. Possible values `NONE`, `JSON`, `FORM`, `RAW`, and `GRAPHQL`.
 - `follow_redirects` (Boolean)
 - `headers` (Map of String)
+- `ip_family` (String) IP Family to be used when executing the api check. The value can be either IPv4 or IPv6.
 - `method` (String) The HTTP method to use for this API check. Possible values are `GET`, `POST`, `PUT`, `HEAD`, `DELETE`, `PATCH`. (Default `GET`).
 - `query_parameters` (Map of String)
 - `skip_ssl` (Boolean)

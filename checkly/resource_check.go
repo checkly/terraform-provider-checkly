@@ -467,6 +467,26 @@ func resourceCheck() *schema.Resource {
 							},
 							Description: "Set up HTTP basic authentication (username & password).",
 						},
+						"ip_family": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Default:     "IPv4",
+							Description: "IP Family to be used when executing the api check. The value can be either IPv4 or IPv6.",
+							ValidateFunc: func(value interface{}, key string) (warns []string, errs []error) {
+								v := value.(string)
+								isValid := false
+								options := []string{"IPv4", "IPv6"}
+								for _, option := range options {
+									if v == option {
+										isValid = true
+									}
+								}
+								if !isValid {
+									errs = append(errs, fmt.Errorf("%q must be one of %v, got %s", key, options, v))
+								}
+								return warns, errs
+							},
+						},
 					},
 				},
 				Description: "An API check might have one request config.",
@@ -730,6 +750,7 @@ func setFromRequest(r checkly.Request) []tfMap {
 	s["query_parameters"] = mapFromKeyValues(r.QueryParameters)
 	s["assertion"] = setFromAssertions(r.Assertions)
 	s["basic_auth"] = setFromBasicAuth(r.BasicAuth)
+	s["ip_family"] = r.IPFamily
 	return []tfMap{s}
 }
 
@@ -1015,6 +1036,7 @@ func requestFromSet(s *schema.Set) checkly.Request {
 		QueryParameters: keyValuesFromMap(res["query_parameters"].(tfMap)),
 		Assertions:      assertionsFromSet(res["assertion"].(*schema.Set)),
 		BasicAuth:       basicAuthFromSet(res["basic_auth"].(*schema.Set)),
+		IPFamily:        res["ip_family"].(string),
 	}
 }
 
