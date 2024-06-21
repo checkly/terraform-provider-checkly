@@ -471,7 +471,7 @@ func resourceCheck() *schema.Resource {
 							Type:        schema.TypeString,
 							Optional:    true,
 							Default:     "IPv4",
-							Description: "IP Family to be used when executing the api check. The value can be IPv4 or IPv6.",
+							Description: "IP Family to be used when executing the api check. The value can be either IPv4 or IPv6.",
 							ValidateFunc: func(value interface{}, key string) (warns []string, errs []error) {
 								v := value.(string)
 								isValid := false
