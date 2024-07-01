@@ -297,5 +297,3 @@ Optional:
 - `max_duration_seconds` (Number) The total amount of time to continue retrying the check (maximum 600 seconds).
 - `max_retries` (Number) The maximum number of times to retry the check. Value must be between 1 and 10.
 - `same_region` (Boolean) Whether retries should be run in the same region as the initial check run.
-
-

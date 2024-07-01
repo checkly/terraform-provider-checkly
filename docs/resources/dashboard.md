@@ -58,5 +58,3 @@ resource "checkly_dashboard" "dashboard_1" {
 
 - `id` (String) The ID of this resource.
 - `key` (String, Sensitive) The access key when the dashboard is private.
-
-

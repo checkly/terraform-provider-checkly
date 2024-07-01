@@ -207,5 +207,3 @@ Optional:
 - `template` (String)
 - `webhook_secret` (String)
 - `webhook_type` (String) Type of the webhook. Possible values are 'WEBHOOK_DISCORD', 'WEBHOOK_FIREHYDRANT', 'WEBHOOK_GITLAB_ALERT', 'WEBHOOK_SPIKESH', 'WEBHOOK_SPLUNK', 'WEBHOOK_MSTEAMS' and 'WEBHOOK_TELEGRAM'.
-
-

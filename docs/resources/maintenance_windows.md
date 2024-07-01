@@ -45,5 +45,3 @@ resource "checkly_maintenance_windows" "maintenance-1" {
 ### Read-Only
 
 - `id` (String) The ID of this resource.
-
-
