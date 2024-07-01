@@ -37,5 +37,3 @@ output "test_trigger_check_url" {
 ### Read-Only
 
 - `id` (String) The ID of this resource.
-
-

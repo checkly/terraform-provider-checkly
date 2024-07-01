@@ -35,5 +35,3 @@ resource "checkly_private_location" "location" {
 
 - `id` (String) The ID of this resource.
 - `keys` (Set of String, Sensitive) Private location API keys.
-
-

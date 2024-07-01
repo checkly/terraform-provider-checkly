@@ -22,7 +22,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: '1.18'
+        go-version: '1.22'
       id: go
     - name: Check out code into the Go module directory
       uses: actions/checkout@v3
@@ -39,7 +39,7 @@ jobs:
     steps:
       - uses: actions/setup-go@v4
         with:
-          go-version: '1.18'
+          go-version: '1.22'
       - uses: actions/checkout@v3
       - run: go generate ./...
       - name: git diff
@@ -68,7 +68,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: '1.18'
+        go-version: '1.22'
       id: go
 
     - uses: hashicorp/setup-terraform@v2
@@ -93,5 +93,3 @@ jobs:
         CHECKLY_ACCOUNT_ID: ${{ secrets.CHECKLY_ACCOUNT_ID }}
         CHECKLY_API_URL: ${{ secrets.CHECKLY_API_URL }}
         CHECKLY_API_KEY: ${{ secrets.CHECKLY_API_KEY }}
-
-

@@ -43,6 +43,9 @@ func Provider() *schema.Provider {
 			"checkly_environment_variable": resourceEnvironmentVariable(),
 			"checkly_private_location":     resourcePrivateLocation(),
 		},
+		DataSourcesMap: map[string]*schema.Resource{
+			"checkly_static_ips": dataSourceStaticIPs(),
+		},
 		ConfigureFunc: func(r *schema.ResourceData) (interface{}, error) {
 			debugLog := os.Getenv("CHECKLY_DEBUG_LOG")
 			var debugOutput io.Writer
