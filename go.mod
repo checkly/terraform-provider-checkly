@@ -1,6 +1,6 @@
 module github.com/checkly/terraform-provider-checkly
 
-go 1.18
+go 1.22
 
 require (
 	github.com/aws/aws-sdk-go v1.44.122 // indirect
