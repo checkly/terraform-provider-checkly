@@ -132,7 +132,7 @@ func resourceCheck() *schema.Resource {
 			"environment_variable": {
 				Type:        schema.TypeList,
 				Optional:    true,
-				Description: "Key/value pairs for setting environment variables during check execution, add locked = true to keep value hidden. These are only relevant for browser checks. Use global environment variables whenever possible.",
+				Description: "Key/value pairs for setting environment variables during check execution, add locked = true to keep value hidden, add secret = true to create a secret variable. These are only relevant for browser checks. Use global environment variables whenever possible.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"key": {
@@ -144,6 +144,11 @@ func resourceCheck() *schema.Resource {
 							Required: true,
 						},
 						"locked": {
+							Type:     schema.TypeBool,
+							Optional: true,
+							Default:  false,
+						},
+						"secret": {
 							Type:     schema.TypeBool,
 							Optional: true,
 							Default:  false,
@@ -968,10 +973,12 @@ func environmentVariablesFromSet(s []interface{}) []checkly.EnvironmentVariable 
 		key := tm["key"].(string)
 		value := tm["value"].(string)
 		locked := tm["locked"].(bool)
+		secret := tm["secret"].(bool)
 		res = append(res, checkly.EnvironmentVariable{
 			Key:    key,
 			Value:  value,
 			Locked: locked,
+			Secret: secret,
 		})
 	}
 

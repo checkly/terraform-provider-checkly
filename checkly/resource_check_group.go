@@ -76,7 +76,7 @@ func resourceCheckGroup() *schema.Resource {
 			"environment_variable": {
 				Type:        schema.TypeList,
 				Optional:    true,
-				Description: "Key/value pairs for setting environment variables during check execution, add locked = true to keep value hidden. These are only relevant for browser checks. Use global environment variables whenever possible.",
+				Description: "Key/value pairs for setting environment variables during check execution, add locked = true to keep value hidden, add secret = true to create a secret variable. These are only relevant for browser checks. Use global environment variables whenever possible.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"key": {
@@ -88,6 +88,11 @@ func resourceCheckGroup() *schema.Resource {
 							Required: true,
 						},
 						"locked": {
+							Type:     schema.TypeBool,
+							Optional: true,
+							Default:  false,
+						},
+						"secret": {
 							Type:     schema.TypeBool,
 							Optional: true,
 							Default:  false,
