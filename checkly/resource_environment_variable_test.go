@@ -44,3 +44,15 @@ func TestAccEnvVarSuccess(t *testing.T) {
 		},
 	})
 }
+
+func TestAccSecretEnvVarSuccess(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `resource "checkly_environment_variable" "test" {
+				key     = "SECRET"
+				value   = "https://api.checklyhq.com"
+				secret  = true
+			}`,
+		},
+	})
+}

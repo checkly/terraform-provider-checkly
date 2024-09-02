@@ -68,7 +68,9 @@ func environmentVariableFromResourceData(d *schema.ResourceData) (checkly.Enviro
 
 func resourceDataFromEnvironmentVariable(s *checkly.EnvironmentVariable, d *schema.ResourceData) error {
 	d.Set("key", s.Key)
-	d.Set("value", s.Value)
+	if !s.Secret {
+		d.Set("value", s.Value)
+	}
 	d.Set("locked", s.Locked)
 	d.Set("secret", s.Secret)
 	return nil
