@@ -77,7 +77,7 @@ After you have installed Terraform and Go, you can clone the repository and star
   ```
 
 
-> 💡 We recommend to use [tfswitch](https://tfswitch.warrensbox.com/) to easily manage different Terraform versions in your local environment.
+> 💡 We recommend to use [tfswitch](https://tfswitch.warrensbox.com/) to easily manage different Terraform versions in your local environment
 
 You are ready to go, take a look at the [`dev` script](###`make-dev`) so you can start testing your local changes.
 
