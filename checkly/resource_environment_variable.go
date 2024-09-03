@@ -33,6 +33,11 @@ func resourceEnvironmentVariable() *schema.Resource {
 				Optional: true,
 				Default:  false,
 			},
+			"secret": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  false,
+			},
 		},
 	}
 }
@@ -57,13 +62,17 @@ func environmentVariableFromResourceData(d *schema.ResourceData) (checkly.Enviro
 		Key:    d.Get("key").(string),
 		Value:  d.Get("value").(string),
 		Locked: d.Get("locked").(bool),
+		Secret: d.Get("secret").(bool),
 	}, nil
 }
 
 func resourceDataFromEnvironmentVariable(s *checkly.EnvironmentVariable, d *schema.ResourceData) error {
 	d.Set("key", s.Key)
-	d.Set("value", s.Value)
+	if !s.Secret {
+		d.Set("value", s.Value)
+	}
 	d.Set("locked", s.Locked)
+	d.Set("secret", s.Secret)
 	return nil
 }
 

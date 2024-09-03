@@ -200,7 +200,7 @@ resource "checkly_check" "example_check" {
 - `alert_settings` (Block List, Max: 1) (see [below for nested schema](#nestedblock--alert_settings))
 - `degraded_response_time` (Number) The response time in milliseconds starting from which a check should be considered degraded. Possible values are between 0 and 30000. (Default `15000`).
 - `double_check` (Boolean, Deprecated) Setting this to `true` will trigger a retry when a check fails from the failing region and another, randomly selected region before marking the check as failed.
-- `environment_variable` (Block List) Key/value pairs for setting environment variables during check execution, add locked = true to keep value hidden. These are only relevant for browser checks. Use global environment variables whenever possible. (see [below for nested schema](#nestedblock--environment_variable))
+- `environment_variable` (Block List) Key/value pairs for setting environment variables during check execution, add locked = true to keep value hidden, add secret = true to create a secret variable. These are only relevant for browser checks. Use global environment variables whenever possible. (see [below for nested schema](#nestedblock--environment_variable))
 - `environment_variables` (Map of String, Deprecated) Key/value pairs for setting environment variables during check execution. These are only relevant for browser checks. Use global environment variables whenever possible.
 - `frequency_offset` (Number) This property only valid for API high frequency checks. To create a hight frequency check, the property `frequency` must be `0` and `frequency_offset` could be `10`, `20` or `30`.
 - `group_id` (Number) The id of the check group this check is part of.
@@ -304,6 +304,7 @@ Required:
 Optional:
 
 - `locked` (Boolean)
+- `secret` (Boolean)
 
 
 <a id="nestedblock--request"></a>

@@ -37,6 +37,7 @@ resource "checkly_environment_variable" "variable_2" {
 ### Optional
 
 - `locked` (Boolean)
+- `secret` (Boolean)
 
 ### Read-Only
 
