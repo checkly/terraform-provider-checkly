@@ -194,9 +194,13 @@ func (r *MaintenanceWindowsResource) Read(
 		return
 	}
 
-	// TODO: Check if we really have to do the weird 404 handling
 	realizedModel, err := r.client.GetMaintenanceWindow(ctx, id)
 	if err != nil {
+		if SDKIsHTTPNotFoundError(err) {
+			resp.State.RemoveResource(ctx)
+			return
+		}
+
 		resp.Diagnostics.AddError(
 			"Error Reading Checkly Maintenance Window",
 			fmt.Sprintf("Could not retrieve maintenance window, unexpected error: %s", err),

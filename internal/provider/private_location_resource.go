@@ -168,9 +168,13 @@ func (r *PrivateLocationResource) Read(
 		return
 	}
 
-	// TODO: Check if we really have to do the weird 404 handling
 	realizedModel, err := r.client.GetPrivateLocation(ctx, state.ID.ValueString())
 	if err != nil {
+		if SDKIsHTTPNotFoundError(err) {
+			resp.State.RemoveResource(ctx)
+			return
+		}
+
 		resp.Diagnostics.AddError(
 			"Error Reading Checkly Private Location",
 			fmt.Sprintf("Could not retrieve private location, unexpected error: %s", err),
