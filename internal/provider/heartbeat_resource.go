@@ -216,9 +216,13 @@ func (r *HeartbeatResource) Read(
 		return
 	}
 
-	// TODO: Check if we really have to do the weird 404 handling
 	realizedModel, err := r.client.GetHeartbeatCheck(ctx, state.ID.ValueString())
 	if err != nil {
+		if SDKIsHTTPNotFoundError(err) {
+			resp.State.RemoveResource(ctx)
+			return
+		}
+
 		resp.Diagnostics.AddError(
 			"Error Reading Checkly Heartbeat",
 			fmt.Sprintf("Could not retrieve heartbeat, unexpected error: %s", err),

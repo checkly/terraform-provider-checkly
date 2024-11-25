@@ -158,12 +158,16 @@ func (r *TriggerCheckResource) Read(
 		return
 	}
 
-	// TODO: Check if we really have to do the weird 404 handling
 	realizedModel, err := r.client.GetTriggerCheck(
 		ctx,
 		state.CheckID.ValueString(),
 	)
 	if err != nil {
+		if SDKIsHTTPNotFoundError(err) {
+			resp.State.RemoveResource(ctx)
+			return
+		}
+
 		resp.Diagnostics.AddError(
 			"Error Reading Checkly Trigger Check",
 			fmt.Sprintf("Could not retrieve trigger check, unexpected error: %s", err),

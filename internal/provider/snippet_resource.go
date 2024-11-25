@@ -169,9 +169,13 @@ func (r *SnippetResource) Read(
 		return
 	}
 
-	// TODO: Check if we really have to do the weird 404 handling
 	realizedModel, err := r.client.GetSnippet(ctx, id)
 	if err != nil {
+		if SDKIsHTTPNotFoundError(err) {
+			resp.State.RemoveResource(ctx)
+			return
+		}
+
 		resp.Diagnostics.AddError(
 			"Error Reading Checkly Snippet",
 			fmt.Sprintf("Could not retrieve snippet, unexpected error: %s", err),

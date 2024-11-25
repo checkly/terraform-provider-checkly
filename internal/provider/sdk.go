@@ -3,6 +3,7 @@ package provider
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -83,4 +84,20 @@ func SDKKeyValuesIntoMap(values *[]checkly.KeyValue) types.Map {
 	}
 
 	return types.MapValueMust(types.StringType, mapValues)
+}
+
+func SDKIsHTTPNotFoundError(err error) bool {
+	// Unfortunately the SDK presents HTTP errors in a completely unusable way,
+	// forcing us to match against string values.
+	msg := err.Error()
+
+	switch {
+	case strings.Contains(msg, "unexpected response status: 404"):
+		return true
+	// Unfortunate inconsistency.
+	case strings.Contains(msg, "unexpected response status 404"):
+		return true
+	}
+
+	return false
 }

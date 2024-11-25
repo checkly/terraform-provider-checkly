@@ -234,9 +234,13 @@ func (r *CheckGroupResource) Read(
 		return
 	}
 
-	// TODO: Check if we really have to do the weird 404 handling
 	realizedModel, err := r.client.GetGroup(ctx, id)
 	if err != nil {
+		if SDKIsHTTPNotFoundError(err) {
+			resp.State.RemoveResource(ctx)
+			return
+		}
+
 		resp.Diagnostics.AddError(
 			"Error Reading Checkly Check Group",
 			fmt.Sprintf("Could not retrieve check group, unexpected error: %s", err),

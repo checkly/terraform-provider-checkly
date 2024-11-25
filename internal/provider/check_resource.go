@@ -300,9 +300,13 @@ func (r *CheckResource) Read(
 		return
 	}
 
-	// TODO: Check if we really have to do the weird 404 handling
 	realizedModel, err := r.client.GetCheck(ctx, state.ID.ValueString())
 	if err != nil {
+		if SDKIsHTTPNotFoundError(err) {
+			resp.State.RemoveResource(ctx)
+			return
+		}
+
 		resp.Diagnostics.AddError(
 			"Error Reading Checkly Check",
 			fmt.Sprintf("Could not retrieve check, unexpected error: %s", err),

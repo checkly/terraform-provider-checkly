@@ -241,9 +241,13 @@ func (r *DashboardResource) Read(
 		return
 	}
 
-	// TODO: Check if we really have to do the weird 404 handling
 	realizedModel, err := r.client.GetDashboard(ctx, state.ID.ValueString())
 	if err != nil {
+		if SDKIsHTTPNotFoundError(err) {
+			resp.State.RemoveResource(ctx)
+			return
+		}
+
 		resp.Diagnostics.AddError(
 			"Error Reading Checkly Dashboard",
 			fmt.Sprintf("Could not retrieve dashboard, unexpected error: %s", err),
