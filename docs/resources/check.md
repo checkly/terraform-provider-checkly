@@ -67,11 +67,11 @@ resource "checkly_check" "example_check_2" {
   }
 
   retry_strategy {
-    type = "FIXED"
+    type                 = "FIXED"
     base_backoff_seconds = 60
     max_duration_seconds = 600
-    max_retries = 3
-    same_region = false
+    max_retries          = 3
+    same_region          = false
   }
 
   request {

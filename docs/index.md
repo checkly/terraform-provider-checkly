@@ -36,7 +36,7 @@ variable "checkly_account_id" {}
 terraform {
   required_providers {
     checkly = {
-      source = "checkly/checkly"
+      source  = "checkly/checkly"
       version = "1.7.1"
     }
   }
@@ -44,7 +44,7 @@ terraform {
 
 # Pass the API Key environment variable to the provider
 provider "checkly" {
-  api_key = var.checkly_api_key
+  api_key    = var.checkly_api_key
   account_id = var.checkly_account_id
 }
 
