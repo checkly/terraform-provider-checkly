@@ -18,37 +18,37 @@ resource "checkly_alert_channel" "email_ac" {
   email {
     address = "john@example.com"
   }
-  send_recovery = true
-  send_failure = false
-  send_degraded = true
-  ssl_expiry = true
+  send_recovery        = true
+  send_failure         = false
+  send_degraded        = true
+  ssl_expiry           = true
   ssl_expiry_threshold = 22
 }
 
 # A SMS alert channel
 resource "checkly_alert_channel" "sms_ac" {
   sms {
-    name = "john"
+    name   = "john"
     number = "+5491100001111"
   }
   send_recovery = true
-  send_failure = true
+  send_failure  = true
 }
 
 # A Slack alert channel
 resource "checkly_alert_channel" "slack_ac" {
   slack {
     channel = "#checkly-notifications"
-    url = "https://hooks.slack.com/services/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"
+    url     = "https://hooks.slack.com/services/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"
   }
 }
 
 # An Opsgenie alert channel
 resource "checkly_alert_channel" "opsgenie_ac" {
   opsgenie {
-    name = "opsalerts"
-    api_key = "fookey"
-    region = "fooregion"
+    name     = "opsalerts"
+    api_key  = "fookey"
+    region   = "fooregion"
     priority = "foopriority"
   }
 }
@@ -65,10 +65,10 @@ resource "checkly_alert_channel" "pagerduty_ac" {
 # A Webhook alert channel
 resource "checkly_alert_channel" "webhook_ac" {
   webhook {
-    name = "foo"
-    method = "get"
-    template = "footemplate"
-    url = "https://example.com/foo"
+    name           = "foo"
+    method         = "get"
+    template       = "footemplate"
+    url            = "https://example.com/foo"
     webhook_secret = "foosecret"
   }
 }

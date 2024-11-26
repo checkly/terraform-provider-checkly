@@ -72,17 +72,17 @@ resource "checkly_check_group" "test_group1" {
 
 # Add a check to a group
 resource "checkly_check" "test_check1" {
-  name        = "My test check 1"
-  type        = "API"
-  activated   = true
-  frequency   = 1
+  name      = "My test check 1"
+  type      = "API"
+  activated = true
+  frequency = 1
 
   locations = [
     "us-west-1"
   ]
 
   request {
-    url              = "https://api.example.com/"
+    url = "https://api.example.com/"
   }
   group_id    = checkly_check_group.test_group1.id
   group_order = 1
@@ -105,7 +105,7 @@ resource "checkly_alert_channel" "email_ac2" {
 
 # Connect the check group to the alert channels
 resource "checkly_check_group" "test_group1" {
-  name      = "My test group 1"
+  name = "My test group 1"
 
   alert_channel_subscription {
     channel_id = checkly_alert_channel.email_ac1.id
