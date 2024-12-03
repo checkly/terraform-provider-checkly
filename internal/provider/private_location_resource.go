@@ -59,6 +59,7 @@ func (r *PrivateLocationResource) Schema(
 			},
 			"icon": schema.StringAttribute{
 				Optional:    true,
+				Computed:    true,
 				Default:     stringdefault.StaticString("location"),
 				Description: "Icon assigned to the private location.",
 			},

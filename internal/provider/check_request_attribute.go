@@ -22,6 +22,7 @@ var CheckRequestAttributeSchema = schema.SingleNestedAttribute{
 	Attributes: map[string]schema.Attribute{
 		"method": schema.StringAttribute{
 			Optional: true,
+			Computed: true,
 			Default:  stringdefault.StaticString("GET"),
 			Validators: []validator.String{
 				stringvalidator.OneOf(
@@ -52,6 +53,7 @@ var CheckRequestAttributeSchema = schema.SingleNestedAttribute{
 		},
 		"body_type": schema.StringAttribute{
 			Optional: true,
+			Computed: true,
 			Default:  stringdefault.StaticString("NONE"),
 			Validators: []validator.String{
 				stringvalidator.OneOf(
@@ -68,6 +70,7 @@ var CheckRequestAttributeSchema = schema.SingleNestedAttribute{
 		"basic_auth": CheckBasicAuthAttributeSchema,
 		"ip_family": schema.StringAttribute{
 			Optional: true,
+			Computed: true,
 			Default:  stringdefault.StaticString("IPv4"),
 			Validators: []validator.String{
 				stringvalidator.OneOf(

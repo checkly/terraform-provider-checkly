@@ -63,7 +63,6 @@ func (r *MaintenanceWindowsResource) Schema(
 			},
 			"repeat_unit": schema.StringAttribute{
 				Optional: true,
-				Default:  nil,
 				Validators: []validator.String{
 					stringvalidator.OneOf("DAY", "WEEK", "MONTH"),
 				},

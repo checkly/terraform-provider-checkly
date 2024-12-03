@@ -109,11 +109,13 @@ func (r *CheckResource) Schema(
 			"private_locations": CheckPrivateLocationsAttributeSchema,
 			"script": schema.StringAttribute{
 				Optional:    true,
+				Computed:    true,
 				Default:     stringdefault.StaticString(""),
 				Description: "A valid piece of Node.js JavaScript code describing a browser interaction with the Puppeteer/Playwright framework or a reference to an external JavaScript file.",
 			},
 			"degraded_response_time": schema.Int32Attribute{
 				Optional: true,
+				Computed: true,
 				Default:  int32default.StaticInt32(15000),
 				Validators: []validator.Int32{
 					int32validator.Between(0, 30000),
@@ -122,6 +124,7 @@ func (r *CheckResource) Schema(
 			},
 			"max_response_time": schema.Int32Attribute{
 				Optional: true,
+				Computed: true,
 				Default:  int32default.StaticInt32(30000),
 				Validators: []validator.Int32{
 					int32validator.Between(0, 30000),

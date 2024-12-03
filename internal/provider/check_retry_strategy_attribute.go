@@ -36,11 +36,13 @@ var CheckRetryStrategyAttributeSchema = schema.SingleNestedAttribute{
 		},
 		"base_backoff_seconds": schema.Int32Attribute{
 			Optional:    true,
+			Computed:    true,
 			Default:     int32default.StaticInt32(60),
 			Description: "The number of seconds to wait before the first retry attempt.",
 		},
 		"max_retries": schema.Int32Attribute{
 			Optional: true,
+			Computed: true,
 			Default:  int32default.StaticInt32(2),
 			Validators: []validator.Int32{
 				int32validator.Between(1, 10),
@@ -49,6 +51,7 @@ var CheckRetryStrategyAttributeSchema = schema.SingleNestedAttribute{
 		},
 		"max_duration_seconds": schema.Int32Attribute{
 			Optional: true,
+			Computed: true,
 			Default:  int32default.StaticInt32(600),
 			Validators: []validator.Int32{
 				int32validator.AtMost(600),
@@ -57,6 +60,7 @@ var CheckRetryStrategyAttributeSchema = schema.SingleNestedAttribute{
 		},
 		"same_region": schema.BoolAttribute{
 			Optional:    true,
+			Computed:    true,
 			Default:     booldefault.StaticBool(true),
 			Description: "Whether retries should be run in the same region as the initial check run.",
 		},

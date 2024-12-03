@@ -59,11 +59,13 @@ func (r *EnvironmentVariableResource) Schema(
 			},
 			"locked": schema.BoolAttribute{
 				Optional:    true,
+				Computed:    true,
 				Default:     booldefault.StaticBool(false),
 				Description: "", // TODO
 			},
 			"secret": schema.BoolAttribute{
 				Optional:    true,
+				Computed:    true,
 				Default:     booldefault.StaticBool(false),
 				Description: "", // TODO
 			},

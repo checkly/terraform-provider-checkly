@@ -59,6 +59,7 @@ func (r *DashboardResource) Schema(
 			},
 			"custom_domain": schema.StringAttribute{
 				Optional:    true,
+				Computed:    true,
 				Default:     nil, // TODO
 				Description: "A custom user domain, e.g. 'status.example.com'. See the docs on updating your DNS and SSL usage.",
 			},
@@ -84,6 +85,7 @@ func (r *DashboardResource) Schema(
 			},
 			"width": schema.StringAttribute{
 				Optional: true,
+				Computed: true,
 				Default:  stringdefault.StaticString("FULL"),
 				Validators: []validator.String{
 					stringvalidator.OneOf("FULL", "960PX"),
@@ -92,6 +94,7 @@ func (r *DashboardResource) Schema(
 			},
 			"refresh_rate": schema.Int32Attribute{
 				Optional: true,
+				Computed: true,
 				Default:  int32default.StaticInt32(60),
 				Validators: []validator.Int32{
 					int32validator.OneOf(60, 300, 600),
@@ -100,16 +103,19 @@ func (r *DashboardResource) Schema(
 			},
 			"paginate": schema.BoolAttribute{
 				Optional:    true,
+				Computed:    true,
 				Default:     booldefault.StaticBool(true),
 				Description: "Determines if pagination is on or off.",
 			},
 			"checks_per_page": schema.Int32Attribute{
 				Optional:    true,
+				Computed:    true,
 				Default:     int32default.StaticInt32(15),
 				Description: "Determines how many checks to show per page.",
 			},
 			"pagination_rate": schema.Int32Attribute{
 				Optional: true,
+				Computed: true,
 				Default:  int32default.StaticInt32(60),
 				Validators: []validator.Int32{
 					int32validator.OneOf(30, 60, 300),
@@ -123,16 +129,19 @@ func (r *DashboardResource) Schema(
 			},
 			"hide_tags": schema.BoolAttribute{
 				Optional:    true,
+				Computed:    true,
 				Default:     booldefault.StaticBool(false),
 				Description: "Show or hide the tags on the dashboard.",
 			},
 			"use_tags_and_operator": schema.BoolAttribute{
 				Optional:    true,
+				Computed:    true,
 				Default:     booldefault.StaticBool(false),
 				Description: "Set when to use AND operator for fetching dashboard tags.",
 			},
 			"is_private": schema.BoolAttribute{
 				Optional:    true,
+				Computed:    true,
 				Default:     booldefault.StaticBool(false),
 				Description: "Set your dashboard as private and generate key.",
 			},

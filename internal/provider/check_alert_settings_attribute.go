@@ -31,10 +31,11 @@ var CheckAlertSettingsAttributeSchema = schema.SingleNestedAttribute{
 	Attributes: map[string]schema.Attribute{
 		"escalation_type": schema.StringAttribute{
 			Optional: true,
+			Computed: true,
+			Default:  stringdefault.StaticString("RUN_BASED"),
 			Validators: []validator.String{
 				stringvalidator.OneOf("RUN_BASED", "TIME_BASED"),
 			},
-			Default:     stringdefault.StaticString("RUN_BASED"),
 			Description: "Determines what type of escalation to use. Possible values are `RUN_BASED` or `TIME_BASED`.",
 		},
 		"run_based_escalation": schema.SingleNestedAttribute{
@@ -43,6 +44,7 @@ var CheckAlertSettingsAttributeSchema = schema.SingleNestedAttribute{
 			Attributes: map[string]schema.Attribute{
 				"failed_run_threshold": schema.Int32Attribute{
 					Optional: true,
+					Computed: true,
 					Default:  int32default.StaticInt32(1),
 					Validators: []validator.Int32{
 						int32validator.Between(1, 5),
@@ -57,6 +59,7 @@ var CheckAlertSettingsAttributeSchema = schema.SingleNestedAttribute{
 			Attributes: map[string]schema.Attribute{
 				"minutes_failing_threshold": schema.Int32Attribute{
 					Optional: true,
+					Computed: true,
 					Default:  int32default.StaticInt32(5),
 					Validators: []validator.Int32{
 						int32validator.OneOf(5, 10, 15, 30),
@@ -78,6 +81,7 @@ var CheckAlertSettingsAttributeSchema = schema.SingleNestedAttribute{
 				},
 				"interval": schema.Int32Attribute{
 					Optional: true,
+					Computed: true,
 					Default:  int32default.StaticInt32(5),
 					Validators: []validator.Int32{
 						int32validator.OneOf(5, 10, 15, 30),
@@ -92,11 +96,13 @@ var CheckAlertSettingsAttributeSchema = schema.SingleNestedAttribute{
 			Attributes: map[string]schema.Attribute{
 				"enabled": schema.BoolAttribute{
 					Optional:    true,
+					Computed:    true,
 					Default:     booldefault.StaticBool(false),
 					Description: "Applicable only for checks scheduled in parallel in multiple locations.",
 				},
 				"percentage": schema.Int32Attribute{
 					Optional: true,
+					Computed: true,
 					Default:  int32default.StaticInt32(10),
 					Validators: []validator.Int32{
 						int32validator.OneOf(10, 20, 30, 40, 50, 60, 70, 80, 90, 100),
@@ -111,11 +117,13 @@ var CheckAlertSettingsAttributeSchema = schema.SingleNestedAttribute{
 			Attributes: map[string]schema.Attribute{
 				"enabled": schema.BoolAttribute{
 					Optional:    true,
+					Computed:    true,
 					Default:     booldefault.StaticBool(false),
 					Description: "Determines if alert notifications should be sent for expiring SSL certificates. Possible values `true`, and `false`. (Default `false`).",
 				},
 				"alert_threshold": schema.Int32Attribute{
 					Optional: true,
+					Computed: true,
 					Default:  int32default.StaticInt32(3),
 					Validators: []validator.Int32{
 						int32validator.OneOf(3, 7, 14, 30),

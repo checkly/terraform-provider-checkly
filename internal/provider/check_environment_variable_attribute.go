@@ -46,6 +46,7 @@ var CheckEnvironmentVariableAttributeSchema = schema.ListNestedAttribute{
 					"default, but can be accessed by team members with the " +
 					"appropriate permissions.",
 				Optional: true,
+				Computed: true,
 				Default:  booldefault.StaticBool(false),
 				Validators: []validator.Bool{
 					boolvalidator.ConflictsWith(
@@ -59,6 +60,7 @@ var CheckEnvironmentVariableAttributeSchema = schema.ListNestedAttribute{
 					"However, keep in mind that your Terraform state will " +
 					"still contain the value.",
 				Optional: true,
+				Computed: true,
 				Default:  booldefault.StaticBool(false),
 				Validators: []validator.Bool{
 					boolvalidator.ConflictsWith(

@@ -115,6 +115,7 @@ func (r *AlertChannelResource) Schema(
 					},
 					"method": schema.StringAttribute{
 						Optional:    true,
+						Computed:    true,
 						Default:     stringdefault.StaticString("POST"),
 						Description: "(Default `POST`)",
 					},
@@ -187,26 +188,31 @@ func (r *AlertChannelResource) Schema(
 			},
 			"send_recovery": schema.BoolAttribute{
 				Optional:    true,
+				Computed:    true,
 				Default:     booldefault.StaticBool(true),
 				Description: "(Default `true`)",
 			},
 			"send_failure": schema.BoolAttribute{
 				Optional:    true,
+				Computed:    true,
 				Default:     booldefault.StaticBool(true),
 				Description: "(Default `true`)",
 			},
 			"send_degraded": schema.BoolAttribute{
 				Optional:    true,
+				Computed:    true,
 				Default:     booldefault.StaticBool(false),
 				Description: "(Default `false`)",
 			},
 			"ssl_expiry": schema.BoolAttribute{
 				Optional:    true,
+				Computed:    true,
 				Default:     booldefault.StaticBool(false),
 				Description: "(Default `false`)",
 			},
 			"ssl_expiry_threshold": schema.Int32Attribute{
 				Optional: true,
+				Computed: true,
 				Default:  int32default.StaticInt32(30),
 				Validators: []validator.Int32{
 					int32validator.Between(1, 30),
