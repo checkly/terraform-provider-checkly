@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/terraform-provider-checkly/internal/sdkutil"
 )
 
 var (
@@ -160,7 +161,7 @@ func (r *TriggerGroupResource) Read(
 		state.GroupID.ValueInt64(),
 	)
 	if err != nil {
-		if SDKIsHTTPNotFoundError(err) {
+		if sdkutil.IsHTTPNotFoundError(err) {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -220,7 +221,7 @@ func (r *TriggerGroupResource) Update(
 	}
 }
 
-var TriggerGroupID = SDKIdentifier{
+var TriggerGroupID = sdkutil.Identifier{
 	Path:  path.Root("id"),
 	Title: "Checkly Trigger Group ID",
 }

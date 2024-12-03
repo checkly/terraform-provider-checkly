@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/terraform-provider-checkly/internal/sdkutil"
 )
 
 var (
@@ -23,13 +24,13 @@ var CheckQueryParametersAttributeSchema = schema.MapAttribute{
 type CheckQueryParametersAttributeModel types.Map
 
 func (m *CheckQueryParametersAttributeModel) Refresh(ctx context.Context, from *[]checkly.KeyValue, flags RefreshFlags) diag.Diagnostics {
-	*m = CheckQueryParametersAttributeModel(SDKKeyValuesIntoMap(from))
+	*m = CheckQueryParametersAttributeModel(sdkutil.KeyValuesIntoMap(from))
 
 	return nil
 }
 
 func (m *CheckQueryParametersAttributeModel) Render(ctx context.Context, into *[]checkly.KeyValue) diag.Diagnostics {
-	*into = SDKKeyValuesFromMap(types.Map(*m))
+	*into = sdkutil.KeyValuesFromMap(types.Map(*m))
 
 	return nil
 }

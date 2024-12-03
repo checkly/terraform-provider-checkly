@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/terraform-provider-checkly/internal/sdkutil"
 )
 
 var (
@@ -168,7 +169,7 @@ func (r *PrivateLocationResource) Read(
 
 	realizedModel, err := r.client.GetPrivateLocation(ctx, state.ID.ValueString())
 	if err != nil {
-		if SDKIsHTTPNotFoundError(err) {
+		if sdkutil.IsHTTPNotFoundError(err) {
 			resp.State.RemoveResource(ctx)
 			return
 		}

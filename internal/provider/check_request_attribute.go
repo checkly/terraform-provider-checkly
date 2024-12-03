@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/terraform-provider-checkly/internal/sdkutil"
 )
 
 var (
@@ -102,8 +103,8 @@ func (m *CheckRequestAttributeModel) Refresh(ctx context.Context, from *checkly.
 	m.URL = types.StringValue(from.URL)
 	m.FollowRedirects = types.BoolValue(from.FollowRedirects)
 	m.SkipSSL = types.BoolValue(from.SkipSSL)
-	m.Headers = SDKKeyValuesIntoMap(&from.Headers)
-	m.QueryParameters = SDKKeyValuesIntoMap(&from.QueryParameters)
+	m.Headers = sdkutil.KeyValuesIntoMap(&from.Headers)
+	m.QueryParameters = sdkutil.KeyValuesIntoMap(&from.QueryParameters)
 	m.Body = types.StringValue(from.Body)
 	m.BodyType = types.StringValue(from.BodyType)
 
@@ -127,8 +128,8 @@ func (m *CheckRequestAttributeModel) Render(ctx context.Context, into *checkly.R
 	into.URL = m.URL.ValueString()
 	into.FollowRedirects = m.FollowRedirects.ValueBool()
 	into.SkipSSL = m.SkipSSL.ValueBool()
-	into.Headers = SDKKeyValuesFromMap(m.Headers)
-	into.QueryParameters = SDKKeyValuesFromMap(m.QueryParameters)
+	into.Headers = sdkutil.KeyValuesFromMap(m.Headers)
+	into.QueryParameters = sdkutil.KeyValuesFromMap(m.QueryParameters)
 	into.Body = m.Body.ValueString()
 	into.BodyType = m.Body.ValueString()
 

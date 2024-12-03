@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/terraform-provider-checkly/internal/sdkutil"
 )
 
 var (
@@ -41,8 +42,8 @@ func (m *CheckAPICheckDefaultsAttributeModel) Refresh(ctx context.Context, from 
 	var diags diag.Diagnostics
 
 	m.URL = types.StringValue(from.BaseURL)
-	m.Headers = SDKKeyValuesIntoMap(&from.Headers)
-	m.QueryParameters = SDKKeyValuesIntoMap(&from.QueryParameters)
+	m.Headers = sdkutil.KeyValuesIntoMap(&from.Headers)
+	m.QueryParameters = sdkutil.KeyValuesIntoMap(&from.QueryParameters)
 
 	diags.Append(RefreshMany(ctx, from.Assertions, m.Assertions, flags)...)
 
@@ -55,8 +56,8 @@ func (m *CheckAPICheckDefaultsAttributeModel) Render(ctx context.Context, into *
 	var diags diag.Diagnostics
 
 	into.BaseURL = m.URL.ValueString()
-	into.Headers = SDKKeyValuesFromMap(m.Headers)
-	into.QueryParameters = SDKKeyValuesFromMap(m.QueryParameters)
+	into.Headers = sdkutil.KeyValuesFromMap(m.Headers)
+	into.QueryParameters = sdkutil.KeyValuesFromMap(m.QueryParameters)
 
 	diags.Append(RenderMany(ctx, m.Assertions, into.Assertions)...)
 

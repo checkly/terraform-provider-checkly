@@ -1,4 +1,4 @@
-package provider
+package sdkutil
 
 import (
 	"fmt"
@@ -13,12 +13,12 @@ import (
 	checkly "github.com/checkly/checkly-go-sdk"
 )
 
-type SDKIdentifier struct {
+type Identifier struct {
 	Path  path.Path
 	Title string
 }
 
-func (i *SDKIdentifier) FromString(id types.String) (int64, diag.Diagnostics) {
+func (i *Identifier) FromString(id types.String) (int64, diag.Diagnostics) {
 	if id.IsUnknown() {
 		return 0, diag.Diagnostics{
 			diag.NewAttributeErrorDiagnostic(
@@ -53,11 +53,11 @@ func (i *SDKIdentifier) FromString(id types.String) (int64, diag.Diagnostics) {
 	return val, nil
 }
 
-func (i *SDKIdentifier) IntoString(id int64) types.String {
+func (i *Identifier) IntoString(id int64) types.String {
 	return types.StringValue(fmt.Sprintf("%d", id))
 }
 
-func SDKKeyValuesFromMap(m types.Map) []checkly.KeyValue {
+func KeyValuesFromMap(m types.Map) []checkly.KeyValue {
 	if m.IsNull() {
 		return nil
 	}
@@ -73,7 +73,7 @@ func SDKKeyValuesFromMap(m types.Map) []checkly.KeyValue {
 	return values
 }
 
-func SDKKeyValuesIntoMap(values *[]checkly.KeyValue) types.Map {
+func KeyValuesIntoMap(values *[]checkly.KeyValue) types.Map {
 	if values == nil {
 		return types.MapNull(types.StringType)
 	}
@@ -86,7 +86,7 @@ func SDKKeyValuesIntoMap(values *[]checkly.KeyValue) types.Map {
 	return types.MapValueMust(types.StringType, mapValues)
 }
 
-func SDKIsHTTPNotFoundError(err error) bool {
+func IsHTTPNotFoundError(err error) bool {
 	// Unfortunately the SDK presents HTTP errors in a completely unusable way,
 	// forcing us to match against string values.
 	msg := err.Error()

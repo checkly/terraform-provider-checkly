@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/terraform-provider-checkly/internal/sdkutil"
 )
 
 var (
@@ -346,7 +347,7 @@ func (r *AlertChannelResource) Read(
 
 	realizedModel, err := r.client.GetAlertChannel(ctx, id)
 	if err != nil {
-		if SDKIsHTTPNotFoundError(err) {
+		if sdkutil.IsHTTPNotFoundError(err) {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -419,7 +420,7 @@ func (r *AlertChannelResource) Update(
 	}
 }
 
-var AlertChannelID = SDKIdentifier{
+var AlertChannelID = sdkutil.Identifier{
 	Path:  path.Root("id"),
 	Title: "Checkly Alert Channel ID",
 }
@@ -667,8 +668,8 @@ type WebhookAttributeModel struct {
 func (m *WebhookAttributeModel) Refresh(ctx context.Context, from *checkly.AlertChannelWebhook, flags RefreshFlags) diag.Diagnostics {
 	m.Name = types.StringValue(from.Name)
 	m.Method = types.StringValue(from.Method)
-	m.Headers = SDKKeyValuesIntoMap(&from.Headers)
-	m.QueryParameters = SDKKeyValuesIntoMap(&from.QueryParameters)
+	m.Headers = sdkutil.KeyValuesIntoMap(&from.Headers)
+	m.QueryParameters = sdkutil.KeyValuesIntoMap(&from.QueryParameters)
 	m.Template = types.StringValue(from.Template)
 	m.URL = types.StringValue(from.URL)
 	m.WebhookSecret = types.StringValue(from.WebhookSecret)
@@ -680,8 +681,8 @@ func (m *WebhookAttributeModel) Refresh(ctx context.Context, from *checkly.Alert
 func (m *WebhookAttributeModel) Render(ctx context.Context, into *checkly.AlertChannelWebhook) diag.Diagnostics {
 	into.Name = m.Name.ValueString()
 	into.Method = m.Method.ValueString()
-	into.Headers = SDKKeyValuesFromMap(m.Headers)
-	into.QueryParameters = SDKKeyValuesFromMap(m.QueryParameters)
+	into.Headers = sdkutil.KeyValuesFromMap(m.Headers)
+	into.QueryParameters = sdkutil.KeyValuesFromMap(m.QueryParameters)
 	into.Template = m.Template.ValueString()
 	into.URL = m.URL.ValueString()
 	into.WebhookSecret = m.WebhookSecret.ValueString()

@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/terraform-provider-checkly/internal/sdkutil"
 )
 
 var (
@@ -23,13 +24,13 @@ var CheckHeadersAttributeSchema = schema.MapAttribute{
 type CheckHeadersAttributeModel types.Map
 
 func (m *CheckHeadersAttributeModel) Refresh(ctx context.Context, from *[]checkly.KeyValue, flags RefreshFlags) diag.Diagnostics {
-	*m = CheckHeadersAttributeModel(SDKKeyValuesIntoMap(from))
+	*m = CheckHeadersAttributeModel(sdkutil.KeyValuesIntoMap(from))
 
 	return nil
 }
 
 func (m *CheckHeadersAttributeModel) Render(ctx context.Context, into *[]checkly.KeyValue) diag.Diagnostics {
-	*into = SDKKeyValuesFromMap(types.Map(*m))
+	*into = sdkutil.KeyValuesFromMap(types.Map(*m))
 
 	return nil
 }
