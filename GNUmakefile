@@ -36,8 +36,6 @@ fmt:
 	go fmt ./checkly
 	terraform fmt
 
-doc:
-	./tools/tfplugindocs
-
+# Generate docs
 generate:
-	go generate ./...
+	cd tools; go generate ./...

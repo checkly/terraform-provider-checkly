@@ -58,3 +58,4 @@ resource "checkly_dashboard" "dashboard_1" {
 
 - `id` (String) The ID of this resource.
 - `key` (String, Sensitive) The access key when the dashboard is private.
+- `last_updated` (String) When the resource was last updated by the provider.

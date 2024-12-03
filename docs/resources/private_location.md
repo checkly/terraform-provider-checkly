@@ -35,3 +35,4 @@ resource "checkly_private_location" "location" {
 
 - `id` (String) The ID of this resource.
 - `keys` (Set of String, Sensitive) Private location API keys.
+- `last_updated` (String) When the resource was last updated by the provider.

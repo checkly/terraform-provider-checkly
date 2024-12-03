@@ -3,12 +3,12 @@
 page_title: "checkly_alert_channel Resource - terraform-provider-checkly"
 subcategory: ""
 description: |-
-  Allows you to define alerting channels for the checks and groups in your account
+  Allows you to define alerting channels for the checks and groups in your account.
 ---
 
 # checkly_alert_channel (Resource)
 
-Allows you to define alerting channels for the checks and groups in your account
+Allows you to define alerting channels for the checks and groups in your account.
 
 ## Example Usage
 
@@ -115,24 +115,25 @@ resource "checkly_check" "example_check" {
 
 ### Optional
 
-- `call` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--call))
-- `email` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--email))
-- `opsgenie` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--opsgenie))
-- `pagerduty` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--pagerduty))
+- `call` (Attributes) (see [below for nested schema](#nestedatt--call))
+- `email` (Attributes) (see [below for nested schema](#nestedatt--email))
+- `opsgenie` (Attributes) (see [below for nested schema](#nestedatt--opsgenie))
+- `pagerduty` (Attributes) (see [below for nested schema](#nestedatt--pagerduty))
 - `send_degraded` (Boolean) (Default `false`)
 - `send_failure` (Boolean) (Default `true`)
 - `send_recovery` (Boolean) (Default `true`)
-- `slack` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--slack))
-- `sms` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--sms))
+- `slack` (Attributes) (see [below for nested schema](#nestedatt--slack))
+- `sms` (Attributes) (see [below for nested schema](#nestedatt--sms))
 - `ssl_expiry` (Boolean) (Default `false`)
 - `ssl_expiry_threshold` (Number) Value must be between 1 and 30 (Default `30`)
-- `webhook` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--webhook))
+- `webhook` (Attributes) (see [below for nested schema](#nestedatt--webhook))
 
 ### Read-Only
 
 - `id` (String) The ID of this resource.
+- `last_updated` (String) When the resource was last updated by the provider.
 
-<a id="nestedblock--call"></a>
+<a id="nestedatt--call"></a>
 ### Nested Schema for `call`
 
 Required:
@@ -141,7 +142,7 @@ Required:
 - `number` (String) The mobile number to receive the alerts
 
 
-<a id="nestedblock--email"></a>
+<a id="nestedatt--email"></a>
 ### Nested Schema for `email`
 
 Required:
@@ -149,7 +150,7 @@ Required:
 - `address` (String) The email address of this email alert channel.
 
 
-<a id="nestedblock--opsgenie"></a>
+<a id="nestedatt--opsgenie"></a>
 ### Nested Schema for `opsgenie`
 
 Required:
@@ -160,7 +161,7 @@ Required:
 - `region` (String)
 
 
-<a id="nestedblock--pagerduty"></a>
+<a id="nestedatt--pagerduty"></a>
 ### Nested Schema for `pagerduty`
 
 Required:
@@ -173,7 +174,7 @@ Optional:
 - `service_name` (String)
 
 
-<a id="nestedblock--slack"></a>
+<a id="nestedatt--slack"></a>
 ### Nested Schema for `slack`
 
 Required:
@@ -182,7 +183,7 @@ Required:
 - `url` (String) The Slack webhook URL
 
 
-<a id="nestedblock--sms"></a>
+<a id="nestedatt--sms"></a>
 ### Nested Schema for `sms`
 
 Required:
@@ -191,7 +192,7 @@ Required:
 - `number` (String) The mobile number to receive the alerts
 
 
-<a id="nestedblock--webhook"></a>
+<a id="nestedatt--webhook"></a>
 ### Nested Schema for `webhook`
 
 Required:
