@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -71,44 +70,39 @@ func (r *HeartbeatResource) Schema(
 				Optional:    true,
 				Description: "When true, the account level alert settings will be used, not the alert setting defined on this check.",
 			},
-			"heartbeat": schema.SetNestedAttribute{ // TODO: Change from set to single object.
-				Required: true,
-				Validators: []validator.Set{
-					setvalidator.SizeAtMost(1),
+			"heartbeat": schema.SingleNestedAttribute{
+				Required:   true,
+				Validators: []validator.Object{
+					// TODO: period * period_unit must be between 30s and 365 days
+					// TODO: grace * grace_unit must be less than 365 days
 				},
-				NestedObject: schema.NestedAttributeObject{
-					Validators: []validator.Object{
-						// TODO: period * period_unit must be between 30s and 365 days
-						// TODO: grace * grace_unit must be less than 365 days
+				Attributes: map[string]schema.Attribute{
+					"period": schema.Int32Attribute{
+						Required:    true,
+						Description: "How often you expect a ping to the ping URL.",
 					},
-					Attributes: map[string]schema.Attribute{
-						"period": schema.Int32Attribute{
-							Required:    true,
-							Description: "How often you expect a ping to the ping URL.",
+					"period_unit": schema.StringAttribute{
+						Required: true,
+						Validators: []validator.String{
+							stringvalidator.OneOf("seconds", "minutes", "hours", "days"),
 						},
-						"period_unit": schema.StringAttribute{
-							Required: true,
-							Validators: []validator.String{
-								stringvalidator.OneOf("seconds", "minutes", "hours", "days"),
-							},
-							Description: "Possible values `seconds`, `minutes`, `hours` and `days`.",
+						Description: "Possible values `seconds`, `minutes`, `hours` and `days`.",
+					},
+					"grace": schema.Int32Attribute{
+						Required:    true,
+						Description: "How long Checkly should wait before triggering any alerts when a ping does not arrive within the set period.",
+					},
+					"grace_unit": schema.StringAttribute{
+						Required: true,
+						Validators: []validator.String{
+							stringvalidator.OneOf("seconds", "minutes", "hours", "days"),
 						},
-						"grace": schema.Int32Attribute{
-							Required:    true,
-							Description: "How long Checkly should wait before triggering any alerts when a ping does not arrive within the set period.",
-						},
-						"grace_unit": schema.StringAttribute{
-							Required: true,
-							Validators: []validator.String{
-								stringvalidator.OneOf("seconds", "minutes", "hours", "days"),
-							},
-							Description: "Possible values `seconds`, `minutes`, `hours` and `days`.",
-						},
-						"ping_token": schema.StringAttribute{
-							Optional:    true,
-							Computed:    true,
-							Description: "Custom token to generate your ping URL. Checkly will expect a ping to `https://ping.checklyhq.com/[PING_TOKEN]`.",
-						},
+						Description: "Possible values `seconds`, `minutes`, `hours` and `days`.",
+					},
+					"ping_token": schema.StringAttribute{
+						Optional:    true,
+						Computed:    true,
+						Description: "Custom token to generate your ping URL. Checkly will expect a ping to `https://ping.checklyhq.com/[PING_TOKEN]`.",
 					},
 				},
 			},

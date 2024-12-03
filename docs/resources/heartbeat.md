@@ -32,7 +32,7 @@ resource "checkly_heartbeat" "example-heartbeat" {
 ### Required
 
 - `activated` (Boolean) Determines if the check is running or not. Possible values `true`, and `false`.
-- `heartbeat` (Attributes Set) (see [below for nested schema](#nestedatt--heartbeat))
+- `heartbeat` (Attributes) (see [below for nested schema](#nestedatt--heartbeat))
 - `name` (String) The name of the check.
 
 ### Optional
