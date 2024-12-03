@@ -1,4 +1,4 @@
-package provider
+package attributes
 
 import (
 	"context"
@@ -8,13 +8,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/terraform-provider-checkly/internal/provider/interop"
 )
 
 var (
-	_ ResourceModel[checkly.AlertChannelSubscription] = (*CheckAlertChannelSubscriptionAttributeModel)(nil)
+	_ interop.Model[checkly.AlertChannelSubscription] = (*AlertChannelSubscriptionAttributeModel)(nil)
 )
 
-var CheckAlertChannelSubscriptionAttributeSchema = schema.ListNestedAttribute{
+var AlertChannelSubscriptionAttributeSchema = schema.ListNestedAttribute{
 	Description: "An array of channel IDs and whether they're activated or " +
 		"not. If you don't set at least one alert subscription for your " +
 		"check, we won't be able to alert you in case something goes wrong " +
@@ -32,19 +33,19 @@ var CheckAlertChannelSubscriptionAttributeSchema = schema.ListNestedAttribute{
 	},
 }
 
-type CheckAlertChannelSubscriptionAttributeModel struct {
+type AlertChannelSubscriptionAttributeModel struct {
 	ChannelID types.Int64 `tfsdk:"channel_id"`
 	Activated types.Bool  `tfsdk:"activated"`
 }
 
-func (m *CheckAlertChannelSubscriptionAttributeModel) Refresh(ctx context.Context, from *checkly.AlertChannelSubscription, flags RefreshFlags) diag.Diagnostics {
+func (m *AlertChannelSubscriptionAttributeModel) Refresh(ctx context.Context, from *checkly.AlertChannelSubscription, flags interop.RefreshFlags) diag.Diagnostics {
 	m.ChannelID = types.Int64Value(from.ChannelID)
 	m.Activated = types.BoolValue(from.Activated)
 
 	return nil
 }
 
-func (m *CheckAlertChannelSubscriptionAttributeModel) Render(ctx context.Context, into *checkly.AlertChannelSubscription) diag.Diagnostics {
+func (m *AlertChannelSubscriptionAttributeModel) Render(ctx context.Context, into *checkly.AlertChannelSubscription) diag.Diagnostics {
 	into.ChannelID = m.ChannelID.ValueInt64()
 	into.Activated = m.Activated.ValueBool()
 

@@ -1,4 +1,4 @@
-package provider
+package attributes
 
 import (
 	"context"
@@ -14,18 +14,19 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/terraform-provider-checkly/internal/provider/interop"
 )
 
 var (
-	_ ResourceModel[checkly.AlertSettings]               = (*CheckAlertSettingsAttributeModel)(nil)
-	_ ResourceModel[checkly.RunBasedEscalation]          = (*CheckRunBasedEscalationAttributeModel)(nil)
-	_ ResourceModel[checkly.TimeBasedEscalation]         = (*CheckTimeBasedEscalationAttributeModel)(nil)
-	_ ResourceModel[checkly.Reminders]                   = (*CheckRemindersAttributeModel)(nil)
-	_ ResourceModel[checkly.ParallelRunFailureThreshold] = (*CheckParallelRunFailureThresholdAttributeModel)(nil)
-	_ ResourceModel[checkly.SSLCertificates]             = (*CheckSSLCertificatesAttributeModel)(nil)
+	_ interop.Model[checkly.AlertSettings]               = (*AlertSettingsAttributeModel)(nil)
+	_ interop.Model[checkly.RunBasedEscalation]          = (*RunBasedEscalationAttributeModel)(nil)
+	_ interop.Model[checkly.TimeBasedEscalation]         = (*TimeBasedEscalationAttributeModel)(nil)
+	_ interop.Model[checkly.Reminders]                   = (*RemindersAttributeModel)(nil)
+	_ interop.Model[checkly.ParallelRunFailureThreshold] = (*ParallelRunFailureThresholdAttributeModel)(nil)
+	_ interop.Model[checkly.SSLCertificates]             = (*SSLCertificatesAttributeModel)(nil)
 )
 
-var CheckAlertSettingsAttributeSchema = schema.SingleNestedAttribute{
+var AlertSettingsAttributeSchema = schema.SingleNestedAttribute{
 	Optional: true,
 	Computed: true,
 	Attributes: map[string]schema.Attribute{
@@ -136,16 +137,16 @@ var CheckAlertSettingsAttributeSchema = schema.SingleNestedAttribute{
 	},
 }
 
-type CheckAlertSettingsAttributeModel struct {
-	EscalationType              types.String                                   `tfsdk:"escalation_type"`
-	RunBasedEscalations         CheckRunBasedEscalationAttributeModel          `tfsdk:"run_based_escalation"`
-	TimeBasedEscalations        CheckTimeBasedEscalationAttributeModel         `tfsdk:"time_based_escalation"`
-	Reminders                   CheckRemindersAttributeModel                   `tfsdk:"reminders"`
-	ParallelRunFailureThreshold CheckParallelRunFailureThresholdAttributeModel `tfsdk:"parallel_run_failure_threshold"`
-	SSLCertificates             CheckSSLCertificatesAttributeModel             `tfsdk:"ssl_certificates"`
+type AlertSettingsAttributeModel struct {
+	EscalationType              types.String                              `tfsdk:"escalation_type"`
+	RunBasedEscalations         RunBasedEscalationAttributeModel          `tfsdk:"run_based_escalation"`
+	TimeBasedEscalations        TimeBasedEscalationAttributeModel         `tfsdk:"time_based_escalation"`
+	Reminders                   RemindersAttributeModel                   `tfsdk:"reminders"`
+	ParallelRunFailureThreshold ParallelRunFailureThresholdAttributeModel `tfsdk:"parallel_run_failure_threshold"`
+	SSLCertificates             SSLCertificatesAttributeModel             `tfsdk:"ssl_certificates"`
 }
 
-func (m *CheckAlertSettingsAttributeModel) Refresh(ctx context.Context, from *checkly.AlertSettings, flags RefreshFlags) diag.Diagnostics {
+func (m *AlertSettingsAttributeModel) Refresh(ctx context.Context, from *checkly.AlertSettings, flags interop.RefreshFlags) diag.Diagnostics {
 	var diags diag.Diagnostics
 
 	m.EscalationType = types.StringValue(from.EscalationType)
@@ -166,7 +167,7 @@ func (m *CheckAlertSettingsAttributeModel) Refresh(ctx context.Context, from *ch
 	return diags
 }
 
-func (m *CheckAlertSettingsAttributeModel) Render(ctx context.Context, into *checkly.AlertSettings) diag.Diagnostics {
+func (m *AlertSettingsAttributeModel) Render(ctx context.Context, into *checkly.AlertSettings) diag.Diagnostics {
 	var diags diag.Diagnostics
 
 	switch m.EscalationType.ValueString() {
@@ -187,89 +188,89 @@ func (m *CheckAlertSettingsAttributeModel) Render(ctx context.Context, into *che
 	return diags
 }
 
-type CheckRunBasedEscalationAttributeModel struct {
+type RunBasedEscalationAttributeModel struct {
 	FailedRunThreshold types.Int32 `tfsdk:"failed_run_threshold"`
 }
 
-func (m *CheckRunBasedEscalationAttributeModel) Refresh(ctx context.Context, from *checkly.RunBasedEscalation, flags RefreshFlags) diag.Diagnostics {
+func (m *RunBasedEscalationAttributeModel) Refresh(ctx context.Context, from *checkly.RunBasedEscalation, flags interop.RefreshFlags) diag.Diagnostics {
 	m.FailedRunThreshold = types.Int32Value(int32(from.FailedRunThreshold))
 
 	return nil
 }
 
-func (m *CheckRunBasedEscalationAttributeModel) Render(ctx context.Context, into *checkly.RunBasedEscalation) diag.Diagnostics {
+func (m *RunBasedEscalationAttributeModel) Render(ctx context.Context, into *checkly.RunBasedEscalation) diag.Diagnostics {
 	into.FailedRunThreshold = int(m.FailedRunThreshold.ValueInt32())
 
 	return nil
 }
 
-type CheckTimeBasedEscalationAttributeModel struct {
+type TimeBasedEscalationAttributeModel struct {
 	MinutesFailingThreshold types.Int32 `tfsdk:"minutes_failing_threshold"`
 }
 
-func (m *CheckTimeBasedEscalationAttributeModel) Refresh(ctx context.Context, from *checkly.TimeBasedEscalation, flags RefreshFlags) diag.Diagnostics {
+func (m *TimeBasedEscalationAttributeModel) Refresh(ctx context.Context, from *checkly.TimeBasedEscalation, flags interop.RefreshFlags) diag.Diagnostics {
 	m.MinutesFailingThreshold = types.Int32Value(int32(from.MinutesFailingThreshold))
 
 	return nil
 }
 
-func (m *CheckTimeBasedEscalationAttributeModel) Render(ctx context.Context, into *checkly.TimeBasedEscalation) diag.Diagnostics {
+func (m *TimeBasedEscalationAttributeModel) Render(ctx context.Context, into *checkly.TimeBasedEscalation) diag.Diagnostics {
 	into.MinutesFailingThreshold = int(m.MinutesFailingThreshold.ValueInt32())
 
 	return nil
 }
 
-type CheckRemindersAttributeModel struct {
+type RemindersAttributeModel struct {
 	Amount   types.Int32 `tfsdk:"amount"`
 	Interval types.Int32 `tfsdk:"interval"`
 }
 
-func (m *CheckRemindersAttributeModel) Refresh(ctx context.Context, from *checkly.Reminders, flags RefreshFlags) diag.Diagnostics {
+func (m *RemindersAttributeModel) Refresh(ctx context.Context, from *checkly.Reminders, flags interop.RefreshFlags) diag.Diagnostics {
 	m.Amount = types.Int32Value(int32(from.Amount))
 	m.Interval = types.Int32Value(int32(from.Interval))
 
 	return nil
 }
 
-func (m *CheckRemindersAttributeModel) Render(ctx context.Context, into *checkly.Reminders) diag.Diagnostics {
+func (m *RemindersAttributeModel) Render(ctx context.Context, into *checkly.Reminders) diag.Diagnostics {
 	into.Amount = int(m.Amount.ValueInt32())
 	into.Interval = int(m.Interval.ValueInt32())
 
 	return nil
 }
 
-type CheckParallelRunFailureThresholdAttributeModel struct {
+type ParallelRunFailureThresholdAttributeModel struct {
 	Enabled    types.Bool  `tfsdk:"enabled"`
 	Percentage types.Int32 `tfsdk:"percentage"`
 }
 
-func (m *CheckParallelRunFailureThresholdAttributeModel) Refresh(ctx context.Context, from *checkly.ParallelRunFailureThreshold, flags RefreshFlags) diag.Diagnostics {
+func (m *ParallelRunFailureThresholdAttributeModel) Refresh(ctx context.Context, from *checkly.ParallelRunFailureThreshold, flags interop.RefreshFlags) diag.Diagnostics {
 	m.Enabled = types.BoolValue(from.Enabled)
 	m.Percentage = types.Int32Value(int32(from.Percentage))
 
 	return nil
 }
 
-func (m *CheckParallelRunFailureThresholdAttributeModel) Render(ctx context.Context, into *checkly.ParallelRunFailureThreshold) diag.Diagnostics {
+func (m *ParallelRunFailureThresholdAttributeModel) Render(ctx context.Context, into *checkly.ParallelRunFailureThreshold) diag.Diagnostics {
 	into.Enabled = m.Enabled.ValueBool()
 	into.Percentage = int(m.Percentage.ValueInt32())
 
 	return nil
 }
 
-type CheckSSLCertificatesAttributeModel struct {
+type SSLCertificatesAttributeModel struct {
 	Enabled        types.Bool  `tfsdk:"enabled"`
 	AlertThreshold types.Int32 `tfsdk:"alert_threshold"`
 }
 
-func (m *CheckSSLCertificatesAttributeModel) Refresh(ctx context.Context, from *checkly.SSLCertificates, flags RefreshFlags) diag.Diagnostics {
+func (m *SSLCertificatesAttributeModel) Refresh(ctx context.Context, from *checkly.SSLCertificates, flags interop.RefreshFlags) diag.Diagnostics {
 	m.Enabled = types.BoolValue(from.Enabled)
 	m.AlertThreshold = types.Int32Value(int32(from.AlertThreshold))
 
 	return nil
 }
 
-func (m *CheckSSLCertificatesAttributeModel) Render(ctx context.Context, into *checkly.SSLCertificates) diag.Diagnostics {
+func (m *SSLCertificatesAttributeModel) Render(ctx context.Context, into *checkly.SSLCertificates) diag.Diagnostics {
 	into.Enabled = m.Enabled.ValueBool()
 	into.AlertThreshold = int(m.AlertThreshold.ValueInt32())
 

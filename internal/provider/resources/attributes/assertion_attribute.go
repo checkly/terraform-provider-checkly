@@ -1,4 +1,4 @@
-package provider
+package attributes
 
 import (
 	"context"
@@ -10,13 +10,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/terraform-provider-checkly/internal/provider/interop"
 )
 
 var (
-	_ ResourceModel[checkly.Assertion] = (*CheckAssertionAttributeModel)(nil)
+	_ interop.Model[checkly.Assertion] = (*AssertionAttributeModel)(nil)
 )
 
-var CheckAssertionAttributeSchema = schema.ListNestedAttribute{
+var AssertionAttributeSchema = schema.ListNestedAttribute{
 	Optional: true,
 	NestedObject: schema.NestedAttributeObject{
 		Attributes: map[string]schema.Attribute{
@@ -65,14 +66,14 @@ var CheckAssertionAttributeSchema = schema.ListNestedAttribute{
 	},
 }
 
-type CheckAssertionAttributeModel struct {
+type AssertionAttributeModel struct {
 	Source     types.String `tfsdk:"source"`
 	Property   types.String `tfsdk:"property"`
 	Comparison types.String `tfsdk:"comparison"`
 	Target     types.String `tfsdk:"target"`
 }
 
-func (m *CheckAssertionAttributeModel) Refresh(ctx context.Context, from *checkly.Assertion, flags RefreshFlags) diag.Diagnostics {
+func (m *AssertionAttributeModel) Refresh(ctx context.Context, from *checkly.Assertion, flags interop.RefreshFlags) diag.Diagnostics {
 	m.Source = types.StringValue(from.Source)
 	m.Property = types.StringValue(from.Property)
 	m.Comparison = types.StringValue(from.Comparison)
@@ -81,7 +82,7 @@ func (m *CheckAssertionAttributeModel) Refresh(ctx context.Context, from *checkl
 	return nil
 }
 
-func (m *CheckAssertionAttributeModel) Render(ctx context.Context, into *checkly.Assertion) diag.Diagnostics {
+func (m *AssertionAttributeModel) Render(ctx context.Context, into *checkly.Assertion) diag.Diagnostics {
 	into.Source = m.Source.ValueString()
 	into.Property = m.Property.ValueString()
 	into.Comparison = m.Comparison.ValueString()

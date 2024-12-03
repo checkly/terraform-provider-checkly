@@ -1,4 +1,4 @@
-package provider
+package resources
 
 import (
 	"context"
@@ -18,6 +18,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/terraform-provider-checkly/internal/provider/interop"
+	"github.com/checkly/terraform-provider-checkly/internal/provider/resources/attributes"
 	"github.com/checkly/terraform-provider-checkly/internal/sdkutil"
 )
 
@@ -55,8 +57,8 @@ func (r *AlertChannelResource) Schema(
 	resp.Schema = schema.Schema{
 		Description: "Allows you to define alerting channels for the checks and groups in your account.",
 		Attributes: map[string]schema.Attribute{
-			"id":           IDResourceAttributeSchema,
-			"last_updated": LastUpdatedAttributeSchema,
+			"id":           attributes.IDAttributeSchema,
+			"last_updated": attributes.LastUpdatedAttributeSchema,
 			"email": schema.SingleNestedAttribute{
 				Optional: true,
 				Attributes: map[string]schema.Attribute{
@@ -242,7 +244,7 @@ func (r *AlertChannelResource) Configure(
 	req resource.ConfigureRequest,
 	resp *resource.ConfigureResponse,
 ) {
-	client, diags := ClientFromProviderData(req.ProviderData)
+	client, diags := interop.ClientFromProviderData(req.ProviderData)
 	if diags.HasError() {
 		resp.Diagnostics.Append(diags...)
 		return
@@ -287,7 +289,7 @@ func (r *AlertChannelResource) Create(
 		return
 	}
 
-	resp.Diagnostics.Append(plan.Refresh(ctx, realizedModel, ModelCreated)...)
+	resp.Diagnostics.Append(plan.Refresh(ctx, realizedModel, interop.Created)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -360,7 +362,7 @@ func (r *AlertChannelResource) Read(
 		return
 	}
 
-	resp.Diagnostics.Append(state.Refresh(ctx, realizedModel, ModelLoaded)...)
+	resp.Diagnostics.Append(state.Refresh(ctx, realizedModel, interop.Loaded)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -409,7 +411,7 @@ func (r *AlertChannelResource) Update(
 		return
 	}
 
-	resp.Diagnostics.Append(plan.Refresh(ctx, realizedModel, ModelUpdated)...)
+	resp.Diagnostics.Append(plan.Refresh(ctx, realizedModel, interop.Updated)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -426,14 +428,14 @@ var AlertChannelID = sdkutil.Identifier{
 }
 
 var (
-	_ ResourceModel[checkly.AlertChannel]          = (*AlertChannelResourceModel)(nil)
-	_ ResourceModel[checkly.AlertChannelEmail]     = (*EmailAttributeModel)(nil)
-	_ ResourceModel[checkly.AlertChannelSlack]     = (*SlackAttributeModel)(nil)
-	_ ResourceModel[checkly.AlertChannelSMS]       = (*SMSAttributeModel)(nil)
-	_ ResourceModel[checkly.AlertChannelCall]      = (*CallAttributeModel)(nil)
-	_ ResourceModel[checkly.AlertChannelWebhook]   = (*WebhookAttributeModel)(nil)
-	_ ResourceModel[checkly.AlertChannelOpsgenie]  = (*OpsgenieAttributeModel)(nil)
-	_ ResourceModel[checkly.AlertChannelPagerduty] = (*PagerdutyAttributeModel)(nil)
+	_ interop.Model[checkly.AlertChannel]          = (*AlertChannelResourceModel)(nil)
+	_ interop.Model[checkly.AlertChannelEmail]     = (*EmailAttributeModel)(nil)
+	_ interop.Model[checkly.AlertChannelSlack]     = (*SlackAttributeModel)(nil)
+	_ interop.Model[checkly.AlertChannelSMS]       = (*SMSAttributeModel)(nil)
+	_ interop.Model[checkly.AlertChannelCall]      = (*CallAttributeModel)(nil)
+	_ interop.Model[checkly.AlertChannelWebhook]   = (*WebhookAttributeModel)(nil)
+	_ interop.Model[checkly.AlertChannelOpsgenie]  = (*OpsgenieAttributeModel)(nil)
+	_ interop.Model[checkly.AlertChannelPagerduty] = (*PagerdutyAttributeModel)(nil)
 )
 
 type AlertChannelResourceModel struct {
@@ -453,7 +455,7 @@ type AlertChannelResourceModel struct {
 	SSLExpiryThreshold types.Int32              `tfsdk:"ssl_expiry_threshold"`
 }
 
-func (m *AlertChannelResourceModel) Refresh(ctx context.Context, from *checkly.AlertChannel, flags RefreshFlags) diag.Diagnostics {
+func (m *AlertChannelResourceModel) Refresh(ctx context.Context, from *checkly.AlertChannel, flags interop.RefreshFlags) diag.Diagnostics {
 	var diags diag.Diagnostics
 
 	if flags.Created() {
@@ -461,7 +463,7 @@ func (m *AlertChannelResourceModel) Refresh(ctx context.Context, from *checkly.A
 	}
 
 	if flags.Created() || flags.Updated() {
-		m.LastUpdated = LastUpdatedNow()
+		m.LastUpdated = attributes.LastUpdatedNow()
 	}
 
 	m.Email = nil
@@ -565,7 +567,7 @@ func (m *AlertChannelResourceModel) Render(ctx context.Context, into *checkly.Al
 		diags.Append(m.Pagerduty.Render(ctx, into.Pagerduty)...)
 	default:
 		// TODO: Use diags instead
-		panic("bug: impossible AlertChannelResourceModel state: no type set")
+		panic("bug: impossible AlertChannelinterop.Model state: no type set")
 	}
 
 	into.SendRecovery = m.SendRecovery.ValueBoolPointer()
@@ -585,7 +587,7 @@ type EmailAttributeModel struct {
 	Address types.String `tfsdk:"address"`
 }
 
-func (m *EmailAttributeModel) Refresh(ctx context.Context, from *checkly.AlertChannelEmail, flags RefreshFlags) diag.Diagnostics {
+func (m *EmailAttributeModel) Refresh(ctx context.Context, from *checkly.AlertChannelEmail, flags interop.RefreshFlags) diag.Diagnostics {
 	m.Address = types.StringValue(from.Address)
 
 	return nil
@@ -602,7 +604,7 @@ type SlackAttributeModel struct {
 	Channel types.String `tfsdk:"channel"`
 }
 
-func (m *SlackAttributeModel) Refresh(ctx context.Context, from *checkly.AlertChannelSlack, flags RefreshFlags) diag.Diagnostics {
+func (m *SlackAttributeModel) Refresh(ctx context.Context, from *checkly.AlertChannelSlack, flags interop.RefreshFlags) diag.Diagnostics {
 	m.URL = types.StringValue(from.WebhookURL)
 	m.Channel = types.StringValue(from.Channel)
 
@@ -621,7 +623,7 @@ type SMSAttributeModel struct {
 	Number types.String `tfsdk:"number"`
 }
 
-func (m *SMSAttributeModel) Refresh(ctx context.Context, from *checkly.AlertChannelSMS, flags RefreshFlags) diag.Diagnostics {
+func (m *SMSAttributeModel) Refresh(ctx context.Context, from *checkly.AlertChannelSMS, flags interop.RefreshFlags) diag.Diagnostics {
 	m.Name = types.StringValue(from.Name)
 	m.Number = types.StringValue(from.Number)
 
@@ -640,7 +642,7 @@ type CallAttributeModel struct {
 	Number types.String `tfsdk:"number"`
 }
 
-func (m *CallAttributeModel) Refresh(ctx context.Context, from *checkly.AlertChannelCall, flags RefreshFlags) diag.Diagnostics {
+func (m *CallAttributeModel) Refresh(ctx context.Context, from *checkly.AlertChannelCall, flags interop.RefreshFlags) diag.Diagnostics {
 	m.Name = types.StringValue(from.Name)
 	m.Number = types.StringValue(from.Number)
 
@@ -665,7 +667,7 @@ type WebhookAttributeModel struct {
 	WebhookType     types.String `tfsdk:"webhook_type"`
 }
 
-func (m *WebhookAttributeModel) Refresh(ctx context.Context, from *checkly.AlertChannelWebhook, flags RefreshFlags) diag.Diagnostics {
+func (m *WebhookAttributeModel) Refresh(ctx context.Context, from *checkly.AlertChannelWebhook, flags interop.RefreshFlags) diag.Diagnostics {
 	m.Name = types.StringValue(from.Name)
 	m.Method = types.StringValue(from.Method)
 	m.Headers = sdkutil.KeyValuesIntoMap(&from.Headers)
@@ -698,7 +700,7 @@ type OpsgenieAttributeModel struct {
 	Priority types.String `tfsdk:"priority"`
 }
 
-func (m *OpsgenieAttributeModel) Refresh(ctx context.Context, from *checkly.AlertChannelOpsgenie, flags RefreshFlags) diag.Diagnostics {
+func (m *OpsgenieAttributeModel) Refresh(ctx context.Context, from *checkly.AlertChannelOpsgenie, flags interop.RefreshFlags) diag.Diagnostics {
 	m.Name = types.StringValue(from.Name)
 	m.APIKey = types.StringValue(from.APIKey)
 	m.Region = types.StringValue(from.Region)
@@ -722,7 +724,7 @@ type PagerdutyAttributeModel struct {
 	Account     types.String `tfsdk:"account"`
 }
 
-func (m *PagerdutyAttributeModel) Refresh(ctx context.Context, from *checkly.AlertChannelPagerduty, flags RefreshFlags) diag.Diagnostics {
+func (m *PagerdutyAttributeModel) Refresh(ctx context.Context, from *checkly.AlertChannelPagerduty, flags interop.RefreshFlags) diag.Diagnostics {
 	m.ServiceKey = types.StringValue(from.ServiceKey)
 	m.ServiceName = types.StringValue(from.ServiceName)
 	m.Account = types.StringValue(from.Account)

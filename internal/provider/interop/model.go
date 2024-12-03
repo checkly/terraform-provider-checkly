@@ -1,4 +1,4 @@
-package provider
+package interop
 
 import (
 	"context"
@@ -9,10 +9,10 @@ import (
 type RefreshFlags int
 
 const (
-	ModelCreated RefreshFlags = 1 << iota
-	ModelUpdated
+	Created RefreshFlags = 1 << iota
+	Updated
 
-	ModelLoaded RefreshFlags = 0
+	Loaded RefreshFlags = 0
 )
 
 func (f RefreshFlags) Contains(other RefreshFlags) bool {
@@ -20,26 +20,26 @@ func (f RefreshFlags) Contains(other RefreshFlags) bool {
 }
 
 func (f RefreshFlags) Updated() bool {
-	return f.Contains(ModelUpdated)
+	return f.Contains(Updated)
 }
 
 func (f RefreshFlags) Created() bool {
-	return f.Contains(ModelCreated)
+	return f.Contains(Created)
 }
 
-type Render[SDKModel any] interface {
-	Render(ctx context.Context, into *SDKModel) diag.Diagnostics
+type Render[T any] interface {
+	Render(ctx context.Context, into *T) diag.Diagnostics
 }
 
 func RenderMany[
-	SDKModel any,
+	T any,
 	R any,
 	RPtr interface {
-		Render[SDKModel]
+		Render[T]
 		*R
 	},
 	Sources ~[]R,
-	Results ~[]SDKModel,
+	Results ~[]T,
 ](
 	ctx context.Context,
 	sources Sources,
@@ -48,7 +48,7 @@ func RenderMany[
 	diags diag.Diagnostics,
 ) {
 	for _, source := range sources {
-		var result SDKModel
+		var result T
 
 		diags.Append(RPtr(&source).Render(ctx, &result)...)
 		if diags.HasError() {
@@ -61,18 +61,18 @@ func RenderMany[
 	return diags
 }
 
-type Refresh[SDKModel any] interface {
-	Refresh(ctx context.Context, from *SDKModel, flags RefreshFlags) diag.Diagnostics
+type Refresh[T any] interface {
+	Refresh(ctx context.Context, from *T, flags RefreshFlags) diag.Diagnostics
 }
 
 func RefreshMany[
-	SDKModel any,
+	T any,
 	R any,
 	RPtr interface {
-		Refresh[SDKModel]
+		Refresh[T]
 		*R
 	},
-	Sources ~[]SDKModel,
+	Sources ~[]T,
 	Results ~[]R,
 ](
 	ctx context.Context,
@@ -96,7 +96,7 @@ func RefreshMany[
 	return diags
 }
 
-type ResourceModel[SDKModel any] interface {
-	Render[SDKModel]
-	Refresh[SDKModel]
+type Model[T any] interface {
+	Render[T]
+	Refresh[T]
 }

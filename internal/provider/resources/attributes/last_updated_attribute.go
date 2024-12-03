@@ -1,4 +1,4 @@
-package provider
+package attributes
 
 import (
 	"time"

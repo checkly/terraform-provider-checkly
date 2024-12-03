@@ -7,7 +7,6 @@ import (
 	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/function"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -17,6 +16,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/terraform-provider-checkly/internal/provider/datasources"
+	"github.com/checkly/terraform-provider-checkly/internal/provider/resources"
 )
 
 const (
@@ -201,50 +202,25 @@ func (p *ChecklyProvider) Configure(
 	resp.ResourceData = client
 }
 
-func ClientFromProviderData(providerData any) (checkly.Client, diag.Diagnostics) {
-	if providerData == nil {
-		return nil, diag.Diagnostics{
-			diag.NewErrorDiagnostic(
-				"Missing Configure Type",
-				"Expected checkly.Client, got nil. Please report this issue "+
-					"to the provider developers.",
-			),
-		}
-	}
-
-	client, ok := providerData.(checkly.Client)
-	if !ok {
-		return nil, diag.Diagnostics{
-			diag.NewErrorDiagnostic(
-				"Unexpected Configure Type",
-				fmt.Sprintf("Expected checkly.Client, got: %T. Please report "+
-					"this issue to the provider developers.", providerData),
-			),
-		}
-	}
-
-	return client, nil
-}
-
 func (p *ChecklyProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
-		NewAlertChannelResource,
-		NewCheckGroupResource,
-		NewCheckResource,
-		NewDashboardResource,
-		NewEnvironmentVariableResource,
-		NewHeartbeatResource,
-		NewMaintenanceWindowsResource,
-		NewPrivateLocationResource,
-		NewSnippetResource,
-		NewTriggerCheckResource,
-		NewTriggerGroupResource,
+		resources.NewAlertChannelResource,
+		resources.NewCheckGroupResource,
+		resources.NewCheckResource,
+		resources.NewDashboardResource,
+		resources.NewEnvironmentVariableResource,
+		resources.NewHeartbeatResource,
+		resources.NewMaintenanceWindowsResource,
+		resources.NewPrivateLocationResource,
+		resources.NewSnippetResource,
+		resources.NewTriggerCheckResource,
+		resources.NewTriggerGroupResource,
 	}
 }
 
 func (p *ChecklyProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
-		NewStaticIPsDataSource,
+		datasources.NewStaticIPsDataSource,
 	}
 }
 

@@ -1,19 +1,20 @@
-package provider
+package attributes
 
 import (
 	"context"
 
 	"github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/terraform-provider-checkly/internal/provider/interop"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
 var (
-	_ ResourceModel[checkly.BasicAuth] = (*CheckBasicAuthAttributeModel)(nil)
+	_ interop.Model[checkly.BasicAuth] = (*BasicAuthAttributeModel)(nil)
 )
 
-var CheckBasicAuthAttributeSchema = schema.SingleNestedAttribute{
+var BasicAuthAttributeSchema = schema.SingleNestedAttribute{
 	Description: "Credentials for Basic HTTP authentication.",
 	Optional:    true,
 	Computed:    true,
@@ -28,19 +29,19 @@ var CheckBasicAuthAttributeSchema = schema.SingleNestedAttribute{
 	},
 }
 
-type CheckBasicAuthAttributeModel struct {
+type BasicAuthAttributeModel struct {
 	Username types.String `tfsdk:"username"`
 	Password types.String `tfsdk:"password"`
 }
 
-func (m *CheckBasicAuthAttributeModel) Refresh(ctx context.Context, from *checkly.BasicAuth, flags RefreshFlags) diag.Diagnostics {
+func (m *BasicAuthAttributeModel) Refresh(ctx context.Context, from *checkly.BasicAuth, flags interop.RefreshFlags) diag.Diagnostics {
 	m.Username = types.StringValue(from.Username)
 	m.Password = types.StringValue(from.Password)
 
 	return nil
 }
 
-func (m *CheckBasicAuthAttributeModel) Render(ctx context.Context, into *checkly.BasicAuth) diag.Diagnostics {
+func (m *BasicAuthAttributeModel) Render(ctx context.Context, into *checkly.BasicAuth) diag.Diagnostics {
 	into.Username = m.Username.ValueString()
 	into.Password = m.Password.ValueString()
 

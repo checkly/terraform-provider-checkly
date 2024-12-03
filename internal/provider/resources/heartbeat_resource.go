@@ -1,4 +1,4 @@
-package provider
+package resources
 
 import (
 	"context"
@@ -14,6 +14,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/terraform-provider-checkly/internal/provider/interop"
+	"github.com/checkly/terraform-provider-checkly/internal/provider/resources/attributes"
 	"github.com/checkly/terraform-provider-checkly/internal/sdkutil"
 )
 
@@ -47,8 +49,8 @@ func (r *HeartbeatResource) Schema(
 	resp.Schema = schema.Schema{
 		Description: "Heartbeats allows you to monitor your cron jobs and set up alerting, so you get a notification when things break or slow down.",
 		Attributes: map[string]schema.Attribute{
-			"id":           IDResourceAttributeSchema,
-			"last_updated": LastUpdatedAttributeSchema,
+			"id":           attributes.IDAttributeSchema,
+			"last_updated": attributes.LastUpdatedAttributeSchema,
 			"name": schema.StringAttribute{
 				Required:    true,
 				Description: "The name of the check.",
@@ -66,7 +68,7 @@ func (r *HeartbeatResource) Schema(
 				Optional:    true,
 				Description: "A list of tags for organizing and filtering checks.",
 			},
-			"alert_settings": CheckAlertSettingsAttributeSchema,
+			"alert_settings": attributes.AlertSettingsAttributeSchema,
 			"use_global_alert_settings": schema.BoolAttribute{
 				Optional:    true,
 				Description: "When true, the account level alert settings will be used, not the alert setting defined on this check.",
@@ -107,7 +109,7 @@ func (r *HeartbeatResource) Schema(
 					},
 				},
 			},
-			"alert_channel_subscription": CheckAlertChannelSubscriptionAttributeSchema,
+			"alert_channel_subscription": attributes.AlertChannelSubscriptionAttributeSchema,
 		},
 	}
 }
@@ -117,7 +119,7 @@ func (r *HeartbeatResource) Configure(
 	req resource.ConfigureRequest,
 	resp *resource.ConfigureResponse,
 ) {
-	client, diags := ClientFromProviderData(req.ProviderData)
+	client, diags := interop.ClientFromProviderData(req.ProviderData)
 	if diags.HasError() {
 		resp.Diagnostics.Append(diags...)
 		return
@@ -162,7 +164,7 @@ func (r *HeartbeatResource) Create(
 		return
 	}
 
-	resp.Diagnostics.Append(plan.Refresh(ctx, realizedModel, ModelCreated)...)
+	resp.Diagnostics.Append(plan.Refresh(ctx, realizedModel, interop.Created)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -223,7 +225,7 @@ func (r *HeartbeatResource) Read(
 		return
 	}
 
-	resp.Diagnostics.Append(state.Refresh(ctx, realizedModel, ModelLoaded)...)
+	resp.Diagnostics.Append(state.Refresh(ctx, realizedModel, interop.Loaded)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -266,7 +268,7 @@ func (r *HeartbeatResource) Update(
 		return
 	}
 
-	resp.Diagnostics.Append(plan.Refresh(ctx, realizedModel, ModelUpdated)...)
+	resp.Diagnostics.Append(plan.Refresh(ctx, realizedModel, interop.Updated)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -278,24 +280,24 @@ func (r *HeartbeatResource) Update(
 }
 
 var (
-	_ ResourceModel[checkly.HeartbeatCheck] = (*HeartbeatResourceModel)(nil)
-	_ ResourceModel[checkly.Heartbeat]      = (*HeartbeatAttributeModel)(nil)
+	_ interop.Model[checkly.HeartbeatCheck] = (*HeartbeatResourceModel)(nil)
+	_ interop.Model[checkly.Heartbeat]      = (*HeartbeatAttributeModel)(nil)
 )
 
 type HeartbeatResourceModel struct {
-	ID                        types.String                                  `tfsdk:"id"`
-	LastUpdated               types.String                                  `tfsdk:"last_updated"` // FIXME: Keep this? Old code did not have it.
-	Name                      types.String                                  `tfsdk:"name"`
-	Activated                 types.Bool                                    `tfsdk:"activated"`
-	Muted                     types.Bool                                    `tfsdk:"muted"`
-	Tags                      types.Set                                     `tfsdk:"tags"`
-	AlertSettings             CheckAlertSettingsAttributeModel              `tfsdk:"alert_settings"`
-	UseGlobalAlertSettings    types.Bool                                    `tfsdk:"use_global_alert_settings"`
-	Heartbeat                 HeartbeatAttributeModel                       `tfsdk:"heartbeat"`
-	AlertChannelSubscriptions []CheckAlertChannelSubscriptionAttributeModel `tfsdk:"alert_channel_subscription"`
+	ID                        types.String                                        `tfsdk:"id"`
+	LastUpdated               types.String                                        `tfsdk:"last_updated"` // FIXME: Keep this? Old code did not have it.
+	Name                      types.String                                        `tfsdk:"name"`
+	Activated                 types.Bool                                          `tfsdk:"activated"`
+	Muted                     types.Bool                                          `tfsdk:"muted"`
+	Tags                      types.Set                                           `tfsdk:"tags"`
+	AlertSettings             attributes.AlertSettingsAttributeModel              `tfsdk:"alert_settings"`
+	UseGlobalAlertSettings    types.Bool                                          `tfsdk:"use_global_alert_settings"`
+	Heartbeat                 HeartbeatAttributeModel                             `tfsdk:"heartbeat"`
+	AlertChannelSubscriptions []attributes.AlertChannelSubscriptionAttributeModel `tfsdk:"alert_channel_subscription"`
 }
 
-func (m *HeartbeatResourceModel) Refresh(ctx context.Context, from *checkly.HeartbeatCheck, flags RefreshFlags) diag.Diagnostics {
+func (m *HeartbeatResourceModel) Refresh(ctx context.Context, from *checkly.HeartbeatCheck, flags interop.RefreshFlags) diag.Diagnostics {
 	var diags diag.Diagnostics
 
 	if flags.Created() {
@@ -303,7 +305,7 @@ func (m *HeartbeatResourceModel) Refresh(ctx context.Context, from *checkly.Hear
 	}
 
 	if flags.Created() || flags.Updated() {
-		m.LastUpdated = LastUpdatedNow()
+		m.LastUpdated = attributes.LastUpdatedNow()
 	}
 
 	m.Name = types.StringValue(from.Name)
@@ -311,7 +313,7 @@ func (m *HeartbeatResourceModel) Refresh(ctx context.Context, from *checkly.Hear
 	m.Muted = types.BoolValue(from.Muted)
 
 	slices.Sort(from.Tags)
-	m.Tags = IntoUntypedStringSet(&from.Tags)
+	m.Tags = interop.IntoUntypedStringSet(&from.Tags)
 
 	diags.Append(m.AlertSettings.Refresh(ctx, &from.AlertSettings, flags)...)
 	if diags.HasError() {
@@ -327,7 +329,7 @@ func (m *HeartbeatResourceModel) Refresh(ctx context.Context, from *checkly.Hear
 
 	m.AlertChannelSubscriptions = nil
 	for _, sub := range from.AlertChannelSubscriptions {
-		var subModel CheckAlertChannelSubscriptionAttributeModel
+		var subModel attributes.AlertChannelSubscriptionAttributeModel
 		diags.Append(subModel.Refresh(ctx, &sub, flags)...)
 		if diags.HasError() {
 			return diags
@@ -345,7 +347,7 @@ func (m *HeartbeatResourceModel) Render(ctx context.Context, into *checkly.Heart
 	into.Name = m.Name.ValueString()
 	into.Activated = m.Activated.ValueBool()
 	into.Muted = m.Muted.ValueBool()
-	into.Tags = FromUntypedStringSet(m.Tags)
+	into.Tags = interop.FromUntypedStringSet(m.Tags)
 
 	diags.Append(m.AlertSettings.Render(ctx, &into.AlertSettings)...)
 
@@ -364,7 +366,7 @@ type HeartbeatAttributeModel struct {
 	PingToken  types.String `tfsdk:"ping_token"`
 }
 
-func (m *HeartbeatAttributeModel) Refresh(ctx context.Context, from *checkly.Heartbeat, flags RefreshFlags) diag.Diagnostics {
+func (m *HeartbeatAttributeModel) Refresh(ctx context.Context, from *checkly.Heartbeat, flags interop.RefreshFlags) diag.Diagnostics {
 	m.Period = types.Int32Value(int32(from.Period))
 	m.PeriodUnit = types.StringValue(from.PeriodUnit)
 	m.Grace = types.Int32Value(int32(from.Grace))

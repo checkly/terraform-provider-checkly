@@ -1,4 +1,4 @@
-package provider
+package resources
 
 import (
 	"context"
@@ -13,6 +13,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/terraform-provider-checkly/internal/provider/interop"
+	"github.com/checkly/terraform-provider-checkly/internal/provider/resources/attributes"
 	"github.com/checkly/terraform-provider-checkly/internal/sdkutil"
 )
 
@@ -46,8 +48,8 @@ func (r *CheckGroupResource) Schema(
 	resp.Schema = schema.Schema{
 		Description: "Check groups allow you to group together a set of related checks, which can also share default settings for various attributes.",
 		Attributes: map[string]schema.Attribute{
-			"id":           IDResourceAttributeSchema,
-			"last_updated": LastUpdatedAttributeSchema,
+			"id":           attributes.IDAttributeSchema,
+			"last_updated": attributes.LastUpdatedAttributeSchema,
 			"name": schema.StringAttribute{
 				Required:    true,
 				Description: "The name of the check group.",
@@ -68,8 +70,8 @@ func (r *CheckGroupResource) Schema(
 				Optional:    true,
 				Description: "Determines if the checks in the group should run in all selected locations in parallel or round-robin.",
 			},
-			"locations":         CheckLocationsAttributeSchema,
-			"private_locations": CheckPrivateLocationsAttributeSchema,
+			"locations":         attributes.LocationsAttributeSchema,
+			"private_locations": attributes.PrivateLocationsAttributeSchema,
 			"environment_variables": schema.MapAttribute{
 				ElementType: types.StringType,
 				Validators: []validator.Map{
@@ -81,7 +83,7 @@ func (r *CheckGroupResource) Schema(
 				Description:        "Key/value pairs for setting environment variables during check execution. These are only relevant for browser checks. Use global environment variables whenever possible.",
 				DeprecationMessage: "The property `environment_variables` is deprecated and will be removed in a future version. Consider using the new `environment_variable` list.",
 			},
-			"environment_variable": CheckEnvironmentVariableAttributeSchema,
+			"environment_variable": attributes.EnvironmentVariableAttributeSchema,
 			"double_check": schema.BoolAttribute{
 				Optional:           true,
 				Description:        "Setting this to `true` will trigger a retry when a check fails from the failing region and another, randomly selected region before marking the check as failed.",
@@ -112,14 +114,14 @@ func (r *CheckGroupResource) Schema(
 				Optional:    true,
 				Description: "The id of the runtime to use for this group.",
 			},
-			"alert_channel_subscription": CheckAlertChannelSubscriptionAttributeSchema,
-			"alert_settings":             CheckAlertSettingsAttributeSchema,
+			"alert_channel_subscription": attributes.AlertChannelSubscriptionAttributeSchema,
+			"alert_settings":             attributes.AlertSettingsAttributeSchema,
 			"use_global_alert_settings": schema.BoolAttribute{
 				Optional:    true,
 				Description: "When true, the account level alert settings will be used, not the alert setting defined on this check group.",
 			},
-			"api_check_defaults": CheckAPICheckDefaultsAttributeSchema,
-			"retry_strategy":     CheckRetryStrategyAttributeSchema,
+			"api_check_defaults": attributes.APICheckDefaultsAttributeSchema,
+			"retry_strategy":     attributes.RetryStrategyAttributeSchema,
 		},
 	}
 }
@@ -129,7 +131,7 @@ func (r *CheckGroupResource) Configure(
 	req resource.ConfigureRequest,
 	resp *resource.ConfigureResponse,
 ) {
-	client, diags := ClientFromProviderData(req.ProviderData)
+	client, diags := interop.ClientFromProviderData(req.ProviderData)
 	if diags.HasError() {
 		resp.Diagnostics.Append(diags...)
 		return
@@ -174,7 +176,7 @@ func (r *CheckGroupResource) Create(
 		return
 	}
 
-	resp.Diagnostics.Append(plan.Refresh(ctx, realizedModel, ModelCreated)...)
+	resp.Diagnostics.Append(plan.Refresh(ctx, realizedModel, interop.Created)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -247,7 +249,7 @@ func (r *CheckGroupResource) Read(
 		return
 	}
 
-	resp.Diagnostics.Append(state.Refresh(ctx, realizedModel, ModelLoaded)...)
+	resp.Diagnostics.Append(state.Refresh(ctx, realizedModel, interop.Loaded)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -296,7 +298,7 @@ func (r *CheckGroupResource) Update(
 		return
 	}
 
-	resp.Diagnostics.Append(plan.Refresh(ctx, realizedModel, ModelUpdated)...)
+	resp.Diagnostics.Append(plan.Refresh(ctx, realizedModel, interop.Updated)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -313,42 +315,42 @@ var CheckGroupID = sdkutil.Identifier{
 }
 
 var (
-	_ ResourceModel[checkly.Group] = (*CheckGroupResourceModel)(nil)
+	_ interop.Model[checkly.Group] = (*CheckGroupResourceModel)(nil)
 )
 
 type CheckGroupResourceModel struct {
-	ID                        types.String                                  `tfsdk:"id"`
-	LastUpdated               types.String                                  `tfsdk:"last_updated"` // FIXME: Keep this? Old code did not have it.
-	Name                      types.String                                  `tfsdk:"name"`
-	Concurrency               types.Int32                                   `tfsdk:"concurrency"`
-	Activated                 types.Bool                                    `tfsdk:"activated"`
-	Muted                     types.Bool                                    `tfsdk:"muted"`
-	RunParallel               types.Bool                                    `tfsdk:"run_parallel"`
-	Locations                 CheckLocationsAttributeModel                  `tfsdk:"locations"`
-	PrivateLocations          CheckPrivateLocationsAttributeModel           `tfsdk:"private_locations"`
-	EnvironmentVariables      types.Map                                     `tfsdk:"environment_variables"`
-	EnvironmentVariable       []CheckEnvironmentVariableAttributeModel      `tfsdk:"environment_variable"`
-	DoubleCheck               types.Bool                                    `tfsdk:"double_check"`
-	Tags                      types.Set                                     `tfsdk:"tags"`
-	SetupSnippetID            types.Int64                                   `tfsdk:"setup_snippet_id"`
-	TearDownSnippetID         types.Int64                                   `tfsdk:"teardown_snippet_id"`
-	LocalSetupScript          types.String                                  `tfsdk:"local_setup_script"`
-	LocalTearDownScript       types.String                                  `tfsdk:"local_teardown_script"`
-	RuntimeID                 types.String                                  `tfsdk:"runtime_id"`
-	AlertChannelSubscriptions []CheckAlertChannelSubscriptionAttributeModel `tfsdk:"alert_channel_subscription"`
-	AlertSettings             CheckAlertSettingsAttributeModel              `tfsdk:"alert_settings"`
-	UseGlobalAlertSettings    types.Bool                                    `tfsdk:"use_global_alert_settings"`
-	APICheckDefaults          CheckAPICheckDefaultsAttributeModel           `tfsdk:"api_check_defaults"`
-	RetryStrategy             *CheckRetryStrategyAttributeModel             `tfsdk:"retry_strategy"`
+	ID                        types.String                                        `tfsdk:"id"`
+	LastUpdated               types.String                                        `tfsdk:"last_updated"` // FIXME: Keep this? Old code did not have it.
+	Name                      types.String                                        `tfsdk:"name"`
+	Concurrency               types.Int32                                         `tfsdk:"concurrency"`
+	Activated                 types.Bool                                          `tfsdk:"activated"`
+	Muted                     types.Bool                                          `tfsdk:"muted"`
+	RunParallel               types.Bool                                          `tfsdk:"run_parallel"`
+	Locations                 attributes.LocationsAttributeModel                  `tfsdk:"locations"`
+	PrivateLocations          attributes.PrivateLocationsAttributeModel           `tfsdk:"private_locations"`
+	EnvironmentVariables      types.Map                                           `tfsdk:"environment_variables"`
+	EnvironmentVariable       []attributes.EnvironmentVariableAttributeModel      `tfsdk:"environment_variable"`
+	DoubleCheck               types.Bool                                          `tfsdk:"double_check"`
+	Tags                      types.Set                                           `tfsdk:"tags"`
+	SetupSnippetID            types.Int64                                         `tfsdk:"setup_snippet_id"`
+	TearDownSnippetID         types.Int64                                         `tfsdk:"teardown_snippet_id"`
+	LocalSetupScript          types.String                                        `tfsdk:"local_setup_script"`
+	LocalTearDownScript       types.String                                        `tfsdk:"local_teardown_script"`
+	RuntimeID                 types.String                                        `tfsdk:"runtime_id"`
+	AlertChannelSubscriptions []attributes.AlertChannelSubscriptionAttributeModel `tfsdk:"alert_channel_subscription"`
+	AlertSettings             attributes.AlertSettingsAttributeModel              `tfsdk:"alert_settings"`
+	UseGlobalAlertSettings    types.Bool                                          `tfsdk:"use_global_alert_settings"`
+	APICheckDefaults          attributes.APICheckDefaultsAttributeModel           `tfsdk:"api_check_defaults"`
+	RetryStrategy             *attributes.RetryStrategyAttributeModel             `tfsdk:"retry_strategy"`
 }
 
-func (m *CheckGroupResourceModel) Refresh(ctx context.Context, from *checkly.Group, flags RefreshFlags) diag.Diagnostics {
+func (m *CheckGroupResourceModel) Refresh(ctx context.Context, from *checkly.Group, flags interop.RefreshFlags) diag.Diagnostics {
 	if flags.Created() {
 		m.ID = CheckGroupID.IntoString(from.ID)
 	}
 
 	if flags.Created() || flags.Updated() {
-		m.LastUpdated = LastUpdatedNow()
+		m.LastUpdated = attributes.LastUpdatedNow()
 	}
 
 	m.Name = types.StringValue(from.Name)
@@ -375,7 +377,7 @@ func (m *CheckGroupResourceModel) Refresh(ctx context.Context, from *checkly.Gro
 	} else {
 		m.EnvironmentVariable = nil
 
-		diags := RefreshMany(ctx, from.EnvironmentVariables, m.EnvironmentVariable, flags)
+		diags := interop.RefreshMany(ctx, from.EnvironmentVariables, m.EnvironmentVariable, flags)
 		if diags.HasError() {
 			return diags
 		}
@@ -383,7 +385,7 @@ func (m *CheckGroupResourceModel) Refresh(ctx context.Context, from *checkly.Gro
 
 	m.DoubleCheck = types.BoolValue(from.DoubleCheck)
 
-	m.Tags = IntoUntypedStringSet(&from.Tags)
+	m.Tags = interop.IntoUntypedStringSet(&from.Tags)
 
 	m.SetupSnippetID = types.Int64Value(from.SetupSnippetID)
 	m.TearDownSnippetID = types.Int64Value(from.TearDownSnippetID)
@@ -396,7 +398,7 @@ func (m *CheckGroupResourceModel) Refresh(ctx context.Context, from *checkly.Gro
 		m.RuntimeID = types.StringNull()
 	}
 
-	diags = RefreshMany(ctx, from.AlertChannelSubscriptions, m.AlertChannelSubscriptions, flags)
+	diags = interop.RefreshMany(ctx, from.AlertChannelSubscriptions, m.AlertChannelSubscriptions, flags)
 	if diags.HasError() {
 		return diags
 	}
@@ -450,7 +452,7 @@ func (m *CheckGroupResourceModel) Render(ctx context.Context, into *checkly.Grou
 	} else {
 		into.EnvironmentVariables = nil
 
-		diags := RenderMany(ctx, m.EnvironmentVariable, into.EnvironmentVariables)
+		diags := interop.RenderMany(ctx, m.EnvironmentVariable, into.EnvironmentVariables)
 		if diags.HasError() {
 			return diags
 		}
@@ -458,7 +460,7 @@ func (m *CheckGroupResourceModel) Render(ctx context.Context, into *checkly.Grou
 
 	into.DoubleCheck = m.DoubleCheck.ValueBool()
 
-	into.Tags = FromUntypedStringSet(m.Tags)
+	into.Tags = interop.FromUntypedStringSet(m.Tags)
 
 	into.SetupSnippetID = m.SetupSnippetID.ValueInt64()
 	into.TearDownSnippetID = m.TearDownSnippetID.ValueInt64()
@@ -472,7 +474,7 @@ func (m *CheckGroupResourceModel) Render(ctx context.Context, into *checkly.Grou
 		into.RuntimeID = nil
 	}
 
-	diags = RenderMany(ctx, m.AlertChannelSubscriptions, into.AlertChannelSubscriptions)
+	diags = interop.RenderMany(ctx, m.AlertChannelSubscriptions, into.AlertChannelSubscriptions)
 	if diags.HasError() {
 		return diags
 	}

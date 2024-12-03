@@ -1,4 +1,4 @@
-package provider
+package datasources
 
 import (
 	"context"
@@ -12,6 +12,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/terraform-provider-checkly/internal/provider/datasources/attributes"
+	"github.com/checkly/terraform-provider-checkly/internal/provider/interop"
 )
 
 var (
@@ -51,7 +53,7 @@ func (d *StaticIPsDataSource) Schema(
 		Description:         "", // TODO
 		MarkdownDescription: "", // TODO
 		Attributes: map[string]schema.Attribute{
-			"id": IDDataSourceAttributeSchema,
+			"id": attributes.IDAttributeSchema,
 			"addresses": schema.SetAttribute{
 				ElementType: types.StringType,
 				Computed:    true,
@@ -79,7 +81,7 @@ func (d *StaticIPsDataSource) Configure(
 	req datasource.ConfigureRequest,
 	resp *datasource.ConfigureResponse,
 ) {
-	client, diags := ClientFromProviderData(req.ProviderData)
+	client, diags := interop.ClientFromProviderData(req.ProviderData)
 	if diags.HasError() {
 		resp.Diagnostics.Append(diags...)
 		return

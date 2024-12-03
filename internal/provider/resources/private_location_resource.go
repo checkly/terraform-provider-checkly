@@ -1,4 +1,4 @@
-package provider
+package resources
 
 import (
 	"context"
@@ -13,6 +13,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/terraform-provider-checkly/internal/provider/interop"
+	"github.com/checkly/terraform-provider-checkly/internal/provider/resources/attributes"
 	"github.com/checkly/terraform-provider-checkly/internal/sdkutil"
 )
 
@@ -45,8 +47,8 @@ func (r *PrivateLocationResource) Schema(
 ) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"id":           IDResourceAttributeSchema,
-			"last_updated": LastUpdatedAttributeSchema,
+			"id":           attributes.IDAttributeSchema,
+			"last_updated": attributes.LastUpdatedAttributeSchema,
 			"name": schema.StringAttribute{
 				Required:    true,
 				Description: "The private location name.",
@@ -76,7 +78,7 @@ func (r *PrivateLocationResource) Configure(
 	req resource.ConfigureRequest,
 	resp *resource.ConfigureResponse,
 ) {
-	client, diags := ClientFromProviderData(req.ProviderData)
+	client, diags := interop.ClientFromProviderData(req.ProviderData)
 	if diags.HasError() {
 		resp.Diagnostics.Append(diags...)
 		return
@@ -121,7 +123,7 @@ func (r *PrivateLocationResource) Create(
 		return
 	}
 
-	resp.Diagnostics.Append(plan.Refresh(ctx, realizedModel, ModelCreated)...)
+	resp.Diagnostics.Append(plan.Refresh(ctx, realizedModel, interop.Created)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -182,7 +184,7 @@ func (r *PrivateLocationResource) Read(
 		return
 	}
 
-	resp.Diagnostics.Append(state.Refresh(ctx, realizedModel, ModelLoaded)...)
+	resp.Diagnostics.Append(state.Refresh(ctx, realizedModel, interop.Loaded)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -225,7 +227,7 @@ func (r *PrivateLocationResource) Update(
 		return
 	}
 
-	resp.Diagnostics.Append(plan.Refresh(ctx, realizedModel, ModelUpdated)...)
+	resp.Diagnostics.Append(plan.Refresh(ctx, realizedModel, interop.Updated)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -237,7 +239,7 @@ func (r *PrivateLocationResource) Update(
 }
 
 var (
-	_ ResourceModel[checkly.PrivateLocation] = (*PrivateLocationResourceModel)(nil)
+	_ interop.Model[checkly.PrivateLocation] = (*PrivateLocationResourceModel)(nil)
 )
 
 type PrivateLocationResourceModel struct {
@@ -249,13 +251,13 @@ type PrivateLocationResourceModel struct {
 	Keys        types.Set    `tfsdk:"keys"`
 }
 
-func (m *PrivateLocationResourceModel) Refresh(ctx context.Context, from *checkly.PrivateLocation, flags RefreshFlags) diag.Diagnostics {
+func (m *PrivateLocationResourceModel) Refresh(ctx context.Context, from *checkly.PrivateLocation, flags interop.RefreshFlags) diag.Diagnostics {
 	if flags.Created() {
 		m.ID = types.StringValue(from.ID)
 	}
 
 	if flags.Created() || flags.Updated() {
-		m.LastUpdated = LastUpdatedNow()
+		m.LastUpdated = attributes.LastUpdatedNow()
 	}
 
 	m.Name = types.StringValue(from.Name)

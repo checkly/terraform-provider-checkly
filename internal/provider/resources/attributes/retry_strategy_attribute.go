@@ -1,4 +1,4 @@
-package provider
+package attributes
 
 import (
 	"context"
@@ -13,13 +13,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/terraform-provider-checkly/internal/provider/interop"
 )
 
 var (
-	_ ResourceModel[checkly.RetryStrategy] = (*CheckRetryStrategyAttributeModel)(nil)
+	_ interop.Model[checkly.RetryStrategy] = (*RetryStrategyAttributeModel)(nil)
 )
 
-var CheckRetryStrategyAttributeSchema = schema.SingleNestedAttribute{
+var RetryStrategyAttributeSchema = schema.SingleNestedAttribute{
 	Optional: true,
 	Computed: true,
 	Attributes: map[string]schema.Attribute{
@@ -68,7 +69,7 @@ var CheckRetryStrategyAttributeSchema = schema.SingleNestedAttribute{
 	Description: "A strategy for retrying failed check runs.",
 }
 
-type CheckRetryStrategyAttributeModel struct {
+type RetryStrategyAttributeModel struct {
 	Type               types.String `tfsdk:"type"`
 	BaseBackoffSeconds types.Int32  `tfsdk:"base_backoff_seconds"`
 	MaxRetries         types.Int32  `tfsdk:"max_retries"`
@@ -76,7 +77,7 @@ type CheckRetryStrategyAttributeModel struct {
 	SameRegion         types.Bool   `tfsdk:"same_region"`
 }
 
-func (m *CheckRetryStrategyAttributeModel) Refresh(ctx context.Context, from *checkly.RetryStrategy, flags RefreshFlags) diag.Diagnostics {
+func (m *RetryStrategyAttributeModel) Refresh(ctx context.Context, from *checkly.RetryStrategy, flags interop.RefreshFlags) diag.Diagnostics {
 	m.Type = types.StringValue(from.Type)
 	m.BaseBackoffSeconds = types.Int32Value(int32(from.BaseBackoffSeconds))
 	m.MaxRetries = types.Int32Value(int32(from.MaxRetries))
@@ -86,7 +87,7 @@ func (m *CheckRetryStrategyAttributeModel) Refresh(ctx context.Context, from *ch
 	return nil
 }
 
-func (m *CheckRetryStrategyAttributeModel) Render(ctx context.Context, into *checkly.RetryStrategy) diag.Diagnostics {
+func (m *RetryStrategyAttributeModel) Render(ctx context.Context, into *checkly.RetryStrategy) diag.Diagnostics {
 	into.Type = m.Type.ValueString()
 	into.BaseBackoffSeconds = int(m.BaseBackoffSeconds.ValueInt32())
 	into.MaxRetries = int(m.MaxRetries.ValueInt32())

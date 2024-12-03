@@ -1,4 +1,4 @@
-package provider
+package resources
 
 import (
 	"context"
@@ -11,6 +11,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/terraform-provider-checkly/internal/provider/interop"
+	"github.com/checkly/terraform-provider-checkly/internal/provider/resources/attributes"
 	"github.com/checkly/terraform-provider-checkly/internal/sdkutil"
 )
 
@@ -43,8 +45,8 @@ func (r *TriggerCheckResource) Schema(
 ) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"id":           IDResourceAttributeSchema,
-			"last_updated": LastUpdatedAttributeSchema,
+			"id":           attributes.IDAttributeSchema,
+			"last_updated": attributes.LastUpdatedAttributeSchema,
 			"check_id": schema.StringAttribute{
 				Required:    true,
 				Description: "The ID of the check that you want to attach the trigger to.",
@@ -68,7 +70,7 @@ func (r *TriggerCheckResource) Configure(
 	req resource.ConfigureRequest,
 	resp *resource.ConfigureResponse,
 ) {
-	client, diags := ClientFromProviderData(req.ProviderData)
+	client, diags := interop.ClientFromProviderData(req.ProviderData)
 	if diags.HasError() {
 		resp.Diagnostics.Append(diags...)
 		return
@@ -110,7 +112,7 @@ func (r *TriggerCheckResource) Create(
 		return
 	}
 
-	resp.Diagnostics.Append(plan.Refresh(ctx, realizedModel, ModelCreated)...)
+	resp.Diagnostics.Append(plan.Refresh(ctx, realizedModel, interop.Created)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -174,7 +176,7 @@ func (r *TriggerCheckResource) Read(
 		return
 	}
 
-	resp.Diagnostics.Append(state.Refresh(ctx, realizedModel, ModelLoaded)...)
+	resp.Diagnostics.Append(state.Refresh(ctx, realizedModel, interop.Loaded)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -210,7 +212,7 @@ func (r *TriggerCheckResource) Update(
 		return
 	}
 
-	resp.Diagnostics.Append(plan.Refresh(ctx, realizedModel, ModelUpdated)...)
+	resp.Diagnostics.Append(plan.Refresh(ctx, realizedModel, interop.Updated)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -227,7 +229,7 @@ var TriggerCheckID = sdkutil.Identifier{
 }
 
 var (
-	_ ResourceModel[checkly.TriggerCheck] = (*TriggerCheckResourceModel)(nil)
+	_ interop.Model[checkly.TriggerCheck] = (*TriggerCheckResourceModel)(nil)
 )
 
 type TriggerCheckResourceModel struct {
@@ -238,7 +240,7 @@ type TriggerCheckResourceModel struct {
 	URL         types.String `tfsdk:"url"`
 }
 
-func (m *TriggerCheckResourceModel) Refresh(ctx context.Context, from *checkly.TriggerCheck, flags RefreshFlags) diag.Diagnostics {
+func (m *TriggerCheckResourceModel) Refresh(ctx context.Context, from *checkly.TriggerCheck, flags interop.RefreshFlags) diag.Diagnostics {
 	// TODO: Always update ID? CheckID, which is used for lookup, is user-modifiable,
 	// and we could receive back a complete different ID.
 	if flags.Created() {
@@ -246,7 +248,7 @@ func (m *TriggerCheckResourceModel) Refresh(ctx context.Context, from *checkly.T
 	}
 
 	if flags.Created() || flags.Updated() {
-		m.LastUpdated = LastUpdatedNow()
+		m.LastUpdated = attributes.LastUpdatedNow()
 	}
 
 	m.CheckID = types.StringValue(from.CheckId)

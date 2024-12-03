@@ -1,4 +1,4 @@
-package provider
+package attributes
 
 import (
 	"context"
@@ -11,14 +11,15 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/terraform-provider-checkly/internal/provider/interop"
 	"github.com/checkly/terraform-provider-checkly/internal/sdkutil"
 )
 
 var (
-	_ ResourceModel[checkly.Request] = (*CheckRequestAttributeModel)(nil)
+	_ interop.Model[checkly.Request] = (*RequestAttributeModel)(nil)
 )
 
-var CheckRequestAttributeSchema = schema.SingleNestedAttribute{
+var RequestAttributeSchema = schema.SingleNestedAttribute{
 	Optional: true,
 	Attributes: map[string]schema.Attribute{
 		"method": schema.StringAttribute{
@@ -46,8 +47,8 @@ var CheckRequestAttributeSchema = schema.SingleNestedAttribute{
 		"skip_ssl": schema.BoolAttribute{
 			Optional: true,
 		},
-		"headers":          CheckHeadersAttributeSchema,
-		"query_parameters": CheckQueryParametersAttributeSchema,
+		"headers":          HeadersAttributeSchema,
+		"query_parameters": QueryParametersAttributeSchema,
 		"body": schema.StringAttribute{
 			Optional:    true,
 			Description: "The body of the request.",
@@ -67,8 +68,8 @@ var CheckRequestAttributeSchema = schema.SingleNestedAttribute{
 			},
 			Description: "The `Content-Type` header of the request. Possible values `NONE`, `JSON`, `FORM`, `RAW`, and `GRAPHQL`.",
 		},
-		"assertion":  CheckAssertionAttributeSchema,
-		"basic_auth": CheckBasicAuthAttributeSchema,
+		"assertion":  AssertionAttributeSchema,
+		"basic_auth": BasicAuthAttributeSchema,
 		"ip_family": schema.StringAttribute{
 			Optional: true,
 			Computed: true,
@@ -84,21 +85,21 @@ var CheckRequestAttributeSchema = schema.SingleNestedAttribute{
 	},
 }
 
-type CheckRequestAttributeModel struct {
-	Method          types.String                   `tfsdk:"method"`
-	URL             types.String                   `tfsdk:"url"`
-	FollowRedirects types.Bool                     `tfsdk:"follow_redirects"`
-	SkipSSL         types.Bool                     `tfsdk:"skip_ssl"`
-	Headers         types.Map                      `tfsdk:"headers"`
-	QueryParameters types.Map                      `tfsdk:"query_parameters"`
-	Body            types.String                   `tfsdk:"body"`
-	BodyType        types.String                   `tfsdk:"body_type"`
-	Assertions      []CheckAssertionAttributeModel `tfsdk:"assertion"`
-	BasicAuth       CheckBasicAuthAttributeModel   `tfsdk:"basic_auth"`
-	IPFamily        types.String                   `tfsdk:"ip_family"`
+type RequestAttributeModel struct {
+	Method          types.String              `tfsdk:"method"`
+	URL             types.String              `tfsdk:"url"`
+	FollowRedirects types.Bool                `tfsdk:"follow_redirects"`
+	SkipSSL         types.Bool                `tfsdk:"skip_ssl"`
+	Headers         types.Map                 `tfsdk:"headers"`
+	QueryParameters types.Map                 `tfsdk:"query_parameters"`
+	Body            types.String              `tfsdk:"body"`
+	BodyType        types.String              `tfsdk:"body_type"`
+	Assertions      []AssertionAttributeModel `tfsdk:"assertion"`
+	BasicAuth       BasicAuthAttributeModel   `tfsdk:"basic_auth"`
+	IPFamily        types.String              `tfsdk:"ip_family"`
 }
 
-func (m *CheckRequestAttributeModel) Refresh(ctx context.Context, from *checkly.Request, flags RefreshFlags) diag.Diagnostics {
+func (m *RequestAttributeModel) Refresh(ctx context.Context, from *checkly.Request, flags interop.RefreshFlags) diag.Diagnostics {
 	m.Method = types.StringValue(from.Method)
 	m.URL = types.StringValue(from.URL)
 	m.FollowRedirects = types.BoolValue(from.FollowRedirects)
@@ -108,7 +109,7 @@ func (m *CheckRequestAttributeModel) Refresh(ctx context.Context, from *checkly.
 	m.Body = types.StringValue(from.Body)
 	m.BodyType = types.StringValue(from.BodyType)
 
-	diags := RefreshMany(ctx, from.Assertions, m.Assertions, flags)
+	diags := interop.RefreshMany(ctx, from.Assertions, m.Assertions, flags)
 	if diags.HasError() {
 		return diags
 	}
@@ -123,7 +124,7 @@ func (m *CheckRequestAttributeModel) Refresh(ctx context.Context, from *checkly.
 	return nil
 }
 
-func (m *CheckRequestAttributeModel) Render(ctx context.Context, into *checkly.Request) diag.Diagnostics {
+func (m *RequestAttributeModel) Render(ctx context.Context, into *checkly.Request) diag.Diagnostics {
 	into.Method = m.Method.ValueString()
 	into.URL = m.URL.ValueString()
 	into.FollowRedirects = m.FollowRedirects.ValueBool()
@@ -133,7 +134,7 @@ func (m *CheckRequestAttributeModel) Render(ctx context.Context, into *checkly.R
 	into.Body = m.Body.ValueString()
 	into.BodyType = m.Body.ValueString()
 
-	diags := RenderMany(ctx, m.Assertions, into.Assertions)
+	diags := interop.RenderMany(ctx, m.Assertions, into.Assertions)
 	if diags.HasError() {
 		return diags
 	}

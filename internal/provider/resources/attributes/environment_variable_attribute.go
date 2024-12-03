@@ -1,4 +1,4 @@
-package provider
+package attributes
 
 import (
 	"context"
@@ -12,13 +12,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/terraform-provider-checkly/internal/provider/interop"
 )
 
 var (
-	_ ResourceModel[checkly.EnvironmentVariable] = (*CheckEnvironmentVariableAttributeModel)(nil)
+	_ interop.Model[checkly.EnvironmentVariable] = (*EnvironmentVariableAttributeModel)(nil)
 )
 
-var CheckEnvironmentVariableAttributeSchema = schema.ListNestedAttribute{
+var EnvironmentVariableAttributeSchema = schema.ListNestedAttribute{
 	Optional: true,
 	Description: "Introduce additional environment variables to the check " +
 		"execution environment. Only relevant for browser checks. Prefer " +
@@ -72,14 +73,14 @@ var CheckEnvironmentVariableAttributeSchema = schema.ListNestedAttribute{
 	},
 }
 
-type CheckEnvironmentVariableAttributeModel struct {
+type EnvironmentVariableAttributeModel struct {
 	Key    types.String `tfsdk:"key"`
 	Value  types.String `tfsdk:"value"`
 	Locked types.Bool   `tfsdk:"locked"`
 	Secret types.Bool   `tfsdk:"secret"`
 }
 
-func (m *CheckEnvironmentVariableAttributeModel) Refresh(ctx context.Context, from *checkly.EnvironmentVariable, flags RefreshFlags) diag.Diagnostics {
+func (m *EnvironmentVariableAttributeModel) Refresh(ctx context.Context, from *checkly.EnvironmentVariable, flags interop.RefreshFlags) diag.Diagnostics {
 	m.Key = types.StringValue(from.Key)
 	m.Value = types.StringValue(from.Value)
 	m.Locked = types.BoolValue(from.Locked)
@@ -88,7 +89,7 @@ func (m *CheckEnvironmentVariableAttributeModel) Refresh(ctx context.Context, fr
 	return nil
 }
 
-func (m *CheckEnvironmentVariableAttributeModel) Render(ctx context.Context, into *checkly.EnvironmentVariable) diag.Diagnostics {
+func (m *EnvironmentVariableAttributeModel) Render(ctx context.Context, into *checkly.EnvironmentVariable) diag.Diagnostics {
 	into.Key = m.Key.ValueString()
 	into.Value = m.Value.ValueString()
 	into.Locked = m.Locked.ValueBool()

@@ -1,4 +1,4 @@
-package provider
+package resources
 
 import (
 	"context"
@@ -11,6 +11,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/terraform-provider-checkly/internal/provider/interop"
+	"github.com/checkly/terraform-provider-checkly/internal/provider/resources/attributes"
 	"github.com/checkly/terraform-provider-checkly/internal/sdkutil"
 )
 
@@ -43,8 +45,8 @@ func (r *TriggerGroupResource) Schema(
 ) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"id":           IDResourceAttributeSchema,
-			"last_updated": LastUpdatedAttributeSchema,
+			"id":           attributes.IDAttributeSchema,
+			"last_updated": attributes.LastUpdatedAttributeSchema,
 			"group_id": schema.Int64Attribute{
 				Required:    true,
 				Description: "The ID of the group that you want to attach the trigger to.",
@@ -68,7 +70,7 @@ func (r *TriggerGroupResource) Configure(
 	req resource.ConfigureRequest,
 	resp *resource.ConfigureResponse,
 ) {
-	client, diags := ClientFromProviderData(req.ProviderData)
+	client, diags := interop.ClientFromProviderData(req.ProviderData)
 	if diags.HasError() {
 		resp.Diagnostics.Append(diags...)
 		return
@@ -110,7 +112,7 @@ func (r *TriggerGroupResource) Create(
 		return
 	}
 
-	resp.Diagnostics.Append(plan.Refresh(ctx, realizedModel, ModelCreated)...)
+	resp.Diagnostics.Append(plan.Refresh(ctx, realizedModel, interop.Created)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -174,7 +176,7 @@ func (r *TriggerGroupResource) Read(
 		return
 	}
 
-	resp.Diagnostics.Append(state.Refresh(ctx, realizedModel, ModelLoaded)...)
+	resp.Diagnostics.Append(state.Refresh(ctx, realizedModel, interop.Loaded)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -210,7 +212,7 @@ func (r *TriggerGroupResource) Update(
 		return
 	}
 
-	resp.Diagnostics.Append(plan.Refresh(ctx, realizedModel, ModelUpdated)...)
+	resp.Diagnostics.Append(plan.Refresh(ctx, realizedModel, interop.Updated)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -227,7 +229,7 @@ var TriggerGroupID = sdkutil.Identifier{
 }
 
 var (
-	_ ResourceModel[checkly.TriggerGroup] = (*TriggerGroupResourceModel)(nil)
+	_ interop.Model[checkly.TriggerGroup] = (*TriggerGroupResourceModel)(nil)
 )
 
 type TriggerGroupResourceModel struct {
@@ -238,13 +240,13 @@ type TriggerGroupResourceModel struct {
 	URL         types.String `tfsdk:"url"`
 }
 
-func (m *TriggerGroupResourceModel) Refresh(ctx context.Context, from *checkly.TriggerGroup, flags RefreshFlags) diag.Diagnostics {
+func (m *TriggerGroupResourceModel) Refresh(ctx context.Context, from *checkly.TriggerGroup, flags interop.RefreshFlags) diag.Diagnostics {
 	if flags.Created() {
 		m.ID = TriggerGroupID.IntoString(from.ID)
 	}
 
 	if flags.Created() || flags.Updated() {
-		m.LastUpdated = LastUpdatedNow()
+		m.LastUpdated = attributes.LastUpdatedNow()
 	}
 
 	m.GroupID = types.Int64Value(from.GroupId)

@@ -1,4 +1,4 @@
-package provider
+package interop
 
 import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
