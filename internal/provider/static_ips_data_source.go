@@ -51,10 +51,7 @@ func (d *StaticIPsDataSource) Schema(
 		Description:         "", // TODO
 		MarkdownDescription: "", // TODO
 		Attributes: map[string]schema.Attribute{
-			"id": schema.StringAttribute{
-				Computed:    true,
-				Description: "ID of the static IPs data source.",
-			},
+			"id": IDDataSourceAttributeSchema,
 			"addresses": schema.SetAttribute{
 				ElementType: types.StringType,
 				Computed:    true,

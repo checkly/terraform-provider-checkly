@@ -23,4 +23,4 @@ description: |-
 ### Read-Only
 
 - `addresses` (Set of String) Static IP addresses for Checkly's runner infrastructure.
-- `id` (String) ID of the static IPs data source.
+- `id` (String) The ID of this data source.

@@ -42,10 +42,7 @@ func (r *TriggerGroupResource) Schema(
 ) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"id": schema.StringAttribute{
-				Computed:    true,
-				Description: "", // TODO
-			},
+			"id":           IDResourceAttributeSchema,
 			"last_updated": LastUpdatedAttributeSchema,
 			"group_id": schema.Int64Attribute{
 				Required:    true,

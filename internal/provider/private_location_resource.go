@@ -44,10 +44,7 @@ func (r *PrivateLocationResource) Schema(
 ) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"id": schema.StringAttribute{
-				Computed:    true,
-				Description: "", // TODO
-			},
+			"id":           IDResourceAttributeSchema,
 			"last_updated": LastUpdatedAttributeSchema,
 			"name": schema.StringAttribute{
 				Required:    true,

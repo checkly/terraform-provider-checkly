@@ -54,10 +54,7 @@ func (r *AlertChannelResource) Schema(
 	resp.Schema = schema.Schema{
 		Description: "Allows you to define alerting channels for the checks and groups in your account.",
 		Attributes: map[string]schema.Attribute{
-			"id": schema.StringAttribute{
-				Computed:    true,
-				Description: "", // TODO
-			},
+			"id":           IDResourceAttributeSchema,
 			"last_updated": LastUpdatedAttributeSchema,
 			"email": schema.SingleNestedAttribute{
 				Optional: true,

@@ -49,10 +49,7 @@ func (r *CheckResource) Schema(
 	resp.Schema = schema.Schema{
 		Description: "Check groups allow you to group together a set of related checks, which can also share default settings for various attributes.",
 		Attributes: map[string]schema.Attribute{
-			"id": schema.StringAttribute{
-				Computed:    true,
-				Description: "", // TODO
-			},
+			"id":           IDResourceAttributeSchema,
 			"last_updated": LastUpdatedAttributeSchema,
 			"name": schema.StringAttribute{
 				Required:    true,

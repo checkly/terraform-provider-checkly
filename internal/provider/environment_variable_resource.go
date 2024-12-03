@@ -43,10 +43,7 @@ func (r *EnvironmentVariableResource) Schema(
 ) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"id": schema.StringAttribute{
-				Computed:    true,
-				Description: "", // TODO
-			},
+			"id":           IDResourceAttributeSchema,
 			"last_updated": LastUpdatedAttributeSchema,
 			"key": schema.StringAttribute{
 				Required:    true,

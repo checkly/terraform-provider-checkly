@@ -42,10 +42,7 @@ func (r *TriggerCheckResource) Schema(
 ) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"id": schema.StringAttribute{
-				Computed:    true,
-				Description: "", // TODO
-			},
+			"id":           IDResourceAttributeSchema,
 			"last_updated": LastUpdatedAttributeSchema,
 			"check_id": schema.StringAttribute{
 				Required:    true,

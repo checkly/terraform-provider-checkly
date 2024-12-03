@@ -48,10 +48,7 @@ func (r *DashboardResource) Schema(
 ) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"id": schema.StringAttribute{
-				Computed:    true,
-				Description: "", // TODO
-			},
+			"id":           IDResourceAttributeSchema,
 			"last_updated": LastUpdatedAttributeSchema,
 			"custom_url": schema.StringAttribute{
 				Required:    true,

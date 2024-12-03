@@ -47,10 +47,7 @@ func (r *HeartbeatResource) Schema(
 	resp.Schema = schema.Schema{
 		Description: "Heartbeats allows you to monitor your cron jobs and set up alerting, so you get a notification when things break or slow down.",
 		Attributes: map[string]schema.Attribute{
-			"id": schema.StringAttribute{
-				Computed:    true,
-				Description: "", // TODO
-			},
+			"id":           IDResourceAttributeSchema,
 			"last_updated": LastUpdatedAttributeSchema,
 			"name": schema.StringAttribute{
 				Required:    true,
