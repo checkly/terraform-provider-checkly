@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 
 	"github.com/checkly/terraform-provider-checkly/internal/provider"
+	"github.com/checkly/terraform-provider-checkly/internal/provider/globalregistry"
 )
 
 var (
@@ -25,7 +26,11 @@ func main() {
 		Debug:   debug,
 	}
 
-	err := providerserver.Serve(context.Background(), provider.New(version), opts)
+	err := providerserver.Serve(
+		context.Background(),
+		provider.New(version, globalregistry.Registry),
+		opts,
+	)
 
 	if err != nil {
 		log.Fatal(err.Error())

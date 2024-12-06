@@ -6,18 +6,13 @@ import (
 	"io"
 	"os"
 
-	"github.com/hashicorp/terraform-plugin-framework/datasource"
-	"github.com/hashicorp/terraform-plugin-framework/function"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	checkly "github.com/checkly/checkly-go-sdk"
-	"github.com/checkly/terraform-provider-checkly/internal/provider/datasources"
-	"github.com/checkly/terraform-provider-checkly/internal/provider/resources"
 )
 
 const (
@@ -31,6 +26,7 @@ var (
 
 type ChecklyProvider struct {
 	version string
+	Registry
 }
 
 type ChecklyProviderModel struct {
@@ -202,36 +198,11 @@ func (p *ChecklyProvider) Configure(
 	resp.ResourceData = client
 }
 
-func (p *ChecklyProvider) Resources(ctx context.Context) []func() resource.Resource {
-	return []func() resource.Resource{
-		resources.NewAlertChannelResource,
-		resources.NewCheckGroupResource,
-		resources.NewCheckResource,
-		resources.NewDashboardResource,
-		resources.NewEnvironmentVariableResource,
-		resources.NewHeartbeatResource,
-		resources.NewMaintenanceWindowsResource,
-		resources.NewPrivateLocationResource,
-		resources.NewSnippetResource,
-		resources.NewTriggerCheckResource,
-		resources.NewTriggerGroupResource,
-	}
-}
-
-func (p *ChecklyProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
-	return []func() datasource.DataSource{
-		datasources.NewStaticIPsDataSource,
-	}
-}
-
-func (p *ChecklyProvider) Functions(ctx context.Context) []func() function.Function {
-	return []func() function.Function{}
-}
-
-func New(version string) func() provider.Provider {
+func New(version string, registry Registry) func() provider.Provider {
 	return func() provider.Provider {
 		return &ChecklyProvider{
-			version: version,
+			version:  version,
+			Registry: registry,
 		}
 	}
 }
