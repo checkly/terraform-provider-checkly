@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -26,6 +27,7 @@ var (
 
 type ChecklyProvider struct {
 	version string
+	options *Options
 	Registry
 }
 
@@ -70,6 +72,8 @@ func (p *ChecklyProvider) Configure(
 	req provider.ConfigureRequest,
 	resp *provider.ConfigureResponse,
 ) {
+	tflog.Debug(ctx, "Configuring provider")
+
 	var config ChecklyProviderModel
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
@@ -117,9 +121,15 @@ func (p *ChecklyProvider) Configure(
 		return
 	}
 
-	apiKey := os.Getenv("CHECKLY_API_KEY")
-	apiURL := os.Getenv("CHECKLY_API_URL")
-	accountID := os.Getenv("CHECKLY_ACCOUNT_ID")
+	var apiKey string
+	var apiURL string
+	var accountID string
+
+	if p.options.UseCredentialsFromEnvironment {
+		apiKey = os.Getenv("CHECKLY_API_KEY")
+		apiURL = os.Getenv("CHECKLY_API_URL")
+		accountID = os.Getenv("CHECKLY_ACCOUNT_ID")
+	}
 
 	if !config.APIKey.IsNull() {
 		apiKey = config.APIKey.ValueString()
@@ -141,6 +151,19 @@ func (p *ChecklyProvider) Configure(
 				"a missing or empty value for the Checkly API Key. "+
 				"Set the value in the configuration or use the "+
 				"CHECKLY_API_KEY environment variable. If either is already "+
+				"set, ensure the value is not empty.",
+		)
+	}
+
+	if strings.HasPrefix(apiKey, "cu_") && accountID == "" {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("account_id"),
+			"Missing Checkly Account ID",
+			"The provider cannot create the Checkly API client as there is "+
+				"a missing or empty value for the Checkly Account ID, which "+
+				`is required when using User API Keys (keys with "cu_" `+
+				"prefix). Set the value in the configuration or use the "+
+				"CHECKLY_ACCOUNT_ID environment variable. If either is already "+
 				"set, ensure the value is not empty.",
 		)
 	}
@@ -198,10 +221,16 @@ func (p *ChecklyProvider) Configure(
 	resp.ResourceData = client
 }
 
-func New(version string, registry Registry) func() provider.Provider {
+func New(version string, registry Registry, options ...Option) func() provider.Provider {
+	opts := DefaultOptions()
+	for _, opt := range options {
+		opt.Apply(opts)
+	}
+
 	return func() provider.Provider {
 		return &ChecklyProvider{
 			version:  version,
+			options:  opts,
 			Registry: registry,
 		}
 	}
