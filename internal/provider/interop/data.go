@@ -9,14 +9,9 @@ import (
 )
 
 func ClientFromProviderData(providerData any) (checkly.Client, diag.Diagnostics) {
+	// Not set when called via ValidateResourceConfig RPC.
 	if providerData == nil {
-		return nil, diag.Diagnostics{
-			diag.NewErrorDiagnostic(
-				"Missing Configure Type",
-				"Expected checkly.Client, got nil. Please report this issue "+
-					"to the provider developers.",
-			),
-		}
+		return nil, nil
 	}
 
 	client, ok := providerData.(checkly.Client)
