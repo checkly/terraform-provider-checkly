@@ -267,9 +267,15 @@ func (m *EnvironmentVariableResourceModel) Refresh(ctx context.Context, from *ch
 	}
 
 	m.Key = types.StringValue(from.Key)
-	m.Value = types.StringValue(from.Value)
 	m.Locked = types.BoolValue(from.Locked)
 	m.Secret = types.BoolValue(from.Secret)
+
+	// We can never receive a secret value back from the server. Just assume
+	// the value is still unchanged and only update state if we're not dealing
+	// with a secret.
+	if !from.Secret {
+		m.Value = types.StringValue(from.Value)
+	}
 
 	return nil
 }
