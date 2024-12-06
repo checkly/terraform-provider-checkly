@@ -4,11 +4,12 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/checkly/terraform-provider-checkly/internal/provider"
-	"github.com/checkly/terraform-provider-checkly/internal/provider/globalregistry"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+
+	"github.com/checkly/terraform-provider-checkly/internal/provider"
+	"github.com/checkly/terraform-provider-checkly/internal/provider/globalregistry"
 )
 
 func protoV6ProviderFactories(options ...provider.Option) map[string]func() (tfprotov6.ProviderServer, error) {

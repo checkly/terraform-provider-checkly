@@ -1,10 +1,11 @@
 package resources_test
 
 import (
-	"github.com/checkly/terraform-provider-checkly/internal/provider"
-	"github.com/checkly/terraform-provider-checkly/internal/provider/globalregistry"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
+
+	"github.com/checkly/terraform-provider-checkly/internal/provider"
+	"github.com/checkly/terraform-provider-checkly/internal/provider/globalregistry"
 )
 
 func protoV6ProviderFactories() map[string]func() (tfprotov6.ProviderServer, error) {
