@@ -1,0 +1,237 @@
+package provider
+
+import (
+	"context"
+	"fmt"
+	"io"
+	"os"
+	"strings"
+
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/provider"
+	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+
+	checkly "github.com/checkly/checkly-go-sdk"
+)
+
+const (
+	defaultAPIURL = "https://api.checklyhq.com"
+)
+
+var (
+	_ provider.Provider              = (*ChecklyProvider)(nil)
+	_ provider.ProviderWithFunctions = (*ChecklyProvider)(nil)
+)
+
+type ChecklyProvider struct {
+	version string
+	options *Options
+	Registry
+}
+
+type ChecklyProviderModel struct {
+	APIKey    types.String `tfsdk:"api_key"`
+	APIURL    types.String `tfsdk:"api_url"`
+	AccountID types.String `tfsdk:"account_id"`
+}
+
+func (p *ChecklyProvider) Metadata(
+	ctx context.Context,
+	req provider.MetadataRequest,
+	resp *provider.MetadataResponse,
+) {
+	resp.TypeName = "checkly"
+	resp.Version = p.version
+}
+
+func (p *ChecklyProvider) Schema(
+	ctx context.Context,
+	req provider.SchemaRequest,
+	resp *provider.SchemaResponse,
+) {
+	resp.Schema = schema.Schema{
+		Attributes: map[string]schema.Attribute{
+			"api_key": schema.StringAttribute{
+				Optional:  true,
+				Sensitive: true, // FIXME: Keep this? Old code did not set it.
+			},
+			"api_url": schema.StringAttribute{
+				Optional: true,
+			},
+			"account_id": schema.StringAttribute{
+				Optional: true,
+			},
+		},
+	}
+}
+
+func (p *ChecklyProvider) Configure(
+	ctx context.Context,
+	req provider.ConfigureRequest,
+	resp *provider.ConfigureResponse,
+) {
+	tflog.Debug(ctx, "Configuring provider")
+
+	var config ChecklyProviderModel
+
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if config.APIKey.IsUnknown() {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("api_key"),
+			"Unknown Checkly API Key",
+			"The provider cannot create the Checkly API client as there is "+
+				"an unknown configuration value for the Checkly API Key. "+
+				"Either target apply the source of the value first, set the "+
+				"value statically in the configuration, or use the "+
+				"CHECKLY_API_KEY environment variable.",
+		)
+	}
+
+	if config.APIURL.IsUnknown() {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("api_url"),
+			"Unknown Checkly API URL",
+			"The provider cannot create the Checkly API client as there is "+
+				"an unknown configuration value for the Checkly API URL. "+
+				"Either target apply the source of the value first, set the "+
+				"value statically in the configuration, or use the "+
+				"CHECKLY_API_URL environment variable.",
+		)
+	}
+
+	if config.AccountID.IsUnknown() {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("account_id"),
+			"Unknown Checkly Account ID",
+			"The provider cannot create the Checkly API client as there is "+
+				"an unknown configuration value for the Checkly Account ID. "+
+				"Either target apply the source of the value first, set the "+
+				"value statically in the configuration, or use the "+
+				"CHECKLY_API_URL environment variable.",
+		)
+	}
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var apiKey string
+	var apiURL string
+	var accountID string
+
+	if p.options.UseCredentialsFromEnvironment {
+		apiKey = os.Getenv("CHECKLY_API_KEY")
+		apiURL = os.Getenv("CHECKLY_API_URL")
+		accountID = os.Getenv("CHECKLY_ACCOUNT_ID")
+	}
+
+	if !config.APIKey.IsNull() {
+		apiKey = config.APIKey.ValueString()
+	}
+
+	if !config.APIURL.IsNull() {
+		apiURL = config.APIURL.ValueString()
+	}
+
+	if !config.AccountID.IsNull() {
+		accountID = config.AccountID.ValueString()
+	}
+
+	if apiKey == "" {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("api_key"),
+			"Missing Checkly API Key",
+			"The provider cannot create the Checkly API client as there is "+
+				"a missing or empty value for the Checkly API Key. "+
+				"Set the value in the configuration or use the "+
+				"CHECKLY_API_KEY environment variable. If either is already "+
+				"set, ensure the value is not empty.",
+		)
+	}
+
+	if strings.HasPrefix(apiKey, "cu_") && accountID == "" {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("account_id"),
+			"Missing Checkly Account ID",
+			"The provider cannot create the Checkly API client as there is "+
+				"a missing or empty value for the Checkly Account ID, which "+
+				`is required when using User API Keys (keys with "cu_" `+
+				"prefix). Set the value in the configuration or use the "+
+				"CHECKLY_ACCOUNT_ID environment variable. If either is already "+
+				"set, ensure the value is not empty.",
+		)
+	}
+
+	if apiURL == "" {
+		apiURL = defaultAPIURL
+	}
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	ctx = tflog.SetField(ctx, "checkly_api_key", apiKey)
+	ctx = tflog.MaskFieldValuesWithFieldKeys(ctx, "checkly_api_key")
+	ctx = tflog.SetField(ctx, "checkly_api_url", apiURL)
+	ctx = tflog.SetField(ctx, "checkly_account_id", accountID)
+
+	tflog.Debug(ctx, "Creating Checkly client")
+
+	debugLog := os.Getenv("CHECKLY_DEBUG_LOG")
+	var debugOutput io.Writer
+	if debugLog != "" {
+		debugFile, err := os.OpenFile(debugLog, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error Accessing Checkly Debug Log File",
+				fmt.Sprintf("Could not open debug log file, unexpected error: %s", err),
+			)
+
+			return
+		}
+
+		debugOutput = debugFile
+	}
+
+	client := checkly.NewClient(
+		apiURL,
+		apiKey,
+		nil,
+		debugOutput,
+	)
+
+	if accountID != "" {
+		client.SetAccountId(accountID)
+	}
+
+	apiSource := os.Getenv("CHECKLY_API_SOURCE")
+	if apiSource != "" {
+		client.SetChecklySource(apiSource)
+	} else {
+		client.SetChecklySource("TF")
+	}
+
+	resp.DataSourceData = client
+	resp.ResourceData = client
+}
+
+func New(version string, registry Registry, options ...Option) func() provider.Provider {
+	opts := DefaultOptions()
+	for _, opt := range options {
+		opt.Apply(opts)
+	}
+
+	return func() provider.Provider {
+		return &ChecklyProvider{
+			version:  version,
+			options:  opts,
+			Registry: registry,
+		}
+	}
+}

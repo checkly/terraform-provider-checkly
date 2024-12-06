@@ -43,9 +43,10 @@ EOT
 
 ### Required
 
-- `name` (String) The name of the snippet
+- `name` (String) The name of the snippet.
 - `script` (String) Your Node.js code that interacts with the API check lifecycle, or functions as a partial for browser checks.
 
 ### Read-Only
 
 - `id` (String) The ID of this resource.
+- `last_updated` (String) When the resource was last updated by the provider.
