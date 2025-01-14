@@ -47,8 +47,7 @@ func (r *PrivateLocationResource) Schema(
 ) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"id":           attributes.IDAttributeSchema,
-			"last_updated": attributes.LastUpdatedAttributeSchema,
+			"id": attributes.IDAttributeSchema,
 			"name": schema.StringAttribute{
 				Required:    true,
 				Description: "The private location name.",
@@ -243,21 +242,16 @@ var (
 )
 
 type PrivateLocationResourceModel struct {
-	ID          types.String `tfsdk:"id"`
-	LastUpdated types.String `tfsdk:"last_updated"` // FIXME: Keep this? Old code did not have it.
-	Name        types.String `tfsdk:"name"`
-	SlugName    types.String `tfsdk:"slug_name"`
-	Icon        types.String `tfsdk:"icon"`
-	Keys        types.Set    `tfsdk:"keys"`
+	ID       types.String `tfsdk:"id"`
+	Name     types.String `tfsdk:"name"`
+	SlugName types.String `tfsdk:"slug_name"`
+	Icon     types.String `tfsdk:"icon"`
+	Keys     types.Set    `tfsdk:"keys"`
 }
 
 func (m *PrivateLocationResourceModel) Refresh(ctx context.Context, from *checkly.PrivateLocation, flags interop.RefreshFlags) diag.Diagnostics {
 	if flags.Created() {
 		m.ID = types.StringValue(from.ID)
-	}
-
-	if flags.Created() || flags.Updated() {
-		m.LastUpdated = attributes.LastUpdatedNow()
 	}
 
 	m.Name = types.StringValue(from.Name)

@@ -51,8 +51,7 @@ func (r *DashboardResource) Schema(
 ) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"id":           attributes.IDAttributeSchema,
-			"last_updated": attributes.LastUpdatedAttributeSchema,
+			"id": attributes.IDAttributeSchema,
 			"custom_url": schema.StringAttribute{
 				Required:    true,
 				Description: "A subdomain name under 'checklyhq.com'. Needs to be unique across all users.",
@@ -325,7 +324,6 @@ var (
 
 type DashboardResourceModel struct {
 	ID                 types.String `tfsdk:"id"`
-	LastUpdated        types.String `tfsdk:"last_updated"` // FIXME: Keep this? Old code did not have it.
 	CustomURL          types.String `tfsdk:"custom_url"`
 	CustomDomain       types.String `tfsdk:"custom_domain"`
 	Logo               types.String `tfsdk:"logo"`
@@ -348,10 +346,6 @@ type DashboardResourceModel struct {
 func (m *DashboardResourceModel) Refresh(ctx context.Context, from *checkly.Dashboard, flags interop.RefreshFlags) diag.Diagnostics {
 	if flags.Created() {
 		m.ID = types.StringValue(from.DashboardID)
-	}
-
-	if flags.Created() || flags.Updated() {
-		m.LastUpdated = attributes.LastUpdatedNow()
 	}
 
 	m.CustomURL = types.StringValue(from.CustomUrl)

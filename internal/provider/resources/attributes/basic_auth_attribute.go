@@ -34,6 +34,11 @@ type BasicAuthAttributeModel struct {
 	Password types.String `tfsdk:"password"`
 }
 
+var BasicAuthAttributeGluer = interop.GluerForSingleNestedAttribute[
+	checkly.BasicAuth,
+	BasicAuthAttributeModel,
+](BasicAuthAttributeSchema)
+
 func (m *BasicAuthAttributeModel) Refresh(ctx context.Context, from *checkly.BasicAuth, flags interop.RefreshFlags) diag.Diagnostics {
 	m.Username = types.StringValue(from.Username)
 	m.Password = types.StringValue(from.Password)

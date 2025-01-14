@@ -11,15 +11,15 @@ resource "checkly_check" "example_check" {
     "us-west-1"
   ]
 
-  request {
+  request = {
     url              = "https://api.example.com/"
     follow_redirects = true
     skip_ssl         = false
-    assertion {
+    assertions = [{
       source     = "STATUS_CODE"
       comparison = "EQUALS"
       target     = "200"
-    }
+    }]
   }
 }
 
@@ -39,19 +39,19 @@ resource "checkly_check" "example_check_2" {
     "ap-south-1",
   ]
 
-  alert_settings {
+  alert_settings = {
     escalation_type = "RUN_BASED"
 
-    run_based_escalation {
+    run_based_escalation = {
       failed_run_threshold = 1
     }
 
-    reminders {
+    reminders = {
       amount = 1
     }
   }
 
-  retry_strategy {
+  retry_strategy = {
     type                 = "FIXED"
     base_backoff_seconds = 60
     max_duration_seconds = 600
@@ -59,7 +59,7 @@ resource "checkly_check" "example_check_2" {
     same_region          = false
   }
 
-  request {
+  request = {
     follow_redirects = true
     skip_ssl         = false
     url              = "http://api.example.com/"
@@ -72,21 +72,21 @@ resource "checkly_check" "example_check_2" {
       X-Bogus = "bogus"
     }
 
-    assertion {
+    assertion = {
       source     = "JSON_BODY"
       property   = "code"
       comparison = "HAS_VALUE"
       target     = "authentication.failed"
     }
 
-    assertion {
+    assertion = {
       source     = "STATUS_CODE"
       property   = ""
       comparison = "EQUALS"
       target     = "401"
     }
 
-    basic_auth {
+    basic_auth = {
       username = ""
       password = ""
     }
@@ -122,13 +122,13 @@ EOT
 
 # Connection checks with alert channels
 resource "checkly_alert_channel" "email_ac1" {
-  email {
+  email = {
     address = "info1@example.com"
   }
 }
 
 resource "checkly_alert_channel" "email_ac2" {
-  email {
+  email = {
     address = "info2@example.com"
   }
 }
@@ -137,15 +137,16 @@ resource "checkly_check" "example_check" {
   name = "Example check"
   # ...
 
-  alert_channel_subscription {
-    channel_id = checkly_alert_channel.email_ac1.id
-    activated  = true
-  }
-
-  alert_channel_subscription {
-    channel_id = checkly_alert_channel.email_ac2.id
-    activated  = true
-  }
+  alert_channel_subscriptions = [
+    {
+      channel_id = checkly_alert_channel.email_ac1.id
+      activated  = true
+    },
+    {
+      channel_id = checkly_alert_channel.email_ac2.id
+      activated  = true
+    }
+  ]
 }
 
 # An alternative syntax for add the script is by referencing an external file

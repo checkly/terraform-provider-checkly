@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	_ interop.Model[[]string] = (*PrivateLocationsAttributeModel)(nil)
+	_ interop.Model[string] = (*PrivateLocationsAttributeModel)(nil)
 )
 
 var PrivateLocationsAttributeSchema = schema.SetAttribute{
@@ -19,16 +19,21 @@ var PrivateLocationsAttributeSchema = schema.SetAttribute{
 	Optional:    true,
 }
 
-type PrivateLocationsAttributeModel types.Set
+type PrivateLocationsAttributeModel string
 
-func (m *PrivateLocationsAttributeModel) Refresh(ctx context.Context, from *[]string, flags interop.RefreshFlags) diag.Diagnostics {
-	*m = PrivateLocationsAttributeModel(interop.IntoUntypedStringSet(from))
+var PrivateLocationsAttributeGluer = interop.GluerForSetAttribute[
+	string,
+	PrivateLocationsAttributeModel,
+](PrivateLocationsAttributeSchema)
+
+func (m *PrivateLocationsAttributeModel) Refresh(ctx context.Context, from *string, flags interop.RefreshFlags) diag.Diagnostics {
+	*m = PrivateLocationsAttributeModel(*from)
 
 	return nil
 }
 
-func (m *PrivateLocationsAttributeModel) Render(ctx context.Context, into *[]string) diag.Diagnostics {
-	*into = interop.FromUntypedStringSet(types.Set(*m))
+func (m *PrivateLocationsAttributeModel) Render(ctx context.Context, into *string) diag.Diagnostics {
+	*into = string(*m)
 
 	return nil
 }

@@ -31,69 +31,8 @@ type Render[T any] interface {
 	Render(ctx context.Context, into *T) diag.Diagnostics
 }
 
-func RenderMany[
-	T any,
-	R any,
-	RPtr interface {
-		Render[T]
-		*R
-	},
-	Sources ~[]R,
-	Results ~[]T,
-](
-	ctx context.Context,
-	sources Sources,
-	results Results,
-) (
-	diags diag.Diagnostics,
-) {
-	for _, source := range sources {
-		var result T
-
-		diags.Append(RPtr(&source).Render(ctx, &result)...)
-		if diags.HasError() {
-			return diags
-		}
-
-		results = append(results, result)
-	}
-
-	return diags
-}
-
 type Refresh[T any] interface {
 	Refresh(ctx context.Context, from *T, flags RefreshFlags) diag.Diagnostics
-}
-
-func RefreshMany[
-	T any,
-	R any,
-	RPtr interface {
-		Refresh[T]
-		*R
-	},
-	Sources ~[]T,
-	Results ~[]R,
-](
-	ctx context.Context,
-	sources Sources,
-	results Results,
-	flags RefreshFlags,
-) (
-	diags diag.Diagnostics,
-) {
-	for _, source := range sources {
-		var r R
-
-		diags.Append(RPtr(&r).Refresh(ctx, &source, flags)...)
-		if diags.HasError() {
-			return diags
-		}
-
-		results = append(results, r)
-	}
-
-	return diags
 }
 
 type Model[T any] interface {

@@ -21,8 +21,8 @@ var APICheckDefaultsAttributeSchema = schema.SingleNestedAttribute{
 	Computed: true,
 	Attributes: map[string]schema.Attribute{
 		"url": schema.StringAttribute{
-			Required:    true,
 			Description: "The base url for this group which you can reference with the `GROUP_BASE_URL` variable in all group checks.",
+			Required:    true,
 		},
 		"headers":          HeadersAttributeSchema,
 		"query_parameters": QueryParametersAttributeSchema,
@@ -32,12 +32,17 @@ var APICheckDefaultsAttributeSchema = schema.SingleNestedAttribute{
 }
 
 type APICheckDefaultsAttributeModel struct {
-	URL             types.String              `tfsdk:"url"`
-	Headers         types.Map                 `tfsdk:"headers"`
-	QueryParameters types.Map                 `tfsdk:"query_parameters"`
-	Assertions      []AssertionAttributeModel `tfsdk:"assertion"`
-	BasicAuth       BasicAuthAttributeModel   `tfsdk:"basic_auth"`
+	URL             types.String `tfsdk:"url"`
+	Headers         types.Map    `tfsdk:"headers"`
+	QueryParameters types.Map    `tfsdk:"query_parameters"`
+	Assertions      types.List   `tfsdk:"assertions"`
+	BasicAuth       types.Object `tfsdk:"basic_auth"`
 }
+
+var APICheckDefaultsAttributeGluer = interop.GluerForSingleNestedAttribute[
+	checkly.APICheckDefaults,
+	APICheckDefaultsAttributeModel,
+](APICheckDefaultsAttributeSchema)
 
 func (m *APICheckDefaultsAttributeModel) Refresh(ctx context.Context, from *checkly.APICheckDefaults, flags interop.RefreshFlags) diag.Diagnostics {
 	var diags diag.Diagnostics
@@ -46,9 +51,15 @@ func (m *APICheckDefaultsAttributeModel) Refresh(ctx context.Context, from *chec
 	m.Headers = sdkutil.KeyValuesIntoMap(&from.Headers)
 	m.QueryParameters = sdkutil.KeyValuesIntoMap(&from.QueryParameters)
 
-	diags.Append(interop.RefreshMany(ctx, from.Assertions, m.Assertions, flags)...)
+	m.Assertions, _, diags = AssertionAttributeGluer.RefreshToList(ctx, &from.Assertions, flags)
+	if diags.HasError() {
+		return diags
+	}
 
-	diags.Append(m.BasicAuth.Refresh(ctx, &from.BasicAuth, flags)...)
+	m.BasicAuth, _, diags = BasicAuthAttributeGluer.RefreshToObject(ctx, &from.BasicAuth, flags)
+	if diags.HasError() {
+		return diags
+	}
 
 	return diags
 }
@@ -60,9 +71,15 @@ func (m *APICheckDefaultsAttributeModel) Render(ctx context.Context, into *check
 	into.Headers = sdkutil.KeyValuesFromMap(m.Headers)
 	into.QueryParameters = sdkutil.KeyValuesFromMap(m.QueryParameters)
 
-	diags.Append(interop.RenderMany(ctx, m.Assertions, into.Assertions)...)
+	into.Assertions, _, diags = AssertionAttributeGluer.RenderFromList(ctx, m.Assertions)
+	if diags.HasError() {
+		return diags
+	}
 
-	diags.Append(m.BasicAuth.Render(ctx, &into.BasicAuth)...)
+	into.BasicAuth, _, diags = BasicAuthAttributeGluer.RenderFromObject(ctx, m.BasicAuth)
+	if diags.HasError() {
+		return diags
+	}
 
 	return diags
 }

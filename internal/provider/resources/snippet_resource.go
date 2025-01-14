@@ -45,8 +45,7 @@ func (r *SnippetResource) Schema(
 ) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"id":           attributes.IDAttributeSchema,
-			"last_updated": attributes.LastUpdatedAttributeSchema,
+			"id": attributes.IDAttributeSchema,
 			"name": schema.StringAttribute{
 				Required:    true,
 				Description: "The name of the snippet.",
@@ -254,19 +253,14 @@ var (
 )
 
 type SnippetResourceModel struct {
-	ID          types.String `tfsdk:"id"`
-	LastUpdated types.String `tfsdk:"last_updated"` // FIXME: Keep this? Old code did not have it.
-	Name        types.String `tfsdk:"name"`
-	Script      types.String `tfsdk:"script"`
+	ID     types.String `tfsdk:"id"`
+	Name   types.String `tfsdk:"name"`
+	Script types.String `tfsdk:"script"`
 }
 
 func (m *SnippetResourceModel) Refresh(ctx context.Context, from *checkly.Snippet, flags interop.RefreshFlags) diag.Diagnostics {
 	if flags.Created() {
 		m.ID = SnippetID.IntoString(from.ID)
-	}
-
-	if flags.Created() || flags.Updated() {
-		m.LastUpdated = attributes.LastUpdatedNow()
 	}
 
 	m.Name = types.StringValue(from.Name)

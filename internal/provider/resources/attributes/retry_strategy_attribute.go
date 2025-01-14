@@ -77,6 +77,11 @@ type RetryStrategyAttributeModel struct {
 	SameRegion         types.Bool   `tfsdk:"same_region"`
 }
 
+var RetryStrategyAttributeGluer = interop.GluerForSingleNestedAttribute[
+	checkly.RetryStrategy,
+	RetryStrategyAttributeModel,
+](RetryStrategyAttributeSchema)
+
 func (m *RetryStrategyAttributeModel) Refresh(ctx context.Context, from *checkly.RetryStrategy, flags interop.RefreshFlags) diag.Diagnostics {
 	m.Type = types.StringValue(from.Type)
 	m.BaseBackoffSeconds = types.Int32Value(int32(from.BaseBackoffSeconds))

@@ -16,7 +16,7 @@ Heartbeats allows you to monitor your cron jobs and set up alerting, so you get 
 resource "checkly_heartbeat" "example-heartbeat" {
   name      = "Example heartbeat"
   activated = true
-  heartbeat {
+  heartbeat = {
     period      = 7
     period_unit = "days"
     grace       = 1
@@ -46,7 +46,6 @@ resource "checkly_heartbeat" "example-heartbeat" {
 ### Read-Only
 
 - `id` (String) The ID of this resource.
-- `last_updated` (String) When the resource was last updated by the provider.
 
 <a id="nestedatt--heartbeat"></a>
 ### Nested Schema for `heartbeat`
@@ -58,7 +57,7 @@ Required:
 - `period` (Number) How often you expect a ping to the ping URL.
 - `period_unit` (String) Possible values `seconds`, `minutes`, `hours` and `days`.
 
-Optional:
+Read-Only:
 
 - `ping_token` (String) Custom token to generate your ping URL. Checkly will expect a ping to `https://ping.checklyhq.com/[PING_TOKEN]`.
 

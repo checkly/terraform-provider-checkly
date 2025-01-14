@@ -48,8 +48,7 @@ func (r *CheckGroupResource) Schema(
 	resp.Schema = schema.Schema{
 		Description: "Check groups allow you to group together a set of related checks, which can also share default settings for various attributes.",
 		Attributes: map[string]schema.Attribute{
-			"id":           attributes.IDAttributeSchema,
-			"last_updated": attributes.LastUpdatedAttributeSchema,
+			"id": attributes.IDAttributeSchema,
 			"name": schema.StringAttribute{
 				Required:    true,
 				Description: "The name of the check group.",
@@ -319,38 +318,35 @@ var (
 )
 
 type CheckGroupResourceModel struct {
-	ID                        types.String                                        `tfsdk:"id"`
-	LastUpdated               types.String                                        `tfsdk:"last_updated"` // FIXME: Keep this? Old code did not have it.
-	Name                      types.String                                        `tfsdk:"name"`
-	Concurrency               types.Int32                                         `tfsdk:"concurrency"`
-	Activated                 types.Bool                                          `tfsdk:"activated"`
-	Muted                     types.Bool                                          `tfsdk:"muted"`
-	RunParallel               types.Bool                                          `tfsdk:"run_parallel"`
-	Locations                 attributes.LocationsAttributeModel                  `tfsdk:"locations"`
-	PrivateLocations          attributes.PrivateLocationsAttributeModel           `tfsdk:"private_locations"`
-	EnvironmentVariables      types.Map                                           `tfsdk:"environment_variables"`
-	EnvironmentVariable       []attributes.EnvironmentVariableAttributeModel      `tfsdk:"environment_variable"`
-	DoubleCheck               types.Bool                                          `tfsdk:"double_check"`
-	Tags                      types.Set                                           `tfsdk:"tags"`
-	SetupSnippetID            types.Int64                                         `tfsdk:"setup_snippet_id"`
-	TearDownSnippetID         types.Int64                                         `tfsdk:"teardown_snippet_id"`
-	LocalSetupScript          types.String                                        `tfsdk:"local_setup_script"`
-	LocalTearDownScript       types.String                                        `tfsdk:"local_teardown_script"`
-	RuntimeID                 types.String                                        `tfsdk:"runtime_id"`
-	AlertChannelSubscriptions []attributes.AlertChannelSubscriptionAttributeModel `tfsdk:"alert_channel_subscription"`
-	AlertSettings             attributes.AlertSettingsAttributeModel              `tfsdk:"alert_settings"`
-	UseGlobalAlertSettings    types.Bool                                          `tfsdk:"use_global_alert_settings"`
-	APICheckDefaults          attributes.APICheckDefaultsAttributeModel           `tfsdk:"api_check_defaults"`
-	RetryStrategy             *attributes.RetryStrategyAttributeModel             `tfsdk:"retry_strategy"`
+	ID                        types.String `tfsdk:"id"`
+	Name                      types.String `tfsdk:"name"`
+	Concurrency               types.Int32  `tfsdk:"concurrency"`
+	Activated                 types.Bool   `tfsdk:"activated"`
+	Muted                     types.Bool   `tfsdk:"muted"`
+	RunParallel               types.Bool   `tfsdk:"run_parallel"`
+	Locations                 types.Set    `tfsdk:"locations"`
+	PrivateLocations          types.Set    `tfsdk:"private_locations"`
+	EnvironmentVariables      types.Map    `tfsdk:"environment_variables"`
+	EnvironmentVariable       types.List   `tfsdk:"environment_variable"`
+	DoubleCheck               types.Bool   `tfsdk:"double_check"`
+	Tags                      types.Set    `tfsdk:"tags"`
+	SetupSnippetID            types.Int64  `tfsdk:"setup_snippet_id"`
+	TearDownSnippetID         types.Int64  `tfsdk:"teardown_snippet_id"`
+	LocalSetupScript          types.String `tfsdk:"local_setup_script"`
+	LocalTearDownScript       types.String `tfsdk:"local_teardown_script"`
+	RuntimeID                 types.String `tfsdk:"runtime_id"`
+	AlertChannelSubscriptions types.List   `tfsdk:"alert_channel_subscription"`
+	AlertSettings             types.Object `tfsdk:"alert_settings"`
+	UseGlobalAlertSettings    types.Bool   `tfsdk:"use_global_alert_settings"`
+	APICheckDefaults          types.Object `tfsdk:"api_check_defaults"`
+	RetryStrategy             types.Object `tfsdk:"retry_strategy"`
 }
 
 func (m *CheckGroupResourceModel) Refresh(ctx context.Context, from *checkly.Group, flags interop.RefreshFlags) diag.Diagnostics {
+	var diags diag.Diagnostics
+
 	if flags.Created() {
 		m.ID = CheckGroupID.IntoString(from.ID)
-	}
-
-	if flags.Created() || flags.Updated() {
-		m.LastUpdated = attributes.LastUpdatedNow()
 	}
 
 	m.Name = types.StringValue(from.Name)
@@ -359,13 +355,13 @@ func (m *CheckGroupResourceModel) Refresh(ctx context.Context, from *checkly.Gro
 	m.Muted = types.BoolValue(from.Muted)
 	m.RunParallel = types.BoolValue(from.RunParallel)
 
-	diags := m.Locations.Refresh(ctx, &from.Locations, flags)
-	if diags != nil {
+	m.Locations, _, diags = attributes.LocationsAttributeGluer.RefreshToSet(ctx, &from.Locations, flags)
+	if diags.HasError() {
 		return diags
 	}
 
-	diags = m.PrivateLocations.Refresh(ctx, from.PrivateLocations, flags)
-	if diags != nil {
+	m.PrivateLocations, _, diags = attributes.PrivateLocationsAttributeGluer.RefreshToSet(ctx, from.PrivateLocations, flags)
+	if diags.HasError() {
 		return diags
 	}
 
@@ -375,9 +371,7 @@ func (m *CheckGroupResourceModel) Refresh(ctx context.Context, from *checkly.Gro
 
 		// TODO either implement backwards compat or remove.
 	} else {
-		m.EnvironmentVariable = nil
-
-		diags := interop.RefreshMany(ctx, from.EnvironmentVariables, m.EnvironmentVariable, flags)
+		m.EnvironmentVariable, _, diags = attributes.EnvironmentVariableAttributeGluer.RefreshToList(ctx, &from.EnvironmentVariables, flags)
 		if diags.HasError() {
 			return diags
 		}
@@ -398,51 +392,51 @@ func (m *CheckGroupResourceModel) Refresh(ctx context.Context, from *checkly.Gro
 		m.RuntimeID = types.StringNull()
 	}
 
-	diags = interop.RefreshMany(ctx, from.AlertChannelSubscriptions, m.AlertChannelSubscriptions, flags)
+	m.AlertChannelSubscriptions, _, diags = attributes.AlertChannelSubscriptionAttributeGluer.RefreshToList(ctx, &from.AlertChannelSubscriptions, flags)
 	if diags.HasError() {
 		return diags
 	}
 
-	diags = m.AlertSettings.Refresh(ctx, &from.AlertSettings, flags)
+	m.AlertSettings, _, diags = attributes.AlertSettingsAttributeGluer.RefreshToObject(ctx, &from.AlertSettings, flags)
 	if diags.HasError() {
 		return diags
 	}
 
 	m.UseGlobalAlertSettings = types.BoolValue(from.UseGlobalAlertSettings)
 
-	diags = m.APICheckDefaults.Refresh(ctx, &from.APICheckDefaults, flags)
+	m.APICheckDefaults, _, diags = attributes.APICheckDefaultsAttributeGluer.RefreshToObject(ctx, &from.APICheckDefaults, flags)
 	if diags.HasError() {
 		return diags
 	}
 
-	if from.RetryStrategy != nil {
-		diags = m.RetryStrategy.Refresh(ctx, from.RetryStrategy, flags)
-		if diags.HasError() {
-			return diags
-		}
-	} else {
-		m.RetryStrategy = nil
+	m.RetryStrategy, _, diags = attributes.RetryStrategyAttributeGluer.RefreshToObject(ctx, from.RetryStrategy, flags)
+	if diags.HasError() {
+		return diags
 	}
 
 	return nil
 }
 
 func (m *CheckGroupResourceModel) Render(ctx context.Context, into *checkly.Group) diag.Diagnostics {
+	var diags diag.Diagnostics
+
 	into.Name = m.Name.ValueString()
 	into.Concurrency = int(m.Concurrency.ValueInt32())
 	into.Activated = m.Activated.ValueBool()
 	into.Muted = m.Muted.ValueBool()
 	into.RunParallel = m.RunParallel.ValueBool()
 
-	diags := m.Locations.Render(ctx, &into.Locations)
+	into.Locations, _, diags = attributes.LocationsAttributeGluer.RenderFromSet(ctx, m.Locations)
 	if diags.HasError() {
 		return diags
 	}
 
-	diags = m.PrivateLocations.Render(ctx, into.PrivateLocations)
+	privateLocations, _, diags := attributes.PrivateLocationsAttributeGluer.RenderFromSet(ctx, m.PrivateLocations)
 	if diags.HasError() {
 		return diags
 	}
+
+	into.PrivateLocations = &privateLocations
 
 	if !m.EnvironmentVariables.IsNull() {
 		// Deprecated mode.
@@ -452,7 +446,7 @@ func (m *CheckGroupResourceModel) Render(ctx context.Context, into *checkly.Grou
 	} else {
 		into.EnvironmentVariables = nil
 
-		diags := interop.RenderMany(ctx, m.EnvironmentVariable, into.EnvironmentVariables)
+		into.EnvironmentVariables, _, diags = attributes.EnvironmentVariableAttributeGluer.RenderFromList(ctx, m.EnvironmentVariable)
 		if diags.HasError() {
 			return diags
 		}
@@ -474,30 +468,32 @@ func (m *CheckGroupResourceModel) Render(ctx context.Context, into *checkly.Grou
 		into.RuntimeID = nil
 	}
 
-	diags = interop.RenderMany(ctx, m.AlertChannelSubscriptions, into.AlertChannelSubscriptions)
+	into.AlertChannelSubscriptions, _, diags = attributes.AlertChannelSubscriptionAttributeGluer.RenderFromList(ctx, m.AlertChannelSubscriptions)
 	if diags.HasError() {
 		return diags
 	}
 
-	diags = m.AlertSettings.Render(ctx, &into.AlertSettings)
+	into.AlertSettings, _, diags = attributes.AlertSettingsAttributeGluer.RenderFromObject(ctx, m.AlertSettings)
 	if diags.HasError() {
 		return diags
 	}
 
 	into.UseGlobalAlertSettings = m.UseGlobalAlertSettings.ValueBool()
 
-	diags = m.APICheckDefaults.Render(ctx, &into.APICheckDefaults)
+	into.APICheckDefaults, _, diags = attributes.APICheckDefaultsAttributeGluer.RenderFromObject(ctx, m.APICheckDefaults)
 	if diags.HasError() {
 		return diags
 	}
 
-	if m.RetryStrategy != nil {
-		diags = m.RetryStrategy.Render(ctx, into.RetryStrategy)
+	if m.RetryStrategy.IsNull() || m.RetryStrategy.IsUnknown() {
+		into.RetryStrategy = nil
+	} else {
+		retryStrategy, _, diags := attributes.RetryStrategyAttributeGluer.RenderFromObject(ctx, m.RetryStrategy)
 		if diags.HasError() {
 			return diags
 		}
-	} else {
-		into.RetryStrategy = nil
+
+		into.RetryStrategy = &retryStrategy
 	}
 
 	return nil

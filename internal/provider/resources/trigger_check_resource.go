@@ -45,8 +45,7 @@ func (r *TriggerCheckResource) Schema(
 ) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"id":           attributes.IDAttributeSchema,
-			"last_updated": attributes.LastUpdatedAttributeSchema,
+			"id": attributes.IDAttributeSchema,
 			"check_id": schema.StringAttribute{
 				Required:    true,
 				Description: "The ID of the check that you want to attach the trigger to.",
@@ -233,11 +232,10 @@ var (
 )
 
 type TriggerCheckResourceModel struct {
-	ID          types.String `tfsdk:"id"`
-	LastUpdated types.String `tfsdk:"last_updated"` // FIXME: Keep this? Old code did not have it.
-	CheckID     types.String `tfsdk:"check_id"`
-	Token       types.String `tfsdk:"token"`
-	URL         types.String `tfsdk:"url"`
+	ID      types.String `tfsdk:"id"`
+	CheckID types.String `tfsdk:"check_id"`
+	Token   types.String `tfsdk:"token"`
+	URL     types.String `tfsdk:"url"`
 }
 
 func (m *TriggerCheckResourceModel) Refresh(ctx context.Context, from *checkly.TriggerCheck, flags interop.RefreshFlags) diag.Diagnostics {
@@ -245,10 +243,6 @@ func (m *TriggerCheckResourceModel) Refresh(ctx context.Context, from *checkly.T
 	// and we could receive back a complete different ID.
 	if flags.Created() {
 		m.ID = TriggerCheckID.IntoString(from.ID)
-	}
-
-	if flags.Created() || flags.Updated() {
-		m.LastUpdated = attributes.LastUpdatedNow()
 	}
 
 	m.CheckID = types.StringValue(from.CheckId)

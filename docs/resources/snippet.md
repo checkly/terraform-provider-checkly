@@ -49,4 +49,3 @@ EOT
 ### Read-Only
 
 - `id` (String) The ID of this resource.
-- `last_updated` (String) When the resource was last updated by the provider.

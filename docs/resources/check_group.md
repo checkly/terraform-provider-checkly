@@ -25,7 +25,7 @@ resource "checkly_check_group" "test_group1" {
     "eu-west-1",
   ]
   concurrency = 3
-  api_check_defaults {
+  api_check_defaults = {
     url = "http://example.com/"
     headers = {
       X-Test = "foo"
@@ -35,48 +35,49 @@ resource "checkly_check_group" "test_group1" {
       query = "foo"
     }
 
-    assertion {
+    assertion = {
       source     = "STATUS_CODE"
       property   = ""
       comparison = "EQUALS"
       target     = "200"
     }
 
-    assertion {
+    assertion = {
       source     = "TEXT_BODY"
       property   = ""
       comparison = "CONTAINS"
       target     = "welcome"
     }
 
-    basic_auth {
+    basic_auth = {
       username = "user"
       password = "pass"
     }
   }
 
-  environment_variable {
-    key    = "TEST_ENV_VAR"
-    value  = "Hello world"
-    locked = false
-  }
-
-  environment_variable {
-    key    = "ADDITIONAL_ENV_VAR"
-    value  = "test value"
-    locked = true
-  }
+  environment_variables = [
+    {
+      key    = "TEST_ENV_VAR"
+      value  = "Hello world"
+      locked = false
+    },
+    {
+      key    = "ADDITIONAL_ENV_VAR"
+      value  = "test value"
+      locked = true
+    }
+  ]
 
   use_global_alert_settings = false
 
-  alert_settings {
+  alert_settings = {
     escalation_type = "RUN_BASED"
 
-    run_based_escalation {
+    run_based_escalation = {
       failed_run_threshold = 1
     }
 
-    reminders {
+    reminders = {
       amount   = 2
       interval = 5
     }
@@ -96,7 +97,7 @@ resource "checkly_check" "test_check1" {
     "us-west-1"
   ]
 
-  request {
+  request = {
     url = "https://api.example.com/"
   }
   group_id    = checkly_check_group.test_group1.id
@@ -106,13 +107,13 @@ resource "checkly_check" "test_check1" {
 
 # Using with alert channels
 resource "checkly_alert_channel" "email_ac1" {
-  email {
+  email = {
     address = "info@example.com"
   }
 }
 
 resource "checkly_alert_channel" "email_ac2" {
-  email {
+  email = {
     address = "info2@example.com"
   }
 }
@@ -122,15 +123,16 @@ resource "checkly_alert_channel" "email_ac2" {
 resource "checkly_check_group" "test_group1" {
   name = "My test group 1"
 
-  alert_channel_subscription {
-    channel_id = checkly_alert_channel.email_ac1.id
-    activated  = true
-  }
-
-  alert_channel_subscription {
-    channel_id = checkly_alert_channel.email_ac2.id
-    activated  = true
-  }
+  alert_channel_subscriptions = [
+    {
+      channel_id = checkly_alert_channel.email_ac1.id
+      activated  = true
+    },
+    {
+      channel_id = checkly_alert_channel.email_ac2.id
+      activated  = true
+    }
+  ]
 }
 ```
 
@@ -167,7 +169,6 @@ resource "checkly_check_group" "test_group1" {
 ### Read-Only
 
 - `id` (String) The ID of this resource.
-- `last_updated` (String) When the resource was last updated by the provider.
 
 <a id="nestedatt--alert_channel_subscription"></a>
 ### Nested Schema for `alert_channel_subscription`

@@ -46,8 +46,7 @@ func (r *EnvironmentVariableResource) Schema(
 ) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"id":           attributes.IDAttributeSchema,
-			"last_updated": attributes.LastUpdatedAttributeSchema,
+			"id": attributes.IDAttributeSchema,
 			"key": schema.StringAttribute{
 				Required:    true,
 				Description: "", // TODO
@@ -249,21 +248,16 @@ var (
 )
 
 type EnvironmentVariableResourceModel struct {
-	ID          types.String `tfsdk:"id"`
-	LastUpdated types.String `tfsdk:"last_updated"` // FIXME: Keep this? Old code did not have it.
-	Key         types.String `tfsdk:"key"`
-	Value       types.String `tfsdk:"value"`
-	Locked      types.Bool   `tfsdk:"locked"`
-	Secret      types.Bool   `tfsdk:"secret"`
+	ID     types.String `tfsdk:"id"`
+	Key    types.String `tfsdk:"key"`
+	Value  types.String `tfsdk:"value"`
+	Locked types.Bool   `tfsdk:"locked"`
+	Secret types.Bool   `tfsdk:"secret"`
 }
 
 func (m *EnvironmentVariableResourceModel) Refresh(ctx context.Context, from *checkly.EnvironmentVariable, flags interop.RefreshFlags) diag.Diagnostics {
 	if flags.Created() {
 		m.ID = types.StringValue(from.Key)
-	}
-
-	if flags.Created() || flags.Updated() {
-		m.LastUpdated = attributes.LastUpdatedNow()
 	}
 
 	m.Key = types.StringValue(from.Key)

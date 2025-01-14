@@ -86,20 +86,27 @@ var RequestAttributeSchema = schema.SingleNestedAttribute{
 }
 
 type RequestAttributeModel struct {
-	Method          types.String              `tfsdk:"method"`
-	URL             types.String              `tfsdk:"url"`
-	FollowRedirects types.Bool                `tfsdk:"follow_redirects"`
-	SkipSSL         types.Bool                `tfsdk:"skip_ssl"`
-	Headers         types.Map                 `tfsdk:"headers"`
-	QueryParameters types.Map                 `tfsdk:"query_parameters"`
-	Body            types.String              `tfsdk:"body"`
-	BodyType        types.String              `tfsdk:"body_type"`
-	Assertions      []AssertionAttributeModel `tfsdk:"assertion"`
-	BasicAuth       BasicAuthAttributeModel   `tfsdk:"basic_auth"`
-	IPFamily        types.String              `tfsdk:"ip_family"`
+	Method          types.String `tfsdk:"method"`
+	URL             types.String `tfsdk:"url"`
+	FollowRedirects types.Bool   `tfsdk:"follow_redirects"`
+	SkipSSL         types.Bool   `tfsdk:"skip_ssl"`
+	Headers         types.Map    `tfsdk:"headers"`
+	QueryParameters types.Map    `tfsdk:"query_parameters"`
+	Body            types.String `tfsdk:"body"`
+	BodyType        types.String `tfsdk:"body_type"`
+	Assertions      types.List   `tfsdk:"assertions"`
+	BasicAuth       types.Object `tfsdk:"basic_auth"`
+	IPFamily        types.String `tfsdk:"ip_family"`
 }
 
+var RequestAttributeGluer = interop.GluerForSingleNestedAttribute[
+	checkly.Request,
+	RequestAttributeModel,
+](RequestAttributeSchema)
+
 func (m *RequestAttributeModel) Refresh(ctx context.Context, from *checkly.Request, flags interop.RefreshFlags) diag.Diagnostics {
+	var diags diag.Diagnostics
+
 	m.Method = types.StringValue(from.Method)
 	m.URL = types.StringValue(from.URL)
 	m.FollowRedirects = types.BoolValue(from.FollowRedirects)
@@ -109,12 +116,12 @@ func (m *RequestAttributeModel) Refresh(ctx context.Context, from *checkly.Reque
 	m.Body = types.StringValue(from.Body)
 	m.BodyType = types.StringValue(from.BodyType)
 
-	diags := interop.RefreshMany(ctx, from.Assertions, m.Assertions, flags)
+	m.Assertions, _, diags = AssertionAttributeGluer.RefreshToList(ctx, &from.Assertions, flags)
 	if diags.HasError() {
 		return diags
 	}
 
-	diags = m.BasicAuth.Refresh(ctx, from.BasicAuth, flags)
+	m.BasicAuth, _, diags = BasicAuthAttributeGluer.RefreshToObject(ctx, from.BasicAuth, flags)
 	if diags.HasError() {
 		return diags
 	}
@@ -125,6 +132,8 @@ func (m *RequestAttributeModel) Refresh(ctx context.Context, from *checkly.Reque
 }
 
 func (m *RequestAttributeModel) Render(ctx context.Context, into *checkly.Request) diag.Diagnostics {
+	var diags diag.Diagnostics
+
 	into.Method = m.Method.ValueString()
 	into.URL = m.URL.ValueString()
 	into.FollowRedirects = m.FollowRedirects.ValueBool()
@@ -134,14 +143,20 @@ func (m *RequestAttributeModel) Render(ctx context.Context, into *checkly.Reques
 	into.Body = m.Body.ValueString()
 	into.BodyType = m.Body.ValueString()
 
-	diags := interop.RenderMany(ctx, m.Assertions, into.Assertions)
+	into.Assertions, _, diags = AssertionAttributeGluer.RenderFromList(ctx, m.Assertions)
 	if diags.HasError() {
 		return diags
 	}
 
-	diags = m.BasicAuth.Render(ctx, into.BasicAuth)
-	if diags.HasError() {
-		return diags
+	if m.BasicAuth.IsNull() || m.BasicAuth.IsUnknown() {
+		into.BasicAuth = nil
+	} else {
+		basicAuth, _, diags := BasicAuthAttributeGluer.RenderFromObject(ctx, m.BasicAuth)
+		if diags.HasError() {
+			return diags
+		}
+
+		into.BasicAuth = &basicAuth
 	}
 
 	into.IPFamily = m.IPFamily.ValueString()

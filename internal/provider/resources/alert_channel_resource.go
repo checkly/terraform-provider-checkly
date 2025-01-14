@@ -13,7 +13,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32default"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
@@ -57,135 +59,14 @@ func (r *AlertChannelResource) Schema(
 	resp.Schema = schema.Schema{
 		Description: "Allows you to define alerting channels for the checks and groups in your account.",
 		Attributes: map[string]schema.Attribute{
-			"id":           attributes.IDAttributeSchema,
-			"last_updated": attributes.LastUpdatedAttributeSchema,
-			"email": schema.SingleNestedAttribute{
-				Optional: true,
-				Attributes: map[string]schema.Attribute{
-					"address": schema.StringAttribute{
-						Required:    true,
-						Description: "The email address of this email alert channel.",
-					},
-				},
-			},
-			"slack": schema.SingleNestedAttribute{
-				Optional: true,
-				Attributes: map[string]schema.Attribute{
-					"url": schema.StringAttribute{
-						Required:    true,
-						Description: "The Slack webhook URL",
-					},
-					"channel": schema.StringAttribute{
-						Required:    true,
-						Description: "The name of the alert's Slack channel",
-					},
-				},
-			},
-			"sms": schema.SingleNestedAttribute{
-				Optional: true,
-				Attributes: map[string]schema.Attribute{
-					"name": schema.StringAttribute{
-						Required:    true,
-						Description: "The name of this alert channel",
-					},
-					"number": schema.StringAttribute{
-						Required:    true,
-						Description: "The mobile number to receive the alerts",
-					},
-				},
-			},
-			"call": schema.SingleNestedAttribute{
-				Optional: true,
-				Attributes: map[string]schema.Attribute{
-					"name": schema.StringAttribute{
-						Required:    true,
-						Description: "The name of this alert channel",
-					},
-					"number": schema.StringAttribute{
-						Required:    true,
-						Description: "The mobile number to receive the alerts",
-					},
-				},
-			},
-			"webhook": schema.SingleNestedAttribute{
-				Optional: true,
-				Attributes: map[string]schema.Attribute{
-					"name": schema.StringAttribute{
-						Required: true,
-					},
-					"method": schema.StringAttribute{
-						Optional:    true,
-						Computed:    true,
-						Default:     stringdefault.StaticString("POST"),
-						Description: "(Default `POST`)",
-					},
-					"headers": schema.MapAttribute{
-						ElementType: types.StringType,
-						Optional:    true,
-						Computed:    true,
-					},
-					"query_parameters": schema.MapAttribute{
-						ElementType: types.StringType,
-						Optional:    true,
-						Computed:    true,
-					},
-					"template": schema.StringAttribute{
-						Optional: true,
-					},
-					"url": schema.StringAttribute{
-						Required: true,
-					},
-					"webhook_secret": schema.StringAttribute{
-						Optional: true,
-					},
-					"webhook_type": schema.StringAttribute{
-						Optional: true,
-						Validators: []validator.String{
-							stringvalidator.OneOf(
-								"WEBHOOK_DISCORD",
-								"WEBHOOK_FIREHYDRANT",
-								"WEBHOOK_GITLAB_ALERT",
-								"WEBHOOK_SPIKESH",
-								"WEBHOOK_SPLUNK",
-								"WEBHOOK_MSTEAMS",
-								"WEBHOOK_TELEGRAM",
-							),
-						},
-						Description: "Type of the webhook. Possible values are 'WEBHOOK_DISCORD', 'WEBHOOK_FIREHYDRANT', 'WEBHOOK_GITLAB_ALERT', 'WEBHOOK_SPIKESH', 'WEBHOOK_SPLUNK', 'WEBHOOK_MSTEAMS' and 'WEBHOOK_TELEGRAM'.",
-					},
-				},
-			},
-			"opsgenie": schema.SingleNestedAttribute{
-				Optional: true,
-				Attributes: map[string]schema.Attribute{
-					"name": schema.StringAttribute{
-						Required: true,
-					},
-					"api_key": schema.StringAttribute{
-						Required: true,
-					},
-					"region": schema.StringAttribute{
-						Required: true,
-					},
-					"priority": schema.StringAttribute{
-						Required: true,
-					},
-				},
-			},
-			"pagerduty": schema.SingleNestedAttribute{
-				Optional: true,
-				Attributes: map[string]schema.Attribute{
-					"service_key": schema.StringAttribute{
-						Required: true,
-					},
-					"service_name": schema.StringAttribute{
-						Optional: true,
-					},
-					"account": schema.StringAttribute{
-						Optional: true,
-					},
-				},
-			},
+			"id":        attributes.IDAttributeSchema,
+			"email":     EmailAttributeSchema,
+			"slack":     SlackAttributeSchema,
+			"sms":       SMSAttributeSchema,
+			"call":      CallAttributeSchema,
+			"webhook":   WebhookAttributeSchema,
+			"opsgenie":  OpsgenieAttributeSchema,
+			"pagerduty": PagerdutyAttributeSchema,
 			"send_recovery": schema.BoolAttribute{
 				Optional:    true,
 				Computed:    true,
@@ -439,20 +320,19 @@ var (
 )
 
 type AlertChannelResourceModel struct {
-	ID                 types.String             `tfsdk:"id"`
-	LastUpdated        types.String             `tfsdk:"last_updated"` // FIXME: Keep this? Old code did not have it.
-	Email              *EmailAttributeModel     `tfsdk:"email"`
-	Slack              *SlackAttributeModel     `tfsdk:"slack"`
-	SMS                *SMSAttributeModel       `tfsdk:"sms"`
-	Call               *CallAttributeModel      `tfsdk:"call"`
-	Webhook            *WebhookAttributeModel   `tfsdk:"webhook"`
-	Opsgenie           *OpsgenieAttributeModel  `tfsdk:"opsgenie"`
-	Pagerduty          *PagerdutyAttributeModel `tfsdk:"pagerduty"`
-	SendRecovery       types.Bool               `tfsdk:"send_recovery"`
-	SendFailure        types.Bool               `tfsdk:"send_failure"`
-	SendDegraded       types.Bool               `tfsdk:"send_degraded"`
-	SSLExpiry          types.Bool               `tfsdk:"ssl_expiry"`
-	SSLExpiryThreshold types.Int32              `tfsdk:"ssl_expiry_threshold"`
+	ID                 types.String `tfsdk:"id"`
+	Email              types.Object `tfsdk:"email"`
+	Slack              types.Object `tfsdk:"slack"`
+	SMS                types.Object `tfsdk:"sms"`
+	Call               types.Object `tfsdk:"call"`
+	Webhook            types.Object `tfsdk:"webhook"`
+	Opsgenie           types.Object `tfsdk:"opsgenie"`
+	Pagerduty          types.Object `tfsdk:"pagerduty"`
+	SendRecovery       types.Bool   `tfsdk:"send_recovery"`
+	SendFailure        types.Bool   `tfsdk:"send_failure"`
+	SendDegraded       types.Bool   `tfsdk:"send_degraded"`
+	SSLExpiry          types.Bool   `tfsdk:"ssl_expiry"`
+	SSLExpiryThreshold types.Int32  `tfsdk:"ssl_expiry_threshold"`
 }
 
 func (m *AlertChannelResourceModel) Refresh(ctx context.Context, from *checkly.AlertChannel, flags interop.RefreshFlags) diag.Diagnostics {
@@ -462,42 +342,39 @@ func (m *AlertChannelResourceModel) Refresh(ctx context.Context, from *checkly.A
 		m.ID = AlertChannelID.IntoString(from.ID)
 	}
 
-	if flags.Created() || flags.Updated() {
-		m.LastUpdated = attributes.LastUpdatedNow()
+	m.Email, _, diags = EmailAttributeGluer.RefreshToObject(ctx, from.Email, flags)
+	if diags.HasError() {
+		return diags
 	}
 
-	m.Email = nil
-	m.Slack = nil
-	m.SMS = nil
-	m.Call = nil
-	m.Webhook = nil
-	m.Opsgenie = nil
-	m.Pagerduty = nil
+	m.Slack, _, diags = SlackAttributeGluer.RefreshToObject(ctx, from.Slack, flags)
+	if diags.HasError() {
+		return diags
+	}
 
-	switch from.Type {
-	case checkly.AlertTypeEmail:
-		m.Email = new(EmailAttributeModel)
-		diags.Append(m.Email.Refresh(ctx, from.Email, flags)...)
-	case checkly.AlertTypeSlack:
-		m.Slack = new(SlackAttributeModel)
-		diags.Append(m.Slack.Refresh(ctx, from.Slack, flags)...)
-	case checkly.AlertTypeSMS:
-		m.SMS = new(SMSAttributeModel)
-		diags.Append(m.SMS.Refresh(ctx, from.SMS, flags)...)
-	case checkly.AlertTypeCall:
-		m.Call = new(CallAttributeModel)
-		diags.Append(m.Call.Refresh(ctx, from.CALL, flags)...)
-	case checkly.AlertTypeWebhook:
-		m.Webhook = new(WebhookAttributeModel)
-		diags.Append(m.Webhook.Refresh(ctx, from.Webhook, flags)...)
-	case checkly.AlertTypeOpsgenie:
-		m.Opsgenie = new(OpsgenieAttributeModel)
-		diags.Append(m.Opsgenie.Refresh(ctx, from.Opsgenie, flags)...)
-	case checkly.AlertTypePagerduty:
-		m.Pagerduty = new(PagerdutyAttributeModel)
-		diags.Append(m.Pagerduty.Refresh(ctx, from.Pagerduty, flags)...)
-	default:
-		// TODO diags
+	m.SMS, _, diags = SMSAttributeGluer.RefreshToObject(ctx, from.SMS, flags)
+	if diags.HasError() {
+		return diags
+	}
+
+	m.Call, _, diags = CallAttributeGluer.RefreshToObject(ctx, from.CALL, flags)
+	if diags.HasError() {
+		return diags
+	}
+
+	m.Webhook, _, diags = WebhookAttributeGluer.RefreshToObject(ctx, from.Webhook, flags)
+	if diags.HasError() {
+		return diags
+	}
+
+	m.Opsgenie, _, diags = OpsgenieAttributeGluer.RefreshToObject(ctx, from.Opsgenie, flags)
+	if diags.HasError() {
+		return diags
+	}
+
+	m.Pagerduty, _, diags = PagerdutyAttributeGluer.RefreshToObject(ctx, from.Pagerduty, flags)
+	if diags.HasError() {
+		return diags
 	}
 
 	if from.SendRecovery != nil {
@@ -536,38 +413,67 @@ func (m *AlertChannelResourceModel) Refresh(ctx context.Context, from *checkly.A
 func (m *AlertChannelResourceModel) Render(ctx context.Context, into *checkly.AlertChannel) diag.Diagnostics {
 	var diags diag.Diagnostics
 
+	into.Email = nil
+	into.Slack = nil
+	into.SMS = nil
+	into.CALL = nil
+	into.Opsgenie = nil
+	into.Webhook = nil
+	into.Pagerduty = nil
+
 	switch {
-	case m.Email != nil:
+	case !m.Email.IsNull():
 		into.Type = checkly.AlertTypeEmail
-		into.Email = new(checkly.AlertChannelEmail)
-		diags.Append(m.Email.Render(ctx, into.Email)...)
-	case m.Slack != nil:
+		config, _, diags := EmailAttributeGluer.RenderFromObject(ctx, m.Email)
+		if diags.HasError() {
+			return diags
+		}
+		into.Email = &config
+	case !m.Slack.IsNull():
 		into.Type = checkly.AlertTypeSlack
-		into.Slack = new(checkly.AlertChannelSlack)
-		diags.Append(m.Slack.Render(ctx, into.Slack)...)
-	case m.SMS != nil:
+		config, _, diags := SlackAttributeGluer.RenderFromObject(ctx, m.Slack)
+		if diags.HasError() {
+			return diags
+		}
+		into.Slack = &config
+	case !m.SMS.IsNull():
 		into.Type = checkly.AlertTypeSMS
-		into.SMS = new(checkly.AlertChannelSMS)
-		diags.Append(m.SMS.Render(ctx, into.SMS)...)
-	case m.Call != nil:
+		config, _, diags := SMSAttributeGluer.RenderFromObject(ctx, m.SMS)
+		if diags.HasError() {
+			return diags
+		}
+		into.SMS = &config
+	case !m.Call.IsNull():
 		into.Type = checkly.AlertTypeCall
-		into.CALL = new(checkly.AlertChannelCall)
-		diags.Append(m.Call.Render(ctx, into.CALL)...)
-	case m.Opsgenie != nil:
-		into.Type = checkly.AlertTypeOpsgenie
-		into.Opsgenie = new(checkly.AlertChannelOpsgenie)
-		diags.Append(m.Opsgenie.Render(ctx, into.Opsgenie)...)
-	case m.Webhook != nil:
+		config, _, diags := CallAttributeGluer.RenderFromObject(ctx, m.Call)
+		if diags.HasError() {
+			return diags
+		}
+		into.CALL = &config
+	case !m.Webhook.IsNull():
 		into.Type = checkly.AlertTypeWebhook
-		into.Webhook = new(checkly.AlertChannelWebhook)
-		diags.Append(m.Webhook.Render(ctx, into.Webhook)...)
-	case m.Pagerduty != nil:
+		config, _, diags := WebhookAttributeGluer.RenderFromObject(ctx, m.Webhook)
+		if diags.HasError() {
+			return diags
+		}
+		into.Webhook = &config
+	case !m.Opsgenie.IsNull():
+		into.Type = checkly.AlertTypeOpsgenie
+		config, _, diags := OpsgenieAttributeGluer.RenderFromObject(ctx, m.Opsgenie)
+		if diags.HasError() {
+			return diags
+		}
+		into.Opsgenie = &config
+	case !m.Pagerduty.IsNull():
 		into.Type = checkly.AlertTypePagerduty
-		into.Pagerduty = new(checkly.AlertChannelPagerduty)
-		diags.Append(m.Pagerduty.Render(ctx, into.Pagerduty)...)
+		config, _, diags := PagerdutyAttributeGluer.RenderFromObject(ctx, m.Pagerduty)
+		if diags.HasError() {
+			return diags
+		}
+		into.Pagerduty = &config
 	default:
 		// TODO: Use diags instead
-		panic("bug: impossible AlertChannelinterop.Model state: no type set")
+		panic("bug: impossible AlertChannelResourceModel state: no type set")
 	}
 
 	into.SendRecovery = m.SendRecovery.ValueBoolPointer()
@@ -583,9 +489,24 @@ func (m *AlertChannelResourceModel) Render(ctx context.Context, into *checkly.Al
 	return diags
 }
 
+var EmailAttributeSchema = schema.SingleNestedAttribute{
+	Optional: true,
+	Attributes: map[string]schema.Attribute{
+		"address": schema.StringAttribute{
+			Required:    true,
+			Description: "The email address of this email alert channel.",
+		},
+	},
+}
+
 type EmailAttributeModel struct {
 	Address types.String `tfsdk:"address"`
 }
+
+var EmailAttributeGluer = interop.GluerForSingleNestedAttribute[
+	checkly.AlertChannelEmail,
+	EmailAttributeModel,
+](EmailAttributeSchema)
 
 func (m *EmailAttributeModel) Refresh(ctx context.Context, from *checkly.AlertChannelEmail, flags interop.RefreshFlags) diag.Diagnostics {
 	m.Address = types.StringValue(from.Address)
@@ -599,10 +520,29 @@ func (m *EmailAttributeModel) Render(ctx context.Context, into *checkly.AlertCha
 	return nil
 }
 
+var SlackAttributeSchema = schema.SingleNestedAttribute{
+	Optional: true,
+	Attributes: map[string]schema.Attribute{
+		"url": schema.StringAttribute{
+			Required:    true,
+			Description: "The Slack webhook URL",
+		},
+		"channel": schema.StringAttribute{
+			Required:    true,
+			Description: "The name of the alert's Slack channel",
+		},
+	},
+}
+
 type SlackAttributeModel struct {
 	URL     types.String `tfsdk:"url"`
 	Channel types.String `tfsdk:"channel"`
 }
+
+var SlackAttributeGluer = interop.GluerForSingleNestedAttribute[
+	checkly.AlertChannelSlack,
+	SlackAttributeModel,
+](SlackAttributeSchema)
 
 func (m *SlackAttributeModel) Refresh(ctx context.Context, from *checkly.AlertChannelSlack, flags interop.RefreshFlags) diag.Diagnostics {
 	m.URL = types.StringValue(from.WebhookURL)
@@ -618,10 +558,29 @@ func (m *SlackAttributeModel) Render(ctx context.Context, into *checkly.AlertCha
 	return nil
 }
 
+var SMSAttributeSchema = schema.SingleNestedAttribute{
+	Optional: true,
+	Attributes: map[string]schema.Attribute{
+		"name": schema.StringAttribute{
+			Required:    true,
+			Description: "The name of this alert channel",
+		},
+		"number": schema.StringAttribute{
+			Required:    true,
+			Description: "The mobile number to receive the alerts",
+		},
+	},
+}
+
 type SMSAttributeModel struct {
 	Name   types.String `tfsdk:"name"`
 	Number types.String `tfsdk:"number"`
 }
+
+var SMSAttributeGluer = interop.GluerForSingleNestedAttribute[
+	checkly.AlertChannelSMS,
+	SMSAttributeModel,
+](SMSAttributeSchema)
 
 func (m *SMSAttributeModel) Refresh(ctx context.Context, from *checkly.AlertChannelSMS, flags interop.RefreshFlags) diag.Diagnostics {
 	m.Name = types.StringValue(from.Name)
@@ -637,10 +596,29 @@ func (m *SMSAttributeModel) Render(ctx context.Context, into *checkly.AlertChann
 	return nil
 }
 
+var CallAttributeSchema = schema.SingleNestedAttribute{
+	Optional: true,
+	Attributes: map[string]schema.Attribute{
+		"name": schema.StringAttribute{
+			Required:    true,
+			Description: "The name of this alert channel",
+		},
+		"number": schema.StringAttribute{
+			Required:    true,
+			Description: "The mobile number to receive the alerts",
+		},
+	},
+}
+
 type CallAttributeModel struct {
 	Name   types.String `tfsdk:"name"`
 	Number types.String `tfsdk:"number"`
 }
+
+var CallAttributeGluer = interop.GluerForSingleNestedAttribute[
+	checkly.AlertChannelCall,
+	CallAttributeModel,
+](CallAttributeSchema)
 
 func (m *CallAttributeModel) Refresh(ctx context.Context, from *checkly.AlertChannelCall, flags interop.RefreshFlags) diag.Diagnostics {
 	m.Name = types.StringValue(from.Name)
@@ -656,6 +634,58 @@ func (m *CallAttributeModel) Render(ctx context.Context, into *checkly.AlertChan
 	return nil
 }
 
+var WebhookAttributeSchema = schema.SingleNestedAttribute{
+	Optional: true,
+	Attributes: map[string]schema.Attribute{
+		"name": schema.StringAttribute{
+			Required: true,
+		},
+		"method": schema.StringAttribute{
+			Optional:    true,
+			Computed:    true,
+			Default:     stringdefault.StaticString("POST"),
+			Description: "(Default `POST`)",
+		},
+		"headers": schema.MapAttribute{
+			ElementType: types.StringType,
+			Optional:    true,
+			Computed:    true,
+		},
+		"query_parameters": schema.MapAttribute{
+			ElementType: types.StringType,
+			Optional:    true,
+			Computed:    true,
+		},
+		"template": schema.StringAttribute{
+			Optional: true,
+		},
+		"url": schema.StringAttribute{
+			Required: true,
+		},
+		"webhook_secret": schema.StringAttribute{
+			Optional: true,
+			PlanModifiers: []planmodifier.String{
+				stringplanmodifier.UseStateForUnknown(),
+			},
+		},
+		"webhook_type": schema.StringAttribute{
+			Optional: true,
+			Validators: []validator.String{
+				stringvalidator.OneOf(
+					"WEBHOOK_DISCORD",
+					"WEBHOOK_FIREHYDRANT",
+					"WEBHOOK_GITLAB_ALERT",
+					"WEBHOOK_SPIKESH",
+					"WEBHOOK_SPLUNK",
+					"WEBHOOK_MSTEAMS",
+					"WEBHOOK_TELEGRAM",
+				),
+			},
+			Description: "Type of the webhook. Possible values are 'WEBHOOK_DISCORD', 'WEBHOOK_FIREHYDRANT', 'WEBHOOK_GITLAB_ALERT', 'WEBHOOK_SPIKESH', 'WEBHOOK_SPLUNK', 'WEBHOOK_MSTEAMS' and 'WEBHOOK_TELEGRAM'.",
+		},
+	},
+}
+
 type WebhookAttributeModel struct {
 	Name            types.String `tfsdk:"name"`
 	Method          types.String `tfsdk:"method"`
@@ -667,6 +697,11 @@ type WebhookAttributeModel struct {
 	WebhookType     types.String `tfsdk:"webhook_type"`
 }
 
+var WebhookAttributeGluer = interop.GluerForSingleNestedAttribute[
+	checkly.AlertChannelWebhook,
+	WebhookAttributeModel,
+](WebhookAttributeSchema)
+
 func (m *WebhookAttributeModel) Refresh(ctx context.Context, from *checkly.AlertChannelWebhook, flags interop.RefreshFlags) diag.Diagnostics {
 	m.Name = types.StringValue(from.Name)
 	m.Method = types.StringValue(from.Method)
@@ -674,7 +709,8 @@ func (m *WebhookAttributeModel) Refresh(ctx context.Context, from *checkly.Alert
 	m.QueryParameters = sdkutil.KeyValuesIntoMap(&from.QueryParameters)
 	m.Template = types.StringValue(from.Template)
 	m.URL = types.StringValue(from.URL)
-	m.WebhookSecret = types.StringValue(from.WebhookSecret)
+	// Value is encrypted after creation and cannot be accessed.
+	// m.WebhookSecret = types.StringValue(from.WebhookSecret)
 	m.WebhookType = types.StringValue(from.WebhookType)
 
 	return nil
@@ -693,6 +729,27 @@ func (m *WebhookAttributeModel) Render(ctx context.Context, into *checkly.AlertC
 	return nil
 }
 
+var OpsgenieAttributeSchema = schema.SingleNestedAttribute{
+	Optional: true,
+	Attributes: map[string]schema.Attribute{
+		"name": schema.StringAttribute{
+			Required: true,
+		},
+		"api_key": schema.StringAttribute{
+			Required: true,
+			PlanModifiers: []planmodifier.String{
+				stringplanmodifier.UseStateForUnknown(),
+			},
+		},
+		"region": schema.StringAttribute{
+			Required: true,
+		},
+		"priority": schema.StringAttribute{
+			Required: true,
+		},
+	},
+}
+
 type OpsgenieAttributeModel struct {
 	Name     types.String `tfsdk:"name"`
 	APIKey   types.String `tfsdk:"api_key"`
@@ -700,9 +757,15 @@ type OpsgenieAttributeModel struct {
 	Priority types.String `tfsdk:"priority"`
 }
 
+var OpsgenieAttributeGluer = interop.GluerForSingleNestedAttribute[
+	checkly.AlertChannelOpsgenie,
+	OpsgenieAttributeModel,
+](OpsgenieAttributeSchema)
+
 func (m *OpsgenieAttributeModel) Refresh(ctx context.Context, from *checkly.AlertChannelOpsgenie, flags interop.RefreshFlags) diag.Diagnostics {
 	m.Name = types.StringValue(from.Name)
-	m.APIKey = types.StringValue(from.APIKey)
+	// Value is encrypted after creation and cannot be accessed.
+	// m.APIKey = types.StringValue(from.APIKey)
 	m.Region = types.StringValue(from.Region)
 	m.Priority = types.StringValue(from.Priority)
 
@@ -718,11 +781,31 @@ func (m *OpsgenieAttributeModel) Render(ctx context.Context, into *checkly.Alert
 	return nil
 }
 
+var PagerdutyAttributeSchema = schema.SingleNestedAttribute{
+	Optional: true,
+	Attributes: map[string]schema.Attribute{
+		"service_key": schema.StringAttribute{
+			Required: true,
+		},
+		"service_name": schema.StringAttribute{
+			Optional: true,
+		},
+		"account": schema.StringAttribute{
+			Optional: true,
+		},
+	},
+}
+
 type PagerdutyAttributeModel struct {
 	ServiceKey  types.String `tfsdk:"service_key"`
 	ServiceName types.String `tfsdk:"service_name"`
 	Account     types.String `tfsdk:"account"`
 }
+
+var PagerdutyAttributeGluer = interop.GluerForSingleNestedAttribute[
+	checkly.AlertChannelPagerduty,
+	PagerdutyAttributeModel,
+](PagerdutyAttributeSchema)
 
 func (m *PagerdutyAttributeModel) Refresh(ctx context.Context, from *checkly.AlertChannelPagerduty, flags interop.RefreshFlags) diag.Diagnostics {
 	m.ServiceKey = types.StringValue(from.ServiceKey)

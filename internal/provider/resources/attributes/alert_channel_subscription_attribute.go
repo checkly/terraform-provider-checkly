@@ -21,6 +21,7 @@ var AlertChannelSubscriptionAttributeSchema = schema.ListNestedAttribute{
 		"check, we won't be able to alert you in case something goes wrong " +
 		"with it.",
 	Optional: true,
+	Computed: true,
 	NestedObject: schema.NestedAttributeObject{
 		Attributes: map[string]schema.Attribute{
 			"channel_id": schema.Int64Attribute{
@@ -37,6 +38,11 @@ type AlertChannelSubscriptionAttributeModel struct {
 	ChannelID types.Int64 `tfsdk:"channel_id"`
 	Activated types.Bool  `tfsdk:"activated"`
 }
+
+var AlertChannelSubscriptionAttributeGluer = interop.GluerForListNestedAttribute[
+	checkly.AlertChannelSubscription,
+	AlertChannelSubscriptionAttributeModel,
+](AlertChannelSubscriptionAttributeSchema)
 
 func (m *AlertChannelSubscriptionAttributeModel) Refresh(ctx context.Context, from *checkly.AlertChannelSubscription, flags interop.RefreshFlags) diag.Diagnostics {
 	m.ChannelID = types.Int64Value(from.ChannelID)

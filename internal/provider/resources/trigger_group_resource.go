@@ -45,8 +45,7 @@ func (r *TriggerGroupResource) Schema(
 ) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"id":           attributes.IDAttributeSchema,
-			"last_updated": attributes.LastUpdatedAttributeSchema,
+			"id": attributes.IDAttributeSchema,
 			"group_id": schema.Int64Attribute{
 				Required:    true,
 				Description: "The ID of the group that you want to attach the trigger to.",
@@ -233,20 +232,15 @@ var (
 )
 
 type TriggerGroupResourceModel struct {
-	ID          types.String `tfsdk:"id"`
-	LastUpdated types.String `tfsdk:"last_updated"` // FIXME: Keep this? Old code did not have it.
-	GroupID     types.Int64  `tfsdk:"group_id"`
-	Token       types.String `tfsdk:"token"`
-	URL         types.String `tfsdk:"url"`
+	ID      types.String `tfsdk:"id"`
+	GroupID types.Int64  `tfsdk:"group_id"`
+	Token   types.String `tfsdk:"token"`
+	URL     types.String `tfsdk:"url"`
 }
 
 func (m *TriggerGroupResourceModel) Refresh(ctx context.Context, from *checkly.TriggerGroup, flags interop.RefreshFlags) diag.Diagnostics {
 	if flags.Created() {
 		m.ID = TriggerGroupID.IntoString(from.ID)
-	}
-
-	if flags.Created() || flags.Updated() {
-		m.LastUpdated = attributes.LastUpdatedNow()
 	}
 
 	m.GroupID = types.Int64Value(from.GroupId)

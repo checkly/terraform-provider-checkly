@@ -73,6 +73,11 @@ type AssertionAttributeModel struct {
 	Target     types.String `tfsdk:"target"`
 }
 
+var AssertionAttributeGluer = interop.GluerForListNestedAttribute[
+	checkly.Assertion,
+	AssertionAttributeModel,
+](AssertionAttributeSchema)
+
 func (m *AssertionAttributeModel) Refresh(ctx context.Context, from *checkly.Assertion, flags interop.RefreshFlags) diag.Diagnostics {
 	m.Source = types.StringValue(from.Source)
 	m.Property = types.StringValue(from.Property)

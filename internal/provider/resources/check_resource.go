@@ -52,8 +52,7 @@ func (r *CheckResource) Schema(
 	resp.Schema = schema.Schema{
 		Description: "Check groups allow you to group together a set of related checks, which can also share default settings for various attributes.",
 		Attributes: map[string]schema.Attribute{
-			"id":           attributes.IDAttributeSchema,
-			"last_updated": attributes.LastUpdatedAttributeSchema,
+			"id": attributes.IDAttributeSchema,
 			"name": schema.StringAttribute{
 				Required:    true,
 				Description: "The name of the check.",
@@ -377,48 +376,45 @@ var (
 )
 
 type CheckResourceModel struct {
-	ID                        types.String                                        `tfsdk:"id"`
-	LastUpdated               types.String                                        `tfsdk:"last_updated"` // FIXME: Keep this? Old code did not have it.
-	Name                      types.String                                        `tfsdk:"name"`
-	Type                      types.String                                        `tfsdk:"type"`
-	Frequency                 types.Int32                                         `tfsdk:"frequency"`
-	FrequencyOffset           types.Int32                                         `tfsdk:"frequency_offset"`
-	Activated                 types.Bool                                          `tfsdk:"activated"`
-	Muted                     types.Bool                                          `tfsdk:"muted"`
-	ShouldFail                types.Bool                                          `tfsdk:"should_fail"`
-	RunParallel               types.Bool                                          `tfsdk:"run_parallel"`
-	Locations                 attributes.LocationsAttributeModel                  `tfsdk:"locations"`
-	PrivateLocations          attributes.PrivateLocationsAttributeModel           `tfsdk:"private_locations"`
-	Script                    types.String                                        `tfsdk:"script"`
-	DegradedResponseTime      types.Int32                                         `tfsdk:"degraded_response_time"`
-	MaxResponseTime           types.Int32                                         `tfsdk:"max_response_time"`
-	EnvironmentVariables      types.Map                                           `tfsdk:"environment_variables"`
-	EnvironmentVariable       []attributes.EnvironmentVariableAttributeModel      `tfsdk:"environment_variable"`
-	DoubleCheck               types.Bool                                          `tfsdk:"double_check"`
-	Tags                      types.Set                                           `tfsdk:"tags"`
-	SSLCheck                  types.Bool                                          `tfsdk:"ssl_check"`
-	SSLCheckDomain            types.String                                        `tfsdk:"ssl_check_domain"`
-	SetupSnippetID            types.Int64                                         `tfsdk:"setup_snippet_id"`
-	TearDownSnippetID         types.Int64                                         `tfsdk:"teardown_snippet_id"`
-	LocalSetupScript          types.String                                        `tfsdk:"local_setup_script"`
-	LocalTearDownScript       types.String                                        `tfsdk:"local_teardown_script"`
-	RuntimeID                 types.String                                        `tfsdk:"runtime_id"`
-	AlertChannelSubscriptions []attributes.AlertChannelSubscriptionAttributeModel `tfsdk:"alert_channel_subscription"`
-	AlertSettings             attributes.AlertSettingsAttributeModel              `tfsdk:"alert_settings"`
-	UseGlobalAlertSettings    types.Bool                                          `tfsdk:"use_global_alert_settings"`
-	Request                   attributes.RequestAttributeModel                    `tfsdk:"request"`
-	GroupID                   types.Int64                                         `tfsdk:"group_id"`
-	GroupOrder                types.Int32                                         `tfsdk:"group_order"`
-	RetryStrategy             *attributes.RetryStrategyAttributeModel             `tfsdk:"retry_strategy"`
+	ID                        types.String `tfsdk:"id"`
+	Name                      types.String `tfsdk:"name"`
+	Type                      types.String `tfsdk:"type"`
+	Frequency                 types.Int32  `tfsdk:"frequency"`
+	FrequencyOffset           types.Int32  `tfsdk:"frequency_offset"`
+	Activated                 types.Bool   `tfsdk:"activated"`
+	Muted                     types.Bool   `tfsdk:"muted"`
+	ShouldFail                types.Bool   `tfsdk:"should_fail"`
+	RunParallel               types.Bool   `tfsdk:"run_parallel"`
+	Locations                 types.Set    `tfsdk:"locations"`
+	PrivateLocations          types.Set    `tfsdk:"private_locations"`
+	Script                    types.String `tfsdk:"script"`
+	DegradedResponseTime      types.Int32  `tfsdk:"degraded_response_time"`
+	MaxResponseTime           types.Int32  `tfsdk:"max_response_time"`
+	EnvironmentVariables      types.Map    `tfsdk:"environment_variables"`
+	EnvironmentVariable       types.List   `tfsdk:"environment_variable"`
+	DoubleCheck               types.Bool   `tfsdk:"double_check"`
+	Tags                      types.Set    `tfsdk:"tags"`
+	SSLCheck                  types.Bool   `tfsdk:"ssl_check"`
+	SSLCheckDomain            types.String `tfsdk:"ssl_check_domain"`
+	SetupSnippetID            types.Int64  `tfsdk:"setup_snippet_id"`
+	TearDownSnippetID         types.Int64  `tfsdk:"teardown_snippet_id"`
+	LocalSetupScript          types.String `tfsdk:"local_setup_script"`
+	LocalTearDownScript       types.String `tfsdk:"local_teardown_script"`
+	RuntimeID                 types.String `tfsdk:"runtime_id"`
+	AlertChannelSubscriptions types.List   `tfsdk:"alert_channel_subscription"`
+	AlertSettings             types.Object `tfsdk:"alert_settings"`
+	UseGlobalAlertSettings    types.Bool   `tfsdk:"use_global_alert_settings"`
+	Request                   types.Object `tfsdk:"request"`
+	GroupID                   types.Int64  `tfsdk:"group_id"`
+	GroupOrder                types.Int32  `tfsdk:"group_order"`
+	RetryStrategy             types.Object `tfsdk:"retry_strategy"`
 }
 
 func (m *CheckResourceModel) Refresh(ctx context.Context, from *checkly.Check, flags interop.RefreshFlags) diag.Diagnostics {
+	var diags diag.Diagnostics
+
 	if flags.Created() {
 		m.ID = types.StringValue(from.ID)
-	}
-
-	if flags.Created() || flags.Updated() {
-		m.LastUpdated = attributes.LastUpdatedNow()
 	}
 
 	m.Name = types.StringValue(from.Name)
@@ -430,12 +426,12 @@ func (m *CheckResourceModel) Refresh(ctx context.Context, from *checkly.Check, f
 	m.ShouldFail = types.BoolValue(from.ShouldFail)
 	m.RunParallel = types.BoolValue(from.RunParallel)
 
-	diags := m.Locations.Refresh(ctx, &from.Locations, flags)
+	m.Locations, _, diags = attributes.LocationsAttributeGluer.RefreshToSet(ctx, &from.Locations, flags)
 	if diags.HasError() {
 		return diags
 	}
 
-	diags = m.PrivateLocations.Refresh(ctx, from.PrivateLocations, flags)
+	m.PrivateLocations, _, diags = attributes.PrivateLocationsAttributeGluer.RefreshToSet(ctx, from.PrivateLocations, flags)
 	if diags.HasError() {
 		return diags
 	}
@@ -450,9 +446,7 @@ func (m *CheckResourceModel) Refresh(ctx context.Context, from *checkly.Check, f
 
 		// TODO either implement backwards compat or remove.
 	} else {
-		m.EnvironmentVariable = nil
-
-		diags := interop.RefreshMany(ctx, from.EnvironmentVariables, m.EnvironmentVariable, flags)
+		m.EnvironmentVariable, _, diags = attributes.EnvironmentVariableAttributeGluer.RefreshToList(ctx, &from.EnvironmentVariables, flags)
 		if diags.HasError() {
 			return diags
 		}
@@ -476,19 +470,19 @@ func (m *CheckResourceModel) Refresh(ctx context.Context, from *checkly.Check, f
 		m.RuntimeID = types.StringNull()
 	}
 
-	diags = interop.RefreshMany(ctx, from.AlertChannelSubscriptions, m.AlertChannelSubscriptions, flags)
+	m.AlertChannelSubscriptions, _, diags = attributes.AlertChannelSubscriptionAttributeGluer.RefreshToList(ctx, &from.AlertChannelSubscriptions, flags)
 	if diags.HasError() {
 		return diags
 	}
 
-	diags = m.AlertSettings.Refresh(ctx, &from.AlertSettings, flags)
+	m.AlertSettings, _, diags = attributes.AlertSettingsAttributeGluer.RefreshToObject(ctx, &from.AlertSettings, flags)
 	if diags.HasError() {
 		return diags
 	}
 
 	m.UseGlobalAlertSettings = types.BoolValue(from.UseGlobalAlertSettings)
 
-	diags = m.Request.Refresh(ctx, &from.Request, flags)
+	m.Request, _, diags = attributes.RequestAttributeGluer.RefreshToObject(ctx, &from.Request, flags)
 	if diags.HasError() {
 		return diags
 	}
@@ -496,19 +490,17 @@ func (m *CheckResourceModel) Refresh(ctx context.Context, from *checkly.Check, f
 	m.GroupID = types.Int64Value(from.GroupID)
 	m.GroupOrder = types.Int32Value(int32(from.GroupOrder))
 
-	if from.RetryStrategy != nil {
-		diags = m.RetryStrategy.Refresh(ctx, from.RetryStrategy, flags)
-		if diags.HasError() {
-			return diags
-		}
-	} else {
-		m.RetryStrategy = nil
+	m.RetryStrategy, _, diags = attributes.RetryStrategyAttributeGluer.RefreshToObject(ctx, from.RetryStrategy, flags)
+	if diags.HasError() {
+		return diags
 	}
 
 	return nil
 }
 
 func (m *CheckResourceModel) Render(ctx context.Context, into *checkly.Check) diag.Diagnostics {
+	var diags diag.Diagnostics
+
 	into.Name = m.Name.ValueString()
 	into.Type = m.Type.ValueString()
 	into.Frequency = int(m.Frequency.ValueInt32())
@@ -518,15 +510,17 @@ func (m *CheckResourceModel) Render(ctx context.Context, into *checkly.Check) di
 	into.ShouldFail = m.ShouldFail.ValueBool()
 	into.RunParallel = m.RunParallel.ValueBool()
 
-	diags := m.Locations.Render(ctx, &into.Locations)
+	into.Locations, _, diags = attributes.LocationsAttributeGluer.RenderFromSet(ctx, m.Locations)
 	if diags.HasError() {
 		return diags
 	}
 
-	diags = m.PrivateLocations.Render(ctx, into.PrivateLocations)
+	privateLocations, _, diags := attributes.PrivateLocationsAttributeGluer.RenderFromSet(ctx, m.PrivateLocations)
 	if diags.HasError() {
 		return diags
 	}
+
+	into.PrivateLocations = &privateLocations
 
 	into.Script = m.Script.ValueString()
 	into.DegradedResponseTime = int(m.DegradedResponseTime.ValueInt32())
@@ -540,7 +534,7 @@ func (m *CheckResourceModel) Render(ctx context.Context, into *checkly.Check) di
 	} else {
 		into.EnvironmentVariables = nil
 
-		diags := interop.RenderMany(ctx, m.EnvironmentVariable, into.EnvironmentVariables)
+		into.EnvironmentVariables, _, diags = attributes.EnvironmentVariableAttributeGluer.RenderFromList(ctx, m.EnvironmentVariable)
 		if diags.HasError() {
 			return diags
 		}
@@ -565,19 +559,19 @@ func (m *CheckResourceModel) Render(ctx context.Context, into *checkly.Check) di
 		into.RuntimeID = nil
 	}
 
-	diags = interop.RenderMany(ctx, m.AlertChannelSubscriptions, into.AlertChannelSubscriptions)
+	into.AlertChannelSubscriptions, _, diags = attributes.AlertChannelSubscriptionAttributeGluer.RenderFromList(ctx, m.AlertChannelSubscriptions)
 	if diags.HasError() {
 		return diags
 	}
 
-	diags = m.AlertSettings.Render(ctx, &into.AlertSettings)
+	into.AlertSettings, _, diags = attributes.AlertSettingsAttributeGluer.RenderFromObject(ctx, m.AlertSettings)
 	if diags.HasError() {
 		return diags
 	}
 
 	into.UseGlobalAlertSettings = m.UseGlobalAlertSettings.ValueBool()
 
-	diags = m.Request.Render(ctx, &into.Request)
+	into.Request, _, diags = attributes.RequestAttributeGluer.RenderFromObject(ctx, m.Request)
 	if diags.HasError() {
 		return diags
 	}
@@ -585,13 +579,15 @@ func (m *CheckResourceModel) Render(ctx context.Context, into *checkly.Check) di
 	into.GroupID = m.GroupID.ValueInt64()
 	into.GroupOrder = int(m.GroupOrder.ValueInt32())
 
-	if m.RetryStrategy != nil {
-		diags = m.RetryStrategy.Render(ctx, into.RetryStrategy)
+	if m.RetryStrategy.IsNull() || m.RetryStrategy.IsUnknown() {
+		into.RetryStrategy = nil
+	} else {
+		retryStrategy, _, diags := attributes.RetryStrategyAttributeGluer.RenderFromObject(ctx, m.RetryStrategy)
 		if diags.HasError() {
 			return diags
 		}
-	} else {
-		into.RetryStrategy = nil
+
+		into.RetryStrategy = &retryStrategy
 	}
 
 	return nil

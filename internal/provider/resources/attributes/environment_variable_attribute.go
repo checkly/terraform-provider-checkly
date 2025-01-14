@@ -80,6 +80,11 @@ type EnvironmentVariableAttributeModel struct {
 	Secret types.Bool   `tfsdk:"secret"`
 }
 
+var EnvironmentVariableAttributeGluer = interop.GluerForListNestedAttribute[
+	checkly.EnvironmentVariable,
+	EnvironmentVariableAttributeModel,
+](EnvironmentVariableAttributeSchema)
+
 func (m *EnvironmentVariableAttributeModel) Refresh(ctx context.Context, from *checkly.EnvironmentVariable, flags interop.RefreshFlags) diag.Diagnostics {
 	m.Key = types.StringValue(from.Key)
 	m.Value = types.StringValue(from.Value)

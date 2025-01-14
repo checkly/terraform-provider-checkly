@@ -47,8 +47,7 @@ func (r *MaintenanceWindowsResource) Schema(
 ) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"id":           attributes.IDAttributeSchema,
-			"last_updated": attributes.LastUpdatedAttributeSchema,
+			"id": attributes.IDAttributeSchema,
 			"name": schema.StringAttribute{
 				Required:    true,
 				Description: "The maintenance window name.",
@@ -279,7 +278,6 @@ var (
 
 type MaintenanceWindowsResourceModel struct {
 	ID             types.String `tfsdk:"id"`
-	LastUpdated    types.String `tfsdk:"last_updated"` // FIXME: Keep this? Old code did not have it.
 	Name           types.String `tfsdk:"name"`
 	StartsAt       types.String `tfsdk:"starts_at"`
 	EndsAt         types.String `tfsdk:"ends_at"`
@@ -292,10 +290,6 @@ type MaintenanceWindowsResourceModel struct {
 func (m *MaintenanceWindowsResourceModel) Refresh(ctx context.Context, from *checkly.MaintenanceWindow, flags interop.RefreshFlags) diag.Diagnostics {
 	if flags.Created() {
 		m.ID = MaintenanceWindowID.IntoString(from.ID)
-	}
-
-	if flags.Created() || flags.Updated() {
-		m.LastUpdated = attributes.LastUpdatedNow()
 	}
 
 	m.Name = types.StringValue(from.Name)

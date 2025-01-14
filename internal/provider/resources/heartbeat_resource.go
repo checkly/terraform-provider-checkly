@@ -5,11 +5,15 @@ import (
 	"fmt"
 	"slices"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/helpers/validatordiag"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
@@ -20,9 +24,10 @@ import (
 )
 
 var (
-	_ resource.Resource                = (*HeartbeatResource)(nil)
-	_ resource.ResourceWithConfigure   = (*HeartbeatResource)(nil)
-	_ resource.ResourceWithImportState = (*HeartbeatResource)(nil)
+	_ resource.Resource                   = (*HeartbeatResource)(nil)
+	_ resource.ResourceWithConfigure      = (*HeartbeatResource)(nil)
+	_ resource.ResourceWithImportState    = (*HeartbeatResource)(nil)
+	_ resource.ResourceWithValidateConfig = (*HeartbeatResource)(nil)
 )
 
 type HeartbeatResource struct {
@@ -49,68 +54,115 @@ func (r *HeartbeatResource) Schema(
 	resp.Schema = schema.Schema{
 		Description: "Heartbeats allows you to monitor your cron jobs and set up alerting, so you get a notification when things break or slow down.",
 		Attributes: map[string]schema.Attribute{
-			"id":           attributes.IDAttributeSchema,
-			"last_updated": attributes.LastUpdatedAttributeSchema,
+			"id": attributes.IDAttributeSchema,
 			"name": schema.StringAttribute{
-				Required:    true,
 				Description: "The name of the check.",
+				Required:    true,
 			},
 			"activated": schema.BoolAttribute{
-				Required:    true,
 				Description: "Determines if the check is running or not. Possible values `true`, and `false`.",
+				Required:    true,
 			},
 			"muted": schema.BoolAttribute{
-				Optional:    true,
 				Description: "Determines if any notifications will be sent out when a check fails/degrades/recovers.",
+				Optional:    true,
+				Computed:    true,
+				Default:     booldefault.StaticBool(false),
 			},
 			"tags": schema.SetAttribute{
+				Description: "A list of tags for organizing and filtering checks.",
 				ElementType: types.StringType,
 				Optional:    true,
-				Description: "A list of tags for organizing and filtering checks.",
+				Computed:    true,
 			},
 			"alert_settings": attributes.AlertSettingsAttributeSchema,
 			"use_global_alert_settings": schema.BoolAttribute{
-				Optional:    true,
 				Description: "When true, the account level alert settings will be used, not the alert setting defined on this check.",
+				Optional:    true,
+				Computed:    true,
+				Default:     booldefault.StaticBool(false),
 			},
-			"heartbeat": schema.SingleNestedAttribute{
-				Required:   true,
-				Validators: []validator.Object{
-					// TODO: period * period_unit must be between 30s and 365 days
-					// TODO: grace * grace_unit must be less than 365 days
-				},
-				Attributes: map[string]schema.Attribute{
-					"period": schema.Int32Attribute{
-						Required:    true,
-						Description: "How often you expect a ping to the ping URL.",
-					},
-					"period_unit": schema.StringAttribute{
-						Required: true,
-						Validators: []validator.String{
-							stringvalidator.OneOf("seconds", "minutes", "hours", "days"),
-						},
-						Description: "Possible values `seconds`, `minutes`, `hours` and `days`.",
-					},
-					"grace": schema.Int32Attribute{
-						Required:    true,
-						Description: "How long Checkly should wait before triggering any alerts when a ping does not arrive within the set period.",
-					},
-					"grace_unit": schema.StringAttribute{
-						Required: true,
-						Validators: []validator.String{
-							stringvalidator.OneOf("seconds", "minutes", "hours", "days"),
-						},
-						Description: "Possible values `seconds`, `minutes`, `hours` and `days`.",
-					},
-					"ping_token": schema.StringAttribute{
-						Optional:    true,
-						Computed:    true,
-						Description: "Custom token to generate your ping URL. Checkly will expect a ping to `https://ping.checklyhq.com/[PING_TOKEN]`.",
-					},
-				},
-			},
+			"heartbeat":                  HeartbeatAttributeSchema,
 			"alert_channel_subscription": attributes.AlertChannelSubscriptionAttributeSchema,
 		},
+	}
+}
+
+func valueWithUnitToSeconds(value int32, unit string) int32 {
+	switch unit {
+	case "seconds":
+		return value * 1
+	case "minutes":
+		return value * 60
+	case "hours":
+		return value * 3600
+	case "days":
+		return value * 3600 * 24
+	default:
+		return 0
+	}
+}
+
+func (r *HeartbeatResource) ValidateConfig(
+	ctx context.Context,
+	req resource.ValidateConfigRequest,
+	resp *resource.ValidateConfigResponse,
+) {
+	var config HeartbeatResourceModel
+
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	_, heartbeatAttributeModel, diags := HeartbeatAttributeGluer.RenderFromObject(ctx, config.Heartbeat)
+	if diags.HasError() {
+		resp.Diagnostics.Append(diags...)
+		return
+	}
+
+	if !heartbeatAttributeModel.Period.IsUnknown() && !heartbeatAttributeModel.PeriodUnit.IsUnknown() {
+		value := heartbeatAttributeModel.Period.ValueInt32()
+		valuePath := path.Root("heartbeat").AtName("period")
+
+		unit := heartbeatAttributeModel.PeriodUnit.ValueString()
+		unitPath := path.Root("heartbeat").AtName("period_unit")
+
+		seconds := valueWithUnitToSeconds(value, unit)
+
+		if seconds < 30 {
+			resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
+				valuePath,
+				fmt.Sprintf(`value in combination with %s must be greater than or equal to 30s`, unitPath.String()),
+				fmt.Sprintf("%d %s", value, unit),
+			))
+		}
+
+		if seconds > 3600*24*365 {
+			resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
+				valuePath,
+				fmt.Sprintf(`value in combination with %s must be less than or equal to 365 days`, unitPath.String()),
+				fmt.Sprintf("%d %s", value, unit),
+			))
+		}
+	}
+
+	if !heartbeatAttributeModel.Grace.IsUnknown() && !heartbeatAttributeModel.GraceUnit.IsUnknown() {
+		value := heartbeatAttributeModel.Grace.ValueInt32()
+		valuePath := path.Root("heartbeat").AtName("grace")
+
+		unit := heartbeatAttributeModel.GraceUnit.ValueString()
+		unitPath := path.Root("heartbeat").AtName("grace_unit")
+
+		seconds := valueWithUnitToSeconds(value, unit)
+
+		if seconds > 3600*24*365 {
+			resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
+				valuePath,
+				fmt.Sprintf(`value in combination with %s must be less than or equal to 365 days`, unitPath.String()),
+				fmt.Sprintf("%d %s", value, unit),
+			))
+		}
 	}
 }
 
@@ -285,16 +337,15 @@ var (
 )
 
 type HeartbeatResourceModel struct {
-	ID                        types.String                                        `tfsdk:"id"`
-	LastUpdated               types.String                                        `tfsdk:"last_updated"` // FIXME: Keep this? Old code did not have it.
-	Name                      types.String                                        `tfsdk:"name"`
-	Activated                 types.Bool                                          `tfsdk:"activated"`
-	Muted                     types.Bool                                          `tfsdk:"muted"`
-	Tags                      types.Set                                           `tfsdk:"tags"`
-	AlertSettings             attributes.AlertSettingsAttributeModel              `tfsdk:"alert_settings"`
-	UseGlobalAlertSettings    types.Bool                                          `tfsdk:"use_global_alert_settings"`
-	Heartbeat                 HeartbeatAttributeModel                             `tfsdk:"heartbeat"`
-	AlertChannelSubscriptions []attributes.AlertChannelSubscriptionAttributeModel `tfsdk:"alert_channel_subscription"`
+	ID                        types.String `tfsdk:"id"`
+	Name                      types.String `tfsdk:"name"`
+	Activated                 types.Bool   `tfsdk:"activated"`
+	Muted                     types.Bool   `tfsdk:"muted"`
+	Tags                      types.Set    `tfsdk:"tags"`
+	AlertSettings             types.Object `tfsdk:"alert_settings"`
+	UseGlobalAlertSettings    types.Bool   `tfsdk:"use_global_alert_settings"`
+	Heartbeat                 types.Object `tfsdk:"heartbeat"`
+	AlertChannelSubscriptions types.List   `tfsdk:"alert_channel_subscription"`
 }
 
 func (m *HeartbeatResourceModel) Refresh(ctx context.Context, from *checkly.HeartbeatCheck, flags interop.RefreshFlags) diag.Diagnostics {
@@ -304,10 +355,6 @@ func (m *HeartbeatResourceModel) Refresh(ctx context.Context, from *checkly.Hear
 		m.ID = types.StringValue(from.ID)
 	}
 
-	if flags.Created() || flags.Updated() {
-		m.LastUpdated = attributes.LastUpdatedNow()
-	}
-
 	m.Name = types.StringValue(from.Name)
 	m.Activated = types.BoolValue(from.Activated)
 	m.Muted = types.BoolValue(from.Muted)
@@ -315,27 +362,21 @@ func (m *HeartbeatResourceModel) Refresh(ctx context.Context, from *checkly.Hear
 	slices.Sort(from.Tags)
 	m.Tags = interop.IntoUntypedStringSet(&from.Tags)
 
-	diags.Append(m.AlertSettings.Refresh(ctx, &from.AlertSettings, flags)...)
+	m.AlertSettings, _, diags = attributes.AlertSettingsAttributeGluer.RefreshToObject(ctx, &from.AlertSettings, flags)
 	if diags.HasError() {
 		return diags
 	}
 
 	m.UseGlobalAlertSettings = types.BoolValue(from.UseGlobalAlertSettings)
 
-	diags.Append(m.Heartbeat.Refresh(ctx, &from.Heartbeat, flags)...)
+	m.Heartbeat, _, diags = HeartbeatAttributeGluer.RefreshToObject(ctx, &from.Heartbeat, flags)
 	if diags.HasError() {
 		return diags
 	}
 
-	m.AlertChannelSubscriptions = nil
-	for _, sub := range from.AlertChannelSubscriptions {
-		var subModel attributes.AlertChannelSubscriptionAttributeModel
-		diags.Append(subModel.Refresh(ctx, &sub, flags)...)
-		if diags.HasError() {
-			return diags
-		}
-
-		m.AlertChannelSubscriptions = append(m.AlertChannelSubscriptions, subModel)
+	m.AlertChannelSubscriptions, _, diags = attributes.AlertChannelSubscriptionAttributeGluer.RefreshToList(ctx, &from.AlertChannelSubscriptions, flags)
+	if diags.HasError() {
+		return diags
 	}
 
 	return diags
@@ -349,13 +390,69 @@ func (m *HeartbeatResourceModel) Render(ctx context.Context, into *checkly.Heart
 	into.Muted = m.Muted.ValueBool()
 	into.Tags = interop.FromUntypedStringSet(m.Tags)
 
-	diags.Append(m.AlertSettings.Render(ctx, &into.AlertSettings)...)
+	into.AlertSettings, _, diags = attributes.AlertSettingsAttributeGluer.RenderFromObject(ctx, m.AlertSettings)
+	if diags.HasError() {
+		return diags
+	}
 
 	into.UseGlobalAlertSettings = m.UseGlobalAlertSettings.ValueBool()
 
-	diags.Append(m.Heartbeat.Render(ctx, &into.Heartbeat)...)
+	into.Heartbeat, _, diags = HeartbeatAttributeGluer.RenderFromObject(ctx, m.Heartbeat)
+	if diags.HasError() {
+		return diags
+	}
+
+	into.AlertChannelSubscriptions, _, diags = attributes.AlertChannelSubscriptionAttributeGluer.RenderFromList(ctx, m.AlertChannelSubscriptions)
+	if diags.HasError() {
+		return diags
+	}
 
 	return diags
+}
+
+var HeartbeatAttributeSchema = schema.SingleNestedAttribute{
+	Required: true,
+	Attributes: map[string]schema.Attribute{
+		"period": schema.Int32Attribute{
+			Description: "How often you expect a ping to the ping URL.",
+			Required:    true,
+		},
+		"period_unit": schema.StringAttribute{
+			Description: "Possible values `seconds`, `minutes`, `hours` and `days`.",
+			Required:    true,
+			Validators: []validator.String{
+				stringvalidator.OneOf(
+					"seconds",
+					"minutes",
+					"hours",
+					"days",
+				),
+			},
+		},
+		"grace": schema.Int32Attribute{
+			Description: "How long Checkly should wait before triggering any alerts when a ping does not arrive within the set period.",
+			Required:    true,
+		},
+		"grace_unit": schema.StringAttribute{
+			Description: "Possible values `seconds`, `minutes`, `hours` and `days`.",
+			Required:    true,
+			Validators: []validator.String{
+				stringvalidator.OneOf(
+					"seconds",
+					"minutes",
+					"hours",
+					"days",
+				),
+			},
+		},
+		"ping_token": schema.StringAttribute{
+			Description: "Custom token to generate your ping URL. Checkly will expect a ping to `https://ping.checklyhq.com/[PING_TOKEN]`.",
+			Computed:    true,
+			PlanModifiers: []planmodifier.String{
+				stringplanmodifier.UseStateForUnknown(),
+			},
+		},
+	},
 }
 
 type HeartbeatAttributeModel struct {
@@ -365,6 +462,11 @@ type HeartbeatAttributeModel struct {
 	GraceUnit  types.String `tfsdk:"grace_unit"`
 	PingToken  types.String `tfsdk:"ping_token"`
 }
+
+var HeartbeatAttributeGluer = interop.GluerForSingleNestedAttribute[
+	checkly.Heartbeat,
+	HeartbeatAttributeModel,
+](HeartbeatAttributeSchema)
 
 func (m *HeartbeatAttributeModel) Refresh(ctx context.Context, from *checkly.Heartbeat, flags interop.RefreshFlags) diag.Diagnostics {
 	m.Period = types.Int32Value(int32(from.Period))

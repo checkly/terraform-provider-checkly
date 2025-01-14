@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	_ interop.Model[[]string] = (*LocationsAttributeModel)(nil)
+	_ interop.Model[string] = (*LocationsAttributeModel)(nil)
 )
 
 var LocationsAttributeSchema = schema.SetAttribute{
@@ -19,16 +19,21 @@ var LocationsAttributeSchema = schema.SetAttribute{
 	Optional:    true,
 }
 
-type LocationsAttributeModel types.Set
+type LocationsAttributeModel string
 
-func (m *LocationsAttributeModel) Refresh(ctx context.Context, from *[]string, flags interop.RefreshFlags) diag.Diagnostics {
-	*m = LocationsAttributeModel(interop.IntoUntypedStringSet(from))
+var LocationsAttributeGluer = interop.GluerForSetAttribute[
+	string,
+	LocationsAttributeModel,
+](LocationsAttributeSchema)
+
+func (m *LocationsAttributeModel) Refresh(ctx context.Context, from *string, flags interop.RefreshFlags) diag.Diagnostics {
+	*m = LocationsAttributeModel(*from)
 
 	return nil
 }
 
-func (m *LocationsAttributeModel) Render(ctx context.Context, into *[]string) diag.Diagnostics {
-	*into = interop.FromUntypedStringSet(types.Set(*m))
+func (m *LocationsAttributeModel) Render(ctx context.Context, into *string) diag.Diagnostics {
+	*into = string(*m)
 
 	return nil
 }
