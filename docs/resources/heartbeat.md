@@ -16,7 +16,7 @@ Heartbeats allows you to monitor your cron jobs and set up alerting, so you get 
 resource "checkly_heartbeat" "example-heartbeat" {
   name      = "Example heartbeat"
   activated = true
-  heartbeat {
+  heartbeat = {
     period      = 7
     period_unit = "days"
     grace       = 1
@@ -32,13 +32,13 @@ resource "checkly_heartbeat" "example-heartbeat" {
 ### Required
 
 - `activated` (Boolean) Determines if the check is running or not. Possible values `true`, and `false`.
-- `heartbeat` (Block Set, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--heartbeat))
+- `heartbeat` (Attributes) (see [below for nested schema](#nestedatt--heartbeat))
 - `name` (String) The name of the check.
 
 ### Optional
 
-- `alert_channel_subscription` (Block List) (see [below for nested schema](#nestedblock--alert_channel_subscription))
-- `alert_settings` (Block List, Max: 1) (see [below for nested schema](#nestedblock--alert_settings))
+- `alert_channel_subscription` (Attributes List) An array of channel IDs and whether they're activated or not. If you don't set at least one alert subscription for your check, we won't be able to alert you in case something goes wrong with it. (see [below for nested schema](#nestedatt--alert_channel_subscription))
+- `alert_settings` (Attributes) (see [below for nested schema](#nestedatt--alert_settings))
 - `muted` (Boolean) Determines if any notifications will be sent out when a check fails/degrades/recovers.
 - `tags` (Set of String) A list of tags for organizing and filtering checks.
 - `use_global_alert_settings` (Boolean) When true, the account level alert settings will be used, not the alert setting defined on this check.
@@ -47,7 +47,7 @@ resource "checkly_heartbeat" "example-heartbeat" {
 
 - `id` (String) The ID of this resource.
 
-<a id="nestedblock--heartbeat"></a>
+<a id="nestedatt--heartbeat"></a>
 ### Nested Schema for `heartbeat`
 
 Required:
@@ -57,12 +57,12 @@ Required:
 - `period` (Number) How often you expect a ping to the ping URL.
 - `period_unit` (String) Possible values `seconds`, `minutes`, `hours` and `days`.
 
-Optional:
+Read-Only:
 
 - `ping_token` (String) Custom token to generate your ping URL. Checkly will expect a ping to `https://ping.checklyhq.com/[PING_TOKEN]`.
 
 
-<a id="nestedblock--alert_channel_subscription"></a>
+<a id="nestedatt--alert_channel_subscription"></a>
 ### Nested Schema for `alert_channel_subscription`
 
 Required:
@@ -71,28 +71,28 @@ Required:
 - `channel_id` (Number)
 
 
-<a id="nestedblock--alert_settings"></a>
+<a id="nestedatt--alert_settings"></a>
 ### Nested Schema for `alert_settings`
 
 Optional:
 
 - `escalation_type` (String) Determines what type of escalation to use. Possible values are `RUN_BASED` or `TIME_BASED`.
-- `parallel_run_failure_threshold` (Block List) (see [below for nested schema](#nestedblock--alert_settings--parallel_run_failure_threshold))
-- `reminders` (Block List) (see [below for nested schema](#nestedblock--alert_settings--reminders))
-- `run_based_escalation` (Block List) (see [below for nested schema](#nestedblock--alert_settings--run_based_escalation))
-- `ssl_certificates` (Block Set, Deprecated) (see [below for nested schema](#nestedblock--alert_settings--ssl_certificates))
-- `time_based_escalation` (Block List) (see [below for nested schema](#nestedblock--alert_settings--time_based_escalation))
+- `parallel_run_failure_threshold` (Attributes) (see [below for nested schema](#nestedatt--alert_settings--parallel_run_failure_threshold))
+- `reminders` (Attributes) (see [below for nested schema](#nestedatt--alert_settings--reminders))
+- `run_based_escalation` (Attributes) (see [below for nested schema](#nestedatt--alert_settings--run_based_escalation))
+- `ssl_certificates` (Attributes, Deprecated) At what interval the reminders should be sent. (see [below for nested schema](#nestedatt--alert_settings--ssl_certificates))
+- `time_based_escalation` (Attributes) (see [below for nested schema](#nestedatt--alert_settings--time_based_escalation))
 
-<a id="nestedblock--alert_settings--parallel_run_failure_threshold"></a>
+<a id="nestedatt--alert_settings--parallel_run_failure_threshold"></a>
 ### Nested Schema for `alert_settings.parallel_run_failure_threshold`
 
 Optional:
 
 - `enabled` (Boolean) Applicable only for checks scheduled in parallel in multiple locations.
-- `percentage` (Number) Possible values are `10`, `20`, `30`, `40`, `50`, `60`, `70`, `80`, `100`, and `100`. (Default `10`).
+- `percentage` (Number) Possible values are `10`, `20`, `30`, `40`, `50`, `60`, `70`, `80`, `90`, and `100`. (Default `10`).
 
 
-<a id="nestedblock--alert_settings--reminders"></a>
+<a id="nestedatt--alert_settings--reminders"></a>
 ### Nested Schema for `alert_settings.reminders`
 
 Optional:
@@ -101,7 +101,7 @@ Optional:
 - `interval` (Number) Possible values are `5`, `10`, `15`, and `30`. (Default `5`).
 
 
-<a id="nestedblock--alert_settings--run_based_escalation"></a>
+<a id="nestedatt--alert_settings--run_based_escalation"></a>
 ### Nested Schema for `alert_settings.run_based_escalation`
 
 Optional:
@@ -109,7 +109,7 @@ Optional:
 - `failed_run_threshold` (Number) After how many failed consecutive check runs an alert notification should be sent. Possible values are between 1 and 5. (Default `1`).
 
 
-<a id="nestedblock--alert_settings--ssl_certificates"></a>
+<a id="nestedatt--alert_settings--ssl_certificates"></a>
 ### Nested Schema for `alert_settings.ssl_certificates`
 
 Optional:
@@ -118,7 +118,7 @@ Optional:
 - `enabled` (Boolean) Determines if alert notifications should be sent for expiring SSL certificates. Possible values `true`, and `false`. (Default `false`).
 
 
-<a id="nestedblock--alert_settings--time_based_escalation"></a>
+<a id="nestedatt--alert_settings--time_based_escalation"></a>
 ### Nested Schema for `alert_settings.time_based_escalation`
 
 Optional:

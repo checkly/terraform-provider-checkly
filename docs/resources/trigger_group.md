@@ -27,11 +27,11 @@ output "test_trigger_group_url" {
 
 ### Required
 
-- `group_id` (Number) The id of the group that you want to attach the trigger to.
+- `group_id` (Number) The ID of the group that you want to attach the trigger to.
 
 ### Optional
 
-- `token` (String) The token value created to trigger the group
+- `token` (String) The token value created to trigger the group.
 - `url` (String) The request URL to trigger the group run.
 
 ### Read-Only

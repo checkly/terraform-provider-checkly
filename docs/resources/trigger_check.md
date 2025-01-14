@@ -27,11 +27,11 @@ output "test_trigger_check_url" {
 
 ### Required
 
-- `check_id` (String) The id of the check that you want to attach the trigger to.
+- `check_id` (String) The ID of the check that you want to attach the trigger to.
 
 ### Optional
 
-- `token` (String) The token value created to trigger the check
+- `token` (String) The token value created to trigger the check.
 - `url` (String) The request URL to trigger the check run.
 
 ### Read-Only

@@ -32,7 +32,7 @@ resource "checkly_environment_variable" "variable_2" {
 ### Required
 
 - `key` (String)
-- `value` (String)
+- `value` (String, Sensitive)
 
 ### Optional
 

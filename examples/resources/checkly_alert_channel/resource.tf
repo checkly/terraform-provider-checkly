@@ -1,6 +1,6 @@
 # An Email alert channel
 resource "checkly_alert_channel" "email_ac" {
-  email {
+  email = {
     address = "john@example.com"
   }
   send_recovery        = true
@@ -12,7 +12,7 @@ resource "checkly_alert_channel" "email_ac" {
 
 # A SMS alert channel
 resource "checkly_alert_channel" "sms_ac" {
-  sms {
+  sms = {
     name   = "john"
     number = "+5491100001111"
   }
@@ -22,7 +22,7 @@ resource "checkly_alert_channel" "sms_ac" {
 
 # A Slack alert channel
 resource "checkly_alert_channel" "slack_ac" {
-  slack {
+  slack = {
     channel = "#checkly-notifications"
     url     = "https://hooks.slack.com/services/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"
   }
@@ -30,7 +30,7 @@ resource "checkly_alert_channel" "slack_ac" {
 
 # An Opsgenie alert channel
 resource "checkly_alert_channel" "opsgenie_ac" {
-  opsgenie {
+  opsgenie = {
     name     = "opsalerts"
     api_key  = "fookey"
     region   = "fooregion"
@@ -40,7 +40,7 @@ resource "checkly_alert_channel" "opsgenie_ac" {
 
 # A Pagerduty alert channel
 resource "checkly_alert_channel" "pagerduty_ac" {
-  pagerduty {
+  pagerduty = {
     account      = "checkly"
     service_key  = "key1"
     service_name = "pdalert"
@@ -49,7 +49,7 @@ resource "checkly_alert_channel" "pagerduty_ac" {
 
 # A Webhook alert channel
 resource "checkly_alert_channel" "webhook_ac" {
-  webhook {
+  webhook = {
     name           = "foo"
     method         = "get"
     template       = "footemplate"
@@ -60,7 +60,7 @@ resource "checkly_alert_channel" "webhook_ac" {
 
 # A Firehydran alert channel integration
 resource "checkly_alert_channel" "firehydrant_ac" {
-  webhook {
+  webhook = {
     name         = "firehydrant"
     method       = "post"
     template     = <<EOT
@@ -83,13 +83,14 @@ resource "checkly_alert_channel" "firehydrant_ac" {
 resource "checkly_check" "example_check" {
   name = "Example check"
 
-  alert_channel_subscription {
-    channel_id = checkly_alert_channel.email_ac.id
-    activated  = true
-  }
-
-  alert_channel_subscription {
-    channel_id = checkly_alert_channel.sms_ac.id
-    activated  = true
-  }
+  alert_channel_subscriptions = [
+    {
+      channel_id = checkly_alert_channel.email_ac.id
+      activated  = true
+    },
+    {
+      channel_id = checkly_alert_channel.sms_ac.id
+      activated  = true
+    }
+  ]
 }

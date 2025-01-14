@@ -31,13 +31,13 @@ resource "checkly_check" "example_check" {
     "us-west-1"
   ]
 
-  request {
+  request = {
     url              = "https://api.example.com/"
     follow_redirects = true
-    assertion {
+    assertions = [{
       source     = "STATUS_CODE"
       comparison = "EQUALS"
       target     = "200"
-    }
+    }]
   }
 }
