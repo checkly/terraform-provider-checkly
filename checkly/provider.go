@@ -33,6 +33,7 @@ func Provider() *schema.Provider {
 		ResourcesMap: map[string]*schema.Resource{
 			"checkly_check":                resourceCheck(),
 			"checkly_heartbeat":            resourceHeartbeat(),
+			"checkly_tcp_check":            resourceTCPCheck(),
 			"checkly_check_group":          resourceCheckGroup(),
 			"checkly_snippet":              resourceSnippet(),
 			"checkly_dashboard":            resourceDashboard(),
