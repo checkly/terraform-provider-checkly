@@ -100,12 +100,12 @@ func TestAccTCPCheckFull(t *testing.T) {
 				resource.TestCheckResourceAttr(
 					"checkly_tcp_check.test",
 					"degraded_response_time",
-					"15000",
+					"4000",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_tcp_check.test",
 					"max_response_time",
-					"30000",
+					"5000",
 				),
 				testCheckResourceAttrExpr(
 					"checkly_tcp_check.test",
@@ -150,8 +150,8 @@ var wantTCPCheck = checkly.TCPCheck{
 	ShouldFail:           false,
 	Locations:            []string{"eu-west-1"},
 	PrivateLocations:     &[]string{},
-	DegradedResponseTime: 15000,
-	MaxResponseTime:      30000,
+	DegradedResponseTime: 4000,
+	MaxResponseTime:      5000,
 	Tags: []string{
 		"foo",
 		"bar",
@@ -199,7 +199,7 @@ const tcpCheck_basic = `
 	  frequency                 = 60
 	  activated                 = true
 	  muted                     = true
-	  max_response_time         = 18000
+	  max_response_time         = 3000
 	  locations                 = [ "us-east-1", "eu-central-1" ]
 	  use_global_alert_settings = true
 	  request {
@@ -221,8 +221,8 @@ const tcpCheck_full = `
 	frequency              = 120
 	activated              = true
 	muted                  = true
-	degraded_response_time = 15000
-	max_response_time      = 30000
+	degraded_response_time = 4000
+	max_response_time      = 5000
 	locations = [
 	  "eu-central-1",
 	  "us-east-1",
