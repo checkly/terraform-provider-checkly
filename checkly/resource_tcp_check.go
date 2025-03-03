@@ -83,30 +83,28 @@ func resourceTCPCheck() *schema.Resource {
 			"degraded_response_time": {
 				Type:     schema.TypeInt,
 				Optional: true,
-				Default:  15000,
+				Default:  4000,
 				ValidateFunc: func(val interface{}, key string) (warns []string, errs []error) {
-					// https://checklyhq.com/docs/api-checks/limits/
 					v := val.(int)
-					if v < 0 || v > 30000 {
-						errs = append(errs, fmt.Errorf("%q must be 0-30000 ms, got %d", key, v))
+					if v < 0 || v > 5000 {
+						errs = append(errs, fmt.Errorf("%q must be 0-5000 ms, got %d", key, v))
 					}
 					return warns, errs
 				},
-				Description: "The response time in milliseconds starting from which a check should be considered degraded. Possible values are between 0 and 30000. (Default `15000`).",
+				Description: "The response time in milliseconds starting from which a check should be considered degraded. Possible values are between 0 and 5000. (Default `4000`).",
 			},
 			"max_response_time": {
 				Type:     schema.TypeInt,
 				Optional: true,
-				Default:  30000,
+				Default:  5000,
 				ValidateFunc: func(val interface{}, key string) (warns []string, errs []error) {
 					v := val.(int)
-					// https://checklyhq.com/docs/api-checks/limits/
-					if v < 0 || v > 30000 {
-						errs = append(errs, fmt.Errorf("%q must be 0-30000 ms, got: %d", key, v))
+					if v < 0 || v > 5000 {
+						errs = append(errs, fmt.Errorf("%q must be 0-5000 ms, got: %d", key, v))
 					}
 					return warns, errs
 				},
-				Description: "The response time in milliseconds starting from which a check should be considered failing. Possible values are between 0 and 30000. (Default `30000`).",
+				Description: "The response time in milliseconds starting from which a check should be considered failing. Possible values are between 0 and 5000. (Default `5000`).",
 			},
 			"tags": {
 				Type:     schema.TypeSet,
