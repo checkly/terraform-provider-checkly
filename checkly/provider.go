@@ -43,6 +43,7 @@ func Provider() *schema.Provider {
 			"checkly_trigger_group":        resourceTriggerGroup(),
 			"checkly_environment_variable": resourceEnvironmentVariable(),
 			"checkly_private_location":     resourcePrivateLocation(),
+			"checkly_client_certificate":   resourceClientCertificate(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{
 			"checkly_static_ips": dataSourceStaticIPs(),
