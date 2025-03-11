@@ -94,7 +94,10 @@ func clientCertificateFromResourceData(d *schema.ResourceData) (checkly.ClientCe
 func resourceDataFromClientCertificate(c *checkly.ClientCertificate, d *schema.ResourceData) error {
 	d.Set("host", c.Host)
 	d.Set("certificate", c.Certificate)
-	d.Set("private_key", c.PrivateKey)
+	// The backend does not return a value for PrivateKey anymore, though it
+	// used to. The value should not change by itself, so we can simply keep
+	// the original state.
+	// d.Set("private_key", c.PrivateKey)
 	d.Set("trusted_ca", c.TrustedCA)
 	// The backend does not return a value for Passphrase and even it did, the
 	// value would be encrypted. Thus, the value should never be modified.
