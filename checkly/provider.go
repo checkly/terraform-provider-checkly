@@ -44,6 +44,8 @@ func Provider() *schema.Provider {
 			"checkly_environment_variable": resourceEnvironmentVariable(),
 			"checkly_private_location":     resourcePrivateLocation(),
 			"checkly_client_certificate":   resourceClientCertificate(),
+			"checkly_status_page":          resourceStatusPage(),
+			"checkly_status_page_service":  resourceStatusPageService(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{
 			"checkly_static_ips": dataSourceStaticIPs(),
