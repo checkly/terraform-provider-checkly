@@ -53,7 +53,8 @@ func resourceStatusPage() *schema.Resource {
 			"default_theme": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "Possible values are 'AUTO', 'DARK', and 'LIGHT'.",
+				Description: "Possible values are `AUTO`, `DARK`, and `LIGHT`. (Default `AUTO`).",
+				Default:     "AUTO",
 				ValidateFunc: func(value interface{}, key string) (warns []string, errs []error) {
 					v := value.(string)
 					isValid := false

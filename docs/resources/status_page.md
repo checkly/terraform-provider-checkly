@@ -52,7 +52,7 @@ resource "checkly_status_page" "example" {
 ### Optional
 
 - `custom_domain` (String) A custom user domain, e.g. "status.example.com". See the docs on updating your DNS and SSL usage.
-- `default_theme` (String) Possible values are 'AUTO', 'DARK', and 'LIGHT'.
+- `default_theme` (String) Possible values are `AUTO`, `DARK`, and `LIGHT`. (Default `AUTO`).
 - `favicon` (String) A URL to an image file to use as the favicon of the status page.
 - `logo` (String) A URL to an image file to use as the logo for the status page.
 - `redirect_to` (String) The URL the user should be redirected to when clicking the logo.

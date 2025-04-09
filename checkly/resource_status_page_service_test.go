@@ -16,3 +16,22 @@ func TestAccStatusPageServiceCheckRequiredFields(t *testing.T) {
 		},
 	})
 }
+
+func TestAccStatusPageServiceHappyPath(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_status_page_service" "test" {
+					name = "foo"
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_status_page_service.test",
+					"name",
+					"foo",
+				),
+			),
+		},
+	})
+}
