@@ -34,6 +34,21 @@ func resourceStatusPage() *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "A custom user domain, e.g. \"status.example.com\". See the docs on updating your DNS and SSL usage.",
+				ValidateFunc: func(value interface{}, key string) (warns []string, errs []error) {
+					unsupportedSuffixes := []string{
+						"example.com",
+						"example.net",
+						"example.org",
+					}
+					v := value.(string)
+					for _, suffix := range unsupportedSuffixes {
+						if strings.HasSuffix(strings.ToLower(v), suffix) || strings.EqualFold(v, suffix) {
+							errs = append(errs, fmt.Errorf("custom domains ending in %s are not supported", suffix))
+							break
+						}
+					}
+					return warns, errs
+				},
 			},
 			"logo": {
 				Type:        schema.TypeString,

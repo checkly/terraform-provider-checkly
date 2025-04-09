@@ -1,6 +1,7 @@
 package checkly
 
 import (
+	"fmt"
 	"regexp"
 	"testing"
 
@@ -112,7 +113,7 @@ func TestAccStatusPageHappyPath(t *testing.T) {
 				resource "checkly_status_page" "test" {
 					name          = "foo"
 					url           = "bar"
-					custom_domain = "status.example.org"
+					custom_domain = "my-example-status-page-248234834.checklyhq.com"
 					logo          = "https://example.org/logo.png"
 					redirect_to   = "https://example.org"
 					favicon       = "https://example.org/favicon.png"
@@ -141,7 +142,7 @@ func TestAccStatusPageHappyPath(t *testing.T) {
 				resource.TestCheckResourceAttr(
 					"checkly_status_page.test",
 					"custom_domain",
-					"status.example.org",
+					"my-example-status-page-248234834.checklyhq.com",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_status_page.test",
@@ -187,4 +188,45 @@ func TestAccStatusPageHappyPath(t *testing.T) {
 			),
 		},
 	})
+}
+
+func TestAccStatusPageUnsupportedCustomDomains(t *testing.T) {
+	badDomains := []string{
+		"example.com",
+		"example.net",
+		"example.org",
+		"status.example.com",
+		"status.example.net",
+		"status.example.org",
+	}
+
+	var steps []resource.TestStep
+
+	for _, domain := range badDomains {
+		steps = append(steps, resource.TestStep{
+			Config: fmt.Sprintf(`
+				resource "checkly_status_page_service" "test" {
+					name = "qux"
+				}
+
+				resource "checkly_status_page" "test" {
+					name          = "foo"
+					url           = "bar"
+					custom_domain = "%s"
+
+					card {
+						name = "baz"
+
+						service_attachment {
+							service_id = checkly_status_page_service.test.id
+						}
+					}
+				}
+			`, domain),
+
+			ExpectError: regexp.MustCompile(`custom domains ending in .+ are not supported`),
+		})
+	}
+
+	accTestCase(t, steps)
 }
