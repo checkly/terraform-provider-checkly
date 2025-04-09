@@ -52,9 +52,11 @@ jobs:
     name: Matrix test
     needs: build
     runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
     timeout-minutes: 15
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         # list whatever Terraform versions here you would like to support
         terraform:
