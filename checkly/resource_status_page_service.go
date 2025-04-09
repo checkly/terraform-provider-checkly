@@ -19,6 +19,8 @@ func resourceStatusPageService() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
+		Description: "Status page services represent functional pieces of " +
+			"your application or website, such as landing page, API, support portal etc.",
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,

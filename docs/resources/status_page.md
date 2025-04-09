@@ -3,12 +3,12 @@
 page_title: "checkly_status_page Resource - terraform-provider-checkly"
 subcategory: ""
 description: |-
-  
+  Checkly status pages allow you to easily communicate the uptime and health of your applications and services to your customers.
 ---
 
 # checkly_status_page (Resource)
 
-
+Checkly status pages allow you to easily communicate the uptime and health of your applications and services to your customers.
 
 ## Example Usage
 

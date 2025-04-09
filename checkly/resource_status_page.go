@@ -19,6 +19,8 @@ func resourceStatusPage() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
+		Description: "Checkly status pages allow you to easily communicate " +
+			"the uptime and health of your applications and services to your customers.",
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,

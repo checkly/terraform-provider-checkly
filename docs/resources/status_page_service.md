@@ -3,12 +3,12 @@
 page_title: "checkly_status_page_service Resource - terraform-provider-checkly"
 subcategory: ""
 description: |-
-  
+  Status page services represent functional pieces of your application or website, such as landing page, API, support portal etc.
 ---
 
 # checkly_status_page_service (Resource)
 
-
+Status page services represent functional pieces of your application or website, such as landing page, API, support portal etc.
 
 ## Example Usage
 
