@@ -17,7 +17,7 @@ func TestAccStaticIPsAll(t *testing.T) {
 				resource.TestCheckResourceAttr(
 					"data.checkly_static_ips.test",
 					"addresses.#",
-					"162",
+					"173",
 				),
 			),
 		},
@@ -55,7 +55,7 @@ func TestAccStaticIPsIPv6Only(t *testing.T) {
 				resource.TestCheckResourceAttr(
 					"data.checkly_static_ips.test",
 					"addresses.#",
-					"22",
+					"25",
 				),
 			),
 		},
@@ -74,7 +74,7 @@ func TestAccStaticIPsIPv4Only(t *testing.T) {
 				resource.TestCheckResourceAttr(
 					"data.checkly_static_ips.test",
 					"addresses.#",
-					"140",
+					"148",
 				),
 			),
 		},
