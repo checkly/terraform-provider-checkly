@@ -7,8 +7,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 )
 
-func TestAccHeartbeatRequiredFields(t *testing.T) {
-	config := `resource "checkly_heartbeat" "test" {}`
+func TestAccHeartbeatMonitorRequiredFields(t *testing.T) {
+	config := `resource "checkly_heartbeat_monitor" "test" {}`
 	accTestCase(t, []resource.TestStep{
 		{
 			Config:      config,
@@ -21,8 +21,8 @@ func TestAccHeartbeatRequiredFields(t *testing.T) {
 	})
 }
 
-func TestAccHeartbeatInvalidInputs(t *testing.T) {
-	config := `resource "checkly_heartbeat" "test" {
+func TestAccHeartbeatMonitorInvalidInputs(t *testing.T) {
+	config := `resource "checkly_heartbeat_monitor" "test" {
 		name                      = 1
 		activated                 = "invalid"
 		use_global_alert_settings = "invalid"
@@ -39,8 +39,8 @@ func TestAccHeartbeatInvalidInputs(t *testing.T) {
 	})
 }
 
-func TestAccHeartbeatMissingHeartbeatBlock(t *testing.T) {
-	config := `resource "checkly_heartbeat" "test" {
+func TestAccHeartbeatMonitorMissingHeartbeatBlock(t *testing.T) {
+	config := `resource "checkly_heartbeat_monitor" "test" {
 		activated = true
 		name = "heartbeat monitor"
 	}`
@@ -52,8 +52,8 @@ func TestAccHeartbeatMissingHeartbeatBlock(t *testing.T) {
 	})
 }
 
-func TestAccHeartbeatMissingHeartbeatFields(t *testing.T) {
-	config := `resource "checkly_heartbeat" "test" {
+func TestAccHeartbeatMonitorMissingHeartbeatFields(t *testing.T) {
+	config := `resource "checkly_heartbeat_monitor" "test" {
 		activated = true
 		name = "heartbeat monitor"
 		heartbeat {
@@ -80,8 +80,8 @@ func TestAccHeartbeatMissingHeartbeatFields(t *testing.T) {
 	})
 }
 
-func TestAccHeartbeatPeriodTooBig(t *testing.T) {
-	config := `resource "checkly_heartbeat" "test" {
+func TestAccHeartbeatMonitorPeriodTooBig(t *testing.T) {
+	config := `resource "checkly_heartbeat_monitor" "test" {
 		activated = true
 		name = "heartbeat monitor"
 		heartbeat {
@@ -99,8 +99,8 @@ func TestAccHeartbeatPeriodTooBig(t *testing.T) {
 	})
 }
 
-func TestAccHeartbeatPeriodTooSmall(t *testing.T) {
-	config := `resource "checkly_heartbeat" "test" {
+func TestAccHeartbeatMonitorPeriodTooSmall(t *testing.T) {
+	config := `resource "checkly_heartbeat_monitor" "test" {
 		activated = true
 		name = "heartbeat monitor"
 		heartbeat {
@@ -118,8 +118,8 @@ func TestAccHeartbeatPeriodTooSmall(t *testing.T) {
 	})
 }
 
-func TestAccHeartbeatInvalidPeriodUnit(t *testing.T) {
-	config := `resource "checkly_heartbeat" "test" {
+func TestAccHeartbeatMonitorInvalidPeriodUnit(t *testing.T) {
+	config := `resource "checkly_heartbeat_monitor" "test" {
 		activated = true
 		name = "heartbeat monitor"
 		heartbeat {
@@ -137,8 +137,8 @@ func TestAccHeartbeatInvalidPeriodUnit(t *testing.T) {
 	})
 }
 
-func TestAccHeartbeatInvalidGraceUnit(t *testing.T) {
-	config := `resource "checkly_heartbeat" "test" {
+func TestAccHeartbeatMonitorInvalidGraceUnit(t *testing.T) {
+	config := `resource "checkly_heartbeat_monitor" "test" {
 		activated = true
 		name = "heartbeat monitor"
 		heartbeat {
@@ -156,8 +156,8 @@ func TestAccHeartbeatInvalidGraceUnit(t *testing.T) {
 	})
 }
 
-func TestAccHeartbeatCreate(t *testing.T) {
-	config := `resource "checkly_heartbeat" "test" {
+func TestAccHeartbeatMonitorCreate(t *testing.T) {
+	config := `resource "checkly_heartbeat_monitor" "test" {
 		activated = true
 		name = "heartbeat monitor"
 		heartbeat {
@@ -172,17 +172,17 @@ func TestAccHeartbeatCreate(t *testing.T) {
 			Config: config,
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
-					"checkly_heartbeat.test",
+					"checkly_heartbeat_monitor.test",
 					"name",
 					"heartbeat monitor",
 				),
 				testCheckResourceAttrExpr(
-					"checkly_heartbeat.test",
+					"checkly_heartbeat_monitor.test",
 					"heartbeat.*.period",
 					"5",
 				),
 				testCheckResourceAttrExpr(
-					"checkly_heartbeat.test",
+					"checkly_heartbeat_monitor.test",
 					"heartbeat.*.period_unit",
 					"days",
 				),
