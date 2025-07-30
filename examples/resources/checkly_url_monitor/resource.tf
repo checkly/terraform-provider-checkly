@@ -1,11 +1,11 @@
 resource "checkly_url_monitor" "example-url-monitor" {
   name                      = "Example URL monitor"
   activated                 = true
-  frequency                 = 1
+  frequency                 = 2
   use_global_alert_settings = true
 
   locations = [
-    "us-west-1"
+    "eu-west-1"
   ]
 
   request {
