@@ -32,8 +32,10 @@ func Provider() *schema.Provider {
 		},
 		ResourcesMap: map[string]*schema.Resource{
 			"checkly_check":                resourceCheck(),
-			"checkly_heartbeat":            resourceHeartbeat(),
-			"checkly_tcp_check":            resourceTCPCheck(),
+			"checkly_heartbeat":            resourceHeartbeat(), // Renamed
+			"checkly_heartbeat_monitor":    resourceHeartbeatMonitor(),
+			"checkly_tcp_check":            resourceTCPCheck(), // Renamed
+			"checkly_tcp_monitor":          resourceTCPMonitor(),
 			"checkly_check_group":          resourceCheckGroup(),
 			"checkly_snippet":              resourceSnippet(),
 			"checkly_dashboard":            resourceDashboard(),
@@ -46,6 +48,7 @@ func Provider() *schema.Provider {
 			"checkly_client_certificate":   resourceClientCertificate(),
 			"checkly_status_page":          resourceStatusPage(),
 			"checkly_status_page_service":  resourceStatusPageService(),
+			"checkly_url_monitor":          resourceURLMonitor(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{
 			"checkly_static_ips": dataSourceStaticIPs(),

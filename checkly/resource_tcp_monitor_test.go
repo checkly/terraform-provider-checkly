@@ -10,8 +10,8 @@ import (
 	"github.com/checkly/checkly-go-sdk"
 )
 
-func TestAccTCPCheckRequiredFields(t *testing.T) {
-	config := `resource "checkly_tcp_check" "test" {}`
+func TestAccTCPMonitorRequiredFields(t *testing.T) {
+	config := `resource "checkly_tcp_monitor" "test" {}`
 	accTestCase(t, []resource.TestStep{
 		{
 			Config:      config,
@@ -32,58 +32,58 @@ func TestAccTCPCheckRequiredFields(t *testing.T) {
 	})
 }
 
-func TestAccTCPCheckBasic(t *testing.T) {
+func TestAccTCPMonitorBasic(t *testing.T) {
 	accTestCase(t, []resource.TestStep{
 		{
-			Config: tcpCheck_basic,
+			Config: tcpMonitor_basic,
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
-					"checkly_tcp_check.test",
+					"checkly_tcp_monitor.test",
 					"name",
-					"TCP Check 1",
+					"TCP Monitor 1",
 				),
 				resource.TestCheckResourceAttr(
-					"checkly_tcp_check.test",
+					"checkly_tcp_monitor.test",
 					"activated",
 					"true",
 				),
 				testCheckResourceAttrExpr(
-					"checkly_tcp_check.test",
+					"checkly_tcp_monitor.test",
 					"locations.*",
 					"eu-central-1",
 				),
 				testCheckResourceAttrExpr(
-					"checkly_tcp_check.test",
+					"checkly_tcp_monitor.test",
 					"locations.*",
 					"us-east-1",
 				),
 				testCheckResourceAttrExpr(
-					"checkly_tcp_check.test",
+					"checkly_tcp_monitor.test",
 					"request.*.hostname",
 					"api.checklyhq.com",
 				),
 				testCheckResourceAttrExpr(
-					"checkly_tcp_check.test",
+					"checkly_tcp_monitor.test",
 					"request.*.port",
 					"80",
 				),
 				testCheckResourceAttrExpr(
-					"checkly_tcp_check.test",
+					"checkly_tcp_monitor.test",
 					"request.*.assertion.*.comparison",
 					"EQUALS",
 				),
 				testCheckResourceAttrExpr(
-					"checkly_tcp_check.test",
+					"checkly_tcp_monitor.test",
 					"request.*.assertion.*.property",
 					"",
 				),
 				testCheckResourceAttrExpr(
-					"checkly_tcp_check.test",
+					"checkly_tcp_monitor.test",
 					"request.*.assertion.*.source",
 					"RESPONSE_DATA",
 				),
 				testCheckResourceAttrExpr(
-					"checkly_tcp_check.test",
+					"checkly_tcp_monitor.test",
 					"request.*.assertion.*.target",
 					"hello",
 				),
@@ -92,48 +92,48 @@ func TestAccTCPCheckBasic(t *testing.T) {
 	})
 }
 
-func TestAccTCPCheckFull(t *testing.T) {
+func TestAccTCPMonitorFull(t *testing.T) {
 	accTestCase(t, []resource.TestStep{
 		{
-			Config: tcpCheck_full,
+			Config: tcpMonitor_full,
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
-					"checkly_tcp_check.test",
+					"checkly_tcp_monitor.test",
 					"degraded_response_time",
 					"4000",
 				),
 				resource.TestCheckResourceAttr(
-					"checkly_tcp_check.test",
+					"checkly_tcp_monitor.test",
 					"max_response_time",
 					"5000",
 				),
 				testCheckResourceAttrExpr(
-					"checkly_tcp_check.test",
+					"checkly_tcp_monitor.test",
 					`"locations.#"`,
 					"3",
 				),
 				testCheckResourceAttrExpr(
-					"checkly_tcp_check.test",
+					"checkly_tcp_monitor.test",
 					"request.*.assertion.#",
 					"2",
 				),
 				testCheckResourceAttrExpr(
-					"checkly_tcp_check.test",
+					"checkly_tcp_monitor.test",
 					"request.*.assertion.*.comparison",
 					"LESS_THAN",
 				),
 				testCheckResourceAttrExpr(
-					"checkly_tcp_check.test",
+					"checkly_tcp_monitor.test",
 					"request.*.assertion.*.comparison",
 					"CONTAINS",
 				),
 				testCheckResourceAttrExpr(
-					"checkly_tcp_check.test",
+					"checkly_tcp_monitor.test",
 					"request.*.assertion.*.target",
 					"2000",
 				),
 				testCheckResourceAttrExpr(
-					"checkly_tcp_check.test",
+					"checkly_tcp_monitor.test",
 					"request.*.assertion.*.target",
 					"Foo",
 				),
@@ -142,7 +142,7 @@ func TestAccTCPCheckFull(t *testing.T) {
 	})
 }
 
-var wantTCPCheck = checkly.TCPCheck{
+var wantTCPMonitor = checkly.TCPMonitor{
 	Name:                 "My test check",
 	Frequency:            1,
 	Activated:            true,
@@ -179,23 +179,23 @@ var wantTCPCheck = checkly.TCPCheck{
 	},
 }
 
-func TestEncodeDecodeTCPCheckResource(t *testing.T) {
-	res := resourceTCPCheck()
+func TestEncodeDecodeTCPMonitorResource(t *testing.T) {
+	res := resourceTCPMonitor()
 	data := res.TestResourceData()
-	wantTCPCheck.AlertChannelSubscriptions = []checkly.AlertChannelSubscription{}
-	resourceDataFromTCPMonitor(&wantTCPCheck, data)
+	wantTCPMonitor.AlertChannelSubscriptions = []checkly.AlertChannelSubscription{}
+	resourceDataFromTCPMonitor(&wantTCPMonitor, data)
 	got, err := tcpCheckFromResourceData(data)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !cmp.Equal(wantTCPCheck, got) {
-		t.Error(cmp.Diff(wantTCPCheck, got))
+	if !cmp.Equal(wantTCPMonitor, got) {
+		t.Error(cmp.Diff(wantTCPMonitor, got))
 	}
 }
 
-const tcpCheck_basic = `
-	resource "checkly_tcp_check" "test" {
-	  name                      = "TCP Check 1"
+const tcpMonitor_basic = `
+	resource "checkly_tcp_monitor" "test" {
+	  name                      = "TCP Monitor 1"
 	  frequency                 = 60
 	  activated                 = true
 	  muted                     = true
@@ -215,9 +215,9 @@ const tcpCheck_basic = `
 	}
 `
 
-const tcpCheck_full = `
-  resource "checkly_tcp_check" "test" {
-	name                   = "tcpCheck_full"
+const tcpMonitor_full = `
+  resource "checkly_tcp_monitor" "test" {
+	name                   = "tcpMonitor_full"
 	frequency              = 120
 	activated              = true
 	muted                  = true
