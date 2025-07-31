@@ -10,22 +10,6 @@ import (
 	checkly "github.com/checkly/checkly-go-sdk"
 )
 
-func validateOptions(options []int) func(val interface{}, key string) (warns []string, errs []error) {
-	return func(val interface{}, key string) (warns []string, errs []error) {
-		v := val.(int)
-		valid := false
-		for _, i := range options {
-			if v == i {
-				valid = true
-			}
-		}
-		if !valid {
-			errs = append(errs, fmt.Errorf("%q must be one of %v, got: %d", key, options, v))
-		}
-		return warns, errs
-	}
-}
-
 func resourceDashboard() *schema.Resource {
 	return &schema.Resource{
 		Create: resourceDashboardCreate,
@@ -73,50 +57,48 @@ func resourceDashboard() *schema.Resource {
 			},
 			"header": {
 				Type:        schema.TypeString,
-				Optional:    true,
-				Default:     "",
+				Required:    true,
 				Description: "A piece of text displayed at the top of your dashboard.",
 			},
+			"show_header": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     true,
+				Description: "Show or hide header and description on the dashboard. (Default `true`).",
+			},
 			"width": {
-				Type:     schema.TypeString,
-				Optional: true,
-				Default:  "FULL",
-				ValidateFunc: func(value interface{}, key string) (warns []string, errs []error) {
-					full := "FULL"
-					px960 := "960PX"
-					v := value.(string)
-					if v != full && v != px960 {
-						errs = append(errs, fmt.Errorf("%q must  %s and  %s, got: %s", key, full, px960, v))
-					}
-					return warns, errs
-				},
-				Description: "Determines whether to use the full screen or focus in the center. Possible values `FULL` and `960PX`.",
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "FULL",
+				ValidateFunc: validateOneOf([]string{"FULL", "960PX"}),
+				Description:  "Determines whether to use the full screen or focus in the center. Possible values are `FULL` and `960PX`. (Default `FULL`).",
 			},
 			"refresh_rate": {
 				Type:         schema.TypeInt,
 				Optional:     true,
 				Default:      60,
-				ValidateFunc: validateOptions([]int{60, 300, 600}),
-				Description:  "How often to refresh the dashboard in seconds. Possible values `60`, '300' and `600`.",
+				ValidateFunc: validateOneOf([]int{60, 300, 600}),
+				Description:  "How often to refresh the dashboard in seconds. Possible values `60`, '300' and `600`. (Default `60`).",
 			},
 			"paginate": {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Default:     true,
-				Description: "Determines if pagination is on or off.",
+				Description: "Determines if pagination is on or off. (Default `true`).",
 			},
 			"checks_per_page": {
-				Type:        schema.TypeInt,
-				Optional:    true,
-				Default:     15,
-				Description: "Determines how many checks to show per page.",
+				Type:         schema.TypeInt,
+				Optional:     true,
+				Default:      15,
+				ValidateFunc: validateBetween(1, 20),
+				Description:  "Determines how many checks to show per page. Possible values are between 1 and 20. (Default `15`).",
 			},
 			"pagination_rate": {
 				Type:         schema.TypeInt,
 				Optional:     true,
 				Default:      60,
-				ValidateFunc: validateOptions([]int{30, 60, 300}),
-				Description:  "How often to trigger pagination in seconds. Possible values `30`, `60` and `300`.",
+				ValidateFunc: validateOneOf([]int{30, 60, 300}),
+				Description:  "How often to trigger pagination in seconds. Possible values `30`, `60` and `300`. (Default `60`).",
 			},
 			"tags": {
 				Type:     schema.TypeSet,
@@ -130,13 +112,19 @@ func resourceDashboard() *schema.Resource {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Default:     false,
-				Description: "Show or hide the tags on the dashboard.",
+				Description: "Show or hide the tags on the dashboard. (Default `false`).",
 			},
 			"use_tags_and_operator": {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Default:     false,
-				Description: "Set when to use AND operator for fetching dashboard tags.",
+				Description: "Set when to use AND operator for fetching dashboard tags. (Default `false`).",
+			},
+			"enable_incidents": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Enable incident support for the dashboard. (Default `false`).",
 			},
 			"is_private": {
 				Type:        schema.TypeBool,
@@ -151,11 +139,45 @@ func resourceDashboard() *schema.Resource {
 				Sensitive:   true,
 				Description: "The access key when the dashboard is private.",
 			},
+			"expand_checks": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Expand or collapse checks on the dashboard. (Default `false`).",
+			},
+			"show_check_run_links": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Show or hide check run links on the dashboard. (Default `false`).",
+			},
+			"custom_css": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Default:     "",
+				Description: "Custom CSS to be applied to the dashboard.",
+			},
+			"show_p95": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     true,
+				Description: "Show or hide the P95 stats on the dashboard. (Default `true`).",
+			},
+			"show_p99": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     true,
+				Description: "Show or hide the P99 stats on the dashboard. (Default `true`).",
+			},
 		},
 	}
 }
 
 func dashboardFromResourceData(d *schema.ResourceData) (checkly.Dashboard, error) {
+	showHeader := d.Get("show_header").(bool)
+	showP95 := d.Get("show_p95").(bool)
+	showP99 := d.Get("show_p99").(bool)
+
 	a := checkly.Dashboard{
 		CustomDomain:       d.Get("custom_domain").(string),
 		CustomUrl:          d.Get("custom_url").(string),
@@ -164,6 +186,7 @@ func dashboardFromResourceData(d *schema.ResourceData) (checkly.Dashboard, error
 		Link:               d.Get("link").(string),
 		Description:        d.Get("description").(string),
 		Header:             d.Get("header").(string),
+		ShowHeader:         &showHeader,
 		RefreshRate:        d.Get("refresh_rate").(int),
 		Paginate:           d.Get("paginate").(bool),
 		ChecksPerPage:      d.Get("checks_per_page").(int),
@@ -171,11 +194,15 @@ func dashboardFromResourceData(d *schema.ResourceData) (checkly.Dashboard, error
 		HideTags:           d.Get("hide_tags").(bool),
 		Width:              d.Get("width").(string),
 		UseTagsAndOperator: d.Get("use_tags_and_operator").(bool),
+		EnableIncidents:    d.Get("enable_incidents").(bool),
 		IsPrivate:          d.Get("is_private").(bool),
 		Tags:               stringsFromSet(d.Get("tags").(*schema.Set)),
+		ExpandChecks:       d.Get("expand_checks").(bool),
+		ShowCheckRunLinks:  d.Get("show_check_run_links").(bool),
+		ShowP95:            &showP95,
+		ShowP99:            &showP99,
+		CustomCSS:          d.Get("custom_css").(string),
 	}
-
-	fmt.Printf("%v", a)
 
 	return a, nil
 }
@@ -188,6 +215,7 @@ func resourceDataFromDashboard(s *checkly.Dashboard, d *schema.ResourceData) err
 	d.Set("link", s.Link)
 	d.Set("description", s.Description)
 	d.Set("header", s.Header)
+	d.Set("show_header", s.ShowHeader)
 	d.Set("refresh_rate", s.RefreshRate)
 	d.Set("paginate", s.Paginate)
 	d.Set("checks_per_page", s.ChecksPerPage)
@@ -196,7 +224,13 @@ func resourceDataFromDashboard(s *checkly.Dashboard, d *schema.ResourceData) err
 	d.Set("tags", s.Tags)
 	d.Set("width", s.Width)
 	d.Set("use_tags_and_operator", s.UseTagsAndOperator)
+	d.Set("enable_incidents", s.EnableIncidents)
 	d.Set("is_private", s.IsPrivate)
+	d.Set("expand_checks", s.ExpandChecks)
+	d.Set("show_check_run_links", s.ShowCheckRunLinks)
+	d.Set("show_p95", s.ShowP95)
+	d.Set("show_p99", s.ShowP99)
+	d.Set("custom_css", s.CustomCSS)
 
 	// if the dashboard is private, we either do nothing
 	// or set the key to a new value if there is any
