@@ -35,24 +35,31 @@ resource "checkly_dashboard" "dashboard_1" {
 ### Required
 
 - `custom_url` (String) A subdomain name under 'checklyhq.com'. Needs to be unique across all users.
+- `header` (String) A piece of text displayed at the top of your dashboard.
 
 ### Optional
 
-- `checks_per_page` (Number) Determines how many checks to show per page.
+- `checks_per_page` (Number) Determines how many checks to show per page. Possible values are between 1 and 20. (Default `15`).
+- `custom_css` (String) Custom CSS to be applied to the dashboard.
 - `custom_domain` (String) A custom user domain, e.g. 'status.example.com'. See the docs on updating your DNS and SSL usage.
 - `description` (String) HTML <meta> description for the dashboard.
+- `enable_incidents` (Boolean) Enable incident support for the dashboard. (Default `false`).
+- `expand_checks` (Boolean) Expand or collapse checks on the dashboard. (Default `false`).
 - `favicon` (String) A URL pointing to an image file to use as browser favicon.
-- `header` (String) A piece of text displayed at the top of your dashboard.
-- `hide_tags` (Boolean) Show or hide the tags on the dashboard.
+- `hide_tags` (Boolean) Show or hide the tags on the dashboard. (Default `false`).
 - `is_private` (Boolean) Set your dashboard as private and generate key.
 - `link` (String) A link to for the dashboard logo.
 - `logo` (String) A URL pointing to an image file to use for the dashboard logo.
-- `paginate` (Boolean) Determines if pagination is on or off.
-- `pagination_rate` (Number) How often to trigger pagination in seconds. Possible values `30`, `60` and `300`.
-- `refresh_rate` (Number) How often to refresh the dashboard in seconds. Possible values `60`, '300' and `600`.
+- `paginate` (Boolean) Determines if pagination is on or off. (Default `true`).
+- `pagination_rate` (Number) How often to trigger pagination in seconds. Possible values `30`, `60` and `300`. (Default `60`).
+- `refresh_rate` (Number) How often to refresh the dashboard in seconds. Possible values `60`, '300' and `600`. (Default `60`).
+- `show_check_run_links` (Boolean) Show or hide check run links on the dashboard. (Default `false`).
+- `show_header` (Boolean) Show or hide header and description on the dashboard. (Default `true`).
+- `show_p95` (Boolean) Show or hide the P95 stats on the dashboard. (Default `true`).
+- `show_p99` (Boolean) Show or hide the P99 stats on the dashboard. (Default `true`).
 - `tags` (Set of String) A list of one or more tags that filter which checks to display on the dashboard.
-- `use_tags_and_operator` (Boolean) Set when to use AND operator for fetching dashboard tags.
-- `width` (String) Determines whether to use the full screen or focus in the center. Possible values `FULL` and `960PX`.
+- `use_tags_and_operator` (Boolean) Set when to use AND operator for fetching dashboard tags. (Default `false`).
+- `width` (String) Determines whether to use the full screen or focus in the center. Possible values are `FULL` and `960PX`. (Default `FULL`).
 
 ### Read-Only
 
