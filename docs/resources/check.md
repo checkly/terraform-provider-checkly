@@ -222,6 +222,7 @@ resource "checkly_check" "example_check" {
 - `ssl_check_domain` (String) A valid fully qualified domain name (FQDN) to check its SSL certificate.
 - `tags` (Set of String) A list of tags for organizing and filtering checks.
 - `teardown_snippet_id` (Number) An ID reference to a snippet to use in the teardown phase of an API check.
+- `trigger_incident` (Block Set, Max: 1) Set up HTTP basic authentication (username & password). (see [below for nested schema](#nestedblock--trigger_incident))
 - `use_global_alert_settings` (Boolean) When true, the account level alert settings will be used, not the alert setting defined on this check.
 
 ### Read-Only
@@ -364,3 +365,15 @@ Optional:
 - `max_duration_seconds` (Number) The total amount of time to continue retrying the check (maximum 600 seconds).
 - `max_retries` (Number) The maximum number of times to retry the check. Value must be between 1 and 10.
 - `same_region` (Boolean) Whether retries should be run in the same region as the initial check run.
+
+
+<a id="nestedblock--trigger_incident"></a>
+### Nested Schema for `trigger_incident`
+
+Required:
+
+- `description` (String) A detailed description of the incident.
+- `name` (String) The name of the incident.
+- `notify_subscribers` (Boolean) Whether to notify subscribers when the incident is triggered.
+- `service_id` (String) The status page service that this incident will be associated with.
+- `severity` (String) The severity level of the incident. Possible values are `MINOR`, `MEDIUM`, `MAJOR`, and `CRITICAL`.

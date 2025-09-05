@@ -347,6 +347,7 @@ func resourceURLMonitor() *schema.Resource {
 					},
 				},
 			},
+			"trigger_incident": triggerIncidentAttributeSchema,
 		},
 	}
 }
@@ -444,6 +445,7 @@ func resourceDataFromURLMonitor(c *checkly.URLMonitor, d *schema.ResourceData) e
 	d.Set("private_locations", c.PrivateLocations)
 	d.Set("alert_channel_subscription", c.AlertChannelSubscriptions)
 	d.Set("retry_strategy", setFromRetryStrategy(c.RetryStrategy))
+	d.Set("trigger_incident", setFromTriggerIncident(c.TriggerIncident))
 	d.SetId(d.Id())
 	return nil
 }
@@ -466,6 +468,7 @@ func urlMonitorFromResourceData(d *schema.ResourceData) (checkly.URLMonitor, err
 		GroupOrder:                d.Get("group_order").(int),
 		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(d.Get("alert_channel_subscription").([]interface{})),
 		RetryStrategy:             retryStrategyFromSet(d.Get("retry_strategy").(*schema.Set)),
+		TriggerIncident:           triggerIncidentFromSet(d.Get("trigger_incident").(*schema.Set)),
 	}
 
 	alertSettings := alertSettingsFromSet(d.Get("alert_settings").([]interface{}))

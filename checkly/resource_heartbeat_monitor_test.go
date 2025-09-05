@@ -190,3 +190,70 @@ func TestAccHeartbeatMonitorCreate(t *testing.T) {
 		},
 	})
 }
+
+func TestAccHeartbeatMonitorWithTriggerIncident(t *testing.T) {
+	heartbeatMonitorWithTriggerIncident := `
+resource "checkly_status_page_service" "test_heartbeat_service" {
+	name = "Heartbeat Test Service"
+}
+
+resource "checkly_heartbeat_monitor" "test_trigger_incident" {
+	name      = "Heartbeat Monitor with Trigger Incident"
+	activated = true
+
+	heartbeat {
+		period      = 10
+		period_unit = "minutes"
+		grace       = 5
+		grace_unit  = "minutes"
+	}
+
+	trigger_incident {
+		service_id         = checkly_status_page_service.test_heartbeat_service.id
+		severity           = "MEDIUM"
+		name               = "Heartbeat Monitor Failure"
+		description        = "The heartbeat monitor has not received a ping within the grace period"
+		notify_subscribers = true
+	}
+
+	use_global_alert_settings = true
+}
+`
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: heartbeatMonitorWithTriggerIncident,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_heartbeat_monitor.test_trigger_incident",
+					"name",
+					"Heartbeat Monitor with Trigger Incident",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_heartbeat_monitor.test_trigger_incident",
+					"activated",
+					"true",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_heartbeat_monitor.test_trigger_incident",
+					"trigger_incident.0.severity",
+					"MEDIUM",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_heartbeat_monitor.test_trigger_incident",
+					"trigger_incident.0.name",
+					"Heartbeat Monitor Failure",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_heartbeat_monitor.test_trigger_incident",
+					"trigger_incident.0.description",
+					"The heartbeat monitor has not received a ping within the grace period",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_heartbeat_monitor.test_trigger_incident",
+					"trigger_incident.0.notify_subscribers",
+					"true",
+				),
+			),
+		},
+	})
+}

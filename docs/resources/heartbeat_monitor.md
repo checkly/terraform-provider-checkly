@@ -41,6 +41,7 @@ resource "checkly_heartbeat_monitor" "example-heartbeat-monitor" {
 - `alert_settings` (Block List, Max: 1) (see [below for nested schema](#nestedblock--alert_settings))
 - `muted` (Boolean) Determines if any notifications will be sent out when a check fails/degrades/recovers.
 - `tags` (Set of String) A list of tags for organizing and filtering checks.
+- `trigger_incident` (Block Set, Max: 1) Set up HTTP basic authentication (username & password). (see [below for nested schema](#nestedblock--trigger_incident))
 - `use_global_alert_settings` (Boolean) When true, the account level alert settings will be used, not the alert setting defined on this check.
 
 ### Read-Only
@@ -124,3 +125,16 @@ Optional:
 Optional:
 
 - `minutes_failing_threshold` (Number) After how many minutes after a check starts failing an alert should be sent. Possible values are `5`, `10`, `15`, and `30`. (Default `5`).
+
+
+
+<a id="nestedblock--trigger_incident"></a>
+### Nested Schema for `trigger_incident`
+
+Required:
+
+- `description` (String) A detailed description of the incident.
+- `name` (String) The name of the incident.
+- `notify_subscribers` (Boolean) Whether to notify subscribers when the incident is triggered.
+- `service_id` (String) The status page service that this incident will be associated with.
+- `severity` (String) The severity level of the incident. Possible values are `MINOR`, `MEDIUM`, `MAJOR`, and `CRITICAL`.
