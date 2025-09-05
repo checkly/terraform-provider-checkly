@@ -152,6 +152,83 @@ func TestAccURLMonitorFull(t *testing.T) {
 	})
 }
 
+func TestAccURLMonitorWithTriggerIncident(t *testing.T) {
+	urlMonitorWithTriggerIncident := `
+resource "checkly_status_page_service" "test_url_service" {
+	name = "URL Test Service"
+}
+
+resource "checkly_url_monitor" "test_trigger_incident" {
+	name          = "URL Monitor with Trigger Incident"
+	activated     = true
+	frequency     = 30
+	locations     = ["eu-west-2", "us-east-1"]
+
+	request {
+		url = "https://status.example.com/health"
+		follow_redirects = false
+		assertion {
+			source     = "STATUS_CODE"
+			comparison = "EQUALS"
+			target     = "200"
+		}
+	}
+
+	trigger_incident {
+		service_id         = checkly_status_page_service.test_url_service.id
+		severity           = "CRITICAL"
+		name               = "URL Monitor Service Down"
+		description        = "The URL monitor has detected that the service is unreachable"
+		notify_subscribers = true
+	}
+
+	use_global_alert_settings = true
+}
+`
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: urlMonitorWithTriggerIncident,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_url_monitor.test_trigger_incident",
+					"name",
+					"URL Monitor with Trigger Incident",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_url_monitor.test_trigger_incident",
+					"activated",
+					"true",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_url_monitor.test_trigger_incident",
+					"frequency",
+					"30",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_url_monitor.test_trigger_incident",
+					"trigger_incident.0.severity",
+					"CRITICAL",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_url_monitor.test_trigger_incident",
+					"trigger_incident.0.name",
+					"URL Monitor Service Down",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_url_monitor.test_trigger_incident",
+					"trigger_incident.0.description",
+					"The URL monitor has detected that the service is unreachable",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_url_monitor.test_trigger_incident",
+					"trigger_incident.0.notify_subscribers",
+					"true",
+				),
+			),
+		},
+	})
+}
+
 var wantURLMonitor = checkly.URLMonitor{
 	Name:                 "My test check",
 	Frequency:            1,

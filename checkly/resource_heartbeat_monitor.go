@@ -250,6 +250,7 @@ func resourceHeartbeatMonitor() *schema.Resource {
 					},
 				},
 			},
+			"trigger_incident": triggerIncidentAttributeSchema,
 		},
 	}
 }
@@ -324,6 +325,7 @@ func heartbeatMonitorFromResourceData(d *schema.ResourceData) (checkly.Heartbeat
 		AlertSettings:             alertSettingsFromSet(d.Get("alert_settings").([]interface{})),
 		UseGlobalAlertSettings:    d.Get("use_global_alert_settings").(bool),
 		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(d.Get("alert_channel_subscription").([]interface{})),
+		TriggerIncident:           triggerIncidentFromSet(d.Get("trigger_incident").(*schema.Set)),
 	}
 
 	// this will prevent subsequent apply from causing a tf config change in browser checks
@@ -398,6 +400,7 @@ func resourceDataFromHeartbeatMonitor(c *checkly.HeartbeatMonitor, d *schema.Res
 	}
 
 	d.Set("alert_channel_subscription", c.AlertChannelSubscriptions)
+	d.Set("trigger_incident", setFromTriggerIncident(c.TriggerIncident))
 	d.SetId(d.Id())
 
 	return nil

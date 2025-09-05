@@ -438,6 +438,152 @@ func TestAccApiCheckMore(t *testing.T) {
 	})
 }
 
+func TestAccApiCheckWithTriggerIncident(t *testing.T) {
+	apiCheckWithTriggerIncident := `
+resource "checkly_status_page_service" "test_service" {
+	name = "API Test Service"
+}
+
+resource "checkly_check" "test_trigger_incident" {
+	name         = "API Check with Trigger Incident"
+	type         = "API"
+	activated    = true
+	frequency    = 10
+	locations    = ["us-east-1"]
+
+	trigger_incident {
+		service_id         = checkly_status_page_service.test_service.id
+		severity           = "MAJOR"
+		name               = "API Check Failure Incident"
+		description        = "The API health check has failed"
+		notify_subscribers = true
+	}
+
+	request {
+		url    = "https://api.example.com/health"
+		method = "GET"
+		assertion {
+			source     = "STATUS_CODE"
+			comparison = "EQUALS"
+			target     = "200"
+		}
+	}
+
+	use_global_alert_settings = true
+}
+`
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: apiCheckWithTriggerIncident,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check.test_trigger_incident",
+					"name",
+					"API Check with Trigger Incident",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test_trigger_incident",
+					"type",
+					"API",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test_trigger_incident",
+					"trigger_incident.0.severity",
+					"MAJOR",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test_trigger_incident",
+					"trigger_incident.0.name",
+					"API Check Failure Incident",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test_trigger_incident",
+					"trigger_incident.0.description",
+					"The API health check has failed",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test_trigger_incident",
+					"trigger_incident.0.notify_subscribers",
+					"true",
+				),
+			),
+		},
+	})
+}
+
+func TestAccBrowserCheckWithTriggerIncident(t *testing.T) {
+	browserCheckWithTriggerIncident := `
+resource "checkly_status_page_service" "test_browser_service" {
+	name = "Browser Test Service"
+}
+
+resource "checkly_check" "test_browser_trigger" {
+	name         = "Browser Check with Trigger Incident"
+	type         = "BROWSER"
+	activated    = true
+	frequency    = 15
+	locations    = ["eu-west-1"]
+
+	trigger_incident {
+		service_id         = checkly_status_page_service.test_browser_service.id
+		severity           = "CRITICAL"
+		name               = "Browser Check Critical Failure"
+		description        = "The browser check has detected a critical failure"
+		notify_subscribers = false
+	}
+
+	script = <<EOT
+const { chromium } = require('playwright');
+(async () => {
+	const browser = await chromium.launch();
+	const page = await browser.newPage();
+	await page.goto('https://example.com');
+	await browser.close();
+})();
+EOT
+
+	use_global_alert_settings = true
+}
+`
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: browserCheckWithTriggerIncident,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check.test_browser_trigger",
+					"name",
+					"Browser Check with Trigger Incident",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test_browser_trigger",
+					"type",
+					"BROWSER",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test_browser_trigger",
+					"trigger_incident.0.severity",
+					"CRITICAL",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test_browser_trigger",
+					"trigger_incident.0.name",
+					"Browser Check Critical Failure",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test_browser_trigger",
+					"trigger_incident.0.description",
+					"The browser check has detected a critical failure",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test_browser_trigger",
+					"trigger_incident.0.notify_subscribers",
+					"false",
+				),
+			),
+		},
+	})
+}
+
 var wantCheck = checkly.Check{
 	Name:                 "My test check",
 	Type:                 checkly.TypeAPI,

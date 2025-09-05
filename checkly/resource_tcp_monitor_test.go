@@ -142,6 +142,83 @@ func TestAccTCPMonitorFull(t *testing.T) {
 	})
 }
 
+func TestAccTCPMonitorWithTriggerIncident(t *testing.T) {
+	tcpMonitorWithTriggerIncident := `
+resource "checkly_status_page_service" "test_tcp_service" {
+	name = "TCP Test Service"
+}
+
+resource "checkly_tcp_monitor" "test_trigger_incident" {
+	name          = "TCP Monitor with Trigger Incident"
+	activated     = true
+	frequency     = 60
+	locations     = ["us-west-1", "ap-south-1"]
+
+	request {
+		hostname = "example.com"
+		port     = 443
+		assertion {
+			source     = "RESPONSE_TIME"
+			comparison = "LESS_THAN"
+			target     = "3000"
+		}
+	}
+
+	trigger_incident {
+		service_id         = checkly_status_page_service.test_tcp_service.id
+		severity           = "MINOR"
+		name               = "TCP Monitor Connection Issue"
+		description        = "The TCP monitor has detected connectivity issues"
+		notify_subscribers = false
+	}
+
+	use_global_alert_settings = true
+}
+`
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: tcpMonitorWithTriggerIncident,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test_trigger_incident",
+					"name",
+					"TCP Monitor with Trigger Incident",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test_trigger_incident",
+					"activated",
+					"true",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test_trigger_incident",
+					"frequency",
+					"60",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test_trigger_incident",
+					"trigger_incident.0.severity",
+					"MINOR",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test_trigger_incident",
+					"trigger_incident.0.name",
+					"TCP Monitor Connection Issue",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test_trigger_incident",
+					"trigger_incident.0.description",
+					"The TCP monitor has detected connectivity issues",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test_trigger_incident",
+					"trigger_incident.0.notify_subscribers",
+					"false",
+				),
+			),
+		},
+	})
+}
+
 var wantTCPMonitor = checkly.TCPMonitor{
 	Name:                 "My test check",
 	Frequency:            1,
