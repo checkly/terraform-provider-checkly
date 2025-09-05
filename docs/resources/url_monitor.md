@@ -61,7 +61,7 @@ resource "checkly_url_monitor" "example-url-monitor" {
 - `run_parallel` (Boolean) Determines whether the monitor should run on all selected locations in parallel or round-robin. (Default `false`).
 - `should_fail` (Boolean) Allows to invert the behaviour of when the monitor is considered to fail. (Default `false`).
 - `tags` (Set of String) A list of tags for organizing and filtering checks and monitors.
-- `trigger_incident` (Block Set, Max: 1) Set up HTTP basic authentication (username & password). (see [below for nested schema](#nestedblock--trigger_incident))
+- `trigger_incident` (Block Set, Max: 1) Create and resolve an incident based on the alert configuration. Useful for status page automation. (see [below for nested schema](#nestedblock--trigger_incident))
 - `use_global_alert_settings` (Boolean) When true, the account level alert settings will be used, not the alert setting defined on this monitor. (Default `true`).
 
 ### Read-Only

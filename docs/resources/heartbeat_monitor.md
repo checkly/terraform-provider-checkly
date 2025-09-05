@@ -41,7 +41,7 @@ resource "checkly_heartbeat_monitor" "example-heartbeat-monitor" {
 - `alert_settings` (Block List, Max: 1) (see [below for nested schema](#nestedblock--alert_settings))
 - `muted` (Boolean) Determines if any notifications will be sent out when a check fails/degrades/recovers.
 - `tags` (Set of String) A list of tags for organizing and filtering checks.
-- `trigger_incident` (Block Set, Max: 1) Set up HTTP basic authentication (username & password). (see [below for nested schema](#nestedblock--trigger_incident))
+- `trigger_incident` (Block Set, Max: 1) Create and resolve an incident based on the alert configuration. Useful for status page automation. (see [below for nested schema](#nestedblock--trigger_incident))
 - `use_global_alert_settings` (Boolean) When true, the account level alert settings will be used, not the alert setting defined on this check.
 
 ### Read-Only
