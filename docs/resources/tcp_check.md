@@ -121,7 +121,7 @@ resource "checkly_tcp_check" "example-tcp-check-2" {
 - `runtime_id` (String) The ID of the runtime to use for this check.
 - `should_fail` (Boolean) Allows to invert the behaviour of when a check is considered to fail.
 - `tags` (Set of String) A list of tags for organizing and filtering checks.
-- `trigger_incident` (Block Set, Max: 1) Set up HTTP basic authentication (username & password). (see [below for nested schema](#nestedblock--trigger_incident))
+- `trigger_incident` (Block Set, Max: 1) Create and resolve an incident based on the alert configuration. Useful for status page automation. (see [below for nested schema](#nestedblock--trigger_incident))
 - `use_global_alert_settings` (Boolean) When true, the account level alert settings will be used, not the alert setting defined on this check.
 
 ### Read-Only

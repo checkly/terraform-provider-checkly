@@ -222,7 +222,7 @@ resource "checkly_check" "example_check" {
 - `ssl_check_domain` (String) A valid fully qualified domain name (FQDN) to check its SSL certificate.
 - `tags` (Set of String) A list of tags for organizing and filtering checks.
 - `teardown_snippet_id` (Number) An ID reference to a snippet to use in the teardown phase of an API check.
-- `trigger_incident` (Block Set, Max: 1) Set up HTTP basic authentication (username & password). (see [below for nested schema](#nestedblock--trigger_incident))
+- `trigger_incident` (Block Set, Max: 1) Create and resolve an incident based on the alert configuration. Useful for status page automation. (see [below for nested schema](#nestedblock--trigger_incident))
 - `use_global_alert_settings` (Boolean) When true, the account level alert settings will be used, not the alert setting defined on this check.
 
 ### Read-Only

@@ -6,7 +6,7 @@ import (
 )
 
 var triggerIncidentAttributeSchema = &schema.Schema{
-	Description: "Set up HTTP basic authentication (username & password).",
+	Description: "Create and resolve an incident based on the alert configuration. Useful for status page automation.",
 	Type:        schema.TypeSet,
 	MaxItems:    1,
 	Optional:    true,
