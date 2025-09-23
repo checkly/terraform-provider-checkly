@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/customdiff"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
@@ -301,54 +302,12 @@ func resourceURLMonitor() *schema.Resource {
 				Type:        schema.TypeInt,
 				Optional:    true,
 			},
-			"retry_strategy": {
-				Description: "A strategy for retrying failed monitor runs.",
-				Type:        schema.TypeSet,
-				Optional:    true,
-				Computed:    true,
-				MaxItems:    1,
-				DefaultFunc: func() (interface{}, error) {
-					return []tfMap{}, nil
-				},
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"type": {
-							Description:  "Determines which type of retry strategy to use. Possible values are `FIXED`, `LINEAR`, and `EXPONENTIAL`.",
-							Type:         schema.TypeString,
-							Required:     true,
-							ValidateFunc: validateOneOf([]string{"FIXED", "LINEAR", "EXPONENTIAL"}),
-						},
-						"base_backoff_seconds": {
-							Description: "The number of seconds to wait before the first retry attempt. (Default `60`).",
-							Type:        schema.TypeInt,
-							Optional:    true,
-							Default:     60,
-						},
-						"max_retries": {
-							Description:  "The maximum number of times to retry the monitor. Value must be between `1` and `10`. (Default `2`).",
-							Type:         schema.TypeInt,
-							Optional:     true,
-							Default:      2,
-							ValidateFunc: validateBetween(1, 10),
-						},
-						"max_duration_seconds": {
-							Description:  "The total amount of time to continue retrying the monitor (maximum 600 seconds). (Default `600`).",
-							Type:         schema.TypeInt,
-							Optional:     true,
-							Default:      600,
-							ValidateFunc: validateBetween(0, 600),
-						},
-						"same_region": {
-							Description: "Whether retries should be run in the same region as the initial monitor run. (Default `true`).",
-							Type:        schema.TypeBool,
-							Optional:    true,
-							Default:     true,
-						},
-					},
-				},
-			},
-			"trigger_incident": triggerIncidentAttributeSchema,
+			retryStrategyAttributeName: retryStrategyAttributeSchema,
+			"trigger_incident":         triggerIncidentAttributeSchema,
 		},
+		CustomizeDiff: customdiff.Sequence(
+			RetryStrategyCustomizeDiff,
+		),
 	}
 }
 
@@ -444,7 +403,7 @@ func resourceDataFromURLMonitor(c *checkly.URLMonitor, d *schema.ResourceData) e
 	d.Set("group_order", c.GroupOrder)
 	d.Set("private_locations", c.PrivateLocations)
 	d.Set("alert_channel_subscription", c.AlertChannelSubscriptions)
-	d.Set("retry_strategy", setFromRetryStrategy(c.RetryStrategy))
+	d.Set(retryStrategyAttributeName, listFromRetryStrategy(c.RetryStrategy))
 	d.Set("trigger_incident", setFromTriggerIncident(c.TriggerIncident))
 	d.SetId(d.Id())
 	return nil
@@ -467,7 +426,7 @@ func urlMonitorFromResourceData(d *schema.ResourceData) (checkly.URLMonitor, err
 		GroupID:                   int64(d.Get("group_id").(int)),
 		GroupOrder:                d.Get("group_order").(int),
 		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(d.Get("alert_channel_subscription").([]interface{})),
-		RetryStrategy:             retryStrategyFromSet(d.Get("retry_strategy").(*schema.Set)),
+		RetryStrategy:             retryStrategyFromList(d.Get(retryStrategyAttributeName).([]any)),
 		TriggerIncident:           triggerIncidentFromSet(d.Get("trigger_incident").(*schema.Set)),
 	}
 
