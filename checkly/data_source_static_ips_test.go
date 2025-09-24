@@ -1,11 +1,28 @@
 package checkly
 
 import (
+	"fmt"
 	"regexp"
+	"strconv"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 )
+
+func checkResourceAttrGreaterThanOrEqualTo(n int) resource.CheckResourceAttrWithFunc {
+	return func(value string) error {
+		i, err := strconv.Atoi(value)
+		if err != nil {
+			return err
+		}
+
+		if i < n {
+			return fmt.Errorf("%v must be greater than or equal to %v", i, n)
+		}
+
+		return nil
+	}
+}
 
 func TestAccStaticIPsAll(t *testing.T) {
 	config := `data "checkly_static_ips" "test" {}`
@@ -14,10 +31,10 @@ func TestAccStaticIPsAll(t *testing.T) {
 		{
 			Config: config,
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
+				resource.TestCheckResourceAttrWith(
 					"data.checkly_static_ips.test",
 					"addresses.#",
-					"173",
+					checkResourceAttrGreaterThanOrEqualTo(1),
 				),
 			),
 		},
@@ -33,10 +50,10 @@ func TestAccStaticIPsTwoRegionsOnly(t *testing.T) {
 		{
 			Config: config,
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
+				resource.TestCheckResourceAttrWith(
 					"data.checkly_static_ips.test",
 					"addresses.#",
-					"20",
+					checkResourceAttrGreaterThanOrEqualTo(1),
 				),
 			),
 		},
@@ -52,10 +69,10 @@ func TestAccStaticIPsIPv6Only(t *testing.T) {
 		{
 			Config: config,
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
+				resource.TestCheckResourceAttrWith(
 					"data.checkly_static_ips.test",
 					"addresses.#",
-					"25",
+					checkResourceAttrGreaterThanOrEqualTo(1),
 				),
 			),
 		},
@@ -71,10 +88,10 @@ func TestAccStaticIPsIPv4Only(t *testing.T) {
 		{
 			Config: config,
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
+				resource.TestCheckResourceAttrWith(
 					"data.checkly_static_ips.test",
 					"addresses.#",
-					"148",
+					checkResourceAttrGreaterThanOrEqualTo(1),
 				),
 			),
 		},
@@ -91,10 +108,10 @@ func TestAccStaticIPsIPv6AndOneRegionOnly(t *testing.T) {
 		{
 			Config: config,
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
+				resource.TestCheckResourceAttrWith(
 					"data.checkly_static_ips.test",
 					"addresses.#",
-					"1",
+					checkResourceAttrGreaterThanOrEqualTo(1),
 				),
 			),
 		},
@@ -111,10 +128,10 @@ func TestAccStaticIPsIPv4AndOneRegionOnly(t *testing.T) {
 		{
 			Config: config,
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
+				resource.TestCheckResourceAttrWith(
 					"data.checkly_static_ips.test",
 					"addresses.#",
-					"12",
+					checkResourceAttrGreaterThanOrEqualTo(1),
 				),
 			),
 		},

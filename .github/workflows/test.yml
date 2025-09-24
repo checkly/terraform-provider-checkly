@@ -22,7 +22,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: '1.22'
+        go-version: '1.24'
       id: go
     - name: Check out code into the Go module directory
       uses: actions/checkout@v3
@@ -39,7 +39,7 @@ jobs:
     steps:
       - uses: actions/setup-go@v4
         with:
-          go-version: '1.22'
+          go-version: '1.24'
       - uses: actions/checkout@v3
       - run: go generate ./...
       - name: git diff
@@ -70,7 +70,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: '1.22'
+        go-version: '1.24'
       id: go
 
     - uses: hashicorp/setup-terraform@v2
