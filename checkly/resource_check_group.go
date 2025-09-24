@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/customdiff"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	checkly "github.com/checkly/checkly-go-sdk"
@@ -369,6 +370,9 @@ func resourceCheckGroup() *schema.Resource {
 			},
 			retryStrategyAttributeName: retryStrategyAttributeSchema,
 		},
+		CustomizeDiff: customdiff.Sequence(
+			RetryStrategyCustomizeDiff,
+		),
 	}
 }
 

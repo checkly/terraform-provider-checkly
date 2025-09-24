@@ -667,6 +667,360 @@ func TestEncodeDecodeResource(t *testing.T) {
 	}
 }
 
+func TestAccCheckWithSingleRetry(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_check" "test" {
+					name      = "test-single-retry"
+					type      = "API"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						method = "GET"
+						url    = "https://api.checklyhq.com/public-stats"
+					}
+					retry_strategy {
+						type                 = "SINGLE_RETRY"
+						base_backoff_seconds = 30
+						same_region          = true
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check.test",
+					"retry_strategy.0.type",
+					"SINGLE_RETRY",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test",
+					"retry_strategy.0.base_backoff_seconds",
+					"30",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test",
+					"retry_strategy.0.max_retries",
+					"0",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test",
+					"retry_strategy.0.max_duration_seconds",
+					"0",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test",
+					"retry_strategy.0.same_region",
+					"true",
+				),
+			),
+		},
+	})
+}
+
+func TestAccCheckWithNoRetries(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_check" "test" {
+					name      = "test-no-retries"
+					type      = "API"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						method = "GET"
+						url    = "https://api.checklyhq.com/public-stats"
+					}
+					retry_strategy {
+						type = "NO_RETRIES"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check.test",
+					"retry_strategy.0.type",
+					"NO_RETRIES",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test",
+					"retry_strategy.0.base_backoff_seconds",
+					"0",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test",
+					"retry_strategy.0.max_retries",
+					"0",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test",
+					"retry_strategy.0.max_duration_seconds",
+					"0",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test",
+					"retry_strategy.0.same_region",
+					"false",
+				),
+			),
+		},
+	})
+}
+
+func TestAccCheckWithDefaultNoRetries(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_check" "test" {
+					name      = "test-no-retries"
+					type      = "API"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						method = "GET"
+						url    = "https://api.checklyhq.com/public-stats"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check.test",
+					"retry_strategy.0.type",
+					"NO_RETRIES",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test",
+					"retry_strategy.0.base_backoff_seconds",
+					"0",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test",
+					"retry_strategy.0.max_retries",
+					"0",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test",
+					"retry_strategy.0.max_duration_seconds",
+					"0",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test",
+					"retry_strategy.0.same_region",
+					"false",
+				),
+			),
+		},
+	})
+}
+
+func TestAccCheckWithFixedRetry(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_check" "test" {
+					name      = "test-fixed-retry"
+					type      = "API"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						method = "GET"
+						url    = "https://api.checklyhq.com/public-stats"
+					}
+					retry_strategy {
+						type                 = "FIXED"
+						base_backoff_seconds = 30
+						max_retries          = 3
+						max_duration_seconds = 300
+						same_region          = false
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check.test",
+					"retry_strategy.0.type",
+					"FIXED",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test",
+					"retry_strategy.0.base_backoff_seconds",
+					"30",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test",
+					"retry_strategy.0.max_retries",
+					"3",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test",
+					"retry_strategy.0.max_duration_seconds",
+					"300",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test",
+					"retry_strategy.0.same_region",
+					"false",
+				),
+			),
+		},
+	})
+}
+
+func TestAccCheckWithExponentialRetry(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_check" "test" {
+					name      = "test-exponential-retry"
+					type      = "BROWSER"
+					activated = true
+					frequency = 720
+					locations = ["eu-central-1"]
+					script    = "console.log('test')"
+					retry_strategy {
+						type                 = "EXPONENTIAL"
+						base_backoff_seconds = 60
+						max_retries          = 5
+						max_duration_seconds = 600
+						same_region          = true
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check.test",
+					"retry_strategy.0.type",
+					"EXPONENTIAL",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test",
+					"retry_strategy.0.base_backoff_seconds",
+					"60",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test",
+					"retry_strategy.0.max_retries",
+					"5",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test",
+					"retry_strategy.0.max_duration_seconds",
+					"600",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test",
+					"retry_strategy.0.same_region",
+					"true",
+				),
+			),
+		},
+	})
+}
+
+func TestAccCheckWithLinearRetry(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_check" "test" {
+					name       = "test-linear-retry"
+					type       = "MULTI_STEP"
+					activated  = true
+					frequency  = 720
+					locations  = ["eu-central-1"]
+					runtime_id = "2023.09"
+					script     = "console.log('test')"
+					retry_strategy {
+						type                 = "LINEAR"
+						base_backoff_seconds = 45
+						max_retries          = 4
+						max_duration_seconds = 450
+						same_region          = false
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check.test",
+					"retry_strategy.0.type",
+					"LINEAR",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test",
+					"retry_strategy.0.base_backoff_seconds",
+					"45",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test",
+					"retry_strategy.0.max_retries",
+					"4",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test",
+					"retry_strategy.0.max_duration_seconds",
+					"450",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test",
+					"retry_strategy.0.same_region",
+					"false",
+				),
+			),
+		},
+	})
+}
+
+func TestAccCheckRetryStrategyRemoval(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_check" "test" {
+					name       = "test-linear-retry"
+					type       = "MULTI_STEP"
+					activated  = true
+					frequency  = 720
+					locations  = ["eu-central-1"]
+					runtime_id = "2023.09"
+					script     = "console.log('test')"
+					retry_strategy {
+						type = "LINEAR"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check.test",
+					"retry_strategy.0.type",
+					"LINEAR",
+				),
+			),
+		},
+		{
+			Config: `
+				resource "checkly_check" "test" {
+					name       = "test-linear-retry"
+					type       = "MULTI_STEP"
+					activated  = true
+					frequency  = 720
+					locations  = ["eu-central-1"]
+					runtime_id = "2023.09"
+					script     = "console.log('test')"
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check.test",
+					"retry_strategy.0.type",
+					"NO_RETRIES",
+				),
+			),
+		},
+	})
+}
+
 const browserCheck_basic = `
 	resource "checkly_check" "test" {
 		name                      = "Browser Check"

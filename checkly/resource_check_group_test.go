@@ -425,3 +425,326 @@ const testCheckGroup_full = `
 	local_teardown_script = "teardown-test"
   }
 `
+
+func TestAccCheckGroupWithSingleRetry(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_check_group" "test" {
+					name        = "test-single-retry"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+					retry_strategy {
+						type                 = "SINGLE_RETRY"
+						base_backoff_seconds = 30
+						same_region          = true
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.type",
+					"SINGLE_RETRY",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.base_backoff_seconds",
+					"30",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.max_retries",
+					"0",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.max_duration_seconds",
+					"0",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.same_region",
+					"true",
+				),
+			),
+		},
+	})
+}
+
+func TestAccCheckGroupWithNoRetries(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_check_group" "test" {
+					name        = "test-no-retries"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+					retry_strategy {
+						type = "NO_RETRIES"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.type",
+					"NO_RETRIES",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.base_backoff_seconds",
+					"0",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.max_retries",
+					"0",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.max_duration_seconds",
+					"0",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.same_region",
+					"false",
+				),
+			),
+		},
+	})
+}
+
+func TestAccCheckGroupWithDefaultNoRetries(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_check_group" "test" {
+					name        = "test-no-retries"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.type",
+					"NO_RETRIES",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.base_backoff_seconds",
+					"0",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.max_retries",
+					"0",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.max_duration_seconds",
+					"0",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.same_region",
+					"false",
+				),
+			),
+		},
+	})
+}
+
+func TestAccCheckGroupWithFixedRetry(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_check_group" "test" {
+					name        = "test-fixed-retry"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+					retry_strategy {
+						type                 = "FIXED"
+						base_backoff_seconds = 30
+						max_retries          = 3
+						max_duration_seconds = 300
+						same_region          = false
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.type",
+					"FIXED",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.base_backoff_seconds",
+					"30",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.max_retries",
+					"3",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.max_duration_seconds",
+					"300",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.same_region",
+					"false",
+				),
+			),
+		},
+	})
+}
+
+func TestAccCheckGroupWithExponentialRetry(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_check_group" "test" {
+					name        = "test-exponential-retry"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+					retry_strategy {
+						type                 = "EXPONENTIAL"
+						base_backoff_seconds = 60
+						max_retries          = 5
+						max_duration_seconds = 600
+						same_region          = true
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.type",
+					"EXPONENTIAL",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.base_backoff_seconds",
+					"60",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.max_retries",
+					"5",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.max_duration_seconds",
+					"600",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.same_region",
+					"true",
+				),
+			),
+		},
+	})
+}
+
+func TestAccCheckGroupWithLinearRetry(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_check_group" "test" {
+					name        = "test-linear-retry"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+					retry_strategy {
+						type                 = "LINEAR"
+						base_backoff_seconds = 45
+						max_retries          = 4
+						max_duration_seconds = 450
+						same_region          = false
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.type",
+					"LINEAR",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.base_backoff_seconds",
+					"45",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.max_retries",
+					"4",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.max_duration_seconds",
+					"450",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.same_region",
+					"false",
+				),
+			),
+		},
+	})
+}
+
+func TestAccCheckGroupRetryStrategyRemoval(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_check_group" "test" {
+					name        = "test-linear-retry"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+					retry_strategy {
+						type = "LINEAR"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.type",
+					"LINEAR",
+				),
+			),
+		},
+		{
+			Config: `
+				resource "checkly_check_group" "test" {
+					name        = "test-linear-retry"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.type",
+					"NO_RETRIES",
+				),
+			),
+		},
+	})
+}
