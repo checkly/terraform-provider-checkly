@@ -143,9 +143,10 @@ func TestAccBrowserCheckBasic(t *testing.T) {
 					"tags.*",
 					"e2e",
 				),
-				resource.TestCheckNoResourceAttr(
+				resource.TestCheckResourceAttr(
 					"checkly_check.test",
-					"request",
+					"request.#",
+					"0",
 				),
 			),
 		},
@@ -305,9 +306,10 @@ func TestAccMultiStepCheckBasic(t *testing.T) {
 					"tags.*",
 					"e2e",
 				),
-				resource.TestCheckNoResourceAttr(
+				resource.TestCheckResourceAttr(
 					"checkly_check.test",
-					"request",
+					"request.#",
+					"0",
 				),
 			),
 		},
