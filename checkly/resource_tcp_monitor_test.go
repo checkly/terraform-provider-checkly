@@ -338,3 +338,358 @@ const tcpMonitor_full = `
 	}
   }
 `
+
+func TestAccTCPMonitorWithSingleRetry(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_tcp_monitor" "test" {
+					name      = "test-single-retry"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						port     = 443
+						hostname = "checkly.com"
+					}
+					retry_strategy {
+						type                 = "SINGLE_RETRY"
+						base_backoff_seconds = 30
+						same_region          = true
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"retry_strategy.0.type",
+					"SINGLE_RETRY",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"retry_strategy.0.base_backoff_seconds",
+					"30",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"retry_strategy.0.max_retries",
+					"0",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"retry_strategy.0.max_duration_seconds",
+					"0",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"retry_strategy.0.same_region",
+					"true",
+				),
+			),
+		},
+	})
+}
+
+func TestAccTCPMonitorWithNoRetries(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_tcp_monitor" "test" {
+					name      = "test-no-retries"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						port     = 443
+						hostname = "checkly.com"
+					}
+					retry_strategy {
+						type = "NO_RETRIES"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"retry_strategy.0.type",
+					"NO_RETRIES",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"retry_strategy.0.base_backoff_seconds",
+					"0",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"retry_strategy.0.max_retries",
+					"0",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"retry_strategy.0.max_duration_seconds",
+					"0",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"retry_strategy.0.same_region",
+					"false",
+				),
+			),
+		},
+	})
+}
+
+func TestAccTCPMonitorWithDefaultNoRetries(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_tcp_monitor" "test" {
+					name      = "test-no-retries"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						port     = 443
+						hostname = "checkly.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"retry_strategy.0.type",
+					"NO_RETRIES",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"retry_strategy.0.base_backoff_seconds",
+					"0",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"retry_strategy.0.max_retries",
+					"0",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"retry_strategy.0.max_duration_seconds",
+					"0",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"retry_strategy.0.same_region",
+					"false",
+				),
+			),
+		},
+	})
+}
+
+func TestAccTCPMonitorWithFixedRetry(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_tcp_monitor" "test" {
+					name      = "test-fixed-retry"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						port     = 443
+						hostname = "checkly.com"
+					}
+					retry_strategy {
+						type                 = "FIXED"
+						base_backoff_seconds = 30
+						max_retries          = 3
+						max_duration_seconds = 300
+						same_region          = false
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"retry_strategy.0.type",
+					"FIXED",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"retry_strategy.0.base_backoff_seconds",
+					"30",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"retry_strategy.0.max_retries",
+					"3",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"retry_strategy.0.max_duration_seconds",
+					"300",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"retry_strategy.0.same_region",
+					"false",
+				),
+			),
+		},
+	})
+}
+
+func TestAccTCPMonitorWithExponentialRetry(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_tcp_monitor" "test" {
+					name      = "test-exponential-retry"
+					activated = true
+					frequency = 720
+					locations = ["eu-central-1"]
+					request {
+						port     = 443
+						hostname = "checkly.com"
+					}
+					retry_strategy {
+						type                 = "EXPONENTIAL"
+						base_backoff_seconds = 60
+						max_retries          = 5
+						max_duration_seconds = 600
+						same_region          = true
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"retry_strategy.0.type",
+					"EXPONENTIAL",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"retry_strategy.0.base_backoff_seconds",
+					"60",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"retry_strategy.0.max_retries",
+					"5",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"retry_strategy.0.max_duration_seconds",
+					"600",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"retry_strategy.0.same_region",
+					"true",
+				),
+			),
+		},
+	})
+}
+
+func TestAccTCPMonitorWithLinearRetry(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_tcp_monitor" "test" {
+					name      = "test-linear-retry"
+					activated = true
+					frequency = 720
+					locations = ["eu-central-1"]
+					request {
+						port     = 443
+						hostname = "checkly.com"
+					}
+					retry_strategy {
+						type                 = "LINEAR"
+						base_backoff_seconds = 45
+						max_retries          = 4
+						max_duration_seconds = 450
+						same_region          = false
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"retry_strategy.0.type",
+					"LINEAR",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"retry_strategy.0.base_backoff_seconds",
+					"45",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"retry_strategy.0.max_retries",
+					"4",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"retry_strategy.0.max_duration_seconds",
+					"450",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"retry_strategy.0.same_region",
+					"false",
+				),
+			),
+		},
+	})
+}
+
+func TestAccTCPMonitorRetryStrategyRemoval(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_tcp_monitor" "test" {
+					name      = "test-linear-retry"
+					activated = true
+					frequency = 720
+					locations = ["eu-central-1"]
+					request {
+						port     = 443
+						hostname = "checkly.com"
+					}
+					retry_strategy {
+						type = "LINEAR"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"retry_strategy.0.type",
+					"LINEAR",
+				),
+			),
+		},
+		{
+			Config: `
+				resource "checkly_tcp_monitor" "test" {
+					name      = "test-linear-retry"
+					activated = true
+					frequency = 720
+					locations = ["eu-central-1"]
+					request {
+						port     = 443
+						hostname = "checkly.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"retry_strategy.0.type",
+					"NO_RETRIES",
+				),
+			),
+		},
+	})
+}

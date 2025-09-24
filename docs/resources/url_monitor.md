@@ -57,7 +57,7 @@ resource "checkly_url_monitor" "example-url-monitor" {
 - `max_response_time` (Number) The response time in milliseconds where the monitor should be considered failing. Possible values are between `0` and `30000`. (Default `5000`).
 - `muted` (Boolean) Determines if any notifications will be sent out when the monitor fails and/or recovers. (Default `false`).
 - `private_locations` (Set of String) An array of one or more private locations slugs.
-- `retry_strategy` (Block Set, Max: 1) A strategy for retrying failed monitor runs. (see [below for nested schema](#nestedblock--retry_strategy))
+- `retry_strategy` (Block List, Max: 1) A strategy for retrying failed check/monitor runs. (see [below for nested schema](#nestedblock--retry_strategy))
 - `run_parallel` (Boolean) Determines whether the monitor should run on all selected locations in parallel or round-robin. (Default `false`).
 - `should_fail` (Boolean) Allows to invert the behaviour of when the monitor is considered to fail. (Default `false`).
 - `tags` (Set of String) A list of tags for organizing and filtering checks and monitors.
@@ -160,14 +160,14 @@ Optional:
 
 Required:
 
-- `type` (String) Determines which type of retry strategy to use. Possible values are `FIXED`, `LINEAR`, and `EXPONENTIAL`.
+- `type` (String) Determines which type of retry strategy to use. Possible values are `FIXED`, `LINEAR`, `EXPONENTIAL`, `SINGLE_RETRY`, and `NO_RETRIES`.
 
 Optional:
 
 - `base_backoff_seconds` (Number) The number of seconds to wait before the first retry attempt. (Default `60`).
-- `max_duration_seconds` (Number) The total amount of time to continue retrying the monitor (maximum 600 seconds). (Default `600`).
-- `max_retries` (Number) The maximum number of times to retry the monitor. Value must be between `1` and `10`. (Default `2`).
-- `same_region` (Boolean) Whether retries should be run in the same region as the initial monitor run. (Default `true`).
+- `max_duration_seconds` (Number) The total amount of time to continue retrying the check/monitor (maximum 600 seconds). Available when `type` is `FIXED`, `LINEAR`, or `EXPONENTIAL`. (Default `600`).
+- `max_retries` (Number) The maximum number of times to retry the check/monitor. Value must be between `1` and `10`. Available when `type` is `FIXED`, `LINEAR`, or `EXPONENTIAL`. (Default `2`).
+- `same_region` (Boolean) Whether retries should be run in the same region as the initial check/monitor run. (Default `true`).
 
 
 <a id="nestedblock--trigger_incident"></a>

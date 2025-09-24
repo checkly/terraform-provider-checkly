@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/customdiff"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
@@ -319,51 +320,12 @@ func resourceTCPMonitor() *schema.Resource {
 				Optional:    true,
 				Description: "The position of this check in a check group. It determines in what order checks are run when a group is triggered from the API or from CI/CD.",
 			},
-			"retry_strategy": {
-				Type:     schema.TypeSet,
-				Optional: true,
-				Computed: true,
-				MaxItems: 1,
-				DefaultFunc: func() (interface{}, error) {
-					return []tfMap{}, nil
-				},
-				Description: "A strategy for retrying failed check runs.",
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"type": {
-							Type:        schema.TypeString,
-							Required:    true,
-							Description: "Determines which type of retry strategy to use. Possible values are `FIXED`, `LINEAR`, or `EXPONENTIAL`.",
-						},
-						"base_backoff_seconds": {
-							Type:        schema.TypeInt,
-							Optional:    true,
-							Default:     60,
-							Description: "The number of seconds to wait before the first retry attempt.",
-						},
-						"max_retries": {
-							Type:        schema.TypeInt,
-							Optional:    true,
-							Default:     2,
-							Description: "The maximum number of times to retry the check. Value must be between 1 and 10.",
-						},
-						"max_duration_seconds": {
-							Type:        schema.TypeInt,
-							Optional:    true,
-							Default:     600,
-							Description: "The total amount of time to continue retrying the check (maximum 600 seconds).",
-						},
-						"same_region": {
-							Type:        schema.TypeBool,
-							Optional:    true,
-							Default:     true,
-							Description: "Whether retries should be run in the same region as the initial check run.",
-						},
-					},
-				},
-			},
-			"trigger_incident": triggerIncidentAttributeSchema,
+			retryStrategyAttributeName: retryStrategyAttributeSchema,
+			"trigger_incident":         triggerIncidentAttributeSchema,
 		},
+		CustomizeDiff: customdiff.Sequence(
+			RetryStrategyCustomizeDiff,
+		),
 	}
 }
 
@@ -463,7 +425,7 @@ func resourceDataFromTCPMonitor(c *checkly.TCPMonitor, d *schema.ResourceData) e
 	d.Set("group_order", c.GroupOrder)
 	d.Set("private_locations", c.PrivateLocations)
 	d.Set("alert_channel_subscription", c.AlertChannelSubscriptions)
-	d.Set("retry_strategy", setFromRetryStrategy(c.RetryStrategy))
+	d.Set(retryStrategyAttributeName, listFromRetryStrategy(c.RetryStrategy))
 	d.Set("trigger_incident", setFromTriggerIncident(c.TriggerIncident))
 	d.SetId(d.Id())
 	return nil
@@ -496,7 +458,7 @@ func tcpCheckFromResourceData(d *schema.ResourceData) (checkly.TCPMonitor, error
 		GroupID:                   int64(d.Get("group_id").(int)),
 		GroupOrder:                d.Get("group_order").(int),
 		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(d.Get("alert_channel_subscription").([]interface{})),
-		RetryStrategy:             retryStrategyFromSet(d.Get("retry_strategy").(*schema.Set)),
+		RetryStrategy:             retryStrategyFromList(d.Get(retryStrategyAttributeName).([]any)),
 		TriggerIncident:           triggerIncidentFromSet(d.Get("trigger_incident").(*schema.Set)),
 	}
 
