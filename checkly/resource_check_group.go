@@ -101,13 +101,7 @@ func resourceCheckGroup() *schema.Resource {
 					},
 				},
 			},
-			"double_check": {
-				Type:          schema.TypeBool,
-				Optional:      true,
-				Description:   "Setting this to `true` will trigger a retry when a check fails from the failing region and another, randomly selected region before marking the check as failed.",
-				Deprecated:    fmt.Sprintf("The property `double_check` is deprecated and will be removed in a future version. To enable retries for failed check runs, use the `%v` property instead.", retryStrategyAttributeName),
-				ConflictsWith: []string{retryStrategyAttributeName},
-			},
+			doubleCheckAttributeName: doubleCheckAttributeSchema,
 			"tags": {
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -446,7 +440,7 @@ func resourceDataFromCheckGroup(g *checkly.Group, d *schema.ResourceData) error 
 	d.Set("muted", g.Muted)
 	d.Set("run_parallel", g.RunParallel)
 	d.Set("locations", g.Locations)
-	d.Set("double_check", g.DoubleCheck)
+	d.Set(doubleCheckAttributeName, g.DoubleCheck)
 	d.Set("setup_snippet_id", g.SetupSnippetID)
 	d.Set("teardown_snippet_id", g.TearDownSnippetID)
 	d.Set("local_setup_script", g.LocalSetupScript)
@@ -500,7 +494,7 @@ func checkGroupFromResourceData(d *schema.ResourceData) (checkly.Group, error) {
 		Muted:                     d.Get("muted").(bool),
 		RunParallel:               d.Get("run_parallel").(bool),
 		Locations:                 stringsFromSet(d.Get("locations").(*schema.Set)),
-		DoubleCheck:               d.Get("double_check").(bool),
+		DoubleCheck:               d.Get(doubleCheckAttributeName).(bool),
 		Tags:                      stringsFromSet(d.Get("tags").(*schema.Set)),
 		SetupSnippetID:            int64(d.Get("setup_snippet_id").(int)),
 		TearDownSnippetID:         int64(d.Get("teardown_snippet_id").(int)),

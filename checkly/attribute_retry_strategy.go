@@ -113,6 +113,14 @@ func listFromRetryStrategy(rs *checkly.RetryStrategy) []tfMap {
 	}
 }
 
+var doubleCheckEquivalentRetryStrategy = checkly.RetryStrategy{
+	Type:               "FIXED",
+	MaxRetries:         1,
+	BaseBackoffSeconds: 0,
+	MaxDurationSeconds: 600,
+	SameRegion:         false,
+}
+
 // RetryStrategy is a seemingly simple yet deceivingly complex attribute.
 // Allowed values change depending on the retry strategy type. This
 // function is used to normalize the value so we don't get into a diff loop.
@@ -123,6 +131,16 @@ func RetryStrategyCustomizeDiff(_ context.Context, diff *schema.ResourceDiff, me
 	// whether the plan has a value for the attribute or not.
 	empty := diff.GetRawPlan().GetAttr(retryStrategyAttributeName).LengthInt() == 0
 	if empty {
+		// If this resource has double_check and it's set to true, then we
+		// need the change the default to the equivalent retry strategy to
+		// avoid diff loops.
+		doubleCheck := diff.GetRawPlan().Type().HasAttribute(doubleCheckAttributeName) &&
+			diff.GetRawPlan().GetAttr(doubleCheckAttributeName).True()
+
+		if doubleCheck {
+			return diff.SetNew(retryStrategyAttributeName, listFromRetryStrategy(&doubleCheckEquivalentRetryStrategy))
+		}
+
 		return diff.SetNew(retryStrategyAttributeName, listFromRetryStrategy(nil))
 	}
 

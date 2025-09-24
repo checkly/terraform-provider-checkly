@@ -157,13 +157,7 @@ func resourceCheck() *schema.Resource {
 					},
 				},
 			},
-			"double_check": {
-				Type:          schema.TypeBool,
-				Optional:      true,
-				Description:   "Setting this to `true` will trigger a retry when a check fails from the failing region and another, randomly selected region before marking the check as failed.",
-				Deprecated:    fmt.Sprintf("The property `double_check` is deprecated and will be removed in a future version. To enable retries for failed check runs, use the `%v` property instead.", retryStrategyAttributeName),
-				ConflictsWith: []string{retryStrategyAttributeName},
-			},
+			doubleCheckAttributeName: doubleCheckAttributeSchema,
 			"tags": {
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -599,7 +593,7 @@ func resourceDataFromCheck(c *checkly.Check, d *schema.ResourceData) error {
 	d.Set("script", c.Script)
 	d.Set("degraded_response_time", c.DegradedResponseTime)
 	d.Set("max_response_time", c.MaxResponseTime)
-	d.Set("double_check", c.DoubleCheck)
+	d.Set(doubleCheckAttributeName, c.DoubleCheck)
 	d.Set("setup_snippet_id", c.SetupSnippetID)
 	d.Set("teardown_snippet_id", c.TearDownSnippetID)
 	d.Set("local_setup_script", c.LocalSetupScript)
@@ -771,7 +765,7 @@ func checkFromResourceData(d *schema.ResourceData) (checkly.Check, error) {
 		Script:                    d.Get("script").(string),
 		DegradedResponseTime:      d.Get("degraded_response_time").(int),
 		MaxResponseTime:           d.Get("max_response_time").(int),
-		DoubleCheck:               d.Get("double_check").(bool),
+		DoubleCheck:               d.Get(doubleCheckAttributeName).(bool),
 		Tags:                      stringsFromSet(d.Get("tags").(*schema.Set)),
 		SSLCheck:                  d.Get("ssl_check").(bool),
 		SSLCheckDomain:            d.Get("ssl_check_domain").(string),
