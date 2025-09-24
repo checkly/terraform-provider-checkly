@@ -218,7 +218,16 @@ Optional:
 - `base_backoff_seconds` (Number) The number of seconds to wait before the first retry attempt. (Default `60`).
 - `max_duration_seconds` (Number) The total amount of time to continue retrying the check/monitor (maximum 600 seconds). Available when `type` is `FIXED`, `LINEAR`, or `EXPONENTIAL`. (Default `600`).
 - `max_retries` (Number) The maximum number of times to retry the check/monitor. Value must be between `1` and `10`. Available when `type` is `FIXED`, `LINEAR`, or `EXPONENTIAL`. (Default `2`).
+- `only_on` (Block List, Max: 1) Apply the retry strategy only if the defined conditions match. (see [below for nested schema](#nestedblock--retry_strategy--only_on))
 - `same_region` (Boolean) Whether retries should be run in the same region as the initial check/monitor run. (Default `true`).
+
+<a id="nestedblock--retry_strategy--only_on"></a>
+### Nested Schema for `retry_strategy.only_on`
+
+Optional:
+
+- `network_error` (Boolean) When `true`, retry only if the cause of the failure is a network error. (Default `false`).
+
 
 
 <a id="nestedblock--trigger_incident"></a>
