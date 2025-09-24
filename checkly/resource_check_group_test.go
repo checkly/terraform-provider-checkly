@@ -468,6 +468,65 @@ func TestAccCheckGroupWithSingleRetry(t *testing.T) {
 					"retry_strategy.0.same_region",
 					"true",
 				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.only_on.#",
+					"0",
+				),
+			),
+		},
+	})
+}
+
+func TestAccCheckGroupWithSingleRetryOnlyOnNetworkError(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_check_group" "test" {
+					name        = "test-single-retry"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+					retry_strategy {
+						type = "SINGLE_RETRY"
+
+						only_on {
+							network_error = true
+						}
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.only_on.#",
+					"1",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.only_on.0.network_error",
+					"true",
+				),
+			),
+		},
+		{
+			Config: `
+				resource "checkly_check_group" "test" {
+					name        = "test-single-retry"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+					retry_strategy {
+						type = "SINGLE_RETRY"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.only_on.#",
+					"0",
+				),
 			),
 		},
 	})
@@ -513,6 +572,40 @@ func TestAccCheckGroupWithNoRetries(t *testing.T) {
 					"retry_strategy.0.same_region",
 					"false",
 				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.only_on.#",
+					"0",
+				),
+			),
+		},
+	})
+}
+
+func TestAccCheckGroupWithNoRetriesOnlyOnNetworkError(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_check_group" "test" {
+					name        = "test-no-retries"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+					retry_strategy {
+						type = "NO_RETRIES"
+
+						only_on {
+							network_error = true
+						}
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.only_on.#",
+					"0",
+				),
 			),
 		},
 	})
@@ -554,6 +647,11 @@ func TestAccCheckGroupWithDefaultNoRetries(t *testing.T) {
 					"checkly_check_group.test",
 					"retry_strategy.0.same_region",
 					"false",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.only_on.#",
+					"0",
 				),
 			),
 		},
@@ -604,6 +702,65 @@ func TestAccCheckGroupWithFixedRetry(t *testing.T) {
 					"retry_strategy.0.same_region",
 					"false",
 				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.only_on.#",
+					"0",
+				),
+			),
+		},
+	})
+}
+
+func TestAccCheckGroupWithFixedRetryOnlyOnNetworkError(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_check_group" "test" {
+					name        = "test-fixed-retry"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+					retry_strategy {
+						type = "FIXED"
+
+						only_on {
+							network_error = true
+						}
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.only_on.#",
+					"1",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.only_on.0.network_error",
+					"true",
+				),
+			),
+		},
+		{
+			Config: `
+				resource "checkly_check_group" "test" {
+					name        = "test-fixed-retry"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+					retry_strategy {
+						type = "FIXED"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.only_on.#",
+					"0",
+				),
 			),
 		},
 	})
@@ -653,6 +810,65 @@ func TestAccCheckGroupWithExponentialRetry(t *testing.T) {
 					"retry_strategy.0.same_region",
 					"true",
 				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.only_on.#",
+					"0",
+				),
+			),
+		},
+	})
+}
+
+func TestAccCheckGroupWithExponentialRetryOnlyOnNetworkError(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_check_group" "test" {
+					name        = "test-exponential-retry"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+					retry_strategy {
+						type = "EXPONENTIAL"
+
+						only_on {
+							network_error = true
+						}
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.only_on.#",
+					"1",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.only_on.0.network_error",
+					"true",
+				),
+			),
+		},
+		{
+			Config: `
+				resource "checkly_check_group" "test" {
+					name        = "test-exponential-retry"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+					retry_strategy {
+						type = "EXPONENTIAL"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.only_on.#",
+					"0",
+				),
 			),
 		},
 	})
@@ -701,6 +917,65 @@ func TestAccCheckGroupWithLinearRetry(t *testing.T) {
 					"checkly_check_group.test",
 					"retry_strategy.0.same_region",
 					"false",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.only_on.#",
+					"0",
+				),
+			),
+		},
+	})
+}
+
+func TestAccCheckGroupWithLinearRetryOnlyOnNetworkError(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_check_group" "test" {
+					name        = "test-linear-retry"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+					retry_strategy {
+						type = "LINEAR"
+
+						only_on {
+							network_error = true
+						}
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.only_on.#",
+					"1",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.only_on.0.network_error",
+					"true",
+				),
+			),
+		},
+		{
+			Config: `
+				resource "checkly_check_group" "test" {
+					name        = "test-linear-retry"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+					retry_strategy {
+						type = "LINEAR"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"retry_strategy.0.only_on.#",
+					"0",
 				),
 			),
 		},

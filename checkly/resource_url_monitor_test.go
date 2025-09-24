@@ -397,6 +397,72 @@ func TestAccURLMonitorWithSingleRetry(t *testing.T) {
 					"retry_strategy.0.same_region",
 					"true",
 				),
+				resource.TestCheckResourceAttr(
+					"checkly_url_monitor.test",
+					"retry_strategy.0.only_on.#",
+					"0",
+				),
+			),
+		},
+	})
+
+}
+
+func TestAccURLMonitorWithSingleRetryOnlyOnNetworkError(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_url_monitor" "test" {
+					name      = "test-single-retry"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						url = "https://checkly.com"
+					}
+					retry_strategy {
+						type = "SINGLE_RETRY"
+
+						only_on {
+							network_error = true
+						}
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_url_monitor.test",
+					"retry_strategy.0.only_on.#",
+					"1",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_url_monitor.test",
+					"retry_strategy.0.only_on.0.network_error",
+					"true",
+				),
+			),
+		},
+		{
+			Config: `
+				resource "checkly_url_monitor" "test" {
+					name      = "test-single-retry"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						url = "https://checkly.com"
+					}
+					retry_strategy {
+						type = "SINGLE_RETRY"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_url_monitor.test",
+					"retry_strategy.0.only_on.#",
+					"0",
+				),
 			),
 		},
 	})
@@ -445,6 +511,43 @@ func TestAccURLMonitorWithNoRetries(t *testing.T) {
 					"retry_strategy.0.same_region",
 					"false",
 				),
+				resource.TestCheckResourceAttr(
+					"checkly_url_monitor.test",
+					"retry_strategy.0.only_on.#",
+					"0",
+				),
+			),
+		},
+	})
+}
+
+func TestAccURLMonitorWithNoRetriesOnlyOnNetworkError(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_url_monitor" "test" {
+					name      = "test-no-retries"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						url = "https://checkly.com"
+					}
+					retry_strategy {
+						type = "NO_RETRIES"
+
+						only_on {
+							network_error = true
+						}
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_url_monitor.test",
+					"retry_strategy.0.only_on.#",
+					"0",
+				),
 			),
 		},
 	})
@@ -489,6 +592,11 @@ func TestAccURLMonitorWithDefaultNoRetries(t *testing.T) {
 					"checkly_url_monitor.test",
 					"retry_strategy.0.same_region",
 					"false",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_url_monitor.test",
+					"retry_strategy.0.only_on.#",
+					"0",
 				),
 			),
 		},
@@ -542,6 +650,71 @@ func TestAccURLMonitorWithFixedRetry(t *testing.T) {
 					"retry_strategy.0.same_region",
 					"false",
 				),
+				resource.TestCheckResourceAttr(
+					"checkly_url_monitor.test",
+					"retry_strategy.0.only_on.#",
+					"0",
+				),
+			),
+		},
+	})
+}
+
+func TestAccURLMonitorWithFixedRetryOnlyOnNetworkError(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_url_monitor" "test" {
+					name      = "test-fixed-retry"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						url = "https://checkly.com"
+					}
+					retry_strategy {
+						type = "FIXED"
+
+						only_on {
+							network_error = true
+						}
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_url_monitor.test",
+					"retry_strategy.0.only_on.#",
+					"1",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_url_monitor.test",
+					"retry_strategy.0.only_on.0.network_error",
+					"true",
+				),
+			),
+		},
+		{
+			Config: `
+				resource "checkly_url_monitor" "test" {
+					name      = "test-fixed-retry"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						url = "https://checkly.com"
+					}
+					retry_strategy {
+						type = "FIXED"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_url_monitor.test",
+					"retry_strategy.0.only_on.#",
+					"0",
+				),
 			),
 		},
 	})
@@ -594,6 +767,71 @@ func TestAccURLMonitorWithExponentialRetry(t *testing.T) {
 					"retry_strategy.0.same_region",
 					"true",
 				),
+				resource.TestCheckResourceAttr(
+					"checkly_url_monitor.test",
+					"retry_strategy.0.only_on.#",
+					"0",
+				),
+			),
+		},
+	})
+}
+
+func TestAccURLMonitorWithExponentialRetryOnlyOnNetworkError(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_url_monitor" "test" {
+					name      = "test-exponential-retry"
+					activated = true
+					frequency = 720
+					locations = ["eu-central-1"]
+					request {
+						url = "https://checkly.com"
+					}
+					retry_strategy {
+						type = "EXPONENTIAL"
+
+						only_on {
+							network_error = true
+						}
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_url_monitor.test",
+					"retry_strategy.0.only_on.#",
+					"1",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_url_monitor.test",
+					"retry_strategy.0.only_on.0.network_error",
+					"true",
+				),
+			),
+		},
+		{
+			Config: `
+				resource "checkly_url_monitor" "test" {
+					name      = "test-exponential-retry"
+					activated = true
+					frequency = 720
+					locations = ["eu-central-1"]
+					request {
+						url = "https://checkly.com"
+					}
+					retry_strategy {
+						type = "EXPONENTIAL"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_url_monitor.test",
+					"retry_strategy.0.only_on.#",
+					"0",
+				),
 			),
 		},
 	})
@@ -645,6 +883,71 @@ func TestAccURLMonitorWithLinearRetry(t *testing.T) {
 					"checkly_url_monitor.test",
 					"retry_strategy.0.same_region",
 					"false",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_url_monitor.test",
+					"retry_strategy.0.only_on.#",
+					"0",
+				),
+			),
+		},
+	})
+}
+
+func TestAccURLMonitorWithLinearRetryOnlyOnNetworkError(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_url_monitor" "test" {
+					name      = "test-linear-retry"
+					activated = true
+					frequency = 720
+					locations = ["eu-central-1"]
+					request {
+						url = "https://checkly.com"
+					}
+					retry_strategy {
+						type = "LINEAR"
+
+						only_on {
+							network_error = true
+						}
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_url_monitor.test",
+					"retry_strategy.0.only_on.#",
+					"1",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_url_monitor.test",
+					"retry_strategy.0.only_on.0.network_error",
+					"true",
+				),
+			),
+		},
+		{
+			Config: `
+				resource "checkly_url_monitor" "test" {
+					name      = "test-linear-retry"
+					activated = true
+					frequency = 720
+					locations = ["eu-central-1"]
+					request {
+						url = "https://checkly.com"
+					}
+					retry_strategy {
+						type = "LINEAR"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_url_monitor.test",
+					"retry_strategy.0.only_on.#",
+					"0",
 				),
 			),
 		},

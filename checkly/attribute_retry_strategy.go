@@ -49,6 +49,22 @@ var retryStrategyAttributeSchema = &schema.Schema{
 				Optional:    true,
 				Default:     true,
 			},
+			"only_on": {
+				Description: "Apply the retry strategy only if the defined conditions match.",
+				Type:        schema.TypeList,
+				MaxItems:    1,
+				Optional:    true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"network_error": {
+							Description: "When `true`, retry only if the cause of the failure is a network error. (Default `false`).",
+							Type:        schema.TypeBool,
+							Optional:    true,
+							Default:     false,
+						},
+					},
+				},
+			},
 		},
 	},
 }
@@ -70,6 +86,7 @@ func retryStrategyFromList(s []any) *checkly.RetryStrategy {
 			Type:               res["type"].(string),
 			BaseBackoffSeconds: res["base_backoff_seconds"].(int),
 			SameRegion:         res["same_region"].(bool),
+			OnlyOn:             retryStrategyOnlyOnFromList(res["only_on"].([]any)),
 		}
 	default:
 		return &checkly.RetryStrategy{
@@ -78,6 +95,7 @@ func retryStrategyFromList(s []any) *checkly.RetryStrategy {
 			MaxRetries:         res["max_retries"].(int),
 			MaxDurationSeconds: res["max_duration_seconds"].(int),
 			SameRegion:         res["same_region"].(bool),
+			OnlyOn:             retryStrategyOnlyOnFromList(res["only_on"].([]any)),
 		}
 	}
 }
@@ -98,6 +116,7 @@ func listFromRetryStrategy(rs *checkly.RetryStrategy) []tfMap {
 				"type":                 rs.Type,
 				"base_backoff_seconds": rs.BaseBackoffSeconds,
 				"same_region":          rs.SameRegion,
+				"only_on":              listFromRetryStrategyOnlyOn(rs.OnlyOn),
 			},
 		}
 	default:
@@ -108,8 +127,36 @@ func listFromRetryStrategy(rs *checkly.RetryStrategy) []tfMap {
 				"max_retries":          rs.MaxRetries,
 				"max_duration_seconds": rs.MaxDurationSeconds,
 				"same_region":          rs.SameRegion,
+				"only_on":              listFromRetryStrategyOnlyOn(rs.OnlyOn),
 			},
 		}
+	}
+}
+
+func retryStrategyOnlyOnFromList(s []any) []string {
+	var conditions []string
+
+	for _, item := range s {
+		res := item.(tfMap)
+
+		if v, ok := res["network_error"].(bool); ok && v {
+			conditions = append(conditions, "NETWORK_ERROR")
+		}
+	}
+
+	return conditions
+}
+
+func listFromRetryStrategyOnlyOn(conditions []string) []tfMap {
+	switch {
+	case len(conditions) == 1 && conditions[0] == "NETWORK_ERROR":
+		return []tfMap{
+			{
+				"network_error": true,
+			},
+		}
+	default:
+		return []tfMap{}
 	}
 }
 
