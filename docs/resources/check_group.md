@@ -148,7 +148,7 @@ resource "checkly_check_group" "test_group1" {
 - `alert_channel_subscription` (Block List) (see [below for nested schema](#nestedblock--alert_channel_subscription))
 - `alert_settings` (Block List, Max: 1) (see [below for nested schema](#nestedblock--alert_settings))
 - `api_check_defaults` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--api_check_defaults))
-- `double_check` (Boolean, Deprecated) Setting this to `true` will trigger a retry when a check fails from the failing region and another, randomly selected region before marking the check as failed.
+- `double_check` (Boolean, Deprecated) Setting this to `true` will trigger a retry when a check fails from the failing region and another, randomly selected region before marking the check as failed. (Default `false`).
 - `environment_variable` (Block List) Key/value pairs for setting environment variables during check execution, add locked = true to keep value hidden, add secret = true to create a secret variable. These are only relevant for browser checks. Use global environment variables whenever possible. (see [below for nested schema](#nestedblock--environment_variable))
 - `environment_variables` (Map of String, Deprecated) Key/value pairs for setting environment variables during check execution. These are only relevant for browser checks. Use global environment variables whenever possible.
 - `local_setup_script` (String) A valid piece of Node.js code to run in the setup phase of an API check in this group.
