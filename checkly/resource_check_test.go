@@ -1503,3 +1503,173 @@ const apiCheck_withEmptyBasicAuth = `
 	}
   }
 `
+
+func TestAccCheckGroupAssignment(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_check_group" "test1" {
+					name        = "test-group-assignment"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+				}
+
+				resource "checkly_check_group" "test2" {
+					name        = "test-group-assignment"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+				}
+
+				resource "checkly_check" "test1" {
+					name      = "test-group-assignment"
+					type      = "API"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					group_id  = checkly_check_group.test1.id
+					request {
+						method = "GET"
+						url    = "https://welcome.checklyhq.com"
+					}
+				}
+
+				resource "checkly_check" "test2" {
+					name      = "test-group-assignment"
+					type      = "API"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						method = "GET"
+						url    = "https://welcome.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttrPair(
+					"checkly_check.test1",
+					"group_id",
+					"checkly_check_group.test1",
+					"id",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test2",
+					"group_id",
+					"0",
+				),
+			),
+		},
+		{
+			Config: `
+				resource "checkly_check_group" "test1" {
+					name        = "test-group-assignment"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+				}
+
+				resource "checkly_check_group" "test2" {
+					name        = "test-group-assignment"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+				}
+
+				resource "checkly_check" "test1" {
+					name      = "test-group-assignment"
+					type      = "API"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					group_id  = checkly_check_group.test2.id
+					request {
+						method = "GET"
+						url    = "https://welcome.checklyhq.com"
+					}
+				}
+
+				resource "checkly_check" "test2" {
+					name      = "test-group-assignment"
+					type      = "API"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					group_id  = checkly_check_group.test2.id
+					request {
+						method = "GET"
+						url    = "https://welcome.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttrPair(
+					"checkly_check.test1",
+					"group_id",
+					"checkly_check_group.test2",
+					"id",
+				),
+				resource.TestCheckResourceAttrPair(
+					"checkly_check.test2",
+					"group_id",
+					"checkly_check_group.test2",
+					"id",
+				),
+			),
+		},
+		{
+			Config: `
+				resource "checkly_check_group" "test1" {
+					name        = "test-group-assignment"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+				}
+
+				resource "checkly_check_group" "test2" {
+					name        = "test-group-assignment"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+				}
+
+				resource "checkly_check" "test1" {
+					name      = "test-group-assignment"
+					type      = "API"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						method = "GET"
+						url    = "https://welcome.checklyhq.com"
+					}
+				}
+
+				resource "checkly_check" "test2" {
+					name      = "test-group-assignment"
+					type      = "API"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						method = "GET"
+						url    = "https://welcome.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check.test1",
+					"group_id",
+					"0",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test2",
+					"group_id",
+					"0",
+				),
+			),
+		},
+	})
+}
