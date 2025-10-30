@@ -652,56 +652,6 @@ func setFromEnvVars(evs []checkly.EnvironmentVariable) tfMap {
 	return s
 }
 
-func setFromAlertSettings(as checkly.AlertSettings) []tfMap {
-	if as.EscalationType == checkly.RunBased {
-		return []tfMap{
-			{
-				"escalation_type": as.EscalationType,
-				"run_based_escalation": []tfMap{
-					{
-						"failed_run_threshold": as.RunBasedEscalation.FailedRunThreshold,
-					},
-				},
-				"reminders": []tfMap{
-					{
-						"amount":   as.Reminders.Amount,
-						"interval": as.Reminders.Interval,
-					},
-				},
-				"parallel_run_failure_threshold": []tfMap{
-					{
-						"enabled":    as.ParallelRunFailureThreshold.Enabled,
-						"percentage": as.ParallelRunFailureThreshold.Percentage,
-					},
-				},
-			},
-		}
-	} else {
-		return []tfMap{
-			{
-				"escalation_type": as.EscalationType,
-				"time_based_escalation": []tfMap{
-					{
-						"minutes_failing_threshold": as.TimeBasedEscalation.MinutesFailingThreshold,
-					},
-				},
-				"reminders": []tfMap{
-					{
-						"amount":   as.Reminders.Amount,
-						"interval": as.Reminders.Interval,
-					},
-				},
-				"parallel_run_failure_threshold": []tfMap{
-					{
-						"enabled":    as.ParallelRunFailureThreshold.Enabled,
-						"percentage": as.ParallelRunFailureThreshold.Percentage,
-					},
-				},
-			},
-		}
-	}
-}
-
 func setFromRequest(r checkly.Request) []tfMap {
 	s := tfMap{}
 	s["method"] = r.Method
@@ -850,31 +800,6 @@ func basicAuthFromSet(s *schema.Set) *checkly.BasicAuth {
 		Username: res["username"].(string),
 		Password: res["password"].(string),
 	}
-}
-
-func alertSettingsFromSet(s []interface{}) checkly.AlertSettings {
-	if len(s) == 0 {
-		return checkly.AlertSettings{
-			EscalationType: checkly.RunBased,
-			RunBasedEscalation: checkly.RunBasedEscalation{
-				FailedRunThreshold: 1,
-			},
-		}
-	}
-	res := s[0].(tfMap)
-	alertSettings := checkly.AlertSettings{
-		EscalationType:              res["escalation_type"].(string),
-		Reminders:                   remindersFromSet(res["reminders"].([]interface{})),
-		ParallelRunFailureThreshold: parallelRunFailureThresholdFromSet(res["parallel_run_failure_threshold"].([]interface{})),
-	}
-
-	if alertSettings.EscalationType == checkly.RunBased {
-		alertSettings.RunBasedEscalation = runBasedEscalationFromSet(res["run_based_escalation"].([]interface{}))
-	} else {
-		alertSettings.TimeBasedEscalation = timeBasedEscalationFromSet(res["time_based_escalation"].([]interface{}))
-	}
-
-	return alertSettings
 }
 
 func alertChannelSubscriptionsFromSet(s []interface{}) []checkly.AlertChannelSubscription {
