@@ -149,90 +149,9 @@ func resourceTCPMonitor() *schema.Resource {
 				},
 				Description: "An array of one or more private locations slugs.",
 			},
-			"alert_settings": {
-				Type:     schema.TypeList,
-				Optional: true,
-				Computed: true,
-				MaxItems: 1,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"escalation_type": {
-							Type:        schema.TypeString,
-							Optional:    true,
-							Description: "Determines what type of escalation to use. Possible values are `RUN_BASED` or `TIME_BASED`.",
-						},
-						"run_based_escalation": {
-							Type:     schema.TypeList,
-							Optional: true,
-							Computed: true,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"failed_run_threshold": {
-										Type:        schema.TypeInt,
-										Optional:    true,
-										Description: "After how many failed consecutive check runs an alert notification should be sent. Possible values are between 1 and 5. (Default `1`).",
-									},
-								},
-							},
-						},
-						"time_based_escalation": {
-							Type:     schema.TypeList,
-							Optional: true,
-							Computed: true,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"minutes_failing_threshold": {
-										Type:        schema.TypeInt,
-										Optional:    true,
-										Description: "After how many minutes after a check starts failing an alert should be sent. Possible values are `5`, `10`, `15`, and `30`. (Default `5`).",
-									},
-								},
-							},
-						},
-						"reminders": {
-							Type:     schema.TypeList,
-							Optional: true,
-							Computed: true,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"amount": {
-										Type:        schema.TypeInt,
-										Optional:    true,
-										Description: "How many reminders to send out after the initial alert notification. Possible values are `0`, `1`, `2`, `3`, `4`, `5`, and `100000`",
-									},
-									"interval": {
-										Type:        schema.TypeInt,
-										Optional:    true,
-										Default:     5,
-										Description: "Possible values are `5`, `10`, `15`, and `30`. (Default `5`).",
-									},
-								},
-							},
-						},
-						"parallel_run_failure_threshold": {
-							Type:     schema.TypeList,
-							Optional: true,
-							Computed: true,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"enabled": {
-										Type:        schema.TypeBool,
-										Optional:    true,
-										Default:     false,
-										Description: "Applicable only for checks scheduled in parallel in multiple locations.",
-									},
-									"percentage": {
-										Type:        schema.TypeInt,
-										Optional:    true,
-										Default:     10,
-										Description: "Possible values are `10`, `20`, `30`, `40`, `50`, `60`, `70`, `80`, `100`, and `100`. (Default `10`).",
-									},
-								},
-							},
-						},
-					},
-				},
-			},
+			alertSettingsAttributeName: makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{
+				Monitor: true,
+			}),
 			"use_global_alert_settings": {
 				Type:        schema.TypeBool,
 				Optional:    true,

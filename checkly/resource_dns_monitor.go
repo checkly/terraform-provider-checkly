@@ -106,7 +106,9 @@ func resourceDNSMonitor() *schema.Resource {
 					},
 				},
 			},
-			alertSettingsAttributeName: alertSettingsAttributeSchema,
+			alertSettingsAttributeName: makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{
+				Monitor: true,
+			}),
 			"use_global_alert_settings": {
 				Description: "When true, the account level alert settings will be used, not the alert setting defined on this monitor. (Default `true`).",
 				Type:        schema.TypeBool,
