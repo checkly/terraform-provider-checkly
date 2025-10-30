@@ -1204,3 +1204,73 @@ func TestAccDNSMonitorGroupAssignment(t *testing.T) {
 		},
 	})
 }
+
+func TestAccDNSMonitorNameServerRemoval(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_dns_monitor" "test" {
+					name      = "test-name-server-removal"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+
+						name_server {
+							host = "1.1.1.1"
+							port = 53
+						}
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test",
+					"request.0.name_server.#",
+					"1",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test",
+					"request.0.name_server.0.host",
+					"1.1.1.1",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test",
+					"request.0.name_server.0.port",
+					"53",
+				),
+			),
+		},
+		{
+			Config: `
+				resource "checkly_dns_monitor" "test" {
+					name      = "test-name-server-removal"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test",
+					"request.0.name_server.#",
+					"0",
+				),
+				resource.TestCheckNoResourceAttr(
+					"checkly_dns_monitor.test",
+					"request.0.name_server.0.host",
+				),
+				resource.TestCheckNoResourceAttr(
+					"checkly_dns_monitor.test",
+					"request.0.name_server.0.port",
+				),
+			),
+		},
+	})
+}
