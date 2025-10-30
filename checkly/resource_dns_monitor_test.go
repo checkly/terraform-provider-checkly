@@ -135,8 +135,11 @@ func TestAccDNSMonitorFull(t *testing.T) {
 						record_type  = "AAAA"
 						query        = "api.checklyhq.com"
 						protocol     = "TCP"
-						name_server  = "1.1.1.1"
-						port         = "53"
+
+						name_server {
+							host = "1.1.1.1"
+							port = 53
+						}
 
 						assertion {
 							source     = "RESPONSE_CODE"
@@ -198,12 +201,12 @@ func TestAccDNSMonitorFull(t *testing.T) {
 				),
 				testCheckResourceAttrExpr(
 					"checkly_dns_monitor.test",
-					"request.*.name_server",
+					"request.*.name_server.*.host",
 					"1.1.1.1",
 				),
 				testCheckResourceAttrExpr(
 					"checkly_dns_monitor.test",
-					"request.*.port",
+					"request.*.name_server.*.port",
 					"53",
 				),
 				testCheckResourceAttrExpr(

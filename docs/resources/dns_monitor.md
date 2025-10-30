@@ -27,6 +27,11 @@ resource "checkly_dns_monitor" "example-dns-monitor" {
     record_type = "A"
     query       = "welcome.checklyhq.com"
 
+    name_server {
+      host = "1.1.1.1"
+      port = 53
+    }
+
     assertion {
       source     = "RESPONSE_CODE"
       comparison = "EQUALS"
@@ -44,7 +49,7 @@ resource "checkly_dns_monitor" "example-dns-monitor" {
 - `activated` (Boolean) Determines whether the monitor will run periodically or not after being deployed.
 - `frequency` (Number) How often the monitor should run in minutes. Possible values are `0`, `1`, `2`, `5`, `10`, `15`, `30`, `60`, `120`, `180`, `360`, `720`, and `1440`.
 - `name` (String) The name of the monitor.
-- `request` (Block Set, Min: 1, Max: 1) The parameters of the HTTP request. (see [below for nested schema](#nestedblock--request))
+- `request` (Block List, Min: 1, Max: 1) The parameters of the HTTP request. (see [below for nested schema](#nestedblock--request))
 
 ### Optional
 
@@ -78,8 +83,7 @@ Required:
 Optional:
 
 - `assertion` (Block Set) Assertions to validate the HTTP response. DNS monitors only support status code assertions. (see [below for nested schema](#nestedblock--request--assertion))
-- `name_server` (String) The hostname of the name server.
-- `port` (Number) The port of the name server.
+- `name_server` (Block List, Max: 1) The name server to use. (see [below for nested schema](#nestedblock--request--name_server))
 - `protocol` (String) The protocol used to communicate with the name server. Possible values are `UDP` and `TCP`. (Default `UDP`).
 
 <a id="nestedblock--request--assertion"></a>
@@ -94,6 +98,15 @@ Required:
 Optional:
 
 - `property` (String)
+
+
+<a id="nestedblock--request--name_server"></a>
+### Nested Schema for `request.name_server`
+
+Optional:
+
+- `host` (String) The name server host.
+- `port` (Number) The name server port.
 
 
 

@@ -117,7 +117,7 @@ func resourceDNSMonitor() *schema.Resource {
 			},
 			"request": {
 				Description: "The parameters of the HTTP request.",
-				Type:        schema.TypeSet,
+				Type:        schema.TypeList,
 				Required:    true,
 				MaxItems:    1,
 				Elem: &schema.Resource{
@@ -141,14 +141,30 @@ func resourceDNSMonitor() *schema.Resource {
 							ValidateFunc: validateOneOf([]string{"UDP", "TCP"}),
 						},
 						"name_server": {
-							Description: "The hostname of the name server.",
-							Type:        schema.TypeString,
+							Description: "The name server to use.",
+							Type:        schema.TypeList,
 							Optional:    true,
-						},
-						"port": {
-							Description: "The port of the name server.",
-							Type:        schema.TypeInt,
-							Optional:    true,
+							MaxItems:    1,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"host": {
+										Description: "The name server host.",
+										Type:        schema.TypeString,
+										Optional:    true,
+										RequiredWith: []string{
+											"request.0.name_server.0.port",
+										},
+									},
+									"port": {
+										Description: "The name server port.",
+										Type:        schema.TypeInt,
+										Optional:    true,
+										RequiredWith: []string{
+											"request.0.name_server.0.host",
+										},
+									},
+								},
+							},
 						},
 						"assertion": {
 							Description: "Assertions to validate the HTTP response. DNS monitors only support status code assertions.",
@@ -291,7 +307,7 @@ func resourceDataFromDNSMonitor(c *checkly.DNSMonitor, d *schema.ResourceData) e
 	}
 	d.Set("use_global_alert_settings", c.UseGlobalAlertSettings)
 
-	err := d.Set("request", setFromDNSRequest(c.Request))
+	err := d.Set("request", listFromDNSRequest(c.Request))
 	if err != nil {
 		return fmt.Errorf("error setting request for resource %s: %w", d.Id(), err)
 	}
@@ -327,7 +343,7 @@ func dnsMonitorFromResourceData(d *schema.ResourceData) (checkly.DNSMonitor, err
 	alertSettings := alertSettingsFromSet(d.Get("alert_settings").([]interface{}))
 	check.AlertSettings = &alertSettings
 
-	check.Request = dnsRequestFromSet(d.Get("request").(*schema.Set))
+	check.Request = dnsRequestFromList(d.Get("request").([]any))
 
 	check.FrequencyOffset = d.Get("frequency_offset").(int)
 
@@ -338,28 +354,61 @@ func dnsMonitorFromResourceData(d *schema.ResourceData) (checkly.DNSMonitor, err
 	return check, nil
 }
 
-func dnsRequestFromSet(s *schema.Set) checkly.DNSRequest {
-	if s.Len() == 0 {
+func dnsRequestFromList(s []any) checkly.DNSRequest {
+	if len(s) == 0 {
 		return checkly.DNSRequest{}
 	}
-	res := s.List()[0].(tfMap)
+	res := s[0].(tfMap)
+	ns := dnsRequestNameServerFromList(res["name_server"].([]any))
 	return checkly.DNSRequest{
 		RecordType: res["record_type"].(string),
 		Query:      res["query"].(string),
-		NameServer: res["name_server"].(string),
-		Port:       res["port"].(int),
+		NameServer: ns.Host,
+		Port:       ns.Port,
 		Protocol:   res["protocol"].(string),
 		Assertions: assertionsFromSet(res["assertion"].(*schema.Set)),
 	}
 }
 
-func setFromDNSRequest(r checkly.DNSRequest) []tfMap {
+func listFromDNSRequest(r checkly.DNSRequest) []tfMap {
 	s := tfMap{}
 	s["record_type"] = r.RecordType
 	s["query"] = r.Query
-	s["name_server"] = r.NameServer
-	s["port"] = r.Port
+	s["name_server"] = listFromDNSRequestNameServer(dnsRequestNameServer{
+		Host: r.NameServer,
+		Port: r.Port,
+	})
 	s["protocol"] = r.Protocol
 	s["assertion"] = setFromAssertions(r.Assertions)
+	return []tfMap{s}
+}
+
+type dnsRequestNameServer struct {
+	Host string
+	Port int
+}
+
+func dnsRequestNameServerFromList(s []any) dnsRequestNameServer {
+	if len(s) == 0 {
+		return dnsRequestNameServer{}
+	}
+
+	res := s[0].(tfMap)
+
+	return dnsRequestNameServer{
+		Host: res["host"].(string),
+		Port: res["port"].(int),
+	}
+}
+
+func listFromDNSRequestNameServer(r dnsRequestNameServer) []tfMap {
+	if r.Host == "" && r.Port == 0 {
+		return []tfMap{}
+	}
+
+	s := tfMap{}
+	s["host"] = r.Host
+	s["port"] = r.Port
+
 	return []tfMap{s}
 }

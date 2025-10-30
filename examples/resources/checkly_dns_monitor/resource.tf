@@ -12,6 +12,11 @@ resource "checkly_dns_monitor" "example-dns-monitor" {
     record_type = "A"
     query       = "welcome.checklyhq.com"
 
+    name_server {
+      host = "1.1.1.1"
+      port = 53
+    }
+
     assertion {
       source     = "RESPONSE_CODE"
       comparison = "EQUALS"
