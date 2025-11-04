@@ -2,7 +2,6 @@ package checkly
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"sort"
@@ -13,16 +12,16 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-func resourceURLMonitor() *schema.Resource {
+func resourceDNSMonitor() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceURLMonitorCreate,
-		Read:   resourceURLMonitorRead,
-		Update: resourceURLMonitorUpdate,
-		Delete: resourceURLMonitorDelete,
+		Create: resourceDNSMonitorCreate,
+		Read:   resourceDNSMonitorRead,
+		Update: resourceDNSMonitorUpdate,
+		Delete: resourceDNSMonitorDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
-		Description: "Creates a URL Monitor to check HTTP endpoint availability and response times.",
+		Description: "Creates a DNS Monitor to check DNS record availability and response times.",
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Description: "The name of the monitor.",
@@ -52,12 +51,6 @@ func resourceURLMonitor() *schema.Resource {
 				Optional:    true,
 				Default:     false,
 			},
-			"should_fail": {
-				Description: "Allows to invert the behaviour of when the monitor is considered to fail. (Default `false`).",
-				Type:        schema.TypeBool,
-				Optional:    true,
-				Default:     false,
-			},
 			"run_parallel": {
 				Description: "Determines whether the monitor should run on all selected locations in parallel or round-robin. (Default `false`).",
 				Type:        schema.TypeBool,
@@ -73,18 +66,18 @@ func resourceURLMonitor() *schema.Resource {
 				},
 			},
 			"degraded_response_time": {
-				Description:  "The response time in milliseconds where the monitor should be considered degraded. Possible values are between `0` and `30000`. (Default `3000`).",
+				Description:  "The response time in milliseconds where the monitor should be considered degraded. Possible values are between `0` and `5000`. (Default `500`).",
 				Type:         schema.TypeInt,
 				Optional:     true,
-				Default:      3000,
-				ValidateFunc: validateBetween(0, 30000),
+				Default:      500,
+				ValidateFunc: validateBetween(0, 5000),
 			},
 			"max_response_time": {
-				Description:  "The response time in milliseconds where the monitor should be considered failing. Possible values are between `0` and `30000`. (Default `5000`).",
+				Description:  "The response time in milliseconds where the monitor should be considered failing. Possible values are between `0` and `5000`. (Default `1000`).",
 				Type:         schema.TypeInt,
 				Optional:     true,
-				Default:      5000,
-				ValidateFunc: validateBetween(0, 30000),
+				Default:      1000,
+				ValidateFunc: validateBetween(0, 5000),
 			},
 			"tags": {
 				Description: "A list of tags for organizing and filtering checks and monitors.",
@@ -113,17 +106,6 @@ func resourceURLMonitor() *schema.Resource {
 					},
 				},
 			},
-			"private_locations": {
-				Description: "An array of one or more private locations slugs.",
-				Type:        schema.TypeSet,
-				Optional:    true,
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-				},
-				DefaultFunc: func() (interface{}, error) {
-					return []tfMap{}, nil
-				},
-			},
 			alertSettingsAttributeName: makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{
 				Monitor: true,
 			}),
@@ -135,39 +117,66 @@ func resourceURLMonitor() *schema.Resource {
 			},
 			"request": {
 				Description: "The parameters of the HTTP request.",
-				Type:        schema.TypeSet,
+				Type:        schema.TypeList,
 				Required:    true,
 				MaxItems:    1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"url": {
-							Description: "The URL to monitor. Must be a valid HTTP or HTTPS URL.",
+						"record_type": {
+							Description:  "The DNS record type. Possible values are `A`, `AAAA`, `CNAME`, `MX`, `NS`, `TXT` and `SOA`.",
+							Type:         schema.TypeString,
+							Required:     true,
+							ValidateFunc: validateOneOf([]string{"A", "AAAA", "CNAME", "MX", "NS", "TXT", "SOA"}),
+						},
+						"query": {
+							Description: "The DNS record to query.",
 							Type:        schema.TypeString,
 							Required:    true,
 						},
-						"follow_redirects": {
-							Description: "Whether to follow HTTP redirects automatically. (Default `true`).",
-							Type:        schema.TypeBool,
-							Optional:    true,
-							Default:     true,
+						"protocol": {
+							Description:  "The protocol used to communicate with the name server. Possible values are `UDP` and `TCP`. (Default `UDP`).",
+							Type:         schema.TypeString,
+							Optional:     true,
+							Default:      "UDP",
+							ValidateFunc: validateOneOf([]string{"UDP", "TCP"}),
 						},
-						"skip_ssl": {
-							Description: "Whether to skip SSL certificate verification. (Default `false`).",
-							Type:        schema.TypeBool,
+						"name_server": {
+							Description: "The name server to use.",
+							Type:        schema.TypeList,
 							Optional:    true,
-							Default:     false,
+							MaxItems:    1,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"host": {
+										Description: "The name server host.",
+										Type:        schema.TypeString,
+										Optional:    true,
+										RequiredWith: []string{
+											"request.0.name_server.0.port",
+										},
+									},
+									"port": {
+										Description: "The name server port.",
+										Type:        schema.TypeInt,
+										Optional:    true,
+										RequiredWith: []string{
+											"request.0.name_server.0.host",
+										},
+									},
+								},
+							},
 						},
 						"assertion": {
-							Description: "Assertions to validate the HTTP response. URL monitors only support status code assertions.",
+							Description: "Assertions to validate the HTTP response. DNS monitors only support status code assertions.",
 							Type:        schema.TypeSet,
 							Optional:    true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"source": {
-										Description:  "The source of the asserted value. The only allowed value is `STATUS_CODE`.",
+										Description:  "The source of the asserted value. Possible values are `RESPONSE_CODE`, `RESPONSE_TIME`, `TEXT_ANSWER` and `JSON_ANSWER`.",
 										Type:         schema.TypeString,
 										Required:     true,
-										ValidateFunc: validateOneOf([]string{"STATUS_CODE"}),
+										ValidateFunc: validateOneOf([]string{"RESPONSE_CODE", "RESPONSE_TIME", "TEXT_ANSWER", "JSON_ANSWER"}),
 									},
 									"property": {
 										Type:     schema.TypeString,
@@ -180,19 +189,12 @@ func resourceURLMonitor() *schema.Resource {
 										ValidateFunc: validateOneOf([]string{"EQUALS", "NOT_EQUALS", "GREATER_THAN", "LESS_THAN"}),
 									},
 									"target": {
-										Description: "The target value. Typically `200` when the source is `STATUS_CODE`.",
+										Description: "The target value. Typically `NOERROR` when the source is `RESPONSE_CODE`.",
 										Type:        schema.TypeString,
 										Required:    true,
 									},
 								},
 							},
-						},
-						"ip_family": {
-							Description:  "IP family version to use for the connection. The value can be either `IPv4` or `IPv6`. (Default `IPv4`).",
-							Type:         schema.TypeString,
-							Optional:     true,
-							Default:      "IPv4",
-							ValidateFunc: validateOneOf([]string{"IPv4", "IPv6"}),
 						},
 					},
 				},
@@ -216,28 +218,30 @@ func resourceURLMonitor() *schema.Resource {
 	}
 }
 
-func resourceURLMonitorCreate(d *schema.ResourceData, client interface{}) error {
-	check, err := urlMonitorFromResourceData(d)
+func resourceDNSMonitorCreate(d *schema.ResourceData, client interface{}) error {
+	check, err := dnsMonitorFromResourceData(d)
 	if err != nil {
 		return fmt.Errorf("translation error: %w", err)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
 	defer cancel()
-	newCheck, err := client.(checkly.Client).CreateURLMonitor(ctx, check)
 
+	newCheck, err := client.(checkly.Client).CreateDNSMonitor(ctx, check)
 	if err != nil {
-		checkJSON, _ := json.Marshal(check)
-		return fmt.Errorf("API error 1: %w, Check: %s", err, string(checkJSON))
+		return fmt.Errorf("failed to create DNS monitor: %w", err)
 	}
+
 	d.SetId(newCheck.ID)
-	return resourceURLMonitorRead(d, client)
+
+	return resourceDNSMonitorRead(d, client)
 }
 
-func resourceURLMonitorRead(d *schema.ResourceData, client interface{}) error {
+func resourceDNSMonitorRead(d *schema.ResourceData, client interface{}) error {
 	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
 	defer cancel()
-	check, err := client.(checkly.Client).GetURLMonitor(ctx, d.Id())
+
+	check, err := client.(checkly.Client).GetDNSMonitor(ctx, d.Id())
 	if err != nil {
 		if strings.Contains(err.Error(), "404") {
 			//if resource is deleted remotely, then mark it as
@@ -245,43 +249,46 @@ func resourceURLMonitorRead(d *schema.ResourceData, client interface{}) error {
 			d.SetId("")
 			return nil
 		}
-		return fmt.Errorf("API error 2: %w", err)
+		return fmt.Errorf("failed to retrieve DNS monitor '%s': %w", d.Id(), err)
 	}
-	return resourceDataFromURLMonitor(check, d)
+
+	return resourceDataFromDNSMonitor(check, d)
 }
 
-func resourceURLMonitorUpdate(d *schema.ResourceData, client interface{}) error {
-	check, err := urlMonitorFromResourceData(d)
-
+func resourceDNSMonitorUpdate(d *schema.ResourceData, client interface{}) error {
+	check, err := dnsMonitorFromResourceData(d)
 	if err != nil {
 		return fmt.Errorf("translation error: %w", err)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
 	defer cancel()
-	_, err = client.(checkly.Client).UpdateURLMonitor(ctx, check.ID, check)
+
+	_, err = client.(checkly.Client).UpdateDNSMonitor(ctx, check.ID, check)
 	if err != nil {
-		checkJSON, _ := json.Marshal(check)
-		return fmt.Errorf("API error 3: Couldn't update check, Error: %w, \nCheck: %s", err, checkJSON)
+		return fmt.Errorf("failed to update DNS monitor '%s': %w", d.Id(), err)
 	}
+
 	d.SetId(check.ID)
-	return resourceURLMonitorRead(d, client)
+
+	return resourceDNSMonitorRead(d, client)
 }
 
-func resourceURLMonitorDelete(d *schema.ResourceData, client interface{}) error {
+func resourceDNSMonitorDelete(d *schema.ResourceData, client interface{}) error {
 	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
 	defer cancel()
-	if err := client.(checkly.Client).DeleteCheck(ctx, d.Id()); err != nil {
-		return fmt.Errorf("API error 4: Couldn't delete Check %s, Error: %w", d.Id(), err)
+
+	if err := client.(checkly.Client).DeleteDNSMonitor(ctx, d.Id()); err != nil {
+		return fmt.Errorf("failed to delete DNS monitor '%s': %w", d.Id(), err)
 	}
+
 	return nil
 }
 
-func resourceDataFromURLMonitor(c *checkly.URLMonitor, d *schema.ResourceData) error {
+func resourceDataFromDNSMonitor(c *checkly.DNSMonitor, d *schema.ResourceData) error {
 	d.Set("name", c.Name)
 	d.Set("activated", c.Activated)
 	d.Set("muted", c.Muted)
-	d.Set("should_fail", c.ShouldFail)
 	d.Set("run_parallel", c.RunParallel)
 	d.Set("locations", c.Locations)
 	d.Set("degraded_response_time", c.DegradedResponseTime)
@@ -300,13 +307,12 @@ func resourceDataFromURLMonitor(c *checkly.URLMonitor, d *schema.ResourceData) e
 	}
 	d.Set("use_global_alert_settings", c.UseGlobalAlertSettings)
 
-	err := d.Set("request", setFromURLRequest(c.Request))
+	err := d.Set("request", listFromDNSRequest(c.Request))
 	if err != nil {
 		return fmt.Errorf("error setting request for resource %s: %w", d.Id(), err)
 	}
 	d.Set("group_id", c.GroupID)
 	d.Set("group_order", c.GroupOrder)
-	d.Set("private_locations", c.PrivateLocations)
 	d.Set("alert_channel_subscription", c.AlertChannelSubscriptions)
 	d.Set(retryStrategyAttributeName, listFromRetryStrategy(c.RetryStrategy))
 	d.Set("trigger_incident", setFromTriggerIncident(c.TriggerIncident))
@@ -314,14 +320,13 @@ func resourceDataFromURLMonitor(c *checkly.URLMonitor, d *schema.ResourceData) e
 	return nil
 }
 
-func urlMonitorFromResourceData(d *schema.ResourceData) (checkly.URLMonitor, error) {
-	check := checkly.URLMonitor{
+func dnsMonitorFromResourceData(d *schema.ResourceData) (checkly.DNSMonitor, error) {
+	check := checkly.DNSMonitor{
 		ID:                        d.Id(),
 		Name:                      d.Get("name").(string),
 		Frequency:                 d.Get("frequency").(int),
 		Activated:                 d.Get("activated").(bool),
 		Muted:                     d.Get("muted").(bool),
-		ShouldFail:                d.Get("should_fail").(bool),
 		RunParallel:               d.Get("run_parallel").(bool),
 		Locations:                 stringsFromSet(d.Get("locations").(*schema.Set)),
 		DegradedResponseTime:      d.Get("degraded_response_time").(int),
@@ -338,10 +343,7 @@ func urlMonitorFromResourceData(d *schema.ResourceData) (checkly.URLMonitor, err
 	alertSettings := alertSettingsFromSet(d.Get("alert_settings").([]interface{}))
 	check.AlertSettings = &alertSettings
 
-	privateLocations := stringsFromSet(d.Get("private_locations").(*schema.Set))
-	check.PrivateLocations = &privateLocations
-
-	check.Request = urlRequestFromSet(d.Get("request").(*schema.Set))
+	check.Request = dnsRequestFromList(d.Get("request").([]any))
 
 	check.FrequencyOffset = d.Get("frequency_offset").(int)
 
@@ -352,26 +354,61 @@ func urlMonitorFromResourceData(d *schema.ResourceData) (checkly.URLMonitor, err
 	return check, nil
 }
 
-func urlRequestFromSet(s *schema.Set) checkly.URLRequest {
-	if s.Len() == 0 {
-		return checkly.URLRequest{}
+func dnsRequestFromList(s []any) checkly.DNSRequest {
+	if len(s) == 0 {
+		return checkly.DNSRequest{}
 	}
-	res := s.List()[0].(tfMap)
-	return checkly.URLRequest{
-		URL:             res["url"].(string),
-		FollowRedirects: res["follow_redirects"].(bool),
-		SkipSSL:         res["skip_ssl"].(bool),
-		Assertions:      assertionsFromSet(res["assertion"].(*schema.Set)),
-		IPFamily:        res["ip_family"].(string),
+	res := s[0].(tfMap)
+	ns := dnsRequestNameServerFromList(res["name_server"].([]any))
+	return checkly.DNSRequest{
+		RecordType: res["record_type"].(string),
+		Query:      res["query"].(string),
+		NameServer: ns.Host,
+		Port:       ns.Port,
+		Protocol:   res["protocol"].(string),
+		Assertions: assertionsFromSet(res["assertion"].(*schema.Set)),
 	}
 }
 
-func setFromURLRequest(r checkly.URLRequest) []tfMap {
+func listFromDNSRequest(r checkly.DNSRequest) []tfMap {
 	s := tfMap{}
-	s["url"] = r.URL
-	s["follow_redirects"] = r.FollowRedirects
-	s["skip_ssl"] = r.SkipSSL
+	s["record_type"] = r.RecordType
+	s["query"] = r.Query
+	s["name_server"] = listFromDNSRequestNameServer(dnsRequestNameServer{
+		Host: r.NameServer,
+		Port: r.Port,
+	})
+	s["protocol"] = r.Protocol
 	s["assertion"] = setFromAssertions(r.Assertions)
-	s["ip_family"] = r.IPFamily
+	return []tfMap{s}
+}
+
+type dnsRequestNameServer struct {
+	Host string
+	Port int
+}
+
+func dnsRequestNameServerFromList(s []any) dnsRequestNameServer {
+	if len(s) == 0 {
+		return dnsRequestNameServer{}
+	}
+
+	res := s[0].(tfMap)
+
+	return dnsRequestNameServer{
+		Host: res["host"].(string),
+		Port: res["port"].(int),
+	}
+}
+
+func listFromDNSRequestNameServer(r dnsRequestNameServer) []tfMap {
+	if r.Host == "" && r.Port == 0 {
+		return []tfMap{}
+	}
+
+	s := tfMap{}
+	s["host"] = r.Host
+	s["port"] = r.Port
+
 	return []tfMap{s}
 }

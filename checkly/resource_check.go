@@ -231,124 +231,9 @@ func resourceCheck() *schema.Resource {
 				},
 				Description: "An array of one or more private locations slugs.",
 			},
-			"alert_settings": {
-				Type:     schema.TypeList,
-				Optional: true,
-				Computed: true,
-				MaxItems: 1,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"escalation_type": {
-							Type:        schema.TypeString,
-							Optional:    true,
-							Description: "Determines what type of escalation to use. Possible values are `RUN_BASED` or `TIME_BASED`.",
-						},
-						"run_based_escalation": {
-							Type:     schema.TypeList,
-							Optional: true,
-							Computed: true,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"failed_run_threshold": {
-										Type:        schema.TypeInt,
-										Optional:    true,
-										Description: "After how many failed consecutive check runs an alert notification should be sent. Possible values are between 1 and 5. (Default `1`).",
-									},
-								},
-							},
-						},
-						"time_based_escalation": {
-							Type:     schema.TypeList,
-							Optional: true,
-							Computed: true,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"minutes_failing_threshold": {
-										Type:        schema.TypeInt,
-										Optional:    true,
-										Description: "After how many minutes after a check starts failing an alert should be sent. Possible values are `5`, `10`, `15`, and `30`. (Default `5`).",
-									},
-								},
-							},
-						},
-						"reminders": {
-							Type:     schema.TypeList,
-							Optional: true,
-							Computed: true,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"amount": {
-										Type:        schema.TypeInt,
-										Optional:    true,
-										Description: "How many reminders to send out after the initial alert notification. Possible values are `0`, `1`, `2`, `3`, `4`, `5`, and `100000`",
-									},
-									"interval": {
-										Type:        schema.TypeInt,
-										Optional:    true,
-										Default:     5,
-										Description: "Possible values are `5`, `10`, `15`, and `30`. (Default `5`).",
-									},
-								},
-							},
-						},
-						"parallel_run_failure_threshold": {
-							Type:     schema.TypeList,
-							Optional: true,
-							Computed: true,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"enabled": {
-										Type:        schema.TypeBool,
-										Optional:    true,
-										Default:     false,
-										Description: "Applicable only for checks scheduled in parallel in multiple locations.",
-									},
-									"percentage": {
-										Type:        schema.TypeInt,
-										Optional:    true,
-										Default:     10,
-										Description: "Possible values are `10`, `20`, `30`, `40`, `50`, `60`, `70`, `80`, `100`, and `100`. (Default `10`).",
-									},
-								},
-							},
-						},
-						"ssl_certificates": {
-							Type:       schema.TypeSet,
-							Optional:   true,
-							Deprecated: "This property is deprecated and it's ignored by the Checkly Public API. It will be removed in a future version.",
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"enabled": {
-										Type:        schema.TypeBool,
-										Optional:    true,
-										Description: "Determines if alert notifications should be sent for expiring SSL certificates. Possible values `true`, and `false`. (Default `false`).",
-									},
-									"alert_threshold": {
-										Type:     schema.TypeInt,
-										Optional: true,
-										ValidateFunc: func(val interface{}, key string) (warns []string, errs []error) {
-											v := val.(int)
-											valid := false
-											validFreqs := []int{3, 7, 14, 30}
-											for _, i := range validFreqs {
-												if v == i {
-													valid = true
-												}
-											}
-											if !valid {
-												errs = append(errs, fmt.Errorf("%q must be one of %v, got: %d", key, validFreqs, v))
-											}
-											return warns, errs
-										},
-										Description: "How long before SSL certificate expiry to send alerts. Possible values `3`, `7`, `14`, `30`. (Default `3`).",
-									},
-								},
-								Description: "At what interval the reminders should be sent.",
-							},
-						},
-					},
-				},
-			},
+			alertSettingsAttributeName: makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{
+				EnableSSLCertificates: true,
+			}),
 			"use_global_alert_settings": {
 				Type:        schema.TypeBool,
 				Optional:    true,
@@ -652,56 +537,6 @@ func setFromEnvVars(evs []checkly.EnvironmentVariable) tfMap {
 	return s
 }
 
-func setFromAlertSettings(as checkly.AlertSettings) []tfMap {
-	if as.EscalationType == checkly.RunBased {
-		return []tfMap{
-			{
-				"escalation_type": as.EscalationType,
-				"run_based_escalation": []tfMap{
-					{
-						"failed_run_threshold": as.RunBasedEscalation.FailedRunThreshold,
-					},
-				},
-				"reminders": []tfMap{
-					{
-						"amount":   as.Reminders.Amount,
-						"interval": as.Reminders.Interval,
-					},
-				},
-				"parallel_run_failure_threshold": []tfMap{
-					{
-						"enabled":    as.ParallelRunFailureThreshold.Enabled,
-						"percentage": as.ParallelRunFailureThreshold.Percentage,
-					},
-				},
-			},
-		}
-	} else {
-		return []tfMap{
-			{
-				"escalation_type": as.EscalationType,
-				"time_based_escalation": []tfMap{
-					{
-						"minutes_failing_threshold": as.TimeBasedEscalation.MinutesFailingThreshold,
-					},
-				},
-				"reminders": []tfMap{
-					{
-						"amount":   as.Reminders.Amount,
-						"interval": as.Reminders.Interval,
-					},
-				},
-				"parallel_run_failure_threshold": []tfMap{
-					{
-						"enabled":    as.ParallelRunFailureThreshold.Enabled,
-						"percentage": as.ParallelRunFailureThreshold.Percentage,
-					},
-				},
-			},
-		}
-	}
-}
-
 func setFromRequest(r checkly.Request) []tfMap {
 	s := tfMap{}
 	s["method"] = r.Method
@@ -850,31 +685,6 @@ func basicAuthFromSet(s *schema.Set) *checkly.BasicAuth {
 		Username: res["username"].(string),
 		Password: res["password"].(string),
 	}
-}
-
-func alertSettingsFromSet(s []interface{}) checkly.AlertSettings {
-	if len(s) == 0 {
-		return checkly.AlertSettings{
-			EscalationType: checkly.RunBased,
-			RunBasedEscalation: checkly.RunBasedEscalation{
-				FailedRunThreshold: 1,
-			},
-		}
-	}
-	res := s[0].(tfMap)
-	alertSettings := checkly.AlertSettings{
-		EscalationType:              res["escalation_type"].(string),
-		Reminders:                   remindersFromSet(res["reminders"].([]interface{})),
-		ParallelRunFailureThreshold: parallelRunFailureThresholdFromSet(res["parallel_run_failure_threshold"].([]interface{})),
-	}
-
-	if alertSettings.EscalationType == checkly.RunBased {
-		alertSettings.RunBasedEscalation = runBasedEscalationFromSet(res["run_based_escalation"].([]interface{}))
-	} else {
-		alertSettings.TimeBasedEscalation = timeBasedEscalationFromSet(res["time_based_escalation"].([]interface{}))
-	}
-
-	return alertSettings
 }
 
 func alertChannelSubscriptionsFromSet(s []interface{}) []checkly.AlertChannelSubscription {
