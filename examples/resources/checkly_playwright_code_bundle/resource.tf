@@ -5,13 +5,13 @@ data "archive_file" "playwright-bundle" {
 }
 
 resource "checkly_playwright_code_bundle" "example-1" {
-  source_archive {
+  prebuilt_archive {
     file = data.archive_file.playwright-bundle.output_path
   }
 }
 
 resource "checkly_playwright_code_bundle" "example-2" {
-  source_archive {
+  prebuilt_archive {
     file = "${path.module}/existing-playwright-bundle.tar.gz"
   }
 }

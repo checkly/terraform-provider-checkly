@@ -20,7 +20,7 @@ data "archive_file" "playwright-bundle" {
 }
 
 resource "checkly_playwright_code_bundle" "playwright-bundle" {
-  source_archive {
+  prebuilt_archive {
     file = data.archive_file.playwright-bundle.output_path
   }
 }
