@@ -354,7 +354,7 @@ func PlaywrightCheckSuiteResourceFromResourceData(
 	if runtimeAttr != nil {
 		if runtimeAttr.Steps != nil {
 			if runtimeAttr.Steps.Test != nil {
-				check.TestCommand = runtimeAttr.Steps.Test.Command
+				check.TestCommand = &runtimeAttr.Steps.Test.Command
 			}
 
 			if runtimeAttr.Steps.Install != nil {
@@ -363,7 +363,7 @@ func PlaywrightCheckSuiteResourceFromResourceData(
 		}
 
 		if runtimeAttr.Playwright != nil {
-			check.PlaywrightVersion = runtimeAttr.Playwright.Version
+			check.PlaywrightVersion = &runtimeAttr.Playwright.Version
 
 			var browsers []string
 			for _, device := range *runtimeAttr.Playwright.Devices {
@@ -397,7 +397,7 @@ func PlaywrightCheckSuiteResourceFromAPIModel(
 
 	var runtimeAttr PlaywrightCheckSuiteRuntimeAttribute
 
-	if check.TestCommand != "" || check.InstallCommand != nil {
+	if check.TestCommand != nil || check.InstallCommand != nil {
 		runtimeAttr.Steps = new(PlaywrightCheckSuiteRuntimeStepsAttribute)
 
 		if check.InstallCommand != nil {
@@ -406,18 +406,18 @@ func PlaywrightCheckSuiteResourceFromAPIModel(
 			}
 		}
 
-		if check.TestCommand != "" {
+		if check.TestCommand != nil {
 			runtimeAttr.Steps.Test = &PlaywrightCheckSuiteRuntimeStepsTestAttribute{
-				Command: check.TestCommand,
+				Command: *check.TestCommand,
 			}
 		}
 	}
 
-	if len(check.Browsers) != 0 || check.PlaywrightVersion != "" {
+	if len(check.Browsers) != 0 || check.PlaywrightVersion != nil {
 		runtimeAttr.Playwright = new(PlaywrightCheckSuiteRuntimePlaywrightAttribute)
 
-		if check.PlaywrightVersion != "" {
-			runtimeAttr.Playwright.Version = check.PlaywrightVersion
+		if check.PlaywrightVersion != nil {
+			runtimeAttr.Playwright.Version = *check.PlaywrightVersion
 		}
 
 		if len(check.Browsers) != 0 {
