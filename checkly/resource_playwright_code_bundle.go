@@ -15,6 +15,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
+const (
+	prebuiltArchiveAttributeName = "prebuilt_archive"
+	metadataAttributeName        = "metadata"
+)
+
 func resourcePlaywrightCodeBundle() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourcePlaywrightCodeBundleCreate,
@@ -22,8 +27,8 @@ func resourcePlaywrightCodeBundle() *schema.Resource {
 		DeleteContext: resourcePlaywrightCodeBundleDelete,
 		Description:   "A managed code bundle which can be used in Playwright Check Suite resources.",
 		Schema: map[string]*schema.Schema{
-			"source_archive": {
-				Description: "",
+			prebuiltArchiveAttributeName: {
+				Description: "A prebuilt archive containing the code bundle.",
 				Type:        schema.TypeList,
 				Required:    true,
 				ForceNew:    true,
@@ -31,7 +36,7 @@ func resourcePlaywrightCodeBundle() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"file": {
-							Description:  "",
+							Description:  "Path to the archive file.",
 							Type:         schema.TypeString,
 							Required:     true,
 							ForceNew:     true,
@@ -40,10 +45,10 @@ func resourcePlaywrightCodeBundle() *schema.Resource {
 					},
 				},
 			},
-			"data": {
-				Description: "An opaque, computed value containing auxiliary " +
-					"data of the code bundle. This value should be passed " +
-					"as-is to a check resource.",
+			metadataAttributeName: {
+				Description: "An opaque blob of generated metadata. The " +
+					"value is not intended to be user-consumable and should " +
+					"be passed as-is to a Playwright check resource.",
 				Type:     schema.TypeString,
 				Computed: true,
 				ForceNew: true,
@@ -57,8 +62,8 @@ func resourcePlaywrightCodeBundle() *schema.Resource {
 				}
 
 				switch {
-				case bundle.SourceArchive != nil:
-					checksum, err := bundle.SourceArchive.ChecksumSha256()
+				case bundle.PrebuiltArchive != nil:
+					checksum, err := bundle.PrebuiltArchive.ChecksumSha256()
 					if err != nil {
 						return fmt.Errorf("failed to calculate source archive checksum: %v", err)
 					}
@@ -76,9 +81,9 @@ func resourcePlaywrightCodeBundle() *schema.Resource {
 					bundle.Data.Version = 1
 					bundle.Data.ChecksumSha256 = checksum
 
-					err = diff.SetNew("data", bundle.Data.EncodeToString())
+					err = diff.SetNew(metadataAttributeName, bundle.Data.EncodeToString())
 					if err != nil {
-						return fmt.Errorf("failed to set %q: %v", "data", err)
+						return fmt.Errorf("failed to set %q: %v", metadataAttributeName, err)
 					}
 
 					return nil
@@ -104,22 +109,22 @@ func resourcePlaywrightCodeBundleCreate(
 	}
 
 	switch {
-	case bundle.SourceArchive != nil:
-		result, err := bundle.SourceArchive.Upload(ctx, client.(checkly.Client))
+	case bundle.PrebuiltArchive != nil:
+		result, err := bundle.PrebuiltArchive.Upload(ctx, client.(checkly.Client))
 		if err != nil {
 			return diag.Errorf("failed to upload source archive: %v", err)
 		}
 
 		d.SetId(base64.StdEncoding.EncodeToString([]byte(result.Key)))
 
-		err = d.Set("source_archive", bundle.SourceArchive.ToList())
+		err = d.Set(prebuiltArchiveAttributeName, bundle.PrebuiltArchive.ToList())
 		if err != nil {
-			return diag.Errorf("failed to set %q state: %v", "source_archive", err)
+			return diag.Errorf("failed to set %q state: %v", prebuiltArchiveAttributeName, err)
 		}
 
-		err = d.Set("data", bundle.Data.EncodeToString())
+		err = d.Set(metadataAttributeName, bundle.Data.EncodeToString())
 		if err != nil {
-			return diag.Errorf("failed to set %q state: %v", "data", err)
+			return diag.Errorf("failed to set %q state: %v", metadataAttributeName, err)
 		}
 
 		return nil
@@ -159,9 +164,9 @@ func resourcePlaywrightCodeBundleRead(
 	if result.ChecksumSha256 != "" {
 		bundle.Data.ChecksumSha256 = result.ChecksumSha256
 
-		err = d.Set("data", bundle.Data.EncodeToString())
+		err = d.Set(metadataAttributeName, bundle.Data.EncodeToString())
 		if err != nil {
-			return diag.Errorf("failed to set %q state: %v", "data", err)
+			return diag.Errorf("failed to set %q state: %v", metadataAttributeName, err)
 		}
 	}
 
@@ -178,34 +183,34 @@ func resourcePlaywrightCodeBundleDelete(
 	return diags
 }
 
-type PlaywrightCodeBundleData struct {
+type PlaywrightCodeBundleMetadata struct {
 	Version        int    `json:"v"`
 	ChecksumSha256 string `json:"s256"`
 }
 
-func PlaywrightCodeBundleDataFromString(s string) (*PlaywrightCodeBundleData, error) {
+func PlaywrightCodeBundleMetadataFromString(s string) (*PlaywrightCodeBundleMetadata, error) {
 	if s == "" {
-		return new(PlaywrightCodeBundleData), nil
+		return new(PlaywrightCodeBundleMetadata), nil
 	}
 
 	b64, err := base64.StdEncoding.DecodeString(s)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decode code bundle data %q: %w", s, err)
+		return nil, fmt.Errorf("failed to decode code bundle metadata %q: %w", s, err)
 	}
 
 	dec := json.NewDecoder(bytes.NewReader(b64))
 
-	var t PlaywrightCodeBundleData
+	var t PlaywrightCodeBundleMetadata
 
 	err = dec.Decode(&t)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decode code bundle data %q: %w", s, err)
+		return nil, fmt.Errorf("failed to decode code bundle metadata %q: %w", s, err)
 	}
 
 	return &t, err
 }
 
-func (t *PlaywrightCodeBundleData) EncodeToString() string {
+func (t *PlaywrightCodeBundleMetadata) EncodeToString() string {
 	buf := new(bytes.Buffer)
 
 	enc := json.NewEncoder(buf)
@@ -220,28 +225,28 @@ func (t *PlaywrightCodeBundleData) EncodeToString() string {
 }
 
 type PlaywrightCodeBundleResource struct {
-	ID            string
-	Data          *PlaywrightCodeBundleData
-	SourceArchive *PlaywrightCodeBundleSourceArchiveAttribute
+	ID              string
+	Data            *PlaywrightCodeBundleMetadata
+	PrebuiltArchive *PlaywrightCodeBundlePrebuiltArchiveAttribute
 }
 
 func PlaywrightCodeBundleResourceFromResourceData(
 	d *schema.ResourceData,
 ) (PlaywrightCodeBundleResource, error) {
-	sourceArchiveAttr, err := PlaywrightCodeBundleSourceArchiveAttributeFromList(d.Get("source_archive").([]any))
+	prebuiltArchiveAttr, err := PlaywrightCodeBundlePrebuiltArchiveAttributeFromList(d.Get(prebuiltArchiveAttributeName).([]any))
 	if err != nil {
 		return PlaywrightCodeBundleResource{}, err
 	}
 
-	data, err := PlaywrightCodeBundleDataFromString(d.Get("data").(string))
+	data, err := PlaywrightCodeBundleMetadataFromString(d.Get(metadataAttributeName).(string))
 	if err != nil {
 		return PlaywrightCodeBundleResource{}, err
 	}
 
 	resource := PlaywrightCodeBundleResource{
-		ID:            d.Id(),
-		Data:          data,
-		SourceArchive: sourceArchiveAttr,
+		ID:              d.Id(),
+		Data:            data,
+		PrebuiltArchive: prebuiltArchiveAttr,
 	}
 
 	return resource, nil
@@ -250,46 +255,46 @@ func PlaywrightCodeBundleResourceFromResourceData(
 func PlaywrightCodeBundleResourceFromResourceDiff(
 	d *schema.ResourceDiff,
 ) (PlaywrightCodeBundleResource, error) {
-	sourceArchiveAttr, err := PlaywrightCodeBundleSourceArchiveAttributeFromList(d.Get("source_archive").([]any))
+	prebuiltArchiveAttr, err := PlaywrightCodeBundlePrebuiltArchiveAttributeFromList(d.Get(prebuiltArchiveAttributeName).([]any))
 	if err != nil {
 		return PlaywrightCodeBundleResource{}, err
 	}
 
-	data, err := PlaywrightCodeBundleDataFromString(d.Get("data").(string))
+	data, err := PlaywrightCodeBundleMetadataFromString(d.Get(metadataAttributeName).(string))
 	if err != nil {
 		return PlaywrightCodeBundleResource{}, err
 	}
 
 	resource := PlaywrightCodeBundleResource{
-		ID:            d.Id(),
-		Data:          data,
-		SourceArchive: sourceArchiveAttr,
+		ID:              d.Id(),
+		Data:            data,
+		PrebuiltArchive: prebuiltArchiveAttr,
 	}
 
 	return resource, nil
 }
 
-type PlaywrightCodeBundleSourceArchiveAttribute struct {
+type PlaywrightCodeBundlePrebuiltArchiveAttribute struct {
 	File string
 }
 
-func PlaywrightCodeBundleSourceArchiveAttributeFromList(
+func PlaywrightCodeBundlePrebuiltArchiveAttributeFromList(
 	list []any,
-) (*PlaywrightCodeBundleSourceArchiveAttribute, error) {
+) (*PlaywrightCodeBundlePrebuiltArchiveAttribute, error) {
 	if len(list) == 0 {
 		return nil, nil
 	}
 
 	m := list[0].(tfMap)
 
-	a := PlaywrightCodeBundleSourceArchiveAttribute{
+	a := PlaywrightCodeBundlePrebuiltArchiveAttribute{
 		File: m["file"].(string),
 	}
 
 	return &a, nil
 }
 
-func (a *PlaywrightCodeBundleSourceArchiveAttribute) ToList() []tfMap {
+func (a *PlaywrightCodeBundlePrebuiltArchiveAttribute) ToList() []tfMap {
 	if a == nil {
 		return []tfMap{}
 	}
@@ -301,7 +306,7 @@ func (a *PlaywrightCodeBundleSourceArchiveAttribute) ToList() []tfMap {
 	}
 }
 
-func (a *PlaywrightCodeBundleSourceArchiveAttribute) ChecksumSha256() (string, error) {
+func (a *PlaywrightCodeBundlePrebuiltArchiveAttribute) ChecksumSha256() (string, error) {
 	file, err := os.Open(a.File)
 	if err != nil {
 		return "", fmt.Errorf("failed to open archive file %q: %w", a.File, err)
@@ -313,7 +318,7 @@ func (a *PlaywrightCodeBundleSourceArchiveAttribute) ChecksumSha256() (string, e
 	return checksum, nil
 }
 
-func (a *PlaywrightCodeBundleSourceArchiveAttribute) Upload(
+func (a *PlaywrightCodeBundlePrebuiltArchiveAttribute) Upload(
 	ctx context.Context,
 	client checkly.Client,
 ) (*checkly.CodeBundle, error) {

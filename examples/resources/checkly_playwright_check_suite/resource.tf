@@ -21,8 +21,8 @@ resource "checkly_playwright_check_suite" "example-playwright-check" {
   ]
 
   bundle {
-    id   = checkly_playwright_code_bundle.playwright-bundle.id
-    data = checkly_playwright_code_bundle.playwright-bundle.data
+    key      = checkly_playwright_code_bundle.playwright-bundle.key
+    metadata = checkly_playwright_code_bundle.playwright-bundle.metadata
   }
 
   runtime {

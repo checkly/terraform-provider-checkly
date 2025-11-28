@@ -115,8 +115,8 @@ func resourcePlaywrightCheckSuite() *schema.Resource {
 							Type:        schema.TypeString,
 							Required:    true,
 						},
-						"data": {
-							Description: "The auxiliary data of the code bundle.",
+						metadataAttributeName: {
+							Description: "The generated metadata of the code bundle.",
 							Type:        schema.TypeString,
 							Required:    true,
 						},
@@ -343,7 +343,7 @@ func PlaywrightCheckSuiteResourceFromResourceData(
 
 		// We may want to make this configurable in the future, but for now
 		// this will do.
-		check.CacheHash = checksumSha256(strings.NewReader(bundleAttr.Data.ChecksumSha256))
+		check.CacheHash = checksumSha256(strings.NewReader(bundleAttr.Metadata.ChecksumSha256))
 	}
 
 	runtimeAttr, err := PlaywrightCheckSuiteRuntimeAttributeFromList(d.Get("runtime").([]any))
@@ -483,8 +483,8 @@ func (r *PlaywrightCheckSuiteResource) StoreResourceData(
 }
 
 type PlaywrightCheckSuiteBundleAttribute struct {
-	ID   string
-	Data *PlaywrightCodeBundleData
+	ID       string
+	Metadata *PlaywrightCodeBundleMetadata
 }
 
 func PlaywrightCheckSuiteBundleAttributeFromList(
@@ -496,14 +496,14 @@ func PlaywrightCheckSuiteBundleAttributeFromList(
 
 	m := list[0].(tfMap)
 
-	data, err := PlaywrightCodeBundleDataFromString(m["data"].(string))
+	data, err := PlaywrightCodeBundleMetadataFromString(m[metadataAttributeName].(string))
 	if err != nil {
 		return nil, err
 	}
 
 	a := PlaywrightCheckSuiteBundleAttribute{
-		ID:   m["id"].(string),
-		Data: data,
+		ID:       m["id"].(string),
+		Metadata: data,
 	}
 
 	return &a, nil
@@ -516,8 +516,8 @@ func (a *PlaywrightCheckSuiteBundleAttribute) ToList() []tfMap {
 
 	return []tfMap{
 		{
-			"id":   a.ID,
-			"data": a.Data.EncodeToString(),
+			"id":                  a.ID,
+			metadataAttributeName: a.Metadata.EncodeToString(),
 		},
 	}
 }

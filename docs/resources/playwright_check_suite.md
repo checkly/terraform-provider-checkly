@@ -36,8 +36,8 @@ resource "checkly_playwright_check_suite" "example-playwright-check" {
   ]
 
   bundle {
-    id   = checkly_playwright_code_bundle.playwright-bundle.id
-    data = checkly_playwright_code_bundle.playwright-bundle.data
+    key      = checkly_playwright_code_bundle.playwright-bundle.key
+    metadata = checkly_playwright_code_bundle.playwright-bundle.metadata
   }
 
   runtime {
@@ -96,8 +96,8 @@ resource "checkly_playwright_check_suite" "example-playwright-check" {
 
 Required:
 
-- `data` (String) The auxiliary data of the code bundle.
 - `id` (String) The ID of the code bundle.
+- `metadata` (String) The generated metadata of the code bundle.
 
 
 <a id="nestedblock--runtime"></a>

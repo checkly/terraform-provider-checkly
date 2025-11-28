@@ -37,16 +37,16 @@ resource "checkly_playwright_code_bundle" "example-2" {
 
 ### Required
 
-- `source_archive` (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--source_archive))
+- `prebuilt_archive` (Block List, Min: 1, Max: 1) A prebuilt archive containing the code bundle. (see [below for nested schema](#nestedblock--prebuilt_archive))
 
 ### Read-Only
 
-- `data` (String) An opaque, computed value containing auxiliary data of the code bundle. This value should be passed as-is to a check resource.
 - `id` (String) The ID of this resource.
+- `metadata` (String) An opaque blob of generated metadata. The value is not intended to be user-consumable and should be passed as-is to a Playwright check resource.
 
-<a id="nestedblock--source_archive"></a>
-### Nested Schema for `source_archive`
+<a id="nestedblock--prebuilt_archive"></a>
+### Nested Schema for `prebuilt_archive`
 
 Required:
 
-- `file` (String)
+- `file` (String) Path to the archive file.
