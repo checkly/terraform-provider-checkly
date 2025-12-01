@@ -21,7 +21,7 @@ func resourcePlaywrightCheckSuite() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
-		Description: "Creates a DNS Monitor to check DNS record availability and response times.",
+		Description: "Creates a Playwright check from a code bundle.",
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Description: "The name of the check.",

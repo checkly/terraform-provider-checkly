@@ -3,12 +3,12 @@
 page_title: "checkly_playwright_check_suite Resource - terraform-provider-checkly"
 subcategory: ""
 description: |-
-  Creates a DNS Monitor to check DNS record availability and response times.
+  Creates a Playwright check from a code bundle.
 ---
 
 # checkly_playwright_check_suite (Resource)
 
-Creates a DNS Monitor to check DNS record availability and response times.
+Creates a Playwright check from a code bundle.
 
 ## Example Usage
 
