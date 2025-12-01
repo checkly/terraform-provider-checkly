@@ -1,6 +1,9 @@
 package checkly
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"io"
 	"os"
 	"strconv"
 	"time"
@@ -17,4 +20,17 @@ func apiCallTimeout() time.Duration {
 		}
 	}
 	return 15 * time.Second
+}
+
+func checksumSha256(r io.Reader) string {
+	hash := sha256.New()
+
+	_, err := io.Copy(hash, r)
+	if err != nil {
+		panic("failed to calculate checksum: " + err.Error())
+	}
+
+	checksum := hex.EncodeToString(hash.Sum(nil))
+
+	return checksum
 }
