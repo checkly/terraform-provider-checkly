@@ -40,18 +40,14 @@ resource "checkly_playwright_check_suite" "example-playwright-check" {
   ]
 
   bundle {
-    key      = checkly_playwright_code_bundle.playwright-bundle.key
+    id       = checkly_playwright_code_bundle.playwright-bundle.id
     metadata = checkly_playwright_code_bundle.playwright-bundle.metadata
   }
 
   runtime {
     steps {
-      install {
-        command = "pnpm i"
-      }
-
       test {
-        command = "pnpm playwright test"
+        command = "npx playwright test --config \"playwright.config.ts\""
       }
     }
 
@@ -60,6 +56,10 @@ resource "checkly_playwright_check_suite" "example-playwright-check" {
 
       device {
         type = "chromium"
+      }
+
+      device {
+        type = "firefox"
       }
     }
   }
