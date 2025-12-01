@@ -15,8 +15,12 @@ Creates a DNS Monitor to check DNS record availability and response times.
 ```terraform
 data "archive_file" "playwright-bundle" {
   type        = "tar.gz"
-  output_path = "test-bundle.tar.gz"
-  source_dir  = "${path.module}/"
+  output_path = "app-bundle.tar.gz"
+  source_dir  = "${path.module}/app/"
+  excludes = [
+    ".git",
+    "node_modules",
+  ]
 }
 
 resource "checkly_playwright_code_bundle" "playwright-bundle" {
