@@ -3,7 +3,6 @@ package checkly
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -29,30 +28,13 @@ func resourceTCPMonitor() *schema.Resource {
 				Required:    true,
 				Description: "The name of the check.",
 			},
-			"frequency": {
-				Type:     schema.TypeInt,
-				Required: true,
-				ValidateFunc: func(val interface{}, key string) (warns []string, errs []error) {
-					v := val.(int)
-					valid := false
-					validFreqs := []int{0, 1, 2, 5, 10, 15, 30, 60, 120, 180, 360, 720, 1440}
-					for _, i := range validFreqs {
-						if v == i {
-							valid = true
-						}
-					}
-					if !valid {
-						errs = append(errs, fmt.Errorf("%q must be one of %v, got %d", key, validFreqs, v))
-					}
-					return warns, errs
-				},
-				Description: "The frequency in minutes to run the check. Possible values are `0`, `1`, `2`, `5`, `10`, `15`, `30`, `60`, `120`, `180`, `360`, `720`, and `1440`.",
-			},
-			"frequency_offset": {
-				Type:        schema.TypeInt,
-				Optional:    true,
-				Description: "To create a high frequency check, the property `frequency` must be `0` and `frequency_offset` can be `10`, `20` or `30`.",
-			},
+			frequencyAttributeName: makeFrequencyAttributeSchema(FrequencyAttributeSchemaOptions{
+				Monitor:            true,
+				AllowHighFrequency: true,
+			}),
+			frequencyOffsetAttributeName: makeFrequencyOffsetAttributeSchema(FrequencyOffsetAttributeSchemaOptions{
+				Monitor: true,
+			}),
 			"activated": {
 				Type:        schema.TypeBool,
 				Required:    true,
@@ -244,6 +226,7 @@ func resourceTCPMonitor() *schema.Resource {
 		},
 		CustomizeDiff: customdiff.Sequence(
 			RetryStrategyCustomizeDiff,
+			FrequencyOffsetCustomizeDiff,
 		),
 	}
 }
@@ -322,9 +305,11 @@ func resourceDataFromTCPMonitor(c *checkly.TCPMonitor, d *schema.ResourceData) e
 	sort.Strings(c.Tags)
 	d.Set("tags", c.Tags)
 
-	d.Set("frequency", c.Frequency)
+	d.Set(frequencyAttributeName, c.Frequency)
 	if c.Frequency == 0 {
-		d.Set("frequency_offset", c.FrequencyOffset)
+		d.Set(frequencyOffsetAttributeName, c.FrequencyOffset)
+	} else {
+		d.Set(frequencyOffsetAttributeName, nil)
 	}
 
 	if c.RuntimeID != nil {
@@ -364,7 +349,7 @@ func tcpCheckFromResourceData(d *schema.ResourceData) (checkly.TCPMonitor, error
 	monitor := checkly.TCPMonitor{
 		ID:                        d.Id(),
 		Name:                      d.Get("name").(string),
-		Frequency:                 d.Get("frequency").(int),
+		Frequency:                 d.Get(frequencyAttributeName).(int),
 		Activated:                 d.Get("activated").(bool),
 		Muted:                     d.Get("muted").(bool),
 		ShouldFail:                d.Get("should_fail").(bool),
@@ -396,11 +381,7 @@ func tcpCheckFromResourceData(d *schema.ResourceData) (checkly.TCPMonitor, error
 
 	monitor.Request = tcpRequestFromSet(d.Get("request").(*schema.Set))
 
-	monitor.FrequencyOffset = d.Get("frequency_offset").(int)
-
-	if monitor.Frequency == 0 && (monitor.FrequencyOffset != 10 && monitor.FrequencyOffset != 20 && monitor.FrequencyOffset != 30) {
-		return monitor, errors.New("when property frequency is 0, frequency_offset must be 10, 20 or 30")
-	}
+	monitor.FrequencyOffset = d.Get(frequencyOffsetAttributeName).(int)
 
 	return monitor, nil
 }

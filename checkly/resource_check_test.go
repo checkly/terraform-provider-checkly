@@ -1673,3 +1673,281 @@ func TestAccCheckGroupAssignment(t *testing.T) {
 		},
 	})
 }
+
+func TestAccCheckFrequencyValidation(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_check" "test-missing-frequency_offset" {
+					name      = "test-missing-frequency_offset"
+					type      = "API"
+					activated = true
+					frequency = 0
+					locations = ["eu-central-1"]
+					request {
+						method = "GET"
+						url    = "https://welcome.checklyhq.com"
+					}
+				}
+			`,
+			ExpectError: regexp.MustCompile(`"frequency_offset" is required when "frequency" is 0`),
+		},
+		{
+			Config: `
+				resource "checkly_check" "test-frequency_offset-ok-10" {
+					name             = "test-frequency_offset-ok-10"
+					type             = "API"
+					activated        = true
+					frequency        = 0
+					frequency_offset = 10
+					locations        = ["eu-central-1"]
+					request {
+						method = "GET"
+						url    = "https://welcome.checklyhq.com"
+					}
+				}
+
+				resource "checkly_check" "test-frequency_offset-ok-20" {
+					name             = "test-frequency_offset-ok-20"
+					type             = "API"
+					activated        = true
+					frequency        = 0
+					frequency_offset = 20
+					locations        = ["eu-central-1"]
+					request {
+						method = "GET"
+						url    = "https://welcome.checklyhq.com"
+					}
+				}
+
+				resource "checkly_check" "test-frequency_offset-ok-30" {
+					name             = "test-frequency_offset-ok-30"
+					type             = "API"
+					activated        = true
+					frequency        = 0
+					frequency_offset = 30
+					locations        = ["eu-central-1"]
+					request {
+						method = "GET"
+						url    = "https://welcome.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check.test-frequency_offset-ok-10",
+					"frequency",
+					"0",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test-frequency_offset-ok-10",
+					"frequency_offset",
+					"10",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test-frequency_offset-ok-20",
+					"frequency",
+					"0",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test-frequency_offset-ok-20",
+					"frequency_offset",
+					"20",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test-frequency_offset-ok-30",
+					"frequency",
+					"0",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test-frequency_offset-ok-30",
+					"frequency_offset",
+					"30",
+				),
+			),
+		},
+		{
+			Config: `
+				resource "checkly_check" "test-extra-frequency_offset" {
+					name             = "test-extra-frequency_offset"
+					type             = "API"
+					activated        = true
+					frequency        = 60
+					frequency_offset = 30
+					locations        = ["eu-central-1"]
+					request {
+						method = "GET"
+						url    = "https://welcome.checklyhq.com"
+					}
+				}
+			`,
+			ExpectError: regexp.MustCompile(`"frequency_offset" can only be set when "frequency" is 0`),
+		},
+		{
+			Config: `
+				resource "checkly_check" "test-bad-frequency" {
+					name      = "test-bad-frequency"
+					type      = "API"
+					activated = true
+					frequency = 9999
+					locations = ["eu-central-1"]
+					request {
+						method = "GET"
+						url    = "https://welcome.checklyhq.com"
+					}
+				}
+			`,
+			ExpectError: regexp.MustCompile(`"frequency" must be one of \[0 1 2 5 10 15 30 60 120 180 360 720 1440\]`),
+		},
+		{
+			Config: `
+				resource "checkly_check" "test-bad-frequency_offset" {
+					name             = "test-bad-frequency_offset"
+					type             = "API"
+					activated        = true
+					frequency        = 60
+					frequency_offset = 99
+					locations        = ["eu-central-1"]
+					request {
+						method = "GET"
+						url    = "https://welcome.checklyhq.com"
+					}
+				}
+			`,
+			ExpectError: regexp.MustCompile(`"frequency_offset" must be one of \[0 10 20 30\]`),
+		},
+		{
+			Config: `
+				resource "checkly_check" "test-frequency-ok-60" {
+					name             = "test-frequency-ok-60"
+					type             = "API"
+					activated        = true
+					frequency        = 60
+					frequency_offset = 0
+					locations        = ["eu-central-1"]
+					request {
+						method = "GET"
+						url    = "https://welcome.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check.test-frequency-ok-60",
+					"frequency",
+					"60",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test-frequency-ok-60",
+					"frequency_offset",
+					"0",
+				),
+			),
+		},
+	})
+}
+
+func TestAccCheckFrequencyUpdates(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_check" "test1" {
+					name      = "test-normal-frequency"
+					type      = "API"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						method = "GET"
+						url    = "https://welcome.checklyhq.com"
+					}
+				}
+
+				resource "checkly_check" "test2" {
+					name             = "test-high-frequency"
+					type             = "API"
+					activated        = true
+					frequency        = 0
+					frequency_offset = 30
+					locations        = ["eu-central-1"]
+					request {
+						method = "GET"
+						url    = "https://welcome.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check.test1",
+					"frequency",
+					"60",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test1",
+					"frequency_offset",
+					"0",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test2",
+					"frequency",
+					"0",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test2",
+					"frequency_offset",
+					"30",
+				),
+			),
+		},
+		{
+			Config: `
+				resource "checkly_check" "test1" {
+					name             = "test-normal-frequency-updated-to-high"
+					type             = "API"
+					activated        = true
+					frequency        = 0
+					frequency_offset = 10
+					locations        = ["eu-central-1"]
+					request {
+						method = "GET"
+						url    = "https://welcome.checklyhq.com"
+					}
+				}
+
+				resource "checkly_check" "test2" {
+					name      = "test-high-frequency-updated-to-normal"
+					type      = "API"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						method = "GET"
+						url    = "https://welcome.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check.test1",
+					"frequency",
+					"0",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test1",
+					"frequency_offset",
+					"10",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test2",
+					"frequency",
+					"60",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test2",
+					"frequency_offset",
+					"0",
+				),
+			),
+		},
+	})
+}

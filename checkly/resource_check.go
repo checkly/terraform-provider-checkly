@@ -38,30 +38,14 @@ func resourceCheck() *schema.Resource {
 				Required:    true,
 				Description: "The type of the check. Possible values are `API`, `BROWSER`, and `MULTI_STEP`.",
 			},
-			"frequency": {
-				Type:     schema.TypeInt,
-				Required: true,
-				ValidateFunc: func(val interface{}, key string) (warns []string, errs []error) {
-					v := val.(int)
-					valid := false
-					validFreqs := []int{0, 1, 2, 5, 10, 15, 30, 60, 120, 180, 360, 720, 1440}
-					for _, i := range validFreqs {
-						if v == i {
-							valid = true
-						}
-					}
-					if !valid {
-						errs = append(errs, fmt.Errorf("%q must be one of %v, got %d", key, validFreqs, v))
-					}
-					return warns, errs
-				},
-				Description: "The frequency in minutes to run the check. Possible values are `0`, `1`, `2`, `5`, `10`, `15`, `30`, `60`, `120`, `180`, `360`, `720`, and `1440`.",
-			},
-			"frequency_offset": {
-				Type:        schema.TypeInt,
-				Optional:    true,
-				Description: "This property only valid for API high frequency checks. To create a hight frequency check, the property `frequency` must be `0` and `frequency_offset` could be `10`, `20` or `30`.",
-			},
+			frequencyAttributeName: makeFrequencyAttributeSchema(FrequencyAttributeSchemaOptions{
+				Monitor:            false,
+				AllowHighFrequency: true,
+			}),
+			frequencyOffsetAttributeName: makeFrequencyOffsetAttributeSchema(FrequencyOffsetAttributeSchemaOptions{
+				Monitor:    true,
+				Disclaimer: "Only relevant when `type` is `API`.",
+			}),
 			"activated": {
 				Type:        schema.TypeBool,
 				Required:    true,
@@ -392,6 +376,7 @@ func resourceCheck() *schema.Resource {
 		},
 		CustomizeDiff: customdiff.Sequence(
 			RetryStrategyCustomizeDiff,
+			FrequencyOffsetCustomizeDiff,
 		),
 	}
 }
@@ -487,9 +472,11 @@ func resourceDataFromCheck(c *checkly.Check, d *schema.ResourceData) error {
 	sort.Strings(c.Tags)
 	d.Set("tags", c.Tags)
 
-	d.Set("frequency", c.Frequency)
+	d.Set(frequencyAttributeName, c.Frequency)
 	if c.Frequency == 0 {
-		d.Set("frequency_offset", c.FrequencyOffset)
+		d.Set(frequencyOffsetAttributeName, c.FrequencyOffset)
+	} else {
+		d.Set(frequencyOffsetAttributeName, nil)
 	}
 
 	if c.RuntimeID != nil {
@@ -591,7 +578,7 @@ func checkFromResourceData(d *schema.ResourceData) (checkly.Check, error) {
 		ID:                        d.Id(),
 		Name:                      d.Get("name").(string),
 		Type:                      d.Get("type").(string),
-		Frequency:                 d.Get("frequency").(int),
+		Frequency:                 d.Get(frequencyAttributeName).(int),
 		Activated:                 d.Get("activated").(bool),
 		Muted:                     d.Get("muted").(bool),
 		ShouldFail:                d.Get("should_fail").(bool),
@@ -636,10 +623,10 @@ func checkFromResourceData(d *schema.ResourceData) (checkly.Check, error) {
 	if check.Type == checkly.TypeAPI {
 		// this will prevent subsequent apply from causing a tf config change in browser checks
 		check.Request = requestFromSet(d.Get("request").(*schema.Set))
-		check.FrequencyOffset = d.Get("frequency_offset").(int)
+		check.FrequencyOffset = d.Get(frequencyOffsetAttributeName).(int)
 
 		if check.Frequency == 0 && (check.FrequencyOffset != 10 && check.FrequencyOffset != 20 && check.FrequencyOffset != 30) {
-			return check, errors.New("when property frequency is 0, frequency_offset must be 10, 20 or 30")
+			return check, errors.New("when `frequency` is 0, `frequency_offset` must be 10, 20 or 30")
 		}
 
 		if check.SSLCheckDomain != "" {

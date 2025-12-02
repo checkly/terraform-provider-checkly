@@ -73,7 +73,7 @@ resource "checkly_playwright_check_suite" "example-playwright-check" {
 
 - `activated` (Boolean) Determines whether the check will run periodically or not after being deployed.
 - `bundle` (Block List, Min: 1, Max: 1) Attaches a code bundle to the check. (see [below for nested schema](#nestedblock--bundle))
-- `frequency` (Number) How often the check should run in minutes. Possible values are `1`, `2`, `5`, `10`, `15`, `30`, `60`, `120`, `180`, `360`, `720`, and `1440`.
+- `frequency` (Number) Controls how often the check should run. Defined in minutes. The allowed values are `1` (1 minute), `2` (2 minutes), `5` (5 minutes), `10` (10 minutes), `15` (15 minutes), `30` (30 minutes), `60` (1 hour), `120` (2 hours), `180` (3 hours), `360` (6 hours), `720` (12 hours) and `1440` (24 hours).
 - `name` (String) The name of the check.
 - `runtime` (Block List, Min: 1, Max: 1) Configure the runtime environment of the Playwright check. (see [below for nested schema](#nestedblock--runtime))
 
