@@ -23,7 +23,7 @@ func makeFrequencyOffsetAttributeSchema(options FrequencyOffsetAttributeSchemaOp
 	allow := allowedValues[int]{
 		{
 			Value:       0,
-			Description: "not set - useful with expressions",
+			Description: "disabled - use `frequency` to define the actual frequency",
 		},
 		{
 			Value:       10,
