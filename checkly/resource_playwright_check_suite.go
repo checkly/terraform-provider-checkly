@@ -28,12 +28,10 @@ func resourcePlaywrightCheckSuite() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 			},
-			"frequency": {
-				Description:  "How often the check should run in minutes. Possible values are `1`, `2`, `5`, `10`, `15`, `30`, `60`, `120`, `180`, `360`, `720`, and `1440`.",
-				Type:         schema.TypeInt,
-				Required:     true,
-				ValidateFunc: validateOneOf([]int{1, 2, 5, 10, 15, 30, 60, 120, 180, 360, 720, 1440}),
-			},
+			frequencyAttributeName: makeFrequencyAttributeSchema(FrequencyAttributeSchemaOptions{
+				Monitor:            false,
+				AllowHighFrequency: false,
+			}),
 			"activated": {
 				Description: "Determines whether the check will run periodically or not after being deployed.",
 				Type:        schema.TypeBool,
@@ -312,7 +310,7 @@ func PlaywrightCheckSuiteResourceFromResourceData(
 	check := checkly.PlaywrightCheck{
 		ID:                        d.Id(),
 		Name:                      d.Get("name").(string),
-		Frequency:                 d.Get("frequency").(int),
+		Frequency:                 d.Get(frequencyAttributeName).(int),
 		Activated:                 d.Get("activated").(bool),
 		Muted:                     d.Get("muted").(bool),
 		RunParallel:               d.Get("run_parallel").(bool),
@@ -457,7 +455,7 @@ func (r *PlaywrightCheckSuiteResource) StoreResourceData(
 	sort.Strings(r.Tags)
 	d.Set("tags", r.Tags)
 
-	d.Set("frequency", r.Frequency)
+	d.Set(frequencyAttributeName, r.Frequency)
 
 	if err := d.Set("alert_settings", setFromAlertSettings(*r.AlertSettings)); err != nil {
 		return fmt.Errorf("error setting alert settings for resource %s: %w", d.Id(), err)

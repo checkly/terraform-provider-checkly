@@ -94,7 +94,7 @@ resource "checkly_tcp_monitor" "example-tcp-monitor-2" {
 ### Required
 
 - `activated` (Boolean) Determines if the check is running or not. Possible values `true`, and `false`.
-- `frequency` (Number) The frequency in minutes to run the check. Possible values are `0`, `1`, `2`, `5`, `10`, `15`, `30`, `60`, `120`, `180`, `360`, `720`, and `1440`.
+- `frequency` (Number) Controls how often the monitor should run. Defined in minutes. The allowed values are `0` (high frequency - use `frequency_offset` to define the actual frequency), `1` (1 minute), `2` (2 minutes), `5` (5 minutes), `10` (10 minutes), `15` (15 minutes), `30` (30 minutes), `60` (1 hour), `120` (2 hours), `180` (3 hours), `360` (6 hours), `720` (12 hours) and `1440` (24 hours).
 - `name` (String) The name of the check.
 - `request` (Block Set, Min: 1, Max: 1) The parameters for the TCP connection. (see [below for nested schema](#nestedblock--request))
 
@@ -103,7 +103,7 @@ resource "checkly_tcp_monitor" "example-tcp-monitor-2" {
 - `alert_channel_subscription` (Block List) An array of channel IDs and whether they're activated or not. If you don't set at least one alert subscription for your check, we won't be able to alert you in case something goes wrong with it. (see [below for nested schema](#nestedblock--alert_channel_subscription))
 - `alert_settings` (Block List, Max: 1) Determines the alert escalation policy for the monitor. (see [below for nested schema](#nestedblock--alert_settings))
 - `degraded_response_time` (Number) The response time in milliseconds starting from which a check should be considered degraded. Possible values are between 0 and 5000. (Default `4000`).
-- `frequency_offset` (Number) To create a high frequency check, the property `frequency` must be `0` and `frequency_offset` can be `10`, `20` or `30`.
+- `frequency_offset` (Number) When `frequency` is `0` (high frequency), `frequency_offset` alone controls how often the monitor should run. Defined in seconds. The allowed values are `10` (10 seconds), `20` (20 seconds) and `30` (30 seconds).
 - `group_id` (Number) The id of the check group this check is part of.
 - `group_order` (Number) The position of this check in a check group. It determines in what order checks are run when a group is triggered from the API or from CI/CD.
 - `locations` (Set of String) An array of one or more data center locations where to run the this check. (Default ["us-east-1"])

@@ -28,18 +28,13 @@ func resourceDNSMonitor() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 			},
-			"frequency": {
-				Description:  "How often the monitor should run in minutes. Possible values are `0`, `1`, `2`, `5`, `10`, `15`, `30`, `60`, `120`, `180`, `360`, `720`, and `1440`.",
-				Type:         schema.TypeInt,
-				Required:     true,
-				ValidateFunc: validateOneOf([]int{0, 1, 2, 5, 10, 15, 30, 60, 120, 180, 360, 720, 1440}),
-			},
-			"frequency_offset": {
-				Description:  "To create a high frequency monitor, set `frequency` to `0` and `frequency_offset` to `10`, `20`, or `30`.",
-				Type:         schema.TypeInt,
-				Optional:     true,
-				ValidateFunc: validateOneOf([]int{10, 20, 30}),
-			},
+			frequencyAttributeName: makeFrequencyAttributeSchema(FrequencyAttributeSchemaOptions{
+				Monitor:            true,
+				AllowHighFrequency: true,
+			}),
+			frequencyOffsetAttributeName: makeFrequencyOffsetAttributeSchema(FrequencyOffsetAttributeSchemaOptions{
+				Monitor: true,
+			}),
 			"activated": {
 				Description: "Determines whether the monitor will run periodically or not after being deployed.",
 				Type:        schema.TypeBool,
@@ -297,9 +292,11 @@ func resourceDataFromDNSMonitor(c *checkly.DNSMonitor, d *schema.ResourceData) e
 	sort.Strings(c.Tags)
 	d.Set("tags", c.Tags)
 
-	d.Set("frequency", c.Frequency)
+	d.Set(frequencyAttributeName, c.Frequency)
 	if c.Frequency == 0 {
-		d.Set("frequency_offset", c.FrequencyOffset)
+		d.Set(frequencyOffsetAttributeName, c.FrequencyOffset)
+	} else {
+		d.Set(frequencyOffsetAttributeName, nil)
 	}
 
 	if err := d.Set("alert_settings", setFromAlertSettings(*c.AlertSettings)); err != nil {
@@ -324,7 +321,7 @@ func dnsMonitorFromResourceData(d *schema.ResourceData) (checkly.DNSMonitor, err
 	check := checkly.DNSMonitor{
 		ID:                        d.Id(),
 		Name:                      d.Get("name").(string),
-		Frequency:                 d.Get("frequency").(int),
+		Frequency:                 d.Get(frequencyAttributeName).(int),
 		Activated:                 d.Get("activated").(bool),
 		Muted:                     d.Get("muted").(bool),
 		RunParallel:               d.Get("run_parallel").(bool),
@@ -345,10 +342,10 @@ func dnsMonitorFromResourceData(d *schema.ResourceData) (checkly.DNSMonitor, err
 
 	check.Request = dnsRequestFromList(d.Get("request").([]any))
 
-	check.FrequencyOffset = d.Get("frequency_offset").(int)
+	check.FrequencyOffset = d.Get(frequencyOffsetAttributeName).(int)
 
 	if check.Frequency == 0 && (check.FrequencyOffset != 10 && check.FrequencyOffset != 20 && check.FrequencyOffset != 30) {
-		return check, errors.New("when property frequency is 0, frequency_offset must be 10, 20 or 30")
+		return check, errors.New("when `frequency` is 0, `frequency_offset` must be 10, 20 or 30")
 	}
 
 	return check, nil
