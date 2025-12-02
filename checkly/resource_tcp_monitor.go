@@ -3,7 +3,6 @@ package checkly
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -227,6 +226,7 @@ func resourceTCPMonitor() *schema.Resource {
 		},
 		CustomizeDiff: customdiff.Sequence(
 			RetryStrategyCustomizeDiff,
+			FrequencyOffsetCustomizeDiff,
 		),
 	}
 }
@@ -382,10 +382,6 @@ func tcpCheckFromResourceData(d *schema.ResourceData) (checkly.TCPMonitor, error
 	monitor.Request = tcpRequestFromSet(d.Get("request").(*schema.Set))
 
 	monitor.FrequencyOffset = d.Get(frequencyOffsetAttributeName).(int)
-
-	if monitor.Frequency == 0 && (monitor.FrequencyOffset != 10 && monitor.FrequencyOffset != 20 && monitor.FrequencyOffset != 30) {
-		return monitor, errors.New("when `frequency` is 0, `frequency_offset` must be 10, 20 or 30")
-	}
 
 	return monitor, nil
 }

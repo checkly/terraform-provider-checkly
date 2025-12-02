@@ -2,7 +2,6 @@ package checkly
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -209,6 +208,7 @@ func resourceDNSMonitor() *schema.Resource {
 		},
 		CustomizeDiff: customdiff.Sequence(
 			RetryStrategyCustomizeDiff,
+			FrequencyOffsetCustomizeDiff,
 		),
 	}
 }
@@ -343,10 +343,6 @@ func dnsMonitorFromResourceData(d *schema.ResourceData) (checkly.DNSMonitor, err
 	check.Request = dnsRequestFromList(d.Get("request").([]any))
 
 	check.FrequencyOffset = d.Get(frequencyOffsetAttributeName).(int)
-
-	if check.Frequency == 0 && (check.FrequencyOffset != 10 && check.FrequencyOffset != 20 && check.FrequencyOffset != 30) {
-		return check, errors.New("when `frequency` is 0, `frequency_offset` must be 10, 20 or 30")
-	}
 
 	return check, nil
 }

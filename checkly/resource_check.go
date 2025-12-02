@@ -376,6 +376,7 @@ func resourceCheck() *schema.Resource {
 		},
 		CustomizeDiff: customdiff.Sequence(
 			RetryStrategyCustomizeDiff,
+			FrequencyOffsetCustomizeDiff,
 		),
 	}
 }

@@ -3,7 +3,6 @@ package checkly
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -207,6 +206,7 @@ func resourceURLMonitor() *schema.Resource {
 		},
 		CustomizeDiff: customdiff.Sequence(
 			RetryStrategyCustomizeDiff,
+			FrequencyOffsetCustomizeDiff,
 		),
 	}
 }
@@ -341,10 +341,6 @@ func urlMonitorFromResourceData(d *schema.ResourceData) (checkly.URLMonitor, err
 	check.Request = urlRequestFromSet(d.Get("request").(*schema.Set))
 
 	check.FrequencyOffset = d.Get(frequencyOffsetAttributeName).(int)
-
-	if check.Frequency == 0 && (check.FrequencyOffset != 10 && check.FrequencyOffset != 20 && check.FrequencyOffset != 30) {
-		return check, errors.New("when `frequency` is 0, `frequency_offset` must be 10, 20 or 30")
-	}
 
 	return check, nil
 }
