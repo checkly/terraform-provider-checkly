@@ -326,6 +326,9 @@ func PlaywrightCheckSuiteResourceFromResourceData(
 	alertSettings := alertSettingsFromSet(d.Get("alert_settings").([]any))
 	check.AlertSettings = &alertSettings
 
+	privateLocations := stringsFromSet(d.Get("private_locations").(*schema.Set))
+	check.PrivateLocations = &privateLocations
+
 	bundleAttr, err := PlaywrightCheckSuiteBundleAttributeFromList(d.Get("bundle").([]any))
 	if err != nil {
 		return PlaywrightCheckSuiteResource{}, err
