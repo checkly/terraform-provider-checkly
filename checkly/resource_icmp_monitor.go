@@ -11,16 +11,16 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-func resourceDNSMonitor() *schema.Resource {
+func resourceICMPMonitor() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceDNSMonitorCreate,
-		Read:   resourceDNSMonitorRead,
-		Update: resourceDNSMonitorUpdate,
-		Delete: resourceDNSMonitorDelete,
+		Create: resourceICMPMonitorCreate,
+		Read:   resourceICMPMonitorRead,
+		Update: resourceICMPMonitorUpdate,
+		Delete: resourceICMPMonitorDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
-		Description: "Creates a DNS Monitor to check DNS record availability and response times.",
+		Description: "Creates an ICMP Monitor to check host availability using ping.",
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Description: "The name of the monitor.",
@@ -52,26 +52,26 @@ func resourceDNSMonitor() *schema.Resource {
 				Default:     false,
 			},
 			"locations": {
-				Description: "An array of one or more data center locations where to run the this monitor.",
+				Description: "An array of one or more data center locations where to run this monitor.",
 				Type:        schema.TypeSet,
 				Optional:    true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
 			},
-			"degraded_response_time": {
-				Description:  "The response time in milliseconds where the monitor should be considered degraded. Possible values are between `0` and `5000`. (Default `500`).",
+			"degraded_packet_loss_threshold": {
+				Description:  "The packet loss percentage where the monitor should be considered degraded. Possible values are between `0` and `100`. (Default `10`).",
 				Type:         schema.TypeInt,
 				Optional:     true,
-				Default:      500,
-				ValidateFunc: validateBetween(0, 5000),
+				Default:      10,
+				ValidateFunc: validateBetween(0, 100),
 			},
-			"max_response_time": {
-				Description:  "The response time in milliseconds where the monitor should be considered failing. Possible values are between `0` and `5000`. (Default `1000`).",
+			"max_packet_loss_threshold": {
+				Description:  "The packet loss percentage where the monitor should be considered failing. Possible values are between `0` and `100`. (Default `20`).",
 				Type:         schema.TypeInt,
 				Optional:     true,
-				Default:      1000,
-				ValidateFunc: validateBetween(0, 5000),
+				Default:      20,
+				ValidateFunc: validateBetween(0, 100),
 			},
 			"tags": {
 				Description: "A list of tags for organizing and filtering checks and monitors.",
@@ -110,71 +110,47 @@ func resourceDNSMonitor() *schema.Resource {
 				Default:     true,
 			},
 			"request": {
-				Description: "The parameters of the HTTP request.",
+				Description: "The parameters of the ICMP request.",
 				Type:        schema.TypeList,
 				Required:    true,
 				MaxItems:    1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"record_type": {
-							Description:  "The DNS record type. Possible values are `A`, `AAAA`, `CNAME`, `MX`, `NS`, `TXT` and `SOA`.",
-							Type:         schema.TypeString,
-							Required:     true,
-							ValidateFunc: validateOneOf([]string{"A", "AAAA", "CNAME", "MX", "NS", "TXT", "SOA"}),
-						},
-						"query": {
-							Description: "The DNS record to query.",
+						"hostname": {
+							Description: "The hostname to ping.",
 							Type:        schema.TypeString,
 							Required:    true,
 						},
-						"protocol": {
-							Description:  "The protocol used to communicate with the name server. Possible values are `UDP` and `TCP`. (Default `UDP`).",
+						"ip_family": {
+							Description:  "The IP family to use. Possible values are `IPv4` and `IPv6`. (Default `IPv4`).",
 							Type:         schema.TypeString,
 							Optional:     true,
-							Default:      "UDP",
-							ValidateFunc: validateOneOf([]string{"UDP", "TCP"}),
+							Default:      "IPv4",
+							ValidateFunc: validateOneOf([]string{"IPv4", "IPv6"}),
 						},
-						"name_server": {
-							Description: "The name server to use.",
-							Type:        schema.TypeList,
-							Optional:    true,
-							MaxItems:    1,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"host": {
-										Description: "The name server host.",
-										Type:        schema.TypeString,
-										Optional:    true,
-										RequiredWith: []string{
-											"request.0.name_server.0.port",
-										},
-									},
-									"port": {
-										Description: "The name server port.",
-										Type:        schema.TypeInt,
-										Optional:    true,
-										RequiredWith: []string{
-											"request.0.name_server.0.host",
-										},
-									},
-								},
-							},
+						"ping_count": {
+							Description:  "The number of ping packets to send. (Default `10`).",
+							Type:         schema.TypeInt,
+							Optional:     true,
+							Default:      10,
+							ValidateFunc: validateBetween(1, 50),
 						},
 						"assertion": {
-							Description: "Assertions to validate the HTTP response. DNS monitors only support status code assertions.",
+							Description: "Assertions to validate the ICMP response.",
 							Type:        schema.TypeSet,
 							Optional:    true,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"source": {
-										Description:  "The source of the asserted value. Possible values are `RESPONSE_CODE`, `RESPONSE_TIME`, `TEXT_ANSWER` and `JSON_ANSWER`.",
+										Description:  "The source of the asserted value. Possible values are `LATENCY` and `JSON_RESPONSE`.",
 										Type:         schema.TypeString,
 										Required:     true,
-										ValidateFunc: validateOneOf([]string{"RESPONSE_CODE", "RESPONSE_TIME", "TEXT_ANSWER", "JSON_ANSWER"}),
+										ValidateFunc: validateOneOf([]string{"LATENCY", "JSON_RESPONSE"}),
 									},
 									"property": {
-										Type:     schema.TypeString,
-										Optional: true,
+										Description: "The property of the source to assert. For `LATENCY` source, possible values are `avg`, `min`, `max` and `stdDev`.",
+										Type:        schema.TypeString,
+										Optional:    true,
 									},
 									"comparison": {
 										Description:  "The type of comparison to be executed between expected and actual value of the assertion. Possible values are `EQUALS`, `NOT_EQUALS`, `GREATER_THAN` and `LESS_THAN`.",
@@ -183,7 +159,7 @@ func resourceDNSMonitor() *schema.Resource {
 										ValidateFunc: validateOneOf([]string{"EQUALS", "NOT_EQUALS", "GREATER_THAN", "LESS_THAN"}),
 									},
 									"target": {
-										Description: "The target value. Typically `NOERROR` when the source is `RESPONSE_CODE`.",
+										Description: "The target value for the assertion.",
 										Type:        schema.TypeString,
 										Required:    true,
 									},
@@ -213,8 +189,8 @@ func resourceDNSMonitor() *schema.Resource {
 	}
 }
 
-func resourceDNSMonitorCreate(d *schema.ResourceData, client interface{}) error {
-	check, err := dnsMonitorFromResourceData(d)
+func resourceICMPMonitorCreate(d *schema.ResourceData, client interface{}) error {
+	monitor, err := icmpMonitorFromResourceData(d)
 	if err != nil {
 		return fmt.Errorf("translation error: %w", err)
 	}
@@ -222,36 +198,34 @@ func resourceDNSMonitorCreate(d *schema.ResourceData, client interface{}) error 
 	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
 	defer cancel()
 
-	newCheck, err := client.(checkly.Client).CreateDNSMonitor(ctx, check)
+	newMonitor, err := client.(checkly.Client).CreateICMPMonitor(ctx, monitor)
 	if err != nil {
-		return fmt.Errorf("failed to create DNS monitor: %w", err)
+		return fmt.Errorf("failed to create ICMP monitor: %w", err)
 	}
 
-	d.SetId(newCheck.ID)
+	d.SetId(newMonitor.ID)
 
-	return resourceDNSMonitorRead(d, client)
+	return resourceICMPMonitorRead(d, client)
 }
 
-func resourceDNSMonitorRead(d *schema.ResourceData, client interface{}) error {
+func resourceICMPMonitorRead(d *schema.ResourceData, client interface{}) error {
 	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
 	defer cancel()
 
-	check, err := client.(checkly.Client).GetDNSMonitor(ctx, d.Id())
+	monitor, err := client.(checkly.Client).GetICMPMonitor(ctx, d.Id())
 	if err != nil {
 		if strings.Contains(err.Error(), "404") {
-			//if resource is deleted remotely, then mark it as
-			//successfully gone by unsetting it's ID
 			d.SetId("")
 			return nil
 		}
-		return fmt.Errorf("failed to retrieve DNS monitor '%s': %w", d.Id(), err)
+		return fmt.Errorf("failed to retrieve ICMP monitor '%s': %w", d.Id(), err)
 	}
 
-	return resourceDataFromDNSMonitor(check, d)
+	return resourceDataFromICMPMonitor(monitor, d)
 }
 
-func resourceDNSMonitorUpdate(d *schema.ResourceData, client interface{}) error {
-	check, err := dnsMonitorFromResourceData(d)
+func resourceICMPMonitorUpdate(d *schema.ResourceData, client interface{}) error {
+	monitor, err := icmpMonitorFromResourceData(d)
 	if err != nil {
 		return fmt.Errorf("translation error: %w", err)
 	}
@@ -259,35 +233,35 @@ func resourceDNSMonitorUpdate(d *schema.ResourceData, client interface{}) error 
 	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
 	defer cancel()
 
-	_, err = client.(checkly.Client).UpdateDNSMonitor(ctx, check.ID, check)
+	_, err = client.(checkly.Client).UpdateICMPMonitor(ctx, monitor.ID, monitor)
 	if err != nil {
-		return fmt.Errorf("failed to update DNS monitor '%s': %w", d.Id(), err)
+		return fmt.Errorf("failed to update ICMP monitor '%s': %w", d.Id(), err)
 	}
 
-	d.SetId(check.ID)
+	d.SetId(monitor.ID)
 
-	return resourceDNSMonitorRead(d, client)
+	return resourceICMPMonitorRead(d, client)
 }
 
-func resourceDNSMonitorDelete(d *schema.ResourceData, client interface{}) error {
+func resourceICMPMonitorDelete(d *schema.ResourceData, client interface{}) error {
 	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
 	defer cancel()
 
-	if err := client.(checkly.Client).DeleteDNSMonitor(ctx, d.Id()); err != nil {
-		return fmt.Errorf("failed to delete DNS monitor '%s': %w", d.Id(), err)
+	if err := client.(checkly.Client).DeleteICMPMonitor(ctx, d.Id()); err != nil {
+		return fmt.Errorf("failed to delete ICMP monitor '%s': %w", d.Id(), err)
 	}
 
 	return nil
 }
 
-func resourceDataFromDNSMonitor(c *checkly.DNSMonitor, d *schema.ResourceData) error {
+func resourceDataFromICMPMonitor(c *checkly.ICMPMonitor, d *schema.ResourceData) error {
 	d.Set("name", c.Name)
 	d.Set("activated", c.Activated)
 	d.Set("muted", c.Muted)
 	d.Set("run_parallel", c.RunParallel)
 	d.Set("locations", c.Locations)
-	d.Set("degraded_response_time", c.DegradedResponseTime)
-	d.Set("max_response_time", c.MaxResponseTime)
+	d.Set("degraded_packet_loss_threshold", c.DegradedPacketLossThreshold)
+	d.Set("max_packet_loss_threshold", c.MaxPacketLossThreshold)
 
 	sort.Strings(c.Tags)
 	d.Set("tags", c.Tags)
@@ -304,7 +278,7 @@ func resourceDataFromDNSMonitor(c *checkly.DNSMonitor, d *schema.ResourceData) e
 	}
 	d.Set("use_global_alert_settings", c.UseGlobalAlertSettings)
 
-	err := d.Set("request", listFromDNSRequest(c.Request))
+	err := d.Set("request", listFromICMPRequest(c.Request))
 	if err != nil {
 		return fmt.Errorf("error setting request for resource %s: %w", d.Id(), err)
 	}
@@ -317,91 +291,54 @@ func resourceDataFromDNSMonitor(c *checkly.DNSMonitor, d *schema.ResourceData) e
 	return nil
 }
 
-func dnsMonitorFromResourceData(d *schema.ResourceData) (checkly.DNSMonitor, error) {
-	check := checkly.DNSMonitor{
-		ID:                        d.Id(),
-		Name:                      d.Get("name").(string),
-		Frequency:                 d.Get(frequencyAttributeName).(int),
-		Activated:                 d.Get("activated").(bool),
-		Muted:                     d.Get("muted").(bool),
-		RunParallel:               d.Get("run_parallel").(bool),
-		Locations:                 stringsFromSet(d.Get("locations").(*schema.Set)),
-		DegradedResponseTime:      d.Get("degraded_response_time").(int),
-		MaxResponseTime:           d.Get("max_response_time").(int),
-		Tags:                      stringsFromSet(d.Get("tags").(*schema.Set)),
-		UseGlobalAlertSettings:    d.Get("use_global_alert_settings").(bool),
-		GroupID:                   int64(d.Get("group_id").(int)),
-		GroupOrder:                d.Get("group_order").(int),
-		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(d.Get("alert_channel_subscription").([]interface{})),
-		RetryStrategy:             retryStrategyFromList(d.Get(retryStrategyAttributeName).([]any)),
-		TriggerIncident:           triggerIncidentFromSet(d.Get("trigger_incident").(*schema.Set)),
+func icmpMonitorFromResourceData(d *schema.ResourceData) (checkly.ICMPMonitor, error) {
+	monitor := checkly.ICMPMonitor{
+		ID:                          d.Id(),
+		Name:                        d.Get("name").(string),
+		Frequency:                   d.Get(frequencyAttributeName).(int),
+		Activated:                   d.Get("activated").(bool),
+		Muted:                       d.Get("muted").(bool),
+		RunParallel:                 d.Get("run_parallel").(bool),
+		Locations:                   stringsFromSet(d.Get("locations").(*schema.Set)),
+		DegradedPacketLossThreshold: d.Get("degraded_packet_loss_threshold").(int),
+		MaxPacketLossThreshold:      d.Get("max_packet_loss_threshold").(int),
+		Tags:                        stringsFromSet(d.Get("tags").(*schema.Set)),
+		UseGlobalAlertSettings:      d.Get("use_global_alert_settings").(bool),
+		GroupID:                     int64(d.Get("group_id").(int)),
+		GroupOrder:                  d.Get("group_order").(int),
+		AlertChannelSubscriptions:   alertChannelSubscriptionsFromSet(d.Get("alert_channel_subscription").([]interface{})),
+		RetryStrategy:               retryStrategyFromList(d.Get(retryStrategyAttributeName).([]any)),
+		TriggerIncident:             triggerIncidentFromSet(d.Get("trigger_incident").(*schema.Set)),
 	}
 
 	alertSettings := alertSettingsFromSet(d.Get("alert_settings").([]interface{}))
-	check.AlertSettings = &alertSettings
+	monitor.AlertSettings = &alertSettings
 
-	check.Request = dnsRequestFromList(d.Get("request").([]any))
+	monitor.Request = icmpRequestFromList(d.Get("request").([]any))
 
-	check.FrequencyOffset = d.Get(frequencyOffsetAttributeName).(int)
+	monitor.FrequencyOffset = d.Get(frequencyOffsetAttributeName).(int)
 
-	return check, nil
+	return monitor, nil
 }
 
-func dnsRequestFromList(s []any) checkly.DNSRequest {
+func icmpRequestFromList(s []any) checkly.ICMPRequest {
 	if len(s) == 0 {
-		return checkly.DNSRequest{}
+		return checkly.ICMPRequest{}
 	}
 	res := s[0].(tfMap)
-	ns := dnsRequestNameServerFromList(res["name_server"].([]any))
-	return checkly.DNSRequest{
-		RecordType: res["record_type"].(string),
-		Query:      res["query"].(string),
-		NameServer: ns.Host,
-		Port:       ns.Port,
-		Protocol:   res["protocol"].(string),
+	return checkly.ICMPRequest{
+		Hostname:   res["hostname"].(string),
+		IPFamily:   res["ip_family"].(string),
+		PingCount:  res["ping_count"].(int),
 		Assertions: assertionsFromSet(res["assertion"].(*schema.Set)),
 	}
 }
 
-func listFromDNSRequest(r checkly.DNSRequest) []tfMap {
+func listFromICMPRequest(r checkly.ICMPRequest) []tfMap {
 	s := tfMap{}
-	s["record_type"] = r.RecordType
-	s["query"] = r.Query
-	s["name_server"] = listFromDNSRequestNameServer(dnsRequestNameServer{
-		Host: r.NameServer,
-		Port: r.Port,
-	})
-	s["protocol"] = r.Protocol
+	s["hostname"] = r.Hostname
+	s["ip_family"] = r.IPFamily
+	s["ping_count"] = r.PingCount
 	s["assertion"] = setFromAssertions(r.Assertions)
-	return []tfMap{s}
-}
-
-type dnsRequestNameServer struct {
-	Host string
-	Port int
-}
-
-func dnsRequestNameServerFromList(s []any) dnsRequestNameServer {
-	if len(s) == 0 {
-		return dnsRequestNameServer{}
-	}
-
-	res := s[0].(tfMap)
-
-	return dnsRequestNameServer{
-		Host: res["host"].(string),
-		Port: res["port"].(int),
-	}
-}
-
-func listFromDNSRequestNameServer(r dnsRequestNameServer) []tfMap {
-	if r.Host == "" && r.Port == 0 {
-		return []tfMap{}
-	}
-
-	s := tfMap{}
-	s["host"] = r.Host
-	s["port"] = r.Port
-
 	return []tfMap{s}
 }

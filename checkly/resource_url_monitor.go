@@ -201,7 +201,9 @@ func resourceURLMonitor() *schema.Resource {
 				Type:        schema.TypeInt,
 				Optional:    true,
 			},
-			retryStrategyAttributeName: retryStrategyAttributeSchema,
+			retryStrategyAttributeName: makeRetryStrategyAttributeSchema(RetryStrategyAttributeSchemaOptions{
+				SupportsOnlyOnNetworkError: true,
+			}),
 			"trigger_incident":         triggerIncidentAttributeSchema,
 		},
 		CustomizeDiff: customdiff.Sequence(
