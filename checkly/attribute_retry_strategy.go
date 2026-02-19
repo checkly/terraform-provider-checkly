@@ -9,64 +9,74 @@ import (
 
 const retryStrategyAttributeName = "retry_strategy"
 
-var retryStrategyAttributeSchema = &schema.Schema{
-	Type:        schema.TypeList,
-	Optional:    true,
-	Computed:    true,
-	MaxItems:    1,
-	Description: "A strategy for retrying failed check/monitor runs.",
-	Elem: &schema.Resource{
-		Schema: map[string]*schema.Schema{
-			"type": {
-				Description:  "Determines which type of retry strategy to use. Possible values are `FIXED`, `LINEAR`, `EXPONENTIAL`, `SINGLE_RETRY`, and `NO_RETRIES`.",
-				Type:         schema.TypeString,
-				Required:     true,
-				ValidateFunc: validateOneOf([]string{"FIXED", "LINEAR", "EXPONENTIAL", "SINGLE_RETRY", "NO_RETRIES"}),
-			},
-			"base_backoff_seconds": {
-				Description: "The number of seconds to wait before the first retry attempt. (Default `60`).",
-				Type:        schema.TypeInt,
-				Optional:    true,
-				Default:     60,
-			},
-			"max_retries": {
-				Description:  "The maximum number of times to retry the check/monitor. Value must be between `1` and `10`. Available when `type` is `FIXED`, `LINEAR`, or `EXPONENTIAL`. (Default `2`).",
-				Type:         schema.TypeInt,
-				Optional:     true,
-				Default:      2,
-				ValidateFunc: validateBetween(1, 10),
-			},
-			"max_duration_seconds": {
-				Description:  "The total amount of time to continue retrying the check/monitor (maximum 600 seconds). Available when `type` is `FIXED`, `LINEAR`, or `EXPONENTIAL`. (Default `600`).",
-				Type:         schema.TypeInt,
-				Optional:     true,
-				Default:      600,
-				ValidateFunc: validateBetween(0, 600),
-			},
-			"same_region": {
-				Description: "Whether retries should be run in the same region as the initial check/monitor run. (Default `true`).",
-				Type:        schema.TypeBool,
-				Optional:    true,
-				Default:     true,
-			},
-			"only_on": {
-				Description: "Apply the retry strategy only if the defined conditions match.",
-				Type:        schema.TypeList,
-				MaxItems:    1,
-				Optional:    true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"network_error": {
-							Description: "When `true`, retry only if the cause of the failure is a network error. (Default `false`).",
-							Type:        schema.TypeBool,
-							Optional:    true,
-							Default:     false,
-						},
+type RetryStrategyAttributeSchemaOptions struct {
+	SupportsOnlyOnNetworkError bool
+}
+
+func makeRetryStrategyAttributeSchema(options RetryStrategyAttributeSchemaOptions) *schema.Schema {
+	onlyOnSchema := map[string]*schema.Schema{}
+
+	if options.SupportsOnlyOnNetworkError {
+		onlyOnSchema["network_error"] = &schema.Schema{
+			Description: "When `true`, retry only if the cause of the failure is a network error. (Default `false`).",
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Default:     false,
+		}
+	}
+
+	return &schema.Schema{
+		Type:        schema.TypeList,
+		Optional:    true,
+		Computed:    true,
+		MaxItems:    1,
+		Description: "A strategy for retrying failed check/monitor runs.",
+		Elem: &schema.Resource{
+			Schema: map[string]*schema.Schema{
+				"type": {
+					Description:  "Determines which type of retry strategy to use. Possible values are `FIXED`, `LINEAR`, `EXPONENTIAL`, `SINGLE_RETRY`, and `NO_RETRIES`.",
+					Type:         schema.TypeString,
+					Required:     true,
+					ValidateFunc: validateOneOf([]string{"FIXED", "LINEAR", "EXPONENTIAL", "SINGLE_RETRY", "NO_RETRIES"}),
+				},
+				"base_backoff_seconds": {
+					Description: "The number of seconds to wait before the first retry attempt. (Default `60`).",
+					Type:        schema.TypeInt,
+					Optional:    true,
+					Default:     60,
+				},
+				"max_retries": {
+					Description:  "The maximum number of times to retry the check/monitor. Value must be between `1` and `10`. Available when `type` is `FIXED`, `LINEAR`, or `EXPONENTIAL`. (Default `2`).",
+					Type:         schema.TypeInt,
+					Optional:     true,
+					Default:      2,
+					ValidateFunc: validateBetween(1, 10),
+				},
+				"max_duration_seconds": {
+					Description:  "The total amount of time to continue retrying the check/monitor (maximum 600 seconds). Available when `type` is `FIXED`, `LINEAR`, or `EXPONENTIAL`. (Default `600`).",
+					Type:         schema.TypeInt,
+					Optional:     true,
+					Default:      600,
+					ValidateFunc: validateBetween(0, 600),
+				},
+				"same_region": {
+					Description: "Whether retries should be run in the same region as the initial check/monitor run. (Default `true`).",
+					Type:        schema.TypeBool,
+					Optional:    true,
+					Default:     true,
+				},
+				"only_on": {
+					Description: "Apply the retry strategy only if the defined conditions match.",
+					Type:        schema.TypeList,
+					MaxItems:    1,
+					Optional:    true,
+					Elem: &schema.Resource{
+						Schema: onlyOnSchema,
 					},
 				},
 			},
 		},
-	},
+	}
 }
 
 func retryStrategyFromList(s []any) *checkly.RetryStrategy {

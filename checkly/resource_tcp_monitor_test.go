@@ -395,68 +395,6 @@ func TestAccTCPMonitorWithSingleRetry(t *testing.T) {
 	})
 }
 
-func TestAccTCPMonitorWithSingleRetryOnlyOnNetworkError(t *testing.T) {
-	accTestCase(t, []resource.TestStep{
-		{
-			Config: `
-				resource "checkly_tcp_monitor" "test" {
-					name      = "test-single-retry"
-					activated = true
-					frequency = 60
-					locations = ["eu-central-1"]
-					request {
-						port     = 443
-						hostname = "checkly.com"
-					}
-					retry_strategy {
-						type = "SINGLE_RETRY"
-
-						only_on {
-							network_error = true
-						}
-					}
-				}
-			`,
-			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
-					"checkly_tcp_monitor.test",
-					"retry_strategy.0.only_on.#",
-					"1",
-				),
-				resource.TestCheckResourceAttr(
-					"checkly_tcp_monitor.test",
-					"retry_strategy.0.only_on.0.network_error",
-					"true",
-				),
-			),
-		},
-		{
-			Config: `
-				resource "checkly_tcp_monitor" "test" {
-					name      = "test-single-retry"
-					activated = true
-					frequency = 60
-					locations = ["eu-central-1"]
-					request {
-						port     = 443
-						hostname = "checkly.com"
-					}
-					retry_strategy {
-						type = "SINGLE_RETRY"
-					}
-				}
-			`,
-			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
-					"checkly_tcp_monitor.test",
-					"retry_strategy.0.only_on.#",
-					"0",
-				),
-			),
-		},
-	})
-}
-
 func TestAccTCPMonitorWithNoRetries(t *testing.T) {
 	accTestCase(t, []resource.TestStep{
 		{
@@ -501,39 +439,6 @@ func TestAccTCPMonitorWithNoRetries(t *testing.T) {
 					"retry_strategy.0.same_region",
 					"false",
 				),
-				resource.TestCheckResourceAttr(
-					"checkly_tcp_monitor.test",
-					"retry_strategy.0.only_on.#",
-					"0",
-				),
-			),
-		},
-	})
-}
-
-func TestAccTCPMonitorWithNoRetriesOnlyOnNetworkError(t *testing.T) {
-	accTestCase(t, []resource.TestStep{
-		{
-			Config: `
-				resource "checkly_tcp_monitor" "test" {
-					name      = "test-no-retries"
-					activated = true
-					frequency = 60
-					locations = ["eu-central-1"]
-					request {
-						port     = 443
-						hostname = "checkly.com"
-					}
-					retry_strategy {
-						type = "NO_RETRIES"
-
-						only_on {
-							network_error = true
-						}
-					}
-				}
-			`,
-			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_tcp_monitor.test",
 					"retry_strategy.0.only_on.#",
@@ -653,68 +558,6 @@ func TestAccTCPMonitorWithFixedRetry(t *testing.T) {
 	})
 }
 
-func TestAccTCPMonitorWithFixedRetryOnlyOnNetworkError(t *testing.T) {
-	accTestCase(t, []resource.TestStep{
-		{
-			Config: `
-				resource "checkly_tcp_monitor" "test" {
-					name      = "test-fixed-retry"
-					activated = true
-					frequency = 60
-					locations = ["eu-central-1"]
-					request {
-						port     = 443
-						hostname = "checkly.com"
-					}
-					retry_strategy {
-						type = "FIXED"
-
-						only_on {
-							network_error = true
-						}
-					}
-				}
-			`,
-			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
-					"checkly_tcp_monitor.test",
-					"retry_strategy.0.only_on.#",
-					"1",
-				),
-				resource.TestCheckResourceAttr(
-					"checkly_tcp_monitor.test",
-					"retry_strategy.0.only_on.0.network_error",
-					"true",
-				),
-			),
-		},
-		{
-			Config: `
-				resource "checkly_tcp_monitor" "test" {
-					name      = "test-fixed-retry"
-					activated = true
-					frequency = 60
-					locations = ["eu-central-1"]
-					request {
-						port     = 443
-						hostname = "checkly.com"
-					}
-					retry_strategy {
-						type = "FIXED"
-					}
-				}
-			`,
-			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
-					"checkly_tcp_monitor.test",
-					"retry_strategy.0.only_on.#",
-					"0",
-				),
-			),
-		},
-	})
-}
-
 func TestAccTCPMonitorWithExponentialRetry(t *testing.T) {
 	accTestCase(t, []resource.TestStep{
 		{
@@ -763,68 +606,6 @@ func TestAccTCPMonitorWithExponentialRetry(t *testing.T) {
 					"retry_strategy.0.same_region",
 					"true",
 				),
-				resource.TestCheckResourceAttr(
-					"checkly_tcp_monitor.test",
-					"retry_strategy.0.only_on.#",
-					"0",
-				),
-			),
-		},
-	})
-}
-
-func TestAccTCPMonitorWithExponentialRetryOnlyOnNetworkError(t *testing.T) {
-	accTestCase(t, []resource.TestStep{
-		{
-			Config: `
-				resource "checkly_tcp_monitor" "test" {
-					name      = "test-exponential-retry"
-					activated = true
-					frequency = 720
-					locations = ["eu-central-1"]
-					request {
-						port     = 443
-						hostname = "checkly.com"
-					}
-					retry_strategy {
-						type = "EXPONENTIAL"
-
-						only_on {
-							network_error = true
-						}
-					}
-				}
-			`,
-			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
-					"checkly_tcp_monitor.test",
-					"retry_strategy.0.only_on.#",
-					"1",
-				),
-				resource.TestCheckResourceAttr(
-					"checkly_tcp_monitor.test",
-					"retry_strategy.0.only_on.0.network_error",
-					"true",
-				),
-			),
-		},
-		{
-			Config: `
-				resource "checkly_tcp_monitor" "test" {
-					name      = "test-exponential-retry"
-					activated = true
-					frequency = 720
-					locations = ["eu-central-1"]
-					request {
-						port     = 443
-						hostname = "checkly.com"
-					}
-					retry_strategy {
-						type = "EXPONENTIAL"
-					}
-				}
-			`,
-			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_tcp_monitor.test",
 					"retry_strategy.0.only_on.#",
@@ -893,21 +674,21 @@ func TestAccTCPMonitorWithLinearRetry(t *testing.T) {
 	})
 }
 
-func TestAccTCPMonitorWithLinearRetryOnlyOnNetworkError(t *testing.T) {
+func TestAccTCPMonitorWithOnlyOnNetworkErrorRejected(t *testing.T) {
 	accTestCase(t, []resource.TestStep{
 		{
 			Config: `
 				resource "checkly_tcp_monitor" "test" {
-					name      = "test-linear-retry"
+					name      = "test-only-on-rejected"
 					activated = true
-					frequency = 720
+					frequency = 60
 					locations = ["eu-central-1"]
 					request {
+						hostname = "example.com"
 						port     = 443
-						hostname = "checkly.com"
 					}
 					retry_strategy {
-						type = "LINEAR"
+						type = "SINGLE_RETRY"
 
 						only_on {
 							network_error = true
@@ -915,42 +696,7 @@ func TestAccTCPMonitorWithLinearRetryOnlyOnNetworkError(t *testing.T) {
 					}
 				}
 			`,
-			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
-					"checkly_tcp_monitor.test",
-					"retry_strategy.0.only_on.#",
-					"1",
-				),
-				resource.TestCheckResourceAttr(
-					"checkly_tcp_monitor.test",
-					"retry_strategy.0.only_on.0.network_error",
-					"true",
-				),
-			),
-		},
-		{
-			Config: `
-				resource "checkly_tcp_monitor" "test" {
-					name      = "test-linear-retry"
-					activated = true
-					frequency = 720
-					locations = ["eu-central-1"]
-					request {
-						port     = 443
-						hostname = "checkly.com"
-					}
-					retry_strategy {
-						type = "LINEAR"
-					}
-				}
-			`,
-			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
-					"checkly_tcp_monitor.test",
-					"retry_strategy.0.only_on.#",
-					"0",
-				),
-			),
+			ExpectError: regexp.MustCompile(`Unsupported argument`),
 		},
 	})
 }

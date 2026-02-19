@@ -431,68 +431,6 @@ func TestAccDNSMonitorWithSingleRetry(t *testing.T) {
 
 }
 
-func TestAccDNSMonitorWithSingleRetryOnlyOnNetworkError(t *testing.T) {
-	accTestCase(t, []resource.TestStep{
-		{
-			Config: `
-				resource "checkly_dns_monitor" "test" {
-					name      = "test-single-retry"
-					activated = true
-					frequency = 60
-					locations = ["eu-central-1"]
-					request {
-						record_type = "A"
-						query       = "welcome.checklyhq.com"
-					}
-					retry_strategy {
-						type = "SINGLE_RETRY"
-
-						only_on {
-							network_error = true
-						}
-					}
-				}
-			`,
-			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
-					"checkly_dns_monitor.test",
-					"retry_strategy.0.only_on.#",
-					"1",
-				),
-				resource.TestCheckResourceAttr(
-					"checkly_dns_monitor.test",
-					"retry_strategy.0.only_on.0.network_error",
-					"true",
-				),
-			),
-		},
-		{
-			Config: `
-				resource "checkly_dns_monitor" "test" {
-					name      = "test-single-retry"
-					activated = true
-					frequency = 60
-					locations = ["eu-central-1"]
-					request {
-						record_type = "A"
-						query       = "welcome.checklyhq.com"
-					}
-					retry_strategy {
-						type = "SINGLE_RETRY"
-					}
-				}
-			`,
-			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
-					"checkly_dns_monitor.test",
-					"retry_strategy.0.only_on.#",
-					"0",
-				),
-			),
-		},
-	})
-}
-
 func TestAccDNSMonitorWithNoRetries(t *testing.T) {
 	accTestCase(t, []resource.TestStep{
 		{
@@ -537,39 +475,6 @@ func TestAccDNSMonitorWithNoRetries(t *testing.T) {
 					"retry_strategy.0.same_region",
 					"false",
 				),
-				resource.TestCheckResourceAttr(
-					"checkly_dns_monitor.test",
-					"retry_strategy.0.only_on.#",
-					"0",
-				),
-			),
-		},
-	})
-}
-
-func TestAccDNSMonitorWithNoRetriesOnlyOnNetworkError(t *testing.T) {
-	accTestCase(t, []resource.TestStep{
-		{
-			Config: `
-				resource "checkly_dns_monitor" "test" {
-					name      = "test-no-retries"
-					activated = true
-					frequency = 60
-					locations = ["eu-central-1"]
-					request {
-						record_type = "A"
-						query       = "welcome.checklyhq.com"
-					}
-					retry_strategy {
-						type = "NO_RETRIES"
-
-						only_on {
-							network_error = true
-						}
-					}
-				}
-			`,
-			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_dns_monitor.test",
 					"retry_strategy.0.only_on.#",
@@ -689,68 +594,6 @@ func TestAccDNSMonitorWithFixedRetry(t *testing.T) {
 	})
 }
 
-func TestAccDNSMonitorWithFixedRetryOnlyOnNetworkError(t *testing.T) {
-	accTestCase(t, []resource.TestStep{
-		{
-			Config: `
-				resource "checkly_dns_monitor" "test" {
-					name      = "test-fixed-retry"
-					activated = true
-					frequency = 60
-					locations = ["eu-central-1"]
-					request {
-						record_type = "A"
-						query       = "welcome.checklyhq.com"
-					}
-					retry_strategy {
-						type = "FIXED"
-
-						only_on {
-							network_error = true
-						}
-					}
-				}
-			`,
-			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
-					"checkly_dns_monitor.test",
-					"retry_strategy.0.only_on.#",
-					"1",
-				),
-				resource.TestCheckResourceAttr(
-					"checkly_dns_monitor.test",
-					"retry_strategy.0.only_on.0.network_error",
-					"true",
-				),
-			),
-		},
-		{
-			Config: `
-				resource "checkly_dns_monitor" "test" {
-					name      = "test-fixed-retry"
-					activated = true
-					frequency = 60
-					locations = ["eu-central-1"]
-					request {
-						record_type = "A"
-						query       = "welcome.checklyhq.com"
-					}
-					retry_strategy {
-						type = "FIXED"
-					}
-				}
-			`,
-			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
-					"checkly_dns_monitor.test",
-					"retry_strategy.0.only_on.#",
-					"0",
-				),
-			),
-		},
-	})
-}
-
 func TestAccDNSMonitorWithExponentialRetry(t *testing.T) {
 	accTestCase(t, []resource.TestStep{
 		{
@@ -799,68 +642,6 @@ func TestAccDNSMonitorWithExponentialRetry(t *testing.T) {
 					"retry_strategy.0.same_region",
 					"true",
 				),
-				resource.TestCheckResourceAttr(
-					"checkly_dns_monitor.test",
-					"retry_strategy.0.only_on.#",
-					"0",
-				),
-			),
-		},
-	})
-}
-
-func TestAccDNSMonitorWithExponentialRetryOnlyOnNetworkError(t *testing.T) {
-	accTestCase(t, []resource.TestStep{
-		{
-			Config: `
-				resource "checkly_dns_monitor" "test" {
-					name      = "test-exponential-retry"
-					activated = true
-					frequency = 720
-					locations = ["eu-central-1"]
-					request {
-						record_type = "A"
-						query       = "welcome.checklyhq.com"
-					}
-					retry_strategy {
-						type = "EXPONENTIAL"
-
-						only_on {
-							network_error = true
-						}
-					}
-				}
-			`,
-			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
-					"checkly_dns_monitor.test",
-					"retry_strategy.0.only_on.#",
-					"1",
-				),
-				resource.TestCheckResourceAttr(
-					"checkly_dns_monitor.test",
-					"retry_strategy.0.only_on.0.network_error",
-					"true",
-				),
-			),
-		},
-		{
-			Config: `
-				resource "checkly_dns_monitor" "test" {
-					name      = "test-exponential-retry"
-					activated = true
-					frequency = 720
-					locations = ["eu-central-1"]
-					request {
-						record_type = "A"
-						query       = "welcome.checklyhq.com"
-					}
-					retry_strategy {
-						type = "EXPONENTIAL"
-					}
-				}
-			`,
-			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_dns_monitor.test",
 					"retry_strategy.0.only_on.#",
@@ -929,21 +710,21 @@ func TestAccDNSMonitorWithLinearRetry(t *testing.T) {
 	})
 }
 
-func TestAccDNSMonitorWithLinearRetryOnlyOnNetworkError(t *testing.T) {
+func TestAccDNSMonitorWithOnlyOnNetworkErrorRejected(t *testing.T) {
 	accTestCase(t, []resource.TestStep{
 		{
 			Config: `
 				resource "checkly_dns_monitor" "test" {
-					name      = "test-linear-retry"
+					name      = "test-only-on-rejected"
 					activated = true
-					frequency = 720
+					frequency = 60
 					locations = ["eu-central-1"]
 					request {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 					}
 					retry_strategy {
-						type = "LINEAR"
+						type = "SINGLE_RETRY"
 
 						only_on {
 							network_error = true
@@ -951,42 +732,7 @@ func TestAccDNSMonitorWithLinearRetryOnlyOnNetworkError(t *testing.T) {
 					}
 				}
 			`,
-			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
-					"checkly_dns_monitor.test",
-					"retry_strategy.0.only_on.#",
-					"1",
-				),
-				resource.TestCheckResourceAttr(
-					"checkly_dns_monitor.test",
-					"retry_strategy.0.only_on.0.network_error",
-					"true",
-				),
-			),
-		},
-		{
-			Config: `
-				resource "checkly_dns_monitor" "test" {
-					name      = "test-linear-retry"
-					activated = true
-					frequency = 720
-					locations = ["eu-central-1"]
-					request {
-						record_type = "A"
-						query       = "welcome.checklyhq.com"
-					}
-					retry_strategy {
-						type = "LINEAR"
-					}
-				}
-			`,
-			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
-					"checkly_dns_monitor.test",
-					"retry_strategy.0.only_on.#",
-					"0",
-				),
-			),
+			ExpectError: regexp.MustCompile(`Unsupported argument`),
 		},
 	})
 }

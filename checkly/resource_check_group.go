@@ -247,7 +247,9 @@ func resourceCheckGroup() *schema.Resource {
 					},
 				},
 			},
-			retryStrategyAttributeName: retryStrategyAttributeSchema,
+			retryStrategyAttributeName: makeRetryStrategyAttributeSchema(RetryStrategyAttributeSchemaOptions{
+				SupportsOnlyOnNetworkError: true,
+			}),
 		},
 		CustomizeDiff: customdiff.Sequence(
 			RetryStrategyCustomizeDiff,

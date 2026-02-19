@@ -170,10 +170,6 @@ Optional:
 <a id="nestedblock--retry_strategy--only_on"></a>
 ### Nested Schema for `retry_strategy.only_on`
 
-Optional:
-
-- `network_error` (Boolean) When `true`, retry only if the cause of the failure is a network error. (Default `false`).
-
 
 
 <a id="nestedblock--trigger_incident"></a>
