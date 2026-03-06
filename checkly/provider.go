@@ -51,6 +51,7 @@ func Provider() *schema.Provider {
 			"checkly_url_monitor":            resourceURLMonitor(),
 			"checkly_dns_monitor":            resourceDNSMonitor(),
 			"checkly_icmp_monitor":           resourceICMPMonitor(),
+			"checkly_traceroute_monitor":     resourceTracerouteMonitor(),
 			"checkly_playwright_check_suite": resourcePlaywrightCheckSuite(),
 			"checkly_playwright_code_bundle": resourcePlaywrightCodeBundle(),
 		},

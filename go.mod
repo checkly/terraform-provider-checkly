@@ -2,6 +2,8 @@ module github.com/checkly/terraform-provider-checkly
 
 go 1.24.0
 
+replace github.com/checkly/checkly-go-sdk => /home/ubuntu/checkly-go-sdk
+
 require (
 	github.com/aws/aws-sdk-go v1.44.122 // indirect
 	github.com/checkly/checkly-go-sdk v1.19.0
