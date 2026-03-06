@@ -200,8 +200,8 @@ resource "checkly_check" "example_check" {
 - `alert_settings` (Block List, Max: 1) Determines the alert escalation policy for the check. (see [below for nested schema](#nestedblock--alert_settings))
 - `degraded_response_time` (Number) The response time in milliseconds starting from which a check should be considered degraded. Possible values are between 0 and 30000. (Default `15000`).
 - `double_check` (Boolean, Deprecated) Setting this to `true` will trigger a retry when a check fails from the failing region and another, randomly selected region before marking the check as failed. (Default `false`).
-- `environment_variable` (Block List) Key/value pairs for setting environment variables during check execution, add locked = true to keep value hidden, add secret = true to create a secret variable. These are only relevant for browser checks. Use global environment variables whenever possible. (see [below for nested schema](#nestedblock--environment_variable))
-- `environment_variables` (Map of String, Deprecated) Key/value pairs for setting environment variables during check execution. These are only relevant for browser checks. Use global environment variables whenever possible.
+- `environment_variable` (Block List) Insert environment variables into the runtime environment. Only relevant for browser checks. Use global environment variables whenever possible. (see [below for nested schema](#nestedblock--environment_variable))
+- `environment_variables` (Map of String, Deprecated) Key/value pairs of environment variables to insert into the runtime environment.
 - `frequency_offset` (Number) Only relevant when `type` is `API`. When `frequency` is `0` (high frequency), `frequency_offset` is required and it alone controls how often the monitor should run. Defined in seconds. The allowed values are `0` (disabled - use `frequency` to define the actual frequency), `10` (10 seconds), `20` (20 seconds) and `30` (30 seconds).
 - `group_id` (Number) The id of the check group this check is part of.
 - `group_order` (Number) The position of this check in a check group. It determines in what order checks are run when a group is triggered from the API or from CI/CD.
@@ -299,13 +299,13 @@ Optional:
 
 Required:
 
-- `key` (String)
-- `value` (String)
+- `key` (String) The name of the environment variable or secret.
+- `value` (String) The value of the environment variable or secret.
 
 Optional:
 
-- `locked` (Boolean)
-- `secret` (Boolean)
+- `locked` (Boolean) If true, the value is not shown by default, but it can be accessed. (Default `false`).
+- `secret` (Boolean) If true, the value will never be visible. (Default `false`).
 
 
 <a id="nestedblock--request"></a>
