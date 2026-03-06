@@ -149,8 +149,8 @@ resource "checkly_check_group" "test_group1" {
 - `alert_settings` (Block List, Max: 1) Determines the alert escalation policy for the check. (see [below for nested schema](#nestedblock--alert_settings))
 - `api_check_defaults` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--api_check_defaults))
 - `double_check` (Boolean, Deprecated) Setting this to `true` will trigger a retry when a check fails from the failing region and another, randomly selected region before marking the check as failed. (Default `false`).
-- `environment_variable` (Block List) Key/value pairs for setting environment variables during check execution, add locked = true to keep value hidden, add secret = true to create a secret variable. These are only relevant for browser checks. Use global environment variables whenever possible. (see [below for nested schema](#nestedblock--environment_variable))
-- `environment_variables` (Map of String, Deprecated) Key/value pairs for setting environment variables during check execution. These are only relevant for browser checks. Use global environment variables whenever possible.
+- `environment_variable` (Block List) Insert environment variables into the runtime environment. Only relevant for browser checks. Use global environment variables whenever possible. (see [below for nested schema](#nestedblock--environment_variable))
+- `environment_variables` (Map of String, Deprecated) Key/value pairs of environment variables to insert into the runtime environment.
 - `local_setup_script` (String) A valid piece of Node.js code to run in the setup phase of an API check in this group.
 - `local_teardown_script` (String) A valid piece of Node.js code to run in the teardown phase of an API check in this group.
 - `locations` (Set of String) An array of one or more data center locations where to run the checks.
@@ -276,13 +276,13 @@ Required:
 
 Required:
 
-- `key` (String)
-- `value` (String)
+- `key` (String) The name of the environment variable or secret.
+- `value` (String) The value of the environment variable or secret.
 
 Optional:
 
-- `locked` (Boolean)
-- `secret` (Boolean)
+- `locked` (Boolean) If true, the value is not shown by default, but it can be accessed. (Default `false`).
+- `secret` (Boolean) If true, the value will never be visible. (Default `false`).
 
 
 <a id="nestedblock--retry_strategy"></a>

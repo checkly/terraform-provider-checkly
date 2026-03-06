@@ -68,39 +68,10 @@ func resourceCheckGroup() *schema.Resource {
 				},
 				Description: "An array of one or more private locations slugs.",
 			},
-			"environment_variables": {
-				Type:        schema.TypeMap,
-				Optional:    true,
-				Deprecated:  "The property `environment_variables` is deprecated and will be removed in a future version. Consider using the new `environment_variable` list.",
-				Description: "Key/value pairs for setting environment variables during check execution. These are only relevant for browser checks. Use global environment variables whenever possible.",
-			},
-			"environment_variable": {
-				Type:        schema.TypeList,
-				Optional:    true,
-				Description: "Key/value pairs for setting environment variables during check execution, add locked = true to keep value hidden, add secret = true to create a secret variable. These are only relevant for browser checks. Use global environment variables whenever possible.",
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"key": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"value": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"locked": {
-							Type:     schema.TypeBool,
-							Optional: true,
-							Default:  false,
-						},
-						"secret": {
-							Type:     schema.TypeBool,
-							Optional: true,
-							Default:  false,
-						},
-					},
-				},
-			},
+			deprecatedEnvironmentVariablesAttributeName: makeDeprecatedEnvironmentVariablesAttributeSchema(DeprecatedEnvironmentVariablesAttributeSchemaOptions{}),
+			environmentVariableAttributeName: makeEnvironmentVariableAttributeSchema(EnvironmentVariableAttributeSchemaOptions{
+				Description: "Insert environment variables into the runtime environment. Only relevant for browser checks. Use global environment variables whenever possible.",
+			}),
 			doubleCheckAttributeName: doubleCheckAttributeSchema,
 			"tags": {
 				Type:     schema.TypeSet,
@@ -338,10 +309,7 @@ func resourceDataFromCheckGroup(g *checkly.Group, d *schema.ResourceData) error 
 	sort.Strings(g.Tags)
 	d.Set("tags", g.Tags)
 
-	environmentVariables := environmentVariablesFromSet(d.Get("environment_variable").([]interface{}))
-	if len(environmentVariables) > 0 {
-		d.Set("environment_variable", g.EnvironmentVariables)
-	} else if err := d.Set("environment_variables", setFromEnvVars(g.EnvironmentVariables)); err != nil {
+	if err := updateCompatEnvironmentVariablesResourceData(d, g.EnvironmentVariables); err != nil {
 		return fmt.Errorf("error setting environment variables for resource %s: %s", d.Id(), err)
 	}
 
@@ -401,7 +369,7 @@ func checkGroupFromResourceData(d *schema.ResourceData) (checkly.Group, error) {
 		group.RuntimeID = &runtimeId
 	}
 
-	environmentVariables, err := getResourceEnvironmentVariables(d)
+	environmentVariables, err := compatEnvironmentVariablesFromResourceData(d)
 	if err != nil {
 		return checkly.Group{}, err
 	}

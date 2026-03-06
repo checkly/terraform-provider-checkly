@@ -57,6 +57,9 @@ func resourcePlaywrightCheckSuite() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
+			environmentVariableAttributeName: makeEnvironmentVariableAttributeSchema(EnvironmentVariableAttributeSchemaOptions{
+				Description: "Insert environment variables into the execution environment.",
+			}),
 			"tags": {
 				Description: "A list of tags for organizing and filtering checks and monitors.",
 				Type:        schema.TypeSet,
@@ -323,6 +326,13 @@ func PlaywrightCheckSuiteResourceFromResourceData(
 		TriggerIncident:           triggerIncidentFromSet(d.Get("trigger_incident").(*schema.Set)),
 	}
 
+	envVars, err := environmentVariablesFromResourceData(d)
+	if err != nil {
+		return PlaywrightCheckSuiteResource{}, err
+	}
+
+	check.EnvironmentVariables = envVars
+
 	alertSettings := alertSettingsFromSet(d.Get("alert_settings").([]any))
 	check.AlertSettings = &alertSettings
 
@@ -454,6 +464,8 @@ func (r *PlaywrightCheckSuiteResource) StoreResourceData(
 	d.Set("run_parallel", r.RunParallel)
 	d.Set("locations", r.Locations)
 	d.Set("private_locations", r.PrivateLocations)
+
+	d.Set(environmentVariableAttributeName, listFromEnvironmentVariables(r.EnvironmentVariables))
 
 	sort.Strings(r.Tags)
 	d.Set("tags", r.Tags)

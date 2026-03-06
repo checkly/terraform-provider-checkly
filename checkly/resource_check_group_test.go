@@ -426,6 +426,286 @@ const testCheckGroup_full = `
   }
 `
 
+func TestAccCheckGroupWithEnvironmentVariable(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_check_group" "test" {
+					name        = "test-env-var"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+
+					environment_variable {
+						key    = "FOO"
+						value  = "bar"
+						locked = false
+					}
+
+					environment_variable {
+						key    = "SECRET"
+						value  = "s3cr3t"
+						locked = true
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"environment_variable.#",
+					"2",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"environment_variable.0.key",
+					"FOO",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"environment_variable.0.value",
+					"bar",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"environment_variable.0.locked",
+					"false",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"environment_variable.1.key",
+					"SECRET",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"environment_variable.1.value",
+					"s3cr3t",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"environment_variable.1.locked",
+					"true",
+				),
+			),
+		},
+	})
+}
+
+func TestAccCheckGroupWithDeprecatedEnvironmentVariables(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_check_group" "test" {
+					name        = "test-deprecated-env-vars"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+
+					environment_variables = {
+						FOO = "bar"
+						BAZ = "qux"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"environment_variables.FOO",
+					"bar",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"environment_variables.BAZ",
+					"qux",
+				),
+			),
+		},
+	})
+}
+
+func TestAccCheckGroupEnvironmentVariableConflict(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_check_group" "test" {
+					name        = "test-env-var-conflict"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+
+					environment_variables = {
+						OLD = "value"
+					}
+
+					environment_variable {
+						key   = "NEW"
+						value = "value"
+					}
+				}
+			`,
+			ExpectError: regexp.MustCompile(`must not use the deprecated "environment_variables" attribute together with the "environment_variable" attribute`),
+		},
+	})
+}
+
+func TestAccCheckGroupMigrateEnvironmentVariablesToEnvironmentVariable(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_check_group" "test" {
+					name        = "test-migrate-env-vars"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+
+					environment_variables = {
+						FOO = "bar"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"environment_variables.FOO",
+					"bar",
+				),
+			),
+		},
+		{
+			Config: `
+				resource "checkly_check_group" "test" {
+					name        = "test-migrate-env-vars"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+
+					environment_variable {
+						key    = "FOO"
+						value  = "bar"
+						locked = false
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"environment_variable.#",
+					"1",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"environment_variable.0.key",
+					"FOO",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"environment_variable.0.value",
+					"bar",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"environment_variable.0.locked",
+					"false",
+				),
+				resource.TestCheckNoResourceAttr(
+					"checkly_check_group.test",
+					"environment_variables.FOO",
+				),
+			),
+		},
+	})
+}
+
+func TestAccCheckGroupEnvironmentVariableRemoval(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_check_group" "test" {
+					name        = "test-env-var-removal"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+
+					environment_variable {
+						key   = "FOO"
+						value = "bar"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"environment_variable.#",
+					"1",
+				),
+			),
+		},
+		{
+			Config: `
+				resource "checkly_check_group" "test" {
+					name        = "test-env-var-removal"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"environment_variable.#",
+					"0",
+				),
+			),
+		},
+	})
+}
+
+func TestAccCheckGroupDeprecatedEnvironmentVariablesRemoval(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_check_group" "test" {
+					name        = "test-deprecated-env-var-removal"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+
+					environment_variables = {
+						FOO = "bar"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"environment_variables.FOO",
+					"bar",
+				),
+			),
+		},
+		{
+			Config: `
+				resource "checkly_check_group" "test" {
+					name        = "test-deprecated-env-var-removal"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckNoResourceAttr(
+					"checkly_check_group.test",
+					"environment_variables.FOO",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group.test",
+					"environment_variable.#",
+					"0",
+				),
+			),
+		},
+	})
+}
+
 func TestAccCheckGroupWithSingleRetry(t *testing.T) {
 	accTestCase(t, []resource.TestStep{
 		{

@@ -81,6 +81,7 @@ resource "checkly_playwright_check_suite" "example-playwright-check" {
 
 - `alert_channel_subscription` (Block List) An array of channel IDs and whether they're activated or not. If you don't set at least one alert subscription for your check, we won't be able to alert you. (see [below for nested schema](#nestedblock--alert_channel_subscription))
 - `alert_settings` (Block List, Max: 1) Determines the alert escalation policy for the check. (see [below for nested schema](#nestedblock--alert_settings))
+- `environment_variable` (Block List) Insert environment variables into the execution environment. (see [below for nested schema](#nestedblock--environment_variable))
 - `group_id` (Number) The ID of the check group that this check is part of.
 - `group_order` (Number) The position of the check in the check group. It determines in what order checks and monitors are run when a group is triggered from the API or from CI/CD.
 - `locations` (Set of String) An array of one or more data center locations where to run the this check.
@@ -208,6 +209,20 @@ Optional:
 
 - `minutes_failing_threshold` (Number) Send an alert notification after the check has been failing for the given amount of time (in minutes). Possible values are `5`, `10`, `15`, and `30`. (Default `5`).
 
+
+
+<a id="nestedblock--environment_variable"></a>
+### Nested Schema for `environment_variable`
+
+Required:
+
+- `key` (String) The name of the environment variable or secret.
+- `value` (String) The value of the environment variable or secret.
+
+Optional:
+
+- `locked` (Boolean) If true, the value is not shown by default, but it can be accessed. (Default `false`).
+- `secret` (Boolean) If true, the value will never be visible. (Default `false`).
 
 
 <a id="nestedblock--trigger_incident"></a>
