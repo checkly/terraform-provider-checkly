@@ -81,7 +81,9 @@ func makeRetryStrategyAttributeSchema(options RetryStrategyAttributeSchemaOption
 
 func retryStrategyFromList(s []any) *checkly.RetryStrategy {
 	if len(s) == 0 {
-		return nil
+		return &checkly.RetryStrategy{
+			Type: "NO_RETRIES",
+		}
 	}
 
 	res := s[0].(tfMap)
@@ -90,7 +92,9 @@ func retryStrategyFromList(s []any) *checkly.RetryStrategy {
 
 	switch kind {
 	case "NO_RETRIES":
-		return nil
+		return &checkly.RetryStrategy{
+			Type: "NO_RETRIES",
+		}
 	case "SINGLE_RETRY":
 		return &checkly.RetryStrategy{
 			Type:               res["type"].(string),

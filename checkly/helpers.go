@@ -92,3 +92,16 @@ func (v *allowedValues[T]) String() string {
 		return buf.String()
 	}
 }
+
+func decodeNumericID(id string) (int64, error) {
+	n, err := strconv.ParseInt(id, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("invalid numeric ID %q: %w", id, err)
+	}
+
+	return n, nil
+}
+
+func encodeNumericID(id int64) string {
+	return strconv.FormatInt(id, 10)
+}
