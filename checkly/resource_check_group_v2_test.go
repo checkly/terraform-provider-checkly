@@ -37,21 +37,25 @@ func TestAccCheckGroupV2Folder(t *testing.T) {
 					"concurrency",
 					"1",
 				),
-				resource.TestCheckNoResourceAttr(
+				resource.TestCheckResourceAttr(
 					checkGroupV2Resource,
-					"enforce_locations.#",
+					"enforce_locations.0.enabled",
+					"false",
 				),
-				resource.TestCheckNoResourceAttr(
+				resource.TestCheckResourceAttr(
 					checkGroupV2Resource,
-					"enforce_retry_strategy.#",
+					"enforce_retry_strategy.0.enabled",
+					"false",
 				),
-				resource.TestCheckNoResourceAttr(
+				resource.TestCheckResourceAttr(
 					checkGroupV2Resource,
-					"enforce_alert_settings.#",
+					"enforce_alert_settings.0.enabled",
+					"false",
 				),
-				resource.TestCheckNoResourceAttr(
+				resource.TestCheckResourceAttr(
 					checkGroupV2Resource,
-					"enforce_scheduling_strategy.#",
+					"enforce_scheduling_strategy.0.enabled",
+					"false",
 				),
 			),
 		},
@@ -72,12 +76,18 @@ func TestAccCheckGroupV2EnforceLocations(t *testing.T) {
 					name = "enforce-locations-test"
 
 					enforce_locations {
+						enabled           = true
 						locations         = ["us-east-1", "eu-west-1"]
 						private_locations = [checkly_private_location.test.slug_name]
 					}
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					checkGroupV2Resource,
+					"enforce_locations.0.enabled",
+					"true",
+				),
 				resource.TestCheckResourceAttr(
 					checkGroupV2Resource,
 					"enforce_locations.0.locations.#",
@@ -118,9 +128,10 @@ func TestAccCheckGroupV2EnforceLocations(t *testing.T) {
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckNoResourceAttr(
+				resource.TestCheckResourceAttr(
 					checkGroupV2Resource,
-					"enforce_locations.#",
+					"enforce_locations.0.enabled",
+					"false",
 				),
 			),
 		},
@@ -135,6 +146,8 @@ func TestAccCheckGroupV2EnforceRetryStrategy(t *testing.T) {
 					name = "enforce-retry-strategy-test"
 
 					enforce_retry_strategy {
+						enabled = true
+
 						retry_strategy {
 							type                 = "FIXED"
 							base_backoff_seconds = 30
@@ -146,6 +159,11 @@ func TestAccCheckGroupV2EnforceRetryStrategy(t *testing.T) {
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					checkGroupV2Resource,
+					"enforce_retry_strategy.0.enabled",
+					"true",
+				),
 				resource.TestCheckResourceAttr(
 					checkGroupV2Resource,
 					"enforce_retry_strategy.0.retry_strategy.0.type",
@@ -180,9 +198,56 @@ func TestAccCheckGroupV2EnforceRetryStrategy(t *testing.T) {
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckNoResourceAttr(
+				resource.TestCheckResourceAttr(
 					checkGroupV2Resource,
-					"enforce_retry_strategy.#",
+					"enforce_retry_strategy.0.enabled",
+					"false",
+				),
+			),
+		},
+	})
+}
+
+func TestAccCheckGroupV2EnforceRetryStrategyNoRetries(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_check_group_v2" "test" {
+					name = "enforce-retry-strategy-no-retries-test"
+
+					enforce_retry_strategy {
+						enabled = true
+
+						retry_strategy {
+							type = "NO_RETRIES"
+						}
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					checkGroupV2Resource,
+					"enforce_retry_strategy.0.enabled",
+					"true",
+				),
+				resource.TestCheckResourceAttr(
+					checkGroupV2Resource,
+					"enforce_retry_strategy.0.retry_strategy.0.type",
+					"NO_RETRIES",
+				),
+			),
+		},
+		{
+			Config: `
+				resource "checkly_check_group_v2" "test" {
+					name = "enforce-retry-strategy-no-retries-test"
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					checkGroupV2Resource,
+					"enforce_retry_strategy.0.enabled",
+					"false",
 				),
 			),
 		},
@@ -197,6 +262,8 @@ func TestAccCheckGroupV2EnforceAlertSettings(t *testing.T) {
 					name = "enforce-alert-settings-test"
 
 					enforce_alert_settings {
+						enabled = true
+
 						alert_settings {
 							escalation_type = "RUN_BASED"
 
@@ -218,6 +285,11 @@ func TestAccCheckGroupV2EnforceAlertSettings(t *testing.T) {
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					checkGroupV2Resource,
+					"enforce_alert_settings.0.enabled",
+					"true",
+				),
 				testCheckResourceAttrExpr(
 					checkGroupV2Resource,
 					"enforce_alert_settings.0.alert_settings.*.escalation_type",
@@ -257,9 +329,10 @@ func TestAccCheckGroupV2EnforceAlertSettings(t *testing.T) {
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckNoResourceAttr(
+				resource.TestCheckResourceAttr(
 					checkGroupV2Resource,
-					"enforce_alert_settings.#",
+					"enforce_alert_settings.0.enabled",
+					"false",
 				),
 			),
 		},
@@ -274,11 +347,17 @@ func TestAccCheckGroupV2EnforceSchedulingStrategy(t *testing.T) {
 					name = "enforce-scheduling-strategy-test"
 
 					enforce_scheduling_strategy {
+						enabled      = true
 						run_parallel = true
 					}
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					checkGroupV2Resource,
+					"enforce_scheduling_strategy.0.enabled",
+					"true",
+				),
 				resource.TestCheckResourceAttr(
 					checkGroupV2Resource,
 					"enforce_scheduling_strategy.0.run_parallel",
@@ -293,9 +372,10 @@ func TestAccCheckGroupV2EnforceSchedulingStrategy(t *testing.T) {
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckNoResourceAttr(
+				resource.TestCheckResourceAttr(
 					checkGroupV2Resource,
-					"enforce_scheduling_strategy.#",
+					"enforce_scheduling_strategy.0.enabled",
+					"false",
 				),
 			),
 		},
@@ -346,6 +426,8 @@ func TestAccCheckGroupV2EnforceAlertSettingsSwap(t *testing.T) {
 					name = "enforce-alert-swap-test"
 
 					enforce_alert_settings {
+						enabled = true
+
 						alert_settings {
 							escalation_type = "RUN_BASED"
 
@@ -362,6 +444,11 @@ func TestAccCheckGroupV2EnforceAlertSettingsSwap(t *testing.T) {
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					checkGroupV2Resource,
+					"enforce_alert_settings.0.enabled",
+					"true",
+				),
 				testCheckResourceAttrExpr(
 					checkGroupV2Resource,
 					"enforce_alert_settings.0.alert_settings.*.escalation_type",
@@ -380,11 +467,17 @@ func TestAccCheckGroupV2EnforceAlertSettingsSwap(t *testing.T) {
 					name = "enforce-alert-swap-test"
 
 					enforce_alert_settings {
+						enabled                   = true
 						use_global_alert_settings = true
 					}
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					checkGroupV2Resource,
+					"enforce_alert_settings.0.enabled",
+					"true",
+				),
 				resource.TestCheckResourceAttr(
 					checkGroupV2Resource,
 					"enforce_alert_settings.0.use_global_alert_settings",
@@ -398,6 +491,8 @@ func TestAccCheckGroupV2EnforceAlertSettingsSwap(t *testing.T) {
 					name = "enforce-alert-swap-test"
 
 					enforce_alert_settings {
+						enabled = true
+
 						alert_settings {
 							escalation_type = "TIME_BASED"
 
@@ -414,6 +509,11 @@ func TestAccCheckGroupV2EnforceAlertSettingsSwap(t *testing.T) {
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					checkGroupV2Resource,
+					"enforce_alert_settings.0.enabled",
+					"true",
+				),
 				testCheckResourceAttrExpr(
 					checkGroupV2Resource,
 					"enforce_alert_settings.0.alert_settings.*.escalation_type",

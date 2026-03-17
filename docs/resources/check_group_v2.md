@@ -300,6 +300,10 @@ Required:
 <a id="nestedblock--enforce_alert_settings"></a>
 ### Nested Schema for `enforce_alert_settings`
 
+Required:
+
+- `enabled` (Boolean) Determines whether the enforced alert settings should be active.
+
 Optional:
 
 - `alert_channel_subscription` (Block List) (see [below for nested schema](#nestedblock--enforce_alert_settings--alert_channel_subscription))
@@ -375,6 +379,10 @@ Optional:
 <a id="nestedblock--enforce_locations"></a>
 ### Nested Schema for `enforce_locations`
 
+Required:
+
+- `enabled` (Boolean) Determines whether the enforced locations should be active.
+
 Optional:
 
 - `locations` (Set of String) An array of one or more data center locations where to run the checks.
@@ -383,6 +391,10 @@ Optional:
 
 <a id="nestedblock--enforce_retry_strategy"></a>
 ### Nested Schema for `enforce_retry_strategy`
+
+Required:
+
+- `enabled` (Boolean) Determines whether the enforced retry strategy should be active.
 
 Optional:
 
@@ -418,6 +430,7 @@ Optional:
 
 Required:
 
+- `enabled` (Boolean) Determines whether the enforced scheduling strategy should be active.
 - `run_parallel` (Boolean) Determines if the checks in the group should run in all selected locations in parallel or round-robin.
 
 

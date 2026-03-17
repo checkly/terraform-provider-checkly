@@ -6,10 +6,9 @@ import (
 	"sort"
 	"strings"
 
+	checkly "github.com/checkly/checkly-go-sdk"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/customdiff"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-
-	checkly "github.com/checkly/checkly-go-sdk"
 )
 
 const (
@@ -166,8 +165,14 @@ func resourceCheckGroupV2() *schema.Resource {
 				Type:     schema.TypeList,
 				MaxItems: 1,
 				Optional: true,
+				Computed: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
+						"enabled": {
+							Description: "Determines whether the enforced alert settings should be active.",
+							Type:        schema.TypeBool,
+							Required:    true,
+						},
 						alertSettingsAttributeName: makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{
 							EnableSSLCertificates: true,
 						}),
@@ -204,8 +209,14 @@ func resourceCheckGroupV2() *schema.Resource {
 				Type:     schema.TypeList,
 				MaxItems: 1,
 				Optional: true,
+				Computed: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
+						"enabled": {
+							Description: "Determines whether the enforced locations should be active.",
+							Type:        schema.TypeBool,
+							Required:    true,
+						},
 						"locations": {
 							Description: "An array of one or more data center locations where to run the checks.",
 							Type:        schema.TypeSet,
@@ -239,8 +250,14 @@ func resourceCheckGroupV2() *schema.Resource {
 				Type:     schema.TypeList,
 				MaxItems: 1,
 				Optional: true,
+				Computed: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
+						"enabled": {
+							Description: "Determines whether the enforced retry strategy should be active.",
+							Type:        schema.TypeBool,
+							Required:    true,
+						},
 						retryStrategyAttributeName: makeRetryStrategyAttributeSchema(RetryStrategyAttributeSchemaOptions{
 							SupportsOnlyOnNetworkError: true,
 						}),
@@ -253,8 +270,14 @@ func resourceCheckGroupV2() *schema.Resource {
 				Type:     schema.TypeList,
 				MaxItems: 1,
 				Optional: true,
+				Computed: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
+						"enabled": {
+							Description: "Determines whether the enforced scheduling strategy should be active.",
+							Type:        schema.TypeBool,
+							Required:    true,
+						},
 						"run_parallel": {
 							Description: "Determines if the checks in the group should run in all selected locations in parallel or round-robin.",
 							Type:        schema.TypeBool,
@@ -266,10 +289,97 @@ func resourceCheckGroupV2() *schema.Resource {
 			apiCheckDefaultsAttributeName: makeAPICheckDefaultsAttributeSchema(),
 		},
 		CustomizeDiff: customdiff.Sequence(
-		// FIXME: RetryStrategyCustomizeDiff cannot be used here directly
-		// because it expects the retry_strategy attribute at the top
-		// level.
+			makeEnabledCustomizeDiffFunc(enforceAlertSettingsAttributeName, func(old, new []any) []tfMap {
+				return []tfMap{new[0].(tfMap)}
+			}),
+			makeEnabledCustomizeDiffFunc(enforceLocationsAttributeName, func(old, new []any) []tfMap {
+				return []tfMap{new[0].(tfMap)}
+			}),
+			makeEnabledCustomizeDiffFunc(enforceRetryStrategyAttributeName, func(old, new []any) []tfMap {
+				retryStrategy := new[0].(tfMap)[retryStrategyAttributeName].([]any)
+
+				return []tfMap{
+					{
+						"enabled":                  true,
+						retryStrategyAttributeName: listFromRetryStrategy(retryStrategyFromList(retryStrategy)),
+					},
+				}
+			}),
+			makeEnabledCustomizeDiffFunc(enforceSchedulingStrategyAttributeName, func(old, new []any) []tfMap {
+				return []tfMap{new[0].(tfMap)}
+			}),
 		),
+	}
+}
+
+func makeEnabledCustomizeDiffFunc(attrName string, f func(old, new []any) []tfMap) schema.CustomizeDiffFunc {
+	return func(_ context.Context, diff *schema.ResourceDiff, meta any) error {
+		rawOldBlock, rawNewBlock := diff.GetChange(attrName)
+
+		oldBlock := rawOldBlock.([]any)
+		newBlock := rawNewBlock.([]any)
+
+		// If both the old value and the new value are empty, then don't show
+		// the diff. This prevents the attribute from being shown in the diff
+		// when the resource is being created.
+		//
+		// Note that when the block is set, but then removed by the user, TF
+		// somehow still returns a non-empty list for the new block. That case
+		// is handled later via GetRawPlan().
+		if len(oldBlock) == 0 && len(newBlock) == 0 {
+			err := diff.Clear(attrName)
+			if err != nil {
+				return err
+			}
+
+			return nil
+		}
+
+		planBlock := diff.GetRawPlan().GetAttr(attrName)
+
+		it := planBlock.ElementIterator()
+
+		// If the attribute is not in the plan, it has been removed.
+		if !it.Next() {
+			err := diff.SetNew(attrName, []tfMap{
+				{
+					"enabled": false,
+				},
+			})
+			if err != nil {
+				return err
+			}
+
+			return nil
+		}
+
+		_, first := it.Element()
+
+		enabled := first.GetAttr("enabled").True()
+
+		// If the block is present, but has not been enabled, then simplify
+		// the diff.
+		if !enabled {
+			err := diff.SetNew(attrName, []tfMap{
+				{
+					"enabled": false,
+				},
+			})
+			if err != nil {
+				return err
+			}
+
+			return nil
+		}
+
+		value := f(oldBlock, newBlock)
+
+		err := diff.SetNew(attrName, value)
+		if err != nil {
+			return err
+		}
+
+		return nil
 	}
 }
 
@@ -440,6 +550,7 @@ func (a *CheckGroupV2DefaultRuntimeAttribute) ToList() []tfMap {
 }
 
 type CheckGroupV2EnforceAlertSettingsAttribute struct {
+	Enabled                   bool
 	AlertSettings             *checkly.AlertSettings
 	UseGlobalAlertSettings    *bool
 	AlertChannelSubscriptions []checkly.AlertChannelSubscription
@@ -454,7 +565,9 @@ func CheckGroupV2EnforceAlertSettingsAttributeFromList(
 
 	m := list[0].(tfMap)
 
-	a := CheckGroupV2EnforceAlertSettingsAttribute{}
+	a := CheckGroupV2EnforceAlertSettingsAttribute{
+		Enabled: m["enabled"].(bool),
+	}
 
 	if raw, ok := m[alertSettingsAttributeName]; ok {
 		if raw != nil {
@@ -484,6 +597,14 @@ func (a *CheckGroupV2EnforceAlertSettingsAttribute) ToList() []tfMap {
 		return []tfMap{}
 	}
 
+	if !a.Enabled {
+		return []tfMap{
+			{
+				"enabled": false,
+			},
+		}
+	}
+
 	var alertSettings []tfMap
 	if a.AlertSettings != nil {
 		alertSettings = setFromAlertSettings(*a.AlertSettings)
@@ -491,6 +612,7 @@ func (a *CheckGroupV2EnforceAlertSettingsAttribute) ToList() []tfMap {
 
 	return []tfMap{
 		{
+			"enabled":                    true,
 			alertSettingsAttributeName:   alertSettings,
 			"use_global_alert_settings":  a.UseGlobalAlertSettings,
 			"alert_channel_subscription": a.AlertChannelSubscriptions,
@@ -499,6 +621,7 @@ func (a *CheckGroupV2EnforceAlertSettingsAttribute) ToList() []tfMap {
 }
 
 type CheckGroupV2EnforceLocationsAttribute struct {
+	Enabled          bool
 	Locations        []string
 	PrivateLocations []string
 }
@@ -513,6 +636,7 @@ func CheckGroupV2EnforceLocationsAttributeFromList(
 	m := list[0].(tfMap)
 
 	a := CheckGroupV2EnforceLocationsAttribute{
+		Enabled:          m["enabled"].(bool),
 		Locations:        stringsFromSet(m["locations"].(*schema.Set)),
 		PrivateLocations: stringsFromSet(m["private_locations"].(*schema.Set)),
 	}
@@ -525,8 +649,17 @@ func (a *CheckGroupV2EnforceLocationsAttribute) ToList() []tfMap {
 		return []tfMap{}
 	}
 
+	if !a.Enabled {
+		return []tfMap{
+			{
+				"enabled": false,
+			},
+		}
+	}
+
 	return []tfMap{
 		{
+			"enabled":           true,
 			"locations":         a.Locations,
 			"private_locations": a.PrivateLocations,
 		},
@@ -534,6 +667,7 @@ func (a *CheckGroupV2EnforceLocationsAttribute) ToList() []tfMap {
 }
 
 type CheckGroupV2EnforceRetryStrategyAttribute struct {
+	Enabled       bool
 	RetryStrategy *checkly.RetryStrategy
 }
 
@@ -547,6 +681,7 @@ func CheckGroupV2EnforceRetryStrategyAttributeFromList(
 	m := list[0].(tfMap)
 
 	a := CheckGroupV2EnforceRetryStrategyAttribute{
+		Enabled:       m["enabled"].(bool),
 		RetryStrategy: retryStrategyFromList(m[retryStrategyAttributeName].([]any)),
 	}
 
@@ -558,14 +693,24 @@ func (a *CheckGroupV2EnforceRetryStrategyAttribute) ToList() []tfMap {
 		return []tfMap{}
 	}
 
+	if !a.Enabled {
+		return []tfMap{
+			{
+				"enabled": false,
+			},
+		}
+	}
+
 	return []tfMap{
 		{
+			"enabled":                  true,
 			retryStrategyAttributeName: listFromRetryStrategy(a.RetryStrategy),
 		},
 	}
 }
 
 type CheckGroupV2EnforceSchedulingStrategyAttribute struct {
+	Enabled     bool
 	RunParallel bool
 }
 
@@ -579,6 +724,7 @@ func CheckGroupV2EnforceSchedulingStrategyAttributeFromList(
 	m := list[0].(tfMap)
 
 	a := CheckGroupV2EnforceSchedulingStrategyAttribute{
+		Enabled:     m["enabled"].(bool),
 		RunParallel: m["run_parallel"].(bool),
 	}
 
@@ -590,8 +736,17 @@ func (a *CheckGroupV2EnforceSchedulingStrategyAttribute) ToList() []tfMap {
 		return []tfMap{}
 	}
 
+	if !a.Enabled {
+		return []tfMap{
+			{
+				"enabled": false,
+			},
+		}
+	}
+
 	return []tfMap{
 		{
+			"enabled":      true,
 			"run_parallel": a.RunParallel,
 		},
 	}
@@ -638,7 +793,7 @@ func CheckGroupV2ResourceFromResourceData(
 		return nil, err
 	}
 
-	if enforceAlertSettingsAttr != nil {
+	if enforceAlertSettingsAttr != nil && enforceAlertSettingsAttr.Enabled {
 		group.AlertSettings = enforceAlertSettingsAttr.AlertSettings
 		group.UseGlobalAlertSettings = enforceAlertSettingsAttr.UseGlobalAlertSettings
 		group.AlertChannelSubscriptions = enforceAlertSettingsAttr.AlertChannelSubscriptions
@@ -649,7 +804,7 @@ func CheckGroupV2ResourceFromResourceData(
 		return nil, err
 	}
 
-	if enforceLocationsAttr != nil {
+	if enforceLocationsAttr != nil && enforceLocationsAttr.Enabled {
 		group.Locations = enforceLocationsAttr.Locations
 		group.PrivateLocations = &enforceLocationsAttr.PrivateLocations
 	}
@@ -659,7 +814,7 @@ func CheckGroupV2ResourceFromResourceData(
 		return nil, err
 	}
 
-	if enforceRetryStrategyAttr != nil {
+	if enforceRetryStrategyAttr != nil && enforceRetryStrategyAttr.Enabled {
 		group.RetryStrategy = enforceRetryStrategyAttr.RetryStrategy
 	} else {
 		group.RetryStrategy = &checkly.RetryStrategy{
@@ -672,7 +827,7 @@ func CheckGroupV2ResourceFromResourceData(
 		return nil, err
 	}
 
-	if enforceSchedulingStrategyAttr != nil {
+	if enforceSchedulingStrategyAttr != nil && enforceSchedulingStrategyAttr.Enabled {
 		group.RunParallel = &enforceSchedulingStrategyAttr.RunParallel
 	}
 
@@ -732,34 +887,54 @@ func CheckGroupV2ResourceFromAPIModel(
 	if group.AlertSettings != nil || group.UseGlobalAlertSettings != nil ||
 		len(group.AlertChannelSubscriptions) != 0 {
 		enforceAlertSettingsAttr = &CheckGroupV2EnforceAlertSettingsAttribute{
+			Enabled:                   true,
 			AlertSettings:             group.AlertSettings,
 			UseGlobalAlertSettings:    group.UseGlobalAlertSettings,
 			AlertChannelSubscriptions: group.AlertChannelSubscriptions,
+		}
+	} else {
+		enforceAlertSettingsAttr = &CheckGroupV2EnforceAlertSettingsAttribute{
+			Enabled: false,
 		}
 	}
 
 	var enforceLocationsAttr *CheckGroupV2EnforceLocationsAttribute
 	if len(group.Locations) != 0 || (group.PrivateLocations != nil && len(*group.PrivateLocations) != 0) {
 		enforceLocationsAttr = &CheckGroupV2EnforceLocationsAttribute{
+			Enabled:   true,
 			Locations: group.Locations,
 		}
 
 		if group.PrivateLocations != nil {
 			enforceLocationsAttr.PrivateLocations = *group.PrivateLocations
 		}
+	} else {
+		enforceLocationsAttr = &CheckGroupV2EnforceLocationsAttribute{
+			Enabled: false,
+		}
 	}
 
 	var enforceRetryStrategyAttr *CheckGroupV2EnforceRetryStrategyAttribute
-	if group.RetryStrategy != nil && group.RetryStrategy.Type != "FALLBACK" {
+	if group.RetryStrategy == nil || group.RetryStrategy.Type != "FALLBACK" {
 		enforceRetryStrategyAttr = &CheckGroupV2EnforceRetryStrategyAttribute{
+			Enabled:       true,
 			RetryStrategy: group.RetryStrategy,
+		}
+	} else {
+		enforceRetryStrategyAttr = &CheckGroupV2EnforceRetryStrategyAttribute{
+			Enabled: false,
 		}
 	}
 
 	var enforceSchedulingStrategyAttr *CheckGroupV2EnforceSchedulingStrategyAttribute
 	if group.RunParallel != nil {
 		enforceSchedulingStrategyAttr = &CheckGroupV2EnforceSchedulingStrategyAttribute{
+			Enabled:     true,
 			RunParallel: *group.RunParallel,
+		}
+	} else {
+		enforceSchedulingStrategyAttr = &CheckGroupV2EnforceSchedulingStrategyAttribute{
+			Enabled: false,
 		}
 	}
 
