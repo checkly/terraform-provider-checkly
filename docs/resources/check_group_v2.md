@@ -35,6 +35,7 @@ resource "checkly_check_group_v2" "production-api" {
   # Enforce locations: all checks in this group will run in these locations,
   # regardless of what's configured on the individual check.
   enforce_locations {
+    enabled           = true
     locations         = ["us-east-1", "eu-west-1", "ap-southeast-1"]
     private_locations = ["my-datacenter"]
   }
@@ -42,6 +43,8 @@ resource "checkly_check_group_v2" "production-api" {
   # Enforce retry strategy: all checks in this group will use this retry
   # strategy, overriding any retry settings on the individual check.
   enforce_retry_strategy {
+    enabled = true
+
     retry_strategy {
       type                 = "LINEAR"
       base_backoff_seconds = 30
@@ -53,11 +56,14 @@ resource "checkly_check_group_v2" "production-api" {
 
   # Enforce scheduling strategy: all checks run in parallel across locations.
   enforce_scheduling_strategy {
+    enabled      = true
     run_parallel = true
   }
 
   # Enforce alert settings: controls when alerts fire for all checks in the group.
   enforce_alert_settings {
+    enabled = true
+
     alert_settings {
       escalation_type = "RUN_BASED"
 
@@ -155,6 +161,8 @@ resource "checkly_check_group_v2" "retry-on-network-errors" {
   name = "Retry on Network Errors Only"
 
   enforce_retry_strategy {
+    enabled = true
+
     retry_strategy {
       type                 = "EXPONENTIAL"
       base_backoff_seconds = 10
@@ -175,6 +183,8 @@ resource "checkly_check_group_v2" "time-based-alerts" {
   name = "Time-Based Alert Escalation"
 
   enforce_alert_settings {
+    enabled = true
+
     alert_settings {
       escalation_type = "TIME_BASED"
 
@@ -195,6 +205,7 @@ resource "checkly_check_group_v2" "use-global-alerts" {
   name = "Use Global Alert Settings"
 
   enforce_alert_settings {
+    enabled                   = true
     use_global_alert_settings = true
   }
 }
@@ -204,6 +215,8 @@ resource "checkly_check_group_v2" "no-retries" {
   name = "No Retries Group"
 
   enforce_retry_strategy {
+    enabled = true
+
     retry_strategy {
       type = "NO_RETRIES"
     }
@@ -215,6 +228,8 @@ resource "checkly_check_group_v2" "single-retry" {
   name = "Single Retry Group"
 
   enforce_retry_strategy {
+    enabled = true
+
     retry_strategy {
       type                 = "SINGLE_RETRY"
       base_backoff_seconds = 10
