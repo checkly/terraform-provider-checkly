@@ -11,6 +11,8 @@ const retryStrategyAttributeName = "retry_strategy"
 
 type RetryStrategyAttributeSchemaOptions struct {
 	SupportsOnlyOnNetworkError bool
+	Required                   bool
+	Computed                   bool
 }
 
 func makeRetryStrategyAttributeSchema(options RetryStrategyAttributeSchemaOptions) *schema.Schema {
@@ -27,8 +29,9 @@ func makeRetryStrategyAttributeSchema(options RetryStrategyAttributeSchemaOption
 
 	return &schema.Schema{
 		Type:        schema.TypeList,
-		Optional:    true,
-		Computed:    true,
+		Optional:    !options.Required,
+		Required:    options.Required,
+		Computed:    options.Computed,
 		MaxItems:    1,
 		Description: "A strategy for retrying failed check/monitor runs.",
 		Elem: &schema.Resource{

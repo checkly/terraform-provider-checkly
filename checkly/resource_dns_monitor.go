@@ -203,8 +203,11 @@ func resourceDNSMonitor() *schema.Resource {
 				Type:        schema.TypeInt,
 				Optional:    true,
 			},
-			retryStrategyAttributeName: makeRetryStrategyAttributeSchema(RetryStrategyAttributeSchemaOptions{}),
-			"trigger_incident":         triggerIncidentAttributeSchema,
+			retryStrategyAttributeName: makeRetryStrategyAttributeSchema(RetryStrategyAttributeSchemaOptions{
+				Required: false,
+				Computed: true,
+			}),
+			"trigger_incident": triggerIncidentAttributeSchema,
 		},
 		CustomizeDiff: customdiff.Sequence(
 			RetryStrategyCustomizeDiff,

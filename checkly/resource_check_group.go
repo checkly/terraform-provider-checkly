@@ -134,6 +134,8 @@ func resourceCheckGroup() *schema.Resource {
 			apiCheckDefaultsAttributeName: makeAPICheckDefaultsAttributeSchema(),
 			retryStrategyAttributeName: makeRetryStrategyAttributeSchema(RetryStrategyAttributeSchemaOptions{
 				SupportsOnlyOnNetworkError: true,
+				Required:                   false,
+				Computed:                   true,
 			}),
 		},
 		CustomizeDiff: customdiff.Sequence(
@@ -294,4 +296,3 @@ func checkGroupFromResourceData(d *schema.ResourceData) (checkly.Group, error) {
 
 	return group, nil
 }
-

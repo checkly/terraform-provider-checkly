@@ -260,6 +260,8 @@ func resourceCheckGroupV2() *schema.Resource {
 						},
 						retryStrategyAttributeName: makeRetryStrategyAttributeSchema(RetryStrategyAttributeSchemaOptions{
 							SupportsOnlyOnNetworkError: true,
+							Required:                   true,
+							Computed:                   false,
 						}),
 					},
 				},

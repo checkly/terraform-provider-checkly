@@ -395,10 +395,7 @@ Optional:
 Required:
 
 - `enabled` (Boolean) Determines whether the enforced retry strategy should be active.
-
-Optional:
-
-- `retry_strategy` (Block List, Max: 1) A strategy for retrying failed check/monitor runs. (see [below for nested schema](#nestedblock--enforce_retry_strategy--retry_strategy))
+- `retry_strategy` (Block List, Min: 1, Max: 1) A strategy for retrying failed check/monitor runs. (see [below for nested schema](#nestedblock--enforce_retry_strategy--retry_strategy))
 
 <a id="nestedblock--enforce_retry_strategy--retry_strategy"></a>
 ### Nested Schema for `enforce_retry_strategy.retry_strategy`
