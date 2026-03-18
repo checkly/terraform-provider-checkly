@@ -9,7 +9,6 @@ import (
 )
 
 func TestAccEmail(t *testing.T) {
-	t.Parallel()
 	accTestCase(t, []resource.TestStep{
 		{
 			Config: `resource "checkly_alert_channel" "t1" {
@@ -27,7 +26,6 @@ func TestAccEmail(t *testing.T) {
 }
 
 func TestAccSlack(t *testing.T) {
-	t.Parallel()
 	accTestCase(t, []resource.TestStep{
 		{
 			Config: `resource "checkly_alert_channel" "slack_ac" {
@@ -46,7 +44,6 @@ func TestAccSlack(t *testing.T) {
 }
 
 func TestAccSMS(t *testing.T) {
-	t.Parallel()
 	accTestCase(t, []resource.TestStep{
 		{
 			Config: `resource "checkly_alert_channel" "sms_ac" {
@@ -60,7 +57,6 @@ func TestAccSMS(t *testing.T) {
 }
 
 func TestAccOpsgenie(t *testing.T) {
-	t.Parallel()
 	accTestCase(t, []resource.TestStep{
 		{
 			Config: `resource "checkly_alert_channel" "opsgenie_ac" {
@@ -76,7 +72,6 @@ func TestAccOpsgenie(t *testing.T) {
 }
 
 func TestAccPagerduty(t *testing.T) {
-	t.Parallel()
 	accTestCase(t, []resource.TestStep{
 		{
 			Config: `resource "checkly_alert_channel" "pagerduty_ac" {
@@ -91,7 +86,6 @@ func TestAccPagerduty(t *testing.T) {
 }
 
 func TestAccWebhook(t *testing.T) {
-	t.Parallel()
 	accTestCase(t, []resource.TestStep{
 		{
 			Config: `resource "checkly_alert_channel" "webhook_ac" {
@@ -114,7 +108,6 @@ func TestAccWebhook(t *testing.T) {
 }
 
 func TestAccFail(t *testing.T) {
-	t.Parallel()
 	cases := []struct {
 		Config string
 		Error  string

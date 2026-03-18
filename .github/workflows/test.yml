@@ -87,7 +87,8 @@ jobs:
 
     - name: TF acceptance tests
       timeout-minutes: 10
-      run: go test -v ./...
+      # Limit parallelism to 4 to avoid hitting Checkly API rate limits.
+      run: go test -v -parallel 4 ./...
       env:
         TF_ACC: "1"
         TF_VAR_checkly_api_key: ${{ secrets.CHECKLY_API_KEY }}
