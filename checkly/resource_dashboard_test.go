@@ -1,9 +1,11 @@
 package checkly
 
 import (
+	"fmt"
 	"regexp"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 )
 
@@ -22,19 +24,20 @@ func TestAccDashboardCheckRequiredFields(t *testing.T) {
 }
 
 func TestAccDashboardMinimalConfig(t *testing.T) {
+	rInt := acctest.RandInt()
 	accTestCase(t, []resource.TestStep{
 		{
-			Config: `
+			Config: fmt.Sprintf(`
 				resource "checkly_dashboard" "test" {
-					custom_url = "test-dashboard-795115703-minimal"
+					custom_url = "test-dashboard-%d-minimal"
 					header     = "Minimal Dashboard"
 				}
-			`,
+			`, rInt),
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_dashboard.test",
 					"custom_url",
-					"test-dashboard-795115703-minimal",
+					fmt.Sprintf("test-dashboard-%d-minimal", rInt),
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_dashboard.test",
@@ -142,12 +145,13 @@ func TestAccDashboardMinimalConfig(t *testing.T) {
 }
 
 func TestAccDashboardFullConfig(t *testing.T) {
+	rInt := acctest.RandInt()
 	accTestCase(t, []resource.TestStep{
 		{
-			Config: `
+			Config: fmt.Sprintf(`
 				resource "checkly_dashboard" "test" {
-					custom_url            = "test-dashboard-795115703-full"
-					custom_domain         = "status-795115703.example.com"
+					custom_url            = "test-dashboard-%d-full"
+					custom_domain         = "status-%d.example.com"
 					logo                  = "https://example.com/logo.png"
 					favicon               = "https://example.com/favicon.ico"
 					link                  = "https://example.com"
@@ -169,17 +173,17 @@ func TestAccDashboardFullConfig(t *testing.T) {
 					show_p99              = false
 					tags                  = ["production", "api"]
 				}
-			`,
+			`, rInt, rInt),
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_dashboard.test",
 					"custom_url",
-					"test-dashboard-795115703-full",
+					fmt.Sprintf("test-dashboard-%d-full", rInt),
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_dashboard.test",
 					"custom_domain",
-					"status-795115703.example.com",
+					fmt.Sprintf("status-%d.example.com", rInt),
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_dashboard.test",
@@ -284,10 +288,10 @@ func TestAccDashboardFullConfig(t *testing.T) {
 			),
 		},
 		{
-			Config: `
+			Config: fmt.Sprintf(`
 				resource "checkly_dashboard" "test" {
-					custom_url            = "test-dashboard-795115703-full-updated"
-					custom_domain         = "status-795115703.example.com" # Cannot be modified for a few minutes.
+					custom_url            = "test-dashboard-%d-full-updated"
+					custom_domain         = "status-%d.example.com"
 					logo                  = "https://example.com/logo2.png"
 					favicon               = "https://example.com/favicon2.ico"
 					link                  = "https://example2.com"
@@ -309,19 +313,19 @@ func TestAccDashboardFullConfig(t *testing.T) {
 					show_p99              = true
 					tags                  = ["staging"]
 				}
-			`,
+			`, rInt, rInt),
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_dashboard.test",
 					"custom_url",
-					"test-dashboard-795115703-full-updated",
+					fmt.Sprintf("test-dashboard-%d-full-updated", rInt),
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_dashboard.test",
 					"custom_domain",
 					// The backend won't let us modify a custom domain for
 					// a few minutes, so we're not testing a new value here.
-					"status-795115703.example.com",
+					fmt.Sprintf("status-%d.example.com", rInt),
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_dashboard.test",
@@ -429,20 +433,21 @@ func TestAccDashboardFullConfig(t *testing.T) {
 }
 
 func TestAccDashboardPrivateDashboard(t *testing.T) {
+	rInt := acctest.RandInt()
 	accTestCase(t, []resource.TestStep{
 		{
-			Config: `
+			Config: fmt.Sprintf(`
 				resource "checkly_dashboard" "test" {
-					custom_url = "test-dashboard-795115703-private"
+					custom_url = "test-dashboard-%d-private"
 					header     = "Private Dashboard"
 					is_private = true
 				}
-			`,
+			`, rInt),
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_dashboard.test",
 					"custom_url",
-					"test-dashboard-795115703-private",
+					fmt.Sprintf("test-dashboard-%d-private", rInt),
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_dashboard.test",
@@ -456,13 +461,13 @@ func TestAccDashboardPrivateDashboard(t *testing.T) {
 			),
 		},
 		{
-			Config: `
+			Config: fmt.Sprintf(`
 				resource "checkly_dashboard" "test" {
-					custom_url = "test-dashboard-795115703-private"
+					custom_url = "test-dashboard-%d-private"
 					header     = "Private Dashboard"
 					is_private = false
 				}
-			`,
+			`, rInt),
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_dashboard.test",
@@ -480,73 +485,74 @@ func TestAccDashboardPrivateDashboard(t *testing.T) {
 }
 
 func TestAccDashboardInvalidWidth(t *testing.T) {
-	config := `
-		resource "checkly_dashboard" "test" {
-			custom_url = "test-dashboard-795115703-invalid-width"
-			header     = "Invalid Width Test"
-			width      = "500PX"
-		}
-	`
+	rInt := acctest.RandInt()
 	accTestCase(t, []resource.TestStep{
 		{
-			Config:      config,
+			Config: fmt.Sprintf(`
+				resource "checkly_dashboard" "test" {
+					custom_url = "test-dashboard-%d-invalid-width"
+					header     = "Invalid Width Test"
+					width      = "500PX"
+				}
+			`, rInt),
 			ExpectError: regexp.MustCompile(`"width" must be one of \[FULL 960PX\], got: 500PX`),
 		},
 	})
 }
 
 func TestAccDashboardInvalidRefreshRate(t *testing.T) {
-	config := `
-		resource "checkly_dashboard" "test" {
-			custom_url   = "test-dashboard-795115703-invalid-refresh"
-			header       = "Invalid Refresh Test"
-			refresh_rate = 120
-		}
-	`
+	rInt := acctest.RandInt()
 	accTestCase(t, []resource.TestStep{
 		{
-			Config:      config,
+			Config: fmt.Sprintf(`
+				resource "checkly_dashboard" "test" {
+					custom_url   = "test-dashboard-%d-invalid-refresh"
+					header       = "Invalid Refresh Test"
+					refresh_rate = 120
+				}
+			`, rInt),
 			ExpectError: regexp.MustCompile(`"refresh_rate" must be one of \[60 300 600\], got: 120`),
 		},
 	})
 }
 
 func TestAccDashboardInvalidPaginationRate(t *testing.T) {
-	config := `
-		resource "checkly_dashboard" "test" {
-			custom_url      = "test-dashboard-795115703-invalid-pagination"
-			header          = "Invalid Pagination Test"
-			pagination_rate = 90
-		}
-	`
+	rInt := acctest.RandInt()
 	accTestCase(t, []resource.TestStep{
 		{
-			Config:      config,
+			Config: fmt.Sprintf(`
+				resource "checkly_dashboard" "test" {
+					custom_url      = "test-dashboard-%d-invalid-pagination"
+					header          = "Invalid Pagination Test"
+					pagination_rate = 90
+				}
+			`, rInt),
 			ExpectError: regexp.MustCompile(`"pagination_rate" must be one of \[30 60 300\], got: 90`),
 		},
 	})
 }
 
 func TestAccDashboardInvalidChecksPerPage(t *testing.T) {
-	config := `
-		resource "checkly_dashboard" "test" {
-			custom_url      = "test-dashboard-795115703-invalid-checks-per-page"
-			header          = "Invalid Checks Per Page Test"
-			checks_per_page = 25
-		}
-	`
+	rInt := acctest.RandInt()
 	accTestCase(t, []resource.TestStep{
 		{
-			Config:      config,
+			Config: fmt.Sprintf(`
+				resource "checkly_dashboard" "test" {
+					custom_url      = "test-dashboard-%d-invalid-checks-per-page"
+					header          = "Invalid Checks Per Page Test"
+					checks_per_page = 25
+				}
+			`, rInt),
 			ExpectError: regexp.MustCompile(`"checks_per_page" must be between 1 and 20, got: 25`),
 		},
 	})
 }
 
 func TestAccDashboardWithCheckGroup(t *testing.T) {
+	rInt := acctest.RandInt()
 	accTestCase(t, []resource.TestStep{
 		{
-			Config: `
+			Config: fmt.Sprintf(`
 				resource "checkly_check_group" "test" {
 					name        = "Test Group for Dashboard"
 					activated   = true
@@ -556,18 +562,18 @@ func TestAccDashboardWithCheckGroup(t *testing.T) {
 				}
 
 				resource "checkly_dashboard" "test" {
-					custom_url = "test-dashboard-795115703-with-tags"
+					custom_url = "test-dashboard-%d-with-tags"
 					header     = "Dashboard with Tags"
 					tags       = ["api", "production"]
 
 					use_tags_and_operator = true
 				}
-			`,
+			`, rInt),
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_dashboard.test",
 					"custom_url",
-					"test-dashboard-795115703-with-tags",
+					fmt.Sprintf("test-dashboard-%d-with-tags", rInt),
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_dashboard.test",
@@ -585,11 +591,12 @@ func TestAccDashboardWithCheckGroup(t *testing.T) {
 }
 
 func TestAccDashboardCustomCSS(t *testing.T) {
+	rInt := acctest.RandInt()
 	accTestCase(t, []resource.TestStep{
 		{
-			Config: `
+			Config: fmt.Sprintf(`
 				resource "checkly_dashboard" "test" {
-					custom_url = "test-dashboard-795115703-custom-css"
+					custom_url = "test-dashboard-%d-custom-css"
 					header     = "Dashboard with Custom CSS"
 					custom_css = <<-EOT
 						body {
@@ -608,12 +615,12 @@ func TestAccDashboardCustomCSS(t *testing.T) {
 						}
 					EOT
 				}
-			`,
+			`, rInt),
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_dashboard.test",
 					"custom_url",
-					"test-dashboard-795115703-custom-css",
+					fmt.Sprintf("test-dashboard-%d-custom-css", rInt),
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_dashboard.test",
@@ -637,13 +644,13 @@ func TestAccDashboardCustomCSS(t *testing.T) {
 			),
 		},
 		{
-			Config: `
+			Config: fmt.Sprintf(`
 				resource "checkly_dashboard" "test" {
-					custom_url = "test-dashboard-795115703-custom-css"
+					custom_url = "test-dashboard-%d-custom-css"
 					header     = "Dashboard with Custom CSS"
 					custom_css = ""
 				}
-			`,
+			`, rInt),
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_dashboard.test",

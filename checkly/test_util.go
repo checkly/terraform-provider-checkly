@@ -31,7 +31,7 @@ func testAccPreCheck(t *testing.T) {
 }
 
 func accTestCase(t *testing.T, steps []resource.TestStep) {
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
 		},

@@ -1,9 +1,11 @@
 package checkly
 
 import (
+	"fmt"
 	"regexp"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 )
 
@@ -22,24 +24,29 @@ func TestAccPrivateLocationCheckRequiredFields(t *testing.T) {
 }
 
 func TestAccPrivateLocationSuccess(t *testing.T) {
-	config := `resource "checkly_private_location" "test" {
-		name     = "New Private Location"
-		slug_name   = "new-private-location"
-		icon       	= "bell-fill"
-	}`
+	rInt := acctest.RandInt()
+	// Slug names are limited to 30 alphanumeric characters. We use modulo to
+	// keep the random suffix short while still avoiding collisions in parallel runs.
+	slug := fmt.Sprintf("tf-test-pl-s-%d", rInt%100000)
 	accTestCase(t, []resource.TestStep{
 		{
-			Config: config,
+			Config: fmt.Sprintf(`
+				resource "checkly_private_location" "test" {
+					name      = "Private Location %d"
+					slug_name = "%s"
+					icon      = "bell-fill"
+				}
+			`, rInt, slug),
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_private_location.test",
 					"name",
-					"New Private Location",
+					fmt.Sprintf("Private Location %d", rInt),
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_private_location.test",
 					"slug_name",
-					"new-private-location",
+					slug,
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_private_location.test",
@@ -52,23 +59,28 @@ func TestAccPrivateLocationSuccess(t *testing.T) {
 }
 
 func TestAccPrivateLocationDefaultIcon(t *testing.T) {
-	config := `resource "checkly_private_location" "without_icon" {
-		name     = "New Private Location"
-		slug_name   = "new-private-location"
-	}`
+	rInt := acctest.RandInt()
+	// Slug names are limited to 30 alphanumeric characters. We use modulo to
+	// keep the random suffix short while still avoiding collisions in parallel runs.
+	slug := fmt.Sprintf("tf-test-pl-d-%d", rInt%100000)
 	accTestCase(t, []resource.TestStep{
 		{
-			Config: config,
+			Config: fmt.Sprintf(`
+				resource "checkly_private_location" "without_icon" {
+					name      = "Private Location %d"
+					slug_name = "%s"
+				}
+			`, rInt, slug),
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_private_location.without_icon",
 					"name",
-					"New Private Location",
+					fmt.Sprintf("Private Location %d", rInt),
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_private_location.without_icon",
 					"slug_name",
-					"new-private-location",
+					slug,
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_private_location.without_icon",

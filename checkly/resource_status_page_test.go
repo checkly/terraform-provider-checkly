@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 )
 
@@ -50,16 +51,17 @@ func TestAccStatusPageCardServiceAttachmentCheckRequiredFields(t *testing.T) {
 }
 
 func TestAccStatusPageHappyPath(t *testing.T) {
+	rInt := acctest.RandInt()
 	accTestCase(t, []resource.TestStep{
 		{
-			Config: `
+			Config: fmt.Sprintf(`
 				resource "checkly_status_page_service" "test" {
 					name = "qux"
 				}
 
 				resource "checkly_status_page" "test" {
 					name = "foo"
-					url  = "bar"
+					url  = "status-page-%d"
 
 					card {
 						name = "baz"
@@ -69,7 +71,7 @@ func TestAccStatusPageHappyPath(t *testing.T) {
 						}
 					}
 				}
-			`,
+			`, rInt),
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_status_page.test",
@@ -79,7 +81,7 @@ func TestAccStatusPageHappyPath(t *testing.T) {
 				resource.TestCheckResourceAttr(
 					"checkly_status_page.test",
 					"url",
-					"bar",
+					fmt.Sprintf("status-page-%d", rInt),
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_status_page.test",
@@ -105,15 +107,15 @@ func TestAccStatusPageHappyPath(t *testing.T) {
 			),
 		},
 		{
-			Config: `
+			Config: fmt.Sprintf(`
 				resource "checkly_status_page_service" "test" {
 					name = "qux"
 				}
 
 				resource "checkly_status_page" "test" {
 					name          = "foo"
-					url           = "bar"
-					custom_domain = "my-example-status-page-248234834.checklyhq.com"
+					url           = "status-page-%d"
+					custom_domain = "status-page-%d.checklyhq.com"
 					logo          = "https://example.org/logo.png"
 					redirect_to   = "https://example.org"
 					favicon       = "https://example.org/favicon.png"
@@ -127,7 +129,7 @@ func TestAccStatusPageHappyPath(t *testing.T) {
 						}
 					}
 				}
-			`,
+			`, rInt, rInt),
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_status_page.test",
@@ -137,12 +139,12 @@ func TestAccStatusPageHappyPath(t *testing.T) {
 				resource.TestCheckResourceAttr(
 					"checkly_status_page.test",
 					"url",
-					"bar",
+					fmt.Sprintf("status-page-%d", rInt),
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_status_page.test",
 					"custom_domain",
-					"my-example-status-page-248234834.checklyhq.com",
+					fmt.Sprintf("status-page-%d.checklyhq.com", rInt),
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_status_page.test",
@@ -191,6 +193,7 @@ func TestAccStatusPageHappyPath(t *testing.T) {
 }
 
 func TestAccStatusPageUnsupportedCustomDomains(t *testing.T) {
+	rInt := acctest.RandInt()
 	badDomains := []string{
 		"example.com",
 		"example.net",
@@ -211,7 +214,7 @@ func TestAccStatusPageUnsupportedCustomDomains(t *testing.T) {
 
 				resource "checkly_status_page" "test" {
 					name          = "foo"
-					url           = "bar"
+					url           = "status-page-%d"
 					custom_domain = "%s"
 
 					card {
@@ -222,7 +225,7 @@ func TestAccStatusPageUnsupportedCustomDomains(t *testing.T) {
 						}
 					}
 				}
-			`, domain),
+			`, rInt, domain),
 
 			ExpectError: regexp.MustCompile(`custom domains ending in .+ are not supported`),
 		})
