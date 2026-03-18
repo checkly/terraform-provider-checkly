@@ -210,6 +210,51 @@ resource "checkly_check_group_v2" "use-global-alerts" {
   }
 }
 
+# Example: enforce alert channel subscriptions with custom alert settings.
+resource "checkly_alert_channel" "email" {
+  email {
+    address = "alerts@example.com"
+  }
+}
+
+resource "checkly_alert_channel" "slack" {
+  slack {
+    channel = "#alerts"
+    url     = "https://hooks.slack.com/services/TXXXXX/XXXXX/XXXXXXXXXX"
+  }
+}
+
+resource "checkly_check_group_v2" "with-alert-channels" {
+  name = "Group with Alert Channels"
+
+  enforce_alert_settings {
+    enabled = true
+
+    alert_settings {
+      escalation_type = "RUN_BASED"
+
+      run_based_escalation {
+        failed_run_threshold = 1
+      }
+
+      reminders {
+        amount   = 0
+        interval = 5
+      }
+    }
+
+    alert_channel_subscription {
+      channel_id = checkly_alert_channel.email.id
+      activated  = true
+    }
+
+    alert_channel_subscription {
+      channel_id = checkly_alert_channel.slack.id
+      activated  = true
+    }
+  }
+}
+
 # Example: enforce no retries.
 resource "checkly_check_group_v2" "no-retries" {
   name = "No Retries Group"
@@ -321,7 +366,7 @@ Required:
 
 Optional:
 
-- `alert_channel_subscription` (Block List) (see [below for nested schema](#nestedblock--enforce_alert_settings--alert_channel_subscription))
+- `alert_channel_subscription` (Block Set) An array of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your check, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedblock--enforce_alert_settings--alert_channel_subscription))
 - `alert_settings` (Block List, Max: 1) Determines the alert escalation policy for the check. (see [below for nested schema](#nestedblock--enforce_alert_settings--alert_settings))
 - `use_global_alert_settings` (Boolean) Whether to use account level alert settings instead of the group's alert settings.Default (`false`).
 
@@ -330,8 +375,8 @@ Optional:
 
 Required:
 
-- `activated` (Boolean)
-- `channel_id` (Number)
+- `activated` (Boolean) Whether an alert should be sent to this channel.
+- `channel_id` (Number) The ID of the alert channel.
 
 
 <a id="nestedblock--enforce_alert_settings--alert_settings"></a>

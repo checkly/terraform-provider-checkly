@@ -120,22 +120,9 @@ func resourceHeartbeatMonitor() *schema.Resource {
 					},
 				},
 			},
-			"alert_channel_subscription": {
-				Type:     schema.TypeList,
-				Optional: true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"channel_id": {
-							Type:     schema.TypeInt,
-							Required: true,
-						},
-						"activated": {
-							Type:     schema.TypeBool,
-							Required: true,
-						},
-					},
-				},
-			},
+			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionAttributeSchema(AlertChannelSubscriptionAttributeSchemaOptions{
+				Monitor: true,
+			}),
 			"trigger_incident": triggerIncidentAttributeSchema,
 		},
 	}
@@ -210,7 +197,7 @@ func heartbeatMonitorFromResourceData(d *schema.ResourceData) (checkly.Heartbeat
 		Tags:                      stringsFromSet(d.Get("tags").(*schema.Set)),
 		AlertSettings:             alertSettingsFromSet(d.Get("alert_settings").([]interface{})),
 		UseGlobalAlertSettings:    d.Get("use_global_alert_settings").(bool),
-		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(d.Get("alert_channel_subscription").([]interface{})),
+		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(d.Get(alertChannelSubscriptionAttributeName).(*schema.Set)),
 		TriggerIncident:           triggerIncidentFromSet(d.Get("trigger_incident").(*schema.Set)),
 	}
 
@@ -285,7 +272,7 @@ func resourceDataFromHeartbeatMonitor(c *checkly.HeartbeatMonitor, d *schema.Res
 		return fmt.Errorf("error setting heartbeat for resource %s: %w %v", d.Id(), err, c.Heartbeat)
 	}
 
-	d.Set("alert_channel_subscription", c.AlertChannelSubscriptions)
+	d.Set(alertChannelSubscriptionAttributeName, setFromAlertChannelSubscriptions(c.AlertChannelSubscriptions))
 	d.Set("trigger_incident", setFromTriggerIncident(c.TriggerIncident))
 	d.SetId(d.Id())
 

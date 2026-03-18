@@ -2259,3 +2259,189 @@ func TestAccCheckFrequencyUpdates(t *testing.T) {
 		},
 	})
 }
+
+func TestAccCheckAlertChannelSubscriptions(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		// Step 1: Add two alert channel subscriptions.
+		{
+			Config: `
+				resource "checkly_alert_channel" "email_1" {
+					email {
+						address = "check-acs-1@example.com"
+					}
+				}
+
+				resource "checkly_alert_channel" "email_2" {
+					email {
+						address = "check-acs-2@example.com"
+					}
+				}
+
+				resource "checkly_alert_channel" "email_3" {
+					email {
+						address = "check-acs-3@example.com"
+					}
+				}
+
+				resource "checkly_check" "test" {
+					name      = "check-alert-channel-sub-test"
+					type      = "API"
+					frequency = 60
+					activated = true
+					locations = ["eu-central-1"]
+
+					request {
+						method = "GET"
+						url    = "https://api.checklyhq.com/public-stats"
+					}
+
+					alert_channel_subscription {
+						channel_id = checkly_alert_channel.email_1.id
+						activated  = true
+					}
+
+					alert_channel_subscription {
+						channel_id = checkly_alert_channel.email_2.id
+						activated  = false
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check.test",
+					"alert_channel_subscription.#",
+					"2",
+				),
+				resourceTestCheckAlertChannelSubscription(
+					"checkly_check.test",
+					"alert_channel_subscription",
+					"checkly_alert_channel.email_1",
+					"true",
+				),
+				resourceTestCheckAlertChannelSubscription(
+					"checkly_check.test",
+					"alert_channel_subscription",
+					"checkly_alert_channel.email_2",
+					"false",
+				),
+			),
+		},
+		// Step 2: Change activations and add a third subscription.
+		{
+			Config: `
+				resource "checkly_alert_channel" "email_1" {
+					email {
+						address = "check-acs-1@example.com"
+					}
+				}
+
+				resource "checkly_alert_channel" "email_2" {
+					email {
+						address = "check-acs-2@example.com"
+					}
+				}
+
+				resource "checkly_alert_channel" "email_3" {
+					email {
+						address = "check-acs-3@example.com"
+					}
+				}
+
+				resource "checkly_check" "test" {
+					name      = "check-alert-channel-sub-test"
+					type      = "API"
+					frequency = 60
+					activated = true
+					locations = ["eu-central-1"]
+
+					request {
+						method = "GET"
+						url    = "https://api.checklyhq.com/public-stats"
+					}
+
+					alert_channel_subscription {
+						channel_id = checkly_alert_channel.email_1.id
+						activated  = false
+					}
+
+					alert_channel_subscription {
+						channel_id = checkly_alert_channel.email_2.id
+						activated  = true
+					}
+
+					alert_channel_subscription {
+						channel_id = checkly_alert_channel.email_3.id
+						activated  = true
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check.test",
+					"alert_channel_subscription.#",
+					"3",
+				),
+				resourceTestCheckAlertChannelSubscription(
+					"checkly_check.test",
+					"alert_channel_subscription",
+					"checkly_alert_channel.email_1",
+					"false",
+				),
+				resourceTestCheckAlertChannelSubscription(
+					"checkly_check.test",
+					"alert_channel_subscription",
+					"checkly_alert_channel.email_2",
+					"true",
+				),
+				resourceTestCheckAlertChannelSubscription(
+					"checkly_check.test",
+					"alert_channel_subscription",
+					"checkly_alert_channel.email_3",
+					"true",
+				),
+			),
+		},
+		// Step 3: Remove all alert channel subscriptions.
+		{
+			Config: `
+				resource "checkly_alert_channel" "email_1" {
+					email {
+						address = "check-acs-1@example.com"
+					}
+				}
+
+				resource "checkly_alert_channel" "email_2" {
+					email {
+						address = "check-acs-2@example.com"
+					}
+				}
+
+				resource "checkly_alert_channel" "email_3" {
+					email {
+						address = "check-acs-3@example.com"
+					}
+				}
+
+				resource "checkly_check" "test" {
+					name      = "check-alert-channel-sub-test"
+					type      = "API"
+					frequency = 60
+					activated = true
+					locations = ["eu-central-1"]
+
+					request {
+						method = "GET"
+						url    = "https://api.checklyhq.com/public-stats"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check.test",
+					"alert_channel_subscription.#",
+					"0",
+				),
+			),
+		},
+	})
+}

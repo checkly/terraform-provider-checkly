@@ -730,3 +730,204 @@ func TestAccICMPMonitorFrequencyUpdates(t *testing.T) {
 		},
 	})
 }
+
+func TestAccICMPMonitorAlertChannelSubscriptions(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		// Step 1: Add two alert channel subscriptions.
+		{
+			Config: `
+				resource "checkly_alert_channel" "email_1" {
+					email {
+						address = "icmp-acs-1@example.com"
+					}
+				}
+
+				resource "checkly_alert_channel" "email_2" {
+					email {
+						address = "icmp-acs-2@example.com"
+					}
+				}
+
+				resource "checkly_alert_channel" "email_3" {
+					email {
+						address = "icmp-acs-3@example.com"
+					}
+				}
+
+				resource "checkly_icmp_monitor" "test" {
+					name      = "icmp-alert-channel-sub-test"
+					frequency = 60
+					activated = true
+					locations = ["eu-central-1"]
+
+					request {
+						hostname = "example.com"
+
+						assertion {
+							source     = "LATENCY"
+							property   = "avg"
+							comparison = "LESS_THAN"
+							target     = "200"
+						}
+					}
+
+					alert_channel_subscription {
+						channel_id = checkly_alert_channel.email_1.id
+						activated  = true
+					}
+
+					alert_channel_subscription {
+						channel_id = checkly_alert_channel.email_2.id
+						activated  = false
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_icmp_monitor.test",
+					"alert_channel_subscription.#",
+					"2",
+				),
+				resourceTestCheckAlertChannelSubscription(
+					"checkly_icmp_monitor.test",
+					"alert_channel_subscription",
+					"checkly_alert_channel.email_1",
+					"true",
+				),
+				resourceTestCheckAlertChannelSubscription(
+					"checkly_icmp_monitor.test",
+					"alert_channel_subscription",
+					"checkly_alert_channel.email_2",
+					"false",
+				),
+			),
+		},
+		// Step 2: Change activations and add a third subscription.
+		{
+			Config: `
+				resource "checkly_alert_channel" "email_1" {
+					email {
+						address = "icmp-acs-1@example.com"
+					}
+				}
+
+				resource "checkly_alert_channel" "email_2" {
+					email {
+						address = "icmp-acs-2@example.com"
+					}
+				}
+
+				resource "checkly_alert_channel" "email_3" {
+					email {
+						address = "icmp-acs-3@example.com"
+					}
+				}
+
+				resource "checkly_icmp_monitor" "test" {
+					name      = "icmp-alert-channel-sub-test"
+					frequency = 60
+					activated = true
+					locations = ["eu-central-1"]
+
+					request {
+						hostname = "example.com"
+
+						assertion {
+							source     = "LATENCY"
+							property   = "avg"
+							comparison = "LESS_THAN"
+							target     = "200"
+						}
+					}
+
+					alert_channel_subscription {
+						channel_id = checkly_alert_channel.email_1.id
+						activated  = false
+					}
+
+					alert_channel_subscription {
+						channel_id = checkly_alert_channel.email_2.id
+						activated  = true
+					}
+
+					alert_channel_subscription {
+						channel_id = checkly_alert_channel.email_3.id
+						activated  = true
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_icmp_monitor.test",
+					"alert_channel_subscription.#",
+					"3",
+				),
+				resourceTestCheckAlertChannelSubscription(
+					"checkly_icmp_monitor.test",
+					"alert_channel_subscription",
+					"checkly_alert_channel.email_1",
+					"false",
+				),
+				resourceTestCheckAlertChannelSubscription(
+					"checkly_icmp_monitor.test",
+					"alert_channel_subscription",
+					"checkly_alert_channel.email_2",
+					"true",
+				),
+				resourceTestCheckAlertChannelSubscription(
+					"checkly_icmp_monitor.test",
+					"alert_channel_subscription",
+					"checkly_alert_channel.email_3",
+					"true",
+				),
+			),
+		},
+		// Step 3: Remove all alert channel subscriptions.
+		{
+			Config: `
+				resource "checkly_alert_channel" "email_1" {
+					email {
+						address = "icmp-acs-1@example.com"
+					}
+				}
+
+				resource "checkly_alert_channel" "email_2" {
+					email {
+						address = "icmp-acs-2@example.com"
+					}
+				}
+
+				resource "checkly_alert_channel" "email_3" {
+					email {
+						address = "icmp-acs-3@example.com"
+					}
+				}
+
+				resource "checkly_icmp_monitor" "test" {
+					name      = "icmp-alert-channel-sub-test"
+					frequency = 60
+					activated = true
+					locations = ["eu-central-1"]
+
+					request {
+						hostname = "example.com"
+
+						assertion {
+							source     = "LATENCY"
+							property   = "avg"
+							comparison = "LESS_THAN"
+							target     = "200"
+						}
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_icmp_monitor.test",
+					"alert_channel_subscription.#",
+					"0",
+				),
+			),
+		},
+	})
+}

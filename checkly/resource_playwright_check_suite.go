@@ -68,25 +68,7 @@ func resourcePlaywrightCheckSuite() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"alert_channel_subscription": {
-				Description: "An array of channel IDs and whether they're activated or not. If you don't set at least one alert subscription for your check, we won't be able to alert you.",
-				Type:        schema.TypeList,
-				Optional:    true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"channel_id": {
-							Description: "The ID of the alert channel.",
-							Type:        schema.TypeInt,
-							Required:    true,
-						},
-						"activated": {
-							Description: "Whether an alert should be sent to this channel.",
-							Type:        schema.TypeBool,
-							Required:    true,
-						},
-					},
-				},
-			},
+			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionAttributeSchema(AlertChannelSubscriptionAttributeSchemaOptions{}),
 			"private_locations": {
 				Description: "An array of one or more private locations slugs.",
 				Type:        schema.TypeSet,
@@ -322,7 +304,7 @@ func PlaywrightCheckSuiteResourceFromResourceData(
 		UseGlobalAlertSettings:    d.Get("use_global_alert_settings").(bool),
 		GroupID:                   int64(d.Get("group_id").(int)),
 		GroupOrder:                d.Get("group_order").(int),
-		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(d.Get("alert_channel_subscription").([]any)),
+		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(d.Get(alertChannelSubscriptionAttributeName).(*schema.Set)),
 		TriggerIncident:           triggerIncidentFromSet(d.Get("trigger_incident").(*schema.Set)),
 	}
 
@@ -489,7 +471,7 @@ func (r *PlaywrightCheckSuiteResource) StoreResourceData(
 
 	d.Set("group_id", r.GroupID)
 	d.Set("group_order", r.GroupOrder)
-	d.Set("alert_channel_subscription", r.AlertChannelSubscriptions)
+	d.Set(alertChannelSubscriptionAttributeName, setFromAlertChannelSubscriptions(r.AlertChannelSubscriptions))
 	d.Set("trigger_incident", setFromTriggerIncident(r.TriggerIncident))
 	d.SetId(d.Id())
 	return nil
