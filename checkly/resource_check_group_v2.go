@@ -291,13 +291,13 @@ func resourceCheckGroupV2() *schema.Resource {
 			apiCheckDefaultsAttributeName: makeAPICheckDefaultsAttributeSchema(),
 		},
 		CustomizeDiff: customdiff.Sequence(
-			makeEnabledCustomizeDiffFunc(enforceAlertSettingsAttributeName, func(old, new []any) []tfMap {
-				return []tfMap{new[0].(tfMap)}
+			makeEnabledCustomizeDiffFunc(enforceAlertSettingsAttributeName, func(old, new []any) ([]tfMap, bool) {
+				return nil, false
 			}),
-			makeEnabledCustomizeDiffFunc(enforceLocationsAttributeName, func(old, new []any) []tfMap {
-				return []tfMap{new[0].(tfMap)}
+			makeEnabledCustomizeDiffFunc(enforceLocationsAttributeName, func(old, new []any) ([]tfMap, bool) {
+				return nil, false
 			}),
-			makeEnabledCustomizeDiffFunc(enforceRetryStrategyAttributeName, func(old, new []any) []tfMap {
+			makeEnabledCustomizeDiffFunc(enforceRetryStrategyAttributeName, func(old, new []any) ([]tfMap, bool) {
 				retryStrategy := new[0].(tfMap)[retryStrategyAttributeName].([]any)
 
 				return []tfMap{
@@ -305,16 +305,16 @@ func resourceCheckGroupV2() *schema.Resource {
 						"enabled":                  true,
 						retryStrategyAttributeName: listFromRetryStrategy(retryStrategyFromList(retryStrategy)),
 					},
-				}
+				}, true
 			}),
-			makeEnabledCustomizeDiffFunc(enforceSchedulingStrategyAttributeName, func(old, new []any) []tfMap {
-				return []tfMap{new[0].(tfMap)}
+			makeEnabledCustomizeDiffFunc(enforceSchedulingStrategyAttributeName, func(old, new []any) ([]tfMap, bool) {
+				return nil, false
 			}),
 		),
 	}
 }
 
-func makeEnabledCustomizeDiffFunc(attrName string, f func(old, new []any) []tfMap) schema.CustomizeDiffFunc {
+func makeEnabledCustomizeDiffFunc(attrName string, f func(old, new []any) ([]tfMap, bool)) schema.CustomizeDiffFunc {
 	return func(_ context.Context, diff *schema.ResourceDiff, meta any) error {
 		rawOldBlock, rawNewBlock := diff.GetChange(attrName)
 
@@ -374,11 +374,12 @@ func makeEnabledCustomizeDiffFunc(attrName string, f func(old, new []any) []tfMa
 			return nil
 		}
 
-		value := f(oldBlock, newBlock)
-
-		err := diff.SetNew(attrName, value)
-		if err != nil {
-			return err
+		value, ok := f(oldBlock, newBlock)
+		if ok {
+			err := diff.SetNew(attrName, value)
+			if err != nil {
+				return err
+			}
 		}
 
 		return nil
