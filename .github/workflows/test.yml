@@ -85,10 +85,17 @@ jobs:
       run: |
         go mod download
 
+    - name: Set up gotestfmt
+      uses: gotesttools/gotestfmt-action@v2
+
     - name: TF acceptance tests
       timeout-minutes: 10
       # Limit parallelism to 4 to avoid hitting Checkly API rate limits.
-      run: go test -v -parallel 4 ./...
+      # Use -json piped to tee + gotestfmt for real-time streaming output
+      # in CI while also saving the raw log as an artifact.
+      run: |
+        set -euo pipefail
+        go test -v -parallel 4 -json ./... 2>&1 | tee /tmp/gotest.log | gotestfmt
       env:
         TF_ACC: "1"
         TF_VAR_checkly_api_key: ${{ secrets.CHECKLY_API_KEY }}
@@ -96,3 +103,11 @@ jobs:
         CHECKLY_ACCOUNT_ID: ${{ secrets.CHECKLY_ACCOUNT_ID }}
         CHECKLY_API_URL: ${{ secrets.CHECKLY_API_URL }}
         CHECKLY_API_KEY: ${{ secrets.CHECKLY_API_KEY }}
+
+    - name: Upload test log
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-log-${{ matrix.terraform }}
+        path: /tmp/gotest.log
+        if-no-files-found: error
