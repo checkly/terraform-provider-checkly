@@ -230,11 +230,11 @@ resource "checkly_url_monitor" "test_trigger_incident" {
 }
 
 var wantURLMonitor = checkly.URLMonitor{
-	Name:          "My test check",
-	Frequency:     1,
-	Activated:     true,
-	Muted:         false,
-	RetryStrategy: &checkly.RetryStrategy{Type: "NO_RETRIES"},
+	Name:                 "My test check",
+	Frequency:            1,
+	Activated:            true,
+	Muted:                false,
+	RetryStrategy:        &checkly.RetryStrategy{Type: "NO_RETRIES"},
 	ShouldFail:           false,
 	Locations:            []string{"eu-west-1"},
 	PrivateLocations:     &[]string{},

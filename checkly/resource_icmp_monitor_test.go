@@ -328,9 +328,9 @@ var wantICMPMonitor = checkly.ICMPMonitor{
 		Assertions: []checkly.Assertion{
 			{
 				Source:     "LATENCY",
-				Property:  "avg",
+				Property:   "avg",
 				Comparison: checkly.LessThan,
-				Target:    "200",
+				Target:     "200",
 			},
 		},
 	},
