@@ -604,7 +604,8 @@ var wantCheck = checkly.Check{
 			Value: "Hello world",
 		},
 	},
-	DoubleCheck: false,
+	DoubleCheck:   false,
+	RetryStrategy: &checkly.RetryStrategy{Type: "NO_RETRIES"},
 	Tags: []string{
 		"foo",
 		"bar",

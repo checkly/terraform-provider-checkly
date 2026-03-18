@@ -320,6 +320,7 @@ var wantICMPMonitor = checkly.ICMPMonitor{
 		},
 	},
 	UseGlobalAlertSettings: false,
+	RetryStrategy:          &checkly.RetryStrategy{Type: "NO_RETRIES"},
 	Request: checkly.ICMPRequest{
 		Hostname:  "example.com",
 		IPFamily:  "IPv4",
