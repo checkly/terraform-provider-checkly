@@ -27,6 +27,18 @@ func resourceStatusPage() *schema.Resource {
 				Required:    true,
 				Description: "The name of the status page.",
 			},
+			"description": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "An optional introductory description for the status page. Maximum 500 characters.",
+				ValidateFunc: func(value interface{}, key string) (warns []string, errs []error) {
+					v := value.(string)
+					if len(v) > 500 {
+						errs = append(errs, fmt.Errorf("%q must be 500 characters or less, got %d", key, len(v)))
+					}
+					return warns, errs
+				},
+			},
 			"url": {
 				Type:        schema.TypeString,
 				Required:    true,
@@ -140,6 +152,7 @@ func statusPageFromResourceData(d *schema.ResourceData) (checkly.StatusPage, err
 	return checkly.StatusPage{
 		ID:           d.Id(),
 		Name:         d.Get("name").(string),
+		Description:  d.Get("description").(string),
 		URL:          d.Get("url").(string),
 		CustomDomain: d.Get("custom_domain").(string),
 		Logo:         d.Get("logo").(string),
@@ -209,6 +222,7 @@ func listFromStatusPageCardServiceAttachments(attachments []checkly.StatusPageSe
 
 func resourceDataFromStatusPage(p *checkly.StatusPage, d *schema.ResourceData) error {
 	d.Set("name", p.Name)
+	d.Set("description", p.Description)
 	d.Set("url", p.URL)
 	d.Set("custom_domain", p.CustomDomain)
 	d.Set("logo", p.Logo)
