@@ -104,10 +104,20 @@ jobs:
         CHECKLY_API_URL: ${{ secrets.CHECKLY_API_URL }}
         CHECKLY_API_KEY: ${{ secrets.CHECKLY_API_KEY }}
 
+    - name: Sanitize artifact name
+      id: artifact-name
+      if: always()
+      uses: actions/github-script@v8
+      with:
+        result-encoding: string
+        script: |
+          const tf = '${{ matrix.terraform }}'.replace('.*', '.x')
+          return `test-log-tf-${tf}`
+
     - name: Upload test log
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: test-log-${{ matrix.terraform }}
+        name: ${{ steps.artifact-name.outputs.result }}
         path: /tmp/gotest.log
         if-no-files-found: error
