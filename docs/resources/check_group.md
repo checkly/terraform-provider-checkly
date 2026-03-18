@@ -145,7 +145,7 @@ resource "checkly_check_group" "test_group1" {
 
 ### Optional
 
-- `alert_channel_subscription` (Block List) (see [below for nested schema](#nestedblock--alert_channel_subscription))
+- `alert_channel_subscription` (Block List) An array of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your check, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedblock--alert_channel_subscription))
 - `alert_settings` (Block List, Max: 1) Determines the alert escalation policy for the check. (see [below for nested schema](#nestedblock--alert_settings))
 - `api_check_defaults` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--api_check_defaults))
 - `double_check` (Boolean, Deprecated) Setting this to `true` will trigger a retry when a check fails from the failing region and another, randomly selected region before marking the check as failed. (Default `false`).
@@ -173,8 +173,8 @@ resource "checkly_check_group" "test_group1" {
 
 Required:
 
-- `activated` (Boolean)
-- `channel_id` (Number)
+- `activated` (Boolean) Whether an alert should be sent to this channel.
+- `channel_id` (Number) The ID of the alert channel.
 
 
 <a id="nestedblock--alert_settings"></a>

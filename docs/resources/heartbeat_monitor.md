@@ -37,7 +37,7 @@ resource "checkly_heartbeat_monitor" "example-heartbeat-monitor" {
 
 ### Optional
 
-- `alert_channel_subscription` (Block List) (see [below for nested schema](#nestedblock--alert_channel_subscription))
+- `alert_channel_subscription` (Block List) An array of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your monitor, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedblock--alert_channel_subscription))
 - `alert_settings` (Block List, Max: 1) Determines the alert escalation policy for the monitor. (see [below for nested schema](#nestedblock--alert_settings))
 - `muted` (Boolean) Determines if any notifications will be sent out when a check fails/degrades/recovers.
 - `tags` (Set of String) A list of tags for organizing and filtering checks.
@@ -68,8 +68,8 @@ Optional:
 
 Required:
 
-- `activated` (Boolean)
-- `channel_id` (Number)
+- `activated` (Boolean) Whether an alert should be sent to this channel.
+- `channel_id` (Number) The ID of the alert channel.
 
 
 <a id="nestedblock--alert_settings"></a>

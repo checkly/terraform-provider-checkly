@@ -81,25 +81,9 @@ func resourceICMPMonitor() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
-			"alert_channel_subscription": {
-				Description: "An array of channel IDs and whether they're activated or not. If you don't set at least one alert subscription for your monitor, we won't be able to alert you.",
-				Type:        schema.TypeList,
-				Optional:    true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"channel_id": {
-							Description: "The ID of the alert channel.",
-							Type:        schema.TypeInt,
-							Required:    true,
-						},
-						"activated": {
-							Description: "Whether an alert should be sent to this channel.",
-							Type:        schema.TypeBool,
-							Required:    true,
-						},
-					},
-				},
-			},
+			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionAttributeSchema(AlertChannelSubscriptionAttributeSchemaOptions{
+				Monitor: true,
+			}),
 			alertSettingsAttributeName: makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{
 				Monitor: true,
 			}),
@@ -287,7 +271,7 @@ func resourceDataFromICMPMonitor(c *checkly.ICMPMonitor, d *schema.ResourceData)
 	}
 	d.Set("group_id", c.GroupID)
 	d.Set("group_order", c.GroupOrder)
-	d.Set("alert_channel_subscription", c.AlertChannelSubscriptions)
+	d.Set(alertChannelSubscriptionAttributeName, setFromAlertChannelSubscriptions(c.AlertChannelSubscriptions))
 	d.Set(retryStrategyAttributeName, listFromRetryStrategy(c.RetryStrategy))
 	d.Set("trigger_incident", setFromTriggerIncident(c.TriggerIncident))
 	d.SetId(d.Id())
@@ -309,7 +293,7 @@ func icmpMonitorFromResourceData(d *schema.ResourceData) (checkly.ICMPMonitor, e
 		UseGlobalAlertSettings:      d.Get("use_global_alert_settings").(bool),
 		GroupID:                     int64(d.Get("group_id").(int)),
 		GroupOrder:                  d.Get("group_order").(int),
-		AlertChannelSubscriptions:   alertChannelSubscriptionsFromSet(d.Get("alert_channel_subscription").([]interface{})),
+		AlertChannelSubscriptions:   alertChannelSubscriptionsFromSet(d.Get(alertChannelSubscriptionAttributeName).(*schema.Set)),
 		RetryStrategy:               retryStrategyFromList(d.Get(retryStrategyAttributeName).([]any)),
 		TriggerIncident:             triggerIncidentFromSet(d.Get("trigger_incident").(*schema.Set)),
 	}

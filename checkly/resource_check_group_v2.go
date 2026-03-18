@@ -184,22 +184,7 @@ func resourceCheckGroupV2() *schema.Resource {
 							Optional: true,
 							Default:  false,
 						},
-						"alert_channel_subscription": {
-							Type:     schema.TypeList,
-							Optional: true,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									"channel_id": {
-										Type:     schema.TypeInt,
-										Required: true,
-									},
-									"activated": {
-										Type:     schema.TypeBool,
-										Required: true,
-									},
-								},
-							},
-						},
+						alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionAttributeSchema(AlertChannelSubscriptionAttributeSchemaOptions{}),
 					},
 				},
 			},
@@ -586,9 +571,9 @@ func CheckGroupV2EnforceAlertSettingsAttributeFromList(
 		}
 	}
 
-	if raw, ok := m["alert_channel_subscription"]; ok {
+	if raw, ok := m[alertChannelSubscriptionAttributeName]; ok {
 		if raw != nil {
-			a.AlertChannelSubscriptions = alertChannelSubscriptionsFromSet(raw.([]any))
+			a.AlertChannelSubscriptions = alertChannelSubscriptionsFromSet(raw.(*schema.Set))
 		}
 	}
 
@@ -615,10 +600,10 @@ func (a *CheckGroupV2EnforceAlertSettingsAttribute) ToList() []tfMap {
 
 	return []tfMap{
 		{
-			"enabled":                    true,
-			alertSettingsAttributeName:   alertSettings,
-			"use_global_alert_settings":  a.UseGlobalAlertSettings,
-			"alert_channel_subscription": a.AlertChannelSubscriptions,
+			"enabled":                             true,
+			alertSettingsAttributeName:            alertSettings,
+			"use_global_alert_settings":           a.UseGlobalAlertSettings,
+			alertChannelSubscriptionAttributeName: setFromAlertChannelSubscriptions(a.AlertChannelSubscriptions),
 		},
 	}
 }

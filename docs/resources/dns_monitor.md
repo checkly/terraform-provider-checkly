@@ -53,7 +53,7 @@ resource "checkly_dns_monitor" "example-dns-monitor" {
 
 ### Optional
 
-- `alert_channel_subscription` (Block List) An array of channel IDs and whether they're activated or not. If you don't set at least one alert subscription for your monitor, we won't be able to alert you. (see [below for nested schema](#nestedblock--alert_channel_subscription))
+- `alert_channel_subscription` (Block List) An array of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your monitor, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedblock--alert_channel_subscription))
 - `alert_settings` (Block List, Max: 1) Determines the alert escalation policy for the monitor. (see [below for nested schema](#nestedblock--alert_settings))
 - `degraded_response_time` (Number) The response time in milliseconds where the monitor should be considered degraded. Possible values are between `0` and `5000`. (Default `500`).
 - `frequency_offset` (Number) When `frequency` is `0` (high frequency), `frequency_offset` is required and it alone controls how often the monitor should run. Defined in seconds. The allowed values are `0` (disabled - use `frequency` to define the actual frequency), `10` (10 seconds), `20` (20 seconds) and `30` (30 seconds).

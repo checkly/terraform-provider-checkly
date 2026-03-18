@@ -190,6 +190,51 @@ resource "checkly_check_group_v2" "use-global-alerts" {
   }
 }
 
+# Example: enforce alert channel subscriptions with custom alert settings.
+resource "checkly_alert_channel" "email" {
+  email {
+    address = "alerts@example.com"
+  }
+}
+
+resource "checkly_alert_channel" "slack" {
+  slack {
+    channel = "#alerts"
+    url     = "https://hooks.slack.com/services/TXXXXX/XXXXX/XXXXXXXXXX"
+  }
+}
+
+resource "checkly_check_group_v2" "with-alert-channels" {
+  name = "Group with Alert Channels"
+
+  enforce_alert_settings {
+    enabled = true
+
+    alert_settings {
+      escalation_type = "RUN_BASED"
+
+      run_based_escalation {
+        failed_run_threshold = 1
+      }
+
+      reminders {
+        amount   = 0
+        interval = 5
+      }
+    }
+
+    alert_channel_subscription {
+      channel_id = checkly_alert_channel.email.id
+      activated  = true
+    }
+
+    alert_channel_subscription {
+      channel_id = checkly_alert_channel.slack.id
+      activated  = true
+    }
+  }
+}
+
 # Example: enforce no retries.
 resource "checkly_check_group_v2" "no-retries" {
   name = "No Retries Group"

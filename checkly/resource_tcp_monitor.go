@@ -103,23 +103,9 @@ func resourceTCPMonitor() *schema.Resource {
 				Default:     nil,
 				Description: "The ID of the runtime to use for this check.",
 			},
-			"alert_channel_subscription": {
-				Type:        schema.TypeList,
-				Optional:    true,
-				Description: "An array of channel IDs and whether they're activated or not. If you don't set at least one alert subscription for your check, we won't be able to alert you in case something goes wrong with it.",
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"channel_id": {
-							Type:     schema.TypeInt,
-							Required: true,
-						},
-						"activated": {
-							Type:     schema.TypeBool,
-							Required: true,
-						},
-					},
-				},
-			},
+			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionAttributeSchema(AlertChannelSubscriptionAttributeSchemaOptions{
+				Monitor: true,
+			}),
 			"private_locations": {
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -331,7 +317,7 @@ func resourceDataFromTCPMonitor(c *checkly.TCPMonitor, d *schema.ResourceData) e
 	d.Set("group_id", c.GroupID)
 	d.Set("group_order", c.GroupOrder)
 	d.Set("private_locations", c.PrivateLocations)
-	d.Set("alert_channel_subscription", c.AlertChannelSubscriptions)
+	d.Set(alertChannelSubscriptionAttributeName, setFromAlertChannelSubscriptions(c.AlertChannelSubscriptions))
 	d.Set(retryStrategyAttributeName, listFromRetryStrategy(c.RetryStrategy))
 	d.Set("trigger_incident", setFromTriggerIncident(c.TriggerIncident))
 	d.SetId(d.Id())
@@ -364,7 +350,7 @@ func tcpCheckFromResourceData(d *schema.ResourceData) (checkly.TCPMonitor, error
 		UseGlobalAlertSettings:    d.Get("use_global_alert_settings").(bool),
 		GroupID:                   int64(d.Get("group_id").(int)),
 		GroupOrder:                d.Get("group_order").(int),
-		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(d.Get("alert_channel_subscription").([]interface{})),
+		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(d.Get(alertChannelSubscriptionAttributeName).(*schema.Set)),
 		RetryStrategy:             retryStrategyFromList(d.Get(retryStrategyAttributeName).([]any)),
 		TriggerIncident:           triggerIncidentFromSet(d.Get("trigger_incident").(*schema.Set)),
 	}

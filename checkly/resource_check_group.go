@@ -107,22 +107,7 @@ func resourceCheckGroup() *schema.Resource {
 				Default:     nil,
 				Description: "The id of the runtime to use for this group.",
 			},
-			"alert_channel_subscription": {
-				Type:     schema.TypeList,
-				Optional: true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"channel_id": {
-							Type:     schema.TypeInt,
-							Required: true,
-						},
-						"activated": {
-							Type:     schema.TypeBool,
-							Required: true,
-						},
-					},
-				},
-			},
+			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionAttributeSchema(AlertChannelSubscriptionAttributeSchemaOptions{}),
 			alertSettingsAttributeName: makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{
 				EnableSSLCertificates: true,
 			}),
@@ -219,7 +204,7 @@ func resourceDataFromCheckGroup(g *checkly.Group, d *schema.ResourceData) error 
 	d.Set("teardown_snippet_id", g.TearDownSnippetID)
 	d.Set("local_setup_script", g.LocalSetupScript)
 	d.Set("local_teardown_script", g.LocalTearDownScript)
-	d.Set("alert_channel_subscription", g.AlertChannelSubscriptions)
+	d.Set(alertChannelSubscriptionAttributeName, setFromAlertChannelSubscriptions(g.AlertChannelSubscriptions))
 	d.Set("private_locations", g.PrivateLocations)
 
 	sort.Strings(g.Tags)
@@ -274,7 +259,7 @@ func checkGroupFromResourceData(d *schema.ResourceData) (checkly.Group, error) {
 		AlertSettings:             alertSettingsFromSet(d.Get("alert_settings").([]interface{})),
 		UseGlobalAlertSettings:    d.Get("use_global_alert_settings").(bool),
 		APICheckDefaults:          apiCheckDefaultsFromSet(d.Get(apiCheckDefaultsAttributeName).(*schema.Set)),
-		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(d.Get("alert_channel_subscription").([]interface{})),
+		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(d.Get(alertChannelSubscriptionAttributeName).(*schema.Set)),
 		RetryStrategy:             retryStrategyFromList(d.Get(retryStrategyAttributeName).([]any)),
 	}
 
