@@ -758,6 +758,350 @@ func TestAccCheckGroupV2EnvironmentVariable(t *testing.T) {
 	})
 }
 
+func TestAccCheckGroupV2EnforceLocationsDisableEquivalence(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_check_group_v2" "removed" {
+					name = "enforce-locations-equiv-removed"
+
+					enforce_locations {
+						enabled   = true
+						locations = ["us-east-1"]
+					}
+				}
+
+				resource "checkly_check_group_v2" "disabled" {
+					name = "enforce-locations-equiv-disabled"
+
+					enforce_locations {
+						enabled   = true
+						locations = ["eu-west-1"]
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check_group_v2.removed",
+					"enforce_locations.0.enabled",
+					"true",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group_v2.disabled",
+					"enforce_locations.0.enabled",
+					"true",
+				),
+			),
+		},
+		{
+			Config: `
+				resource "checkly_check_group_v2" "removed" {
+					name = "enforce-locations-equiv-removed"
+				}
+
+				resource "checkly_check_group_v2" "disabled" {
+					name = "enforce-locations-equiv-disabled"
+
+					enforce_locations {
+						enabled   = false
+						locations = ["eu-west-1"]
+					}
+				}
+
+				resource "checkly_check_group_v2" "fresh" {
+					name = "enforce-locations-equiv-fresh"
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check_group_v2.removed",
+					"enforce_locations.0.enabled",
+					"false",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group_v2.disabled",
+					"enforce_locations.0.enabled",
+					"false",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group_v2.fresh",
+					"enforce_locations.0.enabled",
+					"false",
+				),
+			),
+		},
+	})
+}
+
+func TestAccCheckGroupV2EnforceRetryStrategyDisableEquivalence(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_check_group_v2" "removed" {
+					name = "enforce-retry-equiv-removed"
+
+					enforce_retry_strategy {
+						enabled = true
+
+						retry_strategy {
+							type                 = "FIXED"
+							base_backoff_seconds = 30
+							max_retries          = 3
+							max_duration_seconds = 300
+							same_region          = false
+						}
+					}
+				}
+
+				resource "checkly_check_group_v2" "disabled" {
+					name = "enforce-retry-equiv-disabled"
+
+					enforce_retry_strategy {
+						enabled = true
+
+						retry_strategy {
+							type                 = "FIXED"
+							base_backoff_seconds = 30
+							max_retries          = 3
+							max_duration_seconds = 300
+							same_region          = false
+						}
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check_group_v2.removed",
+					"enforce_retry_strategy.0.enabled",
+					"true",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group_v2.disabled",
+					"enforce_retry_strategy.0.enabled",
+					"true",
+				),
+			),
+		},
+		{
+			Config: `
+				resource "checkly_check_group_v2" "removed" {
+					name = "enforce-retry-equiv-removed"
+				}
+
+				resource "checkly_check_group_v2" "disabled" {
+					name = "enforce-retry-equiv-disabled"
+
+					enforce_retry_strategy {
+						enabled = false
+
+						retry_strategy {
+							type                 = "FIXED"
+							base_backoff_seconds = 30
+							max_retries          = 3
+							max_duration_seconds = 300
+							same_region          = false
+						}
+					}
+				}
+
+				resource "checkly_check_group_v2" "fresh" {
+					name = "enforce-retry-equiv-fresh"
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check_group_v2.removed",
+					"enforce_retry_strategy.0.enabled",
+					"false",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group_v2.disabled",
+					"enforce_retry_strategy.0.enabled",
+					"false",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group_v2.fresh",
+					"enforce_retry_strategy.0.enabled",
+					"false",
+				),
+			),
+		},
+	})
+}
+
+func TestAccCheckGroupV2EnforceAlertSettingsDisableEquivalence(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_check_group_v2" "removed" {
+					name = "enforce-alerts-equiv-removed"
+
+					enforce_alert_settings {
+						enabled = true
+
+						alert_settings {
+							escalation_type = "RUN_BASED"
+
+							run_based_escalation {
+								failed_run_threshold = 2
+							}
+
+							reminders {
+								amount   = 3
+								interval = 10
+							}
+						}
+					}
+				}
+
+				resource "checkly_check_group_v2" "disabled" {
+					name = "enforce-alerts-equiv-disabled"
+
+					enforce_alert_settings {
+						enabled = true
+
+						alert_settings {
+							escalation_type = "RUN_BASED"
+
+							run_based_escalation {
+								failed_run_threshold = 2
+							}
+
+							reminders {
+								amount   = 3
+								interval = 10
+							}
+						}
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check_group_v2.removed",
+					"enforce_alert_settings.0.enabled",
+					"true",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group_v2.disabled",
+					"enforce_alert_settings.0.enabled",
+					"true",
+				),
+			),
+		},
+		{
+			Config: `
+				resource "checkly_check_group_v2" "removed" {
+					name = "enforce-alerts-equiv-removed"
+				}
+
+				resource "checkly_check_group_v2" "disabled" {
+					name = "enforce-alerts-equiv-disabled"
+
+					enforce_alert_settings {
+						enabled = false
+					}
+				}
+
+				resource "checkly_check_group_v2" "fresh" {
+					name = "enforce-alerts-equiv-fresh"
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check_group_v2.removed",
+					"enforce_alert_settings.0.enabled",
+					"false",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group_v2.disabled",
+					"enforce_alert_settings.0.enabled",
+					"false",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group_v2.fresh",
+					"enforce_alert_settings.0.enabled",
+					"false",
+				),
+			),
+		},
+	})
+}
+
+func TestAccCheckGroupV2EnforceSchedulingStrategyDisableEquivalence(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_check_group_v2" "removed" {
+					name = "enforce-sched-equiv-removed"
+
+					enforce_scheduling_strategy {
+						enabled      = true
+						run_parallel = true
+					}
+				}
+
+				resource "checkly_check_group_v2" "disabled" {
+					name = "enforce-sched-equiv-disabled"
+
+					enforce_scheduling_strategy {
+						enabled      = true
+						run_parallel = true
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check_group_v2.removed",
+					"enforce_scheduling_strategy.0.enabled",
+					"true",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group_v2.disabled",
+					"enforce_scheduling_strategy.0.enabled",
+					"true",
+				),
+			),
+		},
+		{
+			Config: `
+				resource "checkly_check_group_v2" "removed" {
+					name = "enforce-sched-equiv-removed"
+				}
+
+				resource "checkly_check_group_v2" "disabled" {
+					name = "enforce-sched-equiv-disabled"
+
+					enforce_scheduling_strategy {
+						enabled      = false
+						run_parallel = true
+					}
+				}
+
+				resource "checkly_check_group_v2" "fresh" {
+					name = "enforce-sched-equiv-fresh"
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_check_group_v2.removed",
+					"enforce_scheduling_strategy.0.enabled",
+					"false",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group_v2.disabled",
+					"enforce_scheduling_strategy.0.enabled",
+					"false",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check_group_v2.fresh",
+					"enforce_scheduling_strategy.0.enabled",
+					"false",
+				),
+			),
+		},
+	})
+}
+
 func TestAccCheckGroupV2ApiCheckDefaults(t *testing.T) {
 	accTestCase(t, []resource.TestStep{
 		{
