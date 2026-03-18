@@ -344,6 +344,8 @@ func resourceCheck() *schema.Resource {
 			},
 			retryStrategyAttributeName: makeRetryStrategyAttributeSchema(RetryStrategyAttributeSchemaOptions{
 				SupportsOnlyOnNetworkError: true,
+				Required:                   false,
+				Computed:                   true,
 			}),
 			"trigger_incident": triggerIncidentAttributeSchema,
 		},

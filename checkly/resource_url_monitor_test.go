@@ -234,6 +234,7 @@ var wantURLMonitor = checkly.URLMonitor{
 	Frequency:            1,
 	Activated:            true,
 	Muted:                false,
+	RetryStrategy:        &checkly.RetryStrategy{Type: "NO_RETRIES"},
 	ShouldFail:           false,
 	Locations:            []string{"eu-west-1"},
 	PrivateLocations:     &[]string{},

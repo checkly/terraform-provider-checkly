@@ -320,6 +320,7 @@ var wantICMPMonitor = checkly.ICMPMonitor{
 		},
 	},
 	UseGlobalAlertSettings: false,
+	RetryStrategy:          &checkly.RetryStrategy{Type: "NO_RETRIES"},
 	Request: checkly.ICMPRequest{
 		Hostname:  "example.com",
 		IPFamily:  "IPv4",
@@ -327,9 +328,9 @@ var wantICMPMonitor = checkly.ICMPMonitor{
 		Assertions: []checkly.Assertion{
 			{
 				Source:     "LATENCY",
-				Property:  "avg",
+				Property:   "avg",
 				Comparison: checkly.LessThan,
-				Target:    "200",
+				Target:     "200",
 			},
 		},
 	},

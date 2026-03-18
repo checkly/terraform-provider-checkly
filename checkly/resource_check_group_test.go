@@ -64,6 +64,7 @@ var wantGroup = checkly.Group{
 		},
 	},
 	DoubleCheck:            true,
+	RetryStrategy:          &checkly.RetryStrategy{Type: "NO_RETRIES"},
 	UseGlobalAlertSettings: false,
 	AlertSettings: checkly.AlertSettings{
 		EscalationType: checkly.RunBased,

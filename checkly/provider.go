@@ -37,6 +37,7 @@ func Provider() *schema.Provider {
 			"checkly_tcp_check":              resourceTCPCheck(), // Renamed
 			"checkly_tcp_monitor":            resourceTCPMonitor(),
 			"checkly_check_group":            resourceCheckGroup(),
+			"checkly_check_group_v2":         resourceCheckGroupV2(),
 			"checkly_snippet":                resourceSnippet(),
 			"checkly_dashboard":              resourceDashboard(),
 			"checkly_maintenance_windows":    resourceMaintenanceWindow(),

@@ -344,6 +344,7 @@ var wantDNSMonitor = checkly.DNSMonitor{
 		},
 	},
 	UseGlobalAlertSettings: false,
+	RetryStrategy:          &checkly.RetryStrategy{Type: "NO_RETRIES"},
 	Request: checkly.DNSRequest{
 		RecordType: "AAAA",
 		Query:      "example.com",

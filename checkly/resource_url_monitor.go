@@ -203,8 +203,10 @@ func resourceURLMonitor() *schema.Resource {
 			},
 			retryStrategyAttributeName: makeRetryStrategyAttributeSchema(RetryStrategyAttributeSchemaOptions{
 				SupportsOnlyOnNetworkError: true,
+				Required:                   false,
+				Computed:                   true,
 			}),
-			"trigger_incident":         triggerIncidentAttributeSchema,
+			"trigger_incident": triggerIncidentAttributeSchema,
 		},
 		CustomizeDiff: customdiff.Sequence(
 			RetryStrategyCustomizeDiff,

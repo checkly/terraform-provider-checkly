@@ -221,8 +221,11 @@ func resourceTCPMonitor() *schema.Resource {
 				Optional:    true,
 				Description: "The position of this check in a check group. It determines in what order checks are run when a group is triggered from the API or from CI/CD.",
 			},
-			retryStrategyAttributeName: makeRetryStrategyAttributeSchema(RetryStrategyAttributeSchemaOptions{}),
-			"trigger_incident":         triggerIncidentAttributeSchema,
+			retryStrategyAttributeName: makeRetryStrategyAttributeSchema(RetryStrategyAttributeSchemaOptions{
+				Required: false,
+				Computed: true,
+			}),
+			"trigger_incident": triggerIncidentAttributeSchema,
 		},
 		CustomizeDiff: customdiff.Sequence(
 			RetryStrategyCustomizeDiff,
