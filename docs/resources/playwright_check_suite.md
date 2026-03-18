@@ -79,7 +79,7 @@ resource "checkly_playwright_check_suite" "example-playwright-check" {
 
 ### Optional
 
-- `alert_channel_subscription` (Block List) An array of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your check, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedblock--alert_channel_subscription))
+- `alert_channel_subscription` (Block Set) An array of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your check, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedblock--alert_channel_subscription))
 - `alert_settings` (Block List, Max: 1) Determines the alert escalation policy for the check. (see [below for nested schema](#nestedblock--alert_settings))
 - `environment_variable` (Block List) Insert environment variables into the execution environment. (see [below for nested schema](#nestedblock--environment_variable))
 - `group_id` (Number) The ID of the check group that this check is part of.

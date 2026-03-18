@@ -366,7 +366,7 @@ Required:
 
 Optional:
 
-- `alert_channel_subscription` (Block List) An array of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your check, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedblock--enforce_alert_settings--alert_channel_subscription))
+- `alert_channel_subscription` (Block Set) An array of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your check, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedblock--enforce_alert_settings--alert_channel_subscription))
 - `alert_settings` (Block List, Max: 1) Determines the alert escalation policy for the check. (see [below for nested schema](#nestedblock--enforce_alert_settings--alert_settings))
 - `use_global_alert_settings` (Boolean) Whether to use account level alert settings instead of the group's alert settings.Default (`false`).
 
