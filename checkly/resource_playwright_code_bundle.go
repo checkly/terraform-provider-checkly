@@ -1,13 +1,18 @@
 package checkly
 
 import (
+	"archive/tar"
 	"bytes"
+	"compress/gzip"
 	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
+	"path"
+	"strings"
 
 	checkly "github.com/checkly/checkly-go-sdk"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -69,7 +74,7 @@ func resourcePlaywrightCodeBundle() *schema.Resource {
 					}
 
 					switch {
-					case bundle.Data.Version < 1:
+					case bundle.Data.Version < 2:
 						// Data should be updated.
 					case checksum != bundle.Data.ChecksumSha256:
 						// Data should be updated.
@@ -78,8 +83,14 @@ func resourcePlaywrightCodeBundle() *schema.Resource {
 						return nil
 					}
 
-					bundle.Data.Version = 1
+					pwVersion, err := bundle.PrebuiltArchive.PackageVersion("@playwright/test")
+					if err != nil {
+						return fmt.Errorf("failed to extract playwright version from archive: %v", err)
+					}
+
+					bundle.Data.Version = 2
 					bundle.Data.ChecksumSha256 = checksum
+					bundle.Data.PlaywrightVersion = pwVersion
 
 					err = diff.SetNew(metadataAttributeName, bundle.Data.EncodeToString())
 					if err != nil {
@@ -184,8 +195,9 @@ func resourcePlaywrightCodeBundleDelete(
 }
 
 type PlaywrightCodeBundleMetadata struct {
-	Version        int    `json:"v"`
-	ChecksumSha256 string `json:"s256"`
+	Version           int    `json:"v"`
+	ChecksumSha256    string `json:"s256"`
+	PlaywrightVersion string `json:"pwv,omitempty"`
 }
 
 func PlaywrightCodeBundleMetadataFromString(s string) (*PlaywrightCodeBundleMetadata, error) {
@@ -316,6 +328,68 @@ func (a *PlaywrightCodeBundlePrebuiltArchiveAttribute) ChecksumSha256() (string,
 	checksum := checksumSha256(file)
 
 	return checksum, nil
+}
+
+// PackageVersion opens the tar.gz archive and searches for a lockfile
+// (package-lock.json, pnpm-lock.yaml, or yarn.lock). If found, it extracts
+// and returns the resolved version of the given package. Returns an empty
+// string if the package is not found in any lockfile.
+func (a *PlaywrightCodeBundlePrebuiltArchiveAttribute) PackageVersion(packageName string) (string, error) {
+	file, err := os.Open(a.File)
+	if err != nil {
+		return "", fmt.Errorf("failed to open archive file %q: %w", a.File, err)
+	}
+	defer file.Close()
+
+	gzr, err := gzip.NewReader(file)
+	if err != nil {
+		return "", fmt.Errorf("failed to create gzip reader for %q: %w", a.File, err)
+	}
+	defer gzr.Close()
+
+	tr := tar.NewReader(gzr)
+
+	parsers := map[string]func(io.Reader, string) (string, error){
+		"package-lock.json": extractPackageVersionFromPackageLock,
+		"pnpm-lock.yaml":    extractPackageVersionFromPnpmLock,
+		"yarn.lock":         extractPackageVersionFromYarnLock,
+	}
+
+	for {
+		header, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return "", fmt.Errorf("failed to read archive %q: %w", a.File, err)
+		}
+
+		if header.Typeflag != tar.TypeReg {
+			continue
+		}
+
+		// Skip files inside node_modules
+		if strings.Contains(header.Name, "node_modules/") {
+			continue
+		}
+
+		base := path.Base(header.Name)
+		parser, ok := parsers[base]
+		if !ok {
+			continue
+		}
+
+		version, err := parser(tr, packageName)
+		if err != nil {
+			return "", fmt.Errorf("failed to extract package version from %q in archive: %w", header.Name, err)
+		}
+
+		if version != "" {
+			return version, nil
+		}
+	}
+
+	return "", nil
 }
 
 func (a *PlaywrightCodeBundlePrebuiltArchiveAttribute) Upload(

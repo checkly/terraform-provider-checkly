@@ -168,9 +168,11 @@ func resourcePlaywrightCheckSuite() *schema.Resource {
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"version": {
-										Description: "The Playwright version to use.",
-										Type:        schema.TypeString,
-										Optional:    true,
+										Description: "The Playwright version to use. Defaults to the " +
+											"version detected from the code bundle's lockfile.",
+										Type:     schema.TypeString,
+										Optional: true,
+										Computed: true,
 									},
 									"device": {
 										Description: "The list of devices that should be made available for Playwright.",
@@ -367,6 +369,20 @@ func PlaywrightCheckSuiteResourceFromResourceData(
 				check.Browsers = browsers
 			}
 		}
+	}
+
+	// Fall back to the Playwright version from the bundle metadata if no
+	// explicit version was set.
+	if (check.PlaywrightVersion == nil || *check.PlaywrightVersion == "") &&
+		bundleAttr != nil && bundleAttr.Metadata.PlaywrightVersion != "" {
+		check.PlaywrightVersion = &bundleAttr.Metadata.PlaywrightVersion
+	}
+
+	if check.PlaywrightVersion == nil || *check.PlaywrightVersion == "" {
+		return PlaywrightCheckSuiteResource{}, fmt.Errorf(
+			"no Playwright version specified and none could be detected from the code bundle's lockfile; " +
+				"set runtime.playwright.version explicitly or ensure the archive contains a lockfile with @playwright/test",
+		)
 	}
 
 	resource := PlaywrightCheckSuiteResource{
