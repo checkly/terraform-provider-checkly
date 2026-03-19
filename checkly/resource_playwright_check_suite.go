@@ -12,6 +12,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
+var defaultPlaywrightBrowsers = []string{"chromium", "firefox", "webkit"}
+
 func resourcePlaywrightCheckSuite() *schema.Resource {
 	return &schema.Resource{
 		Create: resourcePlaywrightCheckSuiteCreate,
@@ -164,6 +166,7 @@ func resourcePlaywrightCheckSuite() *schema.Resource {
 								"to the runtime environment.",
 							Type:     schema.TypeList,
 							Optional: true,
+							Computed: true,
 							MaxItems: 1,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
@@ -175,9 +178,11 @@ func resourcePlaywrightCheckSuite() *schema.Resource {
 										Computed: true,
 									},
 									"device": {
-										Description: "The list of devices that should be made available for Playwright.",
-										Type:        schema.TypeSet,
-										Optional:    true,
+										Description: "The list of devices that should be made available for Playwright. " +
+											"Defaults to chromium, firefox, and webkit.",
+										Type:     schema.TypeSet,
+										Optional: true,
+										Computed: true,
 										Elem: &schema.Resource{
 											Schema: map[string]*schema.Schema{
 												"type": {
@@ -383,6 +388,12 @@ func PlaywrightCheckSuiteResourceFromResourceData(
 			"no Playwright version specified and none could be detected from the code bundle's lockfile; " +
 				"set runtime.playwright.version explicitly or ensure the archive contains a lockfile with @playwright/test",
 		)
+	}
+
+	// Default to all three Playwright browser engines if none were
+	// explicitly configured.
+	if len(check.Browsers) == 0 {
+		check.Browsers = slices.Clone(defaultPlaywrightBrowsers)
 	}
 
 	resource := PlaywrightCheckSuiteResource{
