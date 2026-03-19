@@ -1,6 +1,7 @@
 package checkly
 
 import (
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -99,6 +100,34 @@ func TestAccPlaywrightCheckSuiteWithEnvironmentVariable(t *testing.T) {
 					"true",
 				),
 			),
+		},
+	})
+}
+
+func TestAccPlaywrightCheckSuiteWithoutDevicesShouldNotCrash(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: playwrightCheckSuiteBase + `
+				resource "checkly_playwright_check_suite" "test" {
+					name                      = "PW Check without devices"
+					activated                 = true
+					frequency                 = 720
+					use_global_alert_settings = true
+					locations                 = ["us-east-1"]
+
+					bundle {
+						id       = checkly_playwright_code_bundle.test.id
+						metadata = checkly_playwright_code_bundle.test.metadata
+					}
+
+					runtime {
+						playwright {
+							version = "1.56.1"
+						}
+					}
+				}
+			`,
+			ExpectError: regexp.MustCompile(`browsers.+does not contain 1 required value`),
 		},
 	})
 }
