@@ -358,12 +358,14 @@ func PlaywrightCheckSuiteResourceFromResourceData(
 		if runtimeAttr.Playwright != nil {
 			check.PlaywrightVersion = &runtimeAttr.Playwright.Version
 
-			var browsers []string
-			for _, device := range *runtimeAttr.Playwright.Devices {
-				browsers = append(browsers, device.Type)
-			}
+			if runtimeAttr.Playwright.Devices != nil {
+				var browsers []string
+				for _, device := range *runtimeAttr.Playwright.Devices {
+					browsers = append(browsers, device.Type)
+				}
 
-			check.Browsers = browsers
+				check.Browsers = browsers
+			}
 		}
 	}
 
