@@ -1,8 +1,41 @@
 package checkly
 
 import (
+	"regexp"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 )
+
+func TestAccPlaywrightCodeBundleNoLockfile(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_playwright_code_bundle" "test" {
+					prebuilt_archive {
+						file = "../fixtures/playwright-project-no-lockfile.tar.gz"
+					}
+				}
+			`,
+			ExpectError: regexp.MustCompile(`no lockfile found at the root of the archive`),
+		},
+	})
+}
+
+func TestAccPlaywrightCodeBundleNoPlaywrightInLockfile(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_playwright_code_bundle" "test" {
+					prebuilt_archive {
+						file = "../fixtures/playwright-project-no-playwright.tar.gz"
+					}
+				}
+			`,
+			ExpectError: regexp.MustCompile(`the lockfile does not contain @playwright/test`),
+		},
+	})
+}
 
 func TestInspectLockfile(t *testing.T) {
 	t.Parallel()
@@ -47,6 +80,44 @@ func TestInspectLockfile(t *testing.T) {
 		})
 	}
 
+	t.Run("lockfile without @playwright/test", func(t *testing.T) {
+		t.Parallel()
+
+		attr := PlaywrightCodeBundlePrebuiltArchiveAttribute{
+			File: "../fixtures/playwright-project-no-playwright.tar.gz",
+		}
+
+		info, err := attr.InspectLockfile("@playwright/test")
+		if err != nil {
+			t.Fatalf("InspectLockfile returned unexpected error: %v", err)
+		}
+		if info == nil {
+			t.Fatal("InspectLockfile returned nil, expected LockfileInfo with empty PackageVersion")
+		}
+		if info.PackageManager != "npm" {
+			t.Errorf("PackageManager = %q, want %q", info.PackageManager, "npm")
+		}
+		if info.PackageVersion != "" {
+			t.Errorf("PackageVersion = %q, want empty string", info.PackageVersion)
+		}
+	})
+
+	t.Run("no lockfile in archive", func(t *testing.T) {
+		t.Parallel()
+
+		attr := PlaywrightCodeBundlePrebuiltArchiveAttribute{
+			File: "../fixtures/playwright-project-no-lockfile.tar.gz",
+		}
+
+		info, err := attr.InspectLockfile("@playwright/test")
+		if err != nil {
+			t.Fatalf("InspectLockfile returned unexpected error: %v", err)
+		}
+		if info != nil {
+			t.Fatalf("InspectLockfile returned %+v, want nil", info)
+		}
+	})
+
 	// Verify all three fixtures produce the same detected values
 	// (except checksum, which differs per lockfile format).
 	t.Run("consistent values across fixtures", func(t *testing.T) {
@@ -72,6 +143,31 @@ func TestInspectLockfile(t *testing.T) {
 					fixtures[i].name, versions[i],
 				)
 			}
+		}
+	})
+
+	t.Run("different archive produces different checksum", func(t *testing.T) {
+		t.Parallel()
+
+		pnpm := PlaywrightCodeBundlePrebuiltArchiveAttribute{
+			File: "../fixtures/playwright-project-pnpm.tar.gz",
+		}
+		pnpmNext := PlaywrightCodeBundlePrebuiltArchiveAttribute{
+			File: "../fixtures/playwright-project-pnpm-playwright-next.tar.gz",
+		}
+
+		infoPnpm, err := pnpm.InspectLockfile("@playwright/test")
+		if err != nil {
+			t.Fatalf("InspectLockfile(pnpm) failed: %v", err)
+		}
+
+		infoPnpmNext, err := pnpmNext.InspectLockfile("@playwright/test")
+		if err != nil {
+			t.Fatalf("InspectLockfile(pnpm-next) failed: %v", err)
+		}
+
+		if infoPnpm.ChecksumSha256 == infoPnpmNext.ChecksumSha256 {
+			t.Errorf("expected different checksums, both are %q", infoPnpm.ChecksumSha256)
 		}
 	})
 }

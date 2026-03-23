@@ -2,6 +2,7 @@ package checkly
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -98,6 +99,74 @@ func TestAccPlaywrightCheckSuiteWithEnvironmentVariable(t *testing.T) {
 					"checkly_playwright_check_suite.test",
 					"environment_variable.1.locked",
 					"true",
+				),
+			),
+		},
+	})
+}
+
+func TestAccPlaywrightCheckSuiteBundleChange(t *testing.T) {
+	pnpmBundle := `
+		resource "checkly_playwright_code_bundle" "test" {
+			prebuilt_archive {
+				file = "../fixtures/playwright-project-pnpm.tar.gz"
+			}
+		}
+	`
+
+	pnpmNextBundle := `
+		resource "checkly_playwright_code_bundle" "test" {
+			prebuilt_archive {
+				file = "../fixtures/playwright-project-pnpm-playwright-next.tar.gz"
+			}
+		}
+	`
+
+	checkSuite := `
+		resource "checkly_playwright_check_suite" "test" {
+			name                      = "PW Check bundle change"
+			activated                 = true
+			frequency                 = 720
+			use_global_alert_settings = true
+			locations                 = ["us-east-1"]
+
+			bundle {
+				id       = checkly_playwright_code_bundle.test.id
+				metadata = checkly_playwright_code_bundle.test.metadata
+			}
+		}
+	`
+
+	accTestCase(t, []resource.TestStep{
+		// Step 1: Use the pnpm fixture.
+		{
+			Config: pnpmBundle + checkSuite,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.playwright.0.version",
+					"1.58.2",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.steps.0.test.0.command",
+					defaultTestCommand["pnpm"],
+				),
+			),
+		},
+		// Step 2: Swap to a different archive — auto-detected values should update.
+		{
+			Config: pnpmNextBundle + checkSuite,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.playwright.0.version",
+					"1.59.0-alpha-1774287265000",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.steps.0.test.0.command",
+					defaultTestCommand["pnpm"],
 				),
 			),
 		},
@@ -439,6 +508,275 @@ func TestAccPlaywrightCheckSuiteWithExplicitDevices(t *testing.T) {
 	})
 }
 
+func TestAccPlaywrightCheckSuiteTestCommand(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		// Step 1: No explicit test command — auto-detected from pnpm lockfile.
+		{
+			Config: playwrightCheckSuiteBase + `
+				resource "checkly_playwright_check_suite" "test" {
+					name                      = "PW Check test command"
+					activated                 = true
+					frequency                 = 720
+					use_global_alert_settings = true
+					locations                 = ["us-east-1"]
+
+					bundle {
+						id       = checkly_playwright_code_bundle.test.id
+						metadata = checkly_playwright_code_bundle.test.metadata
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.steps.0.test.0.command",
+					defaultTestCommand["pnpm"],
+				),
+			),
+		},
+		// Step 2: Explicit custom test command — should be preserved.
+		{
+			Config: playwrightCheckSuiteBase + `
+				resource "checkly_playwright_check_suite" "test" {
+					name                      = "PW Check test command"
+					activated                 = true
+					frequency                 = 720
+					use_global_alert_settings = true
+					locations                 = ["us-east-1"]
+
+					bundle {
+						id       = checkly_playwright_code_bundle.test.id
+						metadata = checkly_playwright_code_bundle.test.metadata
+					}
+
+					runtime {
+						steps {
+							test {
+								command = "pnpm playwright test --workers=4"
+							}
+						}
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.steps.0.test.0.command",
+					"pnpm playwright test --workers=4",
+				),
+			),
+		},
+		// Step 3: Remove explicit test command — falls back to auto-detected.
+		{
+			Config: playwrightCheckSuiteBase + `
+				resource "checkly_playwright_check_suite" "test" {
+					name                      = "PW Check test command"
+					activated                 = true
+					frequency                 = 720
+					use_global_alert_settings = true
+					locations                 = ["us-east-1"]
+
+					bundle {
+						id       = checkly_playwright_code_bundle.test.id
+						metadata = checkly_playwright_code_bundle.test.metadata
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.steps.0.test.0.command",
+					defaultTestCommand["pnpm"],
+				),
+			),
+		},
+	})
+}
+
+func TestAccPlaywrightCheckSuiteInstallCommand(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		// Step 1: Set an explicit install command.
+		{
+			Config: playwrightCheckSuiteBase + `
+				resource "checkly_playwright_check_suite" "test" {
+					name                      = "PW Check install command"
+					activated                 = true
+					frequency                 = 720
+					use_global_alert_settings = true
+					locations                 = ["us-east-1"]
+
+					bundle {
+						id       = checkly_playwright_code_bundle.test.id
+						metadata = checkly_playwright_code_bundle.test.metadata
+					}
+
+					runtime {
+						steps {
+							install {
+								command = "pnpm install --frozen-lockfile"
+							}
+						}
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.steps.0.install.0.command",
+					"pnpm install --frozen-lockfile",
+				),
+			),
+		},
+		// Step 2: Remove the install command — should be unset.
+		{
+			Config: playwrightCheckSuiteBase + `
+				resource "checkly_playwright_check_suite" "test" {
+					name                      = "PW Check install command"
+					activated                 = true
+					frequency                 = 720
+					use_global_alert_settings = true
+					locations                 = ["us-east-1"]
+
+					bundle {
+						id       = checkly_playwright_code_bundle.test.id
+						metadata = checkly_playwright_code_bundle.test.metadata
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckNoResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.steps.0.install.0.command",
+				),
+			),
+		},
+	})
+}
+
+func TestAccPlaywrightCheckSuiteInstallCommandPreservedAcrossChanges(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		// Step 1: Set install command alongside an explicit playwright version.
+		{
+			Config: playwrightCheckSuiteBase + `
+				resource "checkly_playwright_check_suite" "test" {
+					name                      = "PW Check install preserved"
+					activated                 = true
+					frequency                 = 720
+					use_global_alert_settings = true
+					locations                 = ["us-east-1"]
+
+					bundle {
+						id       = checkly_playwright_code_bundle.test.id
+						metadata = checkly_playwright_code_bundle.test.metadata
+					}
+
+					runtime {
+						steps {
+							install {
+								command = "pnpm install --frozen-lockfile"
+							}
+						}
+
+						playwright {
+							version = "1.56.1"
+						}
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.steps.0.install.0.command",
+					"pnpm install --frozen-lockfile",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.playwright.0.version",
+					"1.56.1",
+				),
+			),
+		},
+		// Step 2: Change the playwright version — install command should be preserved.
+		{
+			Config: playwrightCheckSuiteBase + `
+				resource "checkly_playwright_check_suite" "test" {
+					name                      = "PW Check install preserved"
+					activated                 = true
+					frequency                 = 720
+					use_global_alert_settings = true
+					locations                 = ["us-east-1"]
+
+					bundle {
+						id       = checkly_playwright_code_bundle.test.id
+						metadata = checkly_playwright_code_bundle.test.metadata
+					}
+
+					runtime {
+						steps {
+							install {
+								command = "pnpm install --frozen-lockfile"
+							}
+						}
+
+						playwright {
+							version = "1.58.2"
+						}
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.steps.0.install.0.command",
+					"pnpm install --frozen-lockfile",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.playwright.0.version",
+					"1.58.2",
+				),
+			),
+		},
+		// Step 3: Remove the playwright version (fall back to auto-detect) — install command should still be preserved.
+		{
+			Config: playwrightCheckSuiteBase + `
+				resource "checkly_playwright_check_suite" "test" {
+					name                      = "PW Check install preserved"
+					activated                 = true
+					frequency                 = 720
+					use_global_alert_settings = true
+					locations                 = ["us-east-1"]
+
+					bundle {
+						id       = checkly_playwright_code_bundle.test.id
+						metadata = checkly_playwright_code_bundle.test.metadata
+					}
+
+					runtime {
+						steps {
+							install {
+								command = "pnpm install --frozen-lockfile"
+							}
+						}
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.steps.0.install.0.command",
+					"pnpm install --frozen-lockfile",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.playwright.0.version",
+					"1.58.2",
+				),
+			),
+		},
+	})
+}
+
 func TestAccPlaywrightCheckSuiteWithoutDevicesShouldNotCrash(t *testing.T) {
 	accTestCase(t, []resource.TestStep{
 		{
@@ -474,6 +812,304 @@ func TestAccPlaywrightCheckSuiteWithoutDevicesShouldNotCrash(t *testing.T) {
 					fmt.Sprintf("%d", len(defaultPlaywrightBrowsers)),
 				),
 			),
+		},
+	})
+}
+
+func TestAccPlaywrightCheckSuiteAutoDetectTransition(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		// Step 1: auto_detect = false with all explicit values.
+		{
+			Config: playwrightCheckSuiteBase + `
+				resource "checkly_playwright_check_suite" "test" {
+					name                      = "PW Check auto_detect transition"
+					activated                 = true
+					frequency                 = 720
+					use_global_alert_settings = true
+					locations                 = ["us-east-1"]
+
+					bundle {
+						id       = checkly_playwright_code_bundle.test.id
+						metadata = checkly_playwright_code_bundle.test.metadata
+					}
+
+					runtime {
+						auto_detect = false
+
+						steps {
+							test {
+								command = "npx playwright test"
+							}
+						}
+
+						playwright {
+							version = "1.56.1"
+							device {
+								type = "chromium"
+							}
+						}
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.playwright.0.version",
+					"1.56.1",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.playwright.0.device.#",
+					"1",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.steps.0.test.0.command",
+					"npx playwright test",
+				),
+			),
+		},
+		// Step 2: Switch to auto_detect = true, keep explicit version but
+		// remove devices and test command — those should be auto-detected.
+		{
+			Config: playwrightCheckSuiteBase + `
+				resource "checkly_playwright_check_suite" "test" {
+					name                      = "PW Check auto_detect transition"
+					activated                 = true
+					frequency                 = 720
+					use_global_alert_settings = true
+					locations                 = ["us-east-1"]
+
+					bundle {
+						id       = checkly_playwright_code_bundle.test.id
+						metadata = checkly_playwright_code_bundle.test.metadata
+					}
+
+					runtime {
+						playwright {
+							version = "1.56.1"
+						}
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.playwright.0.version",
+					"1.56.1",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.playwright.0.device.#",
+					fmt.Sprintf("%d", len(defaultPlaywrightBrowsers)),
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.steps.0.test.0.command",
+					defaultTestCommand["pnpm"],
+				),
+			),
+		},
+		// Step 3: Remove explicit version too — everything auto-detected.
+		{
+			Config: playwrightCheckSuiteBase + `
+				resource "checkly_playwright_check_suite" "test" {
+					name                      = "PW Check auto_detect transition"
+					activated                 = true
+					frequency                 = 720
+					use_global_alert_settings = true
+					locations                 = ["us-east-1"]
+
+					bundle {
+						id       = checkly_playwright_code_bundle.test.id
+						metadata = checkly_playwright_code_bundle.test.metadata
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.playwright.0.version",
+					"1.58.2",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.playwright.0.device.#",
+					fmt.Sprintf("%d", len(defaultPlaywrightBrowsers)),
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.steps.0.test.0.command",
+					defaultTestCommand["pnpm"],
+				),
+			),
+		},
+	})
+}
+
+func TestAccPlaywrightCheckSuiteAutoDetectFalse(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: playwrightCheckSuiteBase + `
+				resource "checkly_playwright_check_suite" "test" {
+					name                      = "PW Check auto_detect false"
+					activated                 = true
+					frequency                 = 720
+					use_global_alert_settings = true
+					locations                 = ["us-east-1"]
+
+					bundle {
+						id       = checkly_playwright_code_bundle.test.id
+						metadata = checkly_playwright_code_bundle.test.metadata
+					}
+
+					runtime {
+						auto_detect = false
+
+						steps {
+							test {
+								command = "npx playwright test"
+							}
+						}
+
+						playwright {
+							version = "1.56.1"
+							device {
+								type = "chromium"
+							}
+						}
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.auto_detect",
+					"false",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.playwright.0.version",
+					"1.56.1",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.playwright.0.device.#",
+					"1",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.steps.0.test.0.command",
+					"npx playwright test",
+				),
+			),
+		},
+	})
+}
+
+func TestAccPlaywrightCheckSuiteAutoDetectFalseMissingVersion(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: playwrightCheckSuiteBase + `
+				resource "checkly_playwright_check_suite" "test" {
+					name                      = "PW Check auto_detect false missing version"
+					activated                 = true
+					frequency                 = 720
+					use_global_alert_settings = true
+					locations                 = ["us-east-1"]
+
+					bundle {
+						id       = checkly_playwright_code_bundle.test.id
+						metadata = checkly_playwright_code_bundle.test.metadata
+					}
+
+					runtime {
+						auto_detect = false
+
+						steps {
+							test {
+								command = "npx playwright test"
+							}
+						}
+
+						playwright {
+							device {
+								type = "chromium"
+							}
+						}
+					}
+				}
+			`,
+			ExpectError: regexp.MustCompile(`"runtime.playwright.version" is required when "runtime.auto_detect" is false`),
+		},
+	})
+}
+
+func TestAccPlaywrightCheckSuiteAutoDetectFalseMissingDevices(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: playwrightCheckSuiteBase + `
+				resource "checkly_playwright_check_suite" "test" {
+					name                      = "PW Check auto_detect false missing devices"
+					activated                 = true
+					frequency                 = 720
+					use_global_alert_settings = true
+					locations                 = ["us-east-1"]
+
+					bundle {
+						id       = checkly_playwright_code_bundle.test.id
+						metadata = checkly_playwright_code_bundle.test.metadata
+					}
+
+					runtime {
+						auto_detect = false
+
+						steps {
+							test {
+								command = "npx playwright test"
+							}
+						}
+
+						playwright {
+							version = "1.56.1"
+						}
+					}
+				}
+			`,
+			ExpectError: regexp.MustCompile(`at least one "runtime.playwright.device" block is required when "runtime.auto_detect" is false`),
+		},
+	})
+}
+
+func TestAccPlaywrightCheckSuiteAutoDetectFalseMissingTestCommand(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: playwrightCheckSuiteBase + `
+				resource "checkly_playwright_check_suite" "test" {
+					name                      = "PW Check auto_detect false missing test command"
+					activated                 = true
+					frequency                 = 720
+					use_global_alert_settings = true
+					locations                 = ["us-east-1"]
+
+					bundle {
+						id       = checkly_playwright_code_bundle.test.id
+						metadata = checkly_playwright_code_bundle.test.metadata
+					}
+
+					runtime {
+						auto_detect = false
+
+						playwright {
+							version = "1.56.1"
+							device {
+								type = "chromium"
+							}
+						}
+					}
+				}
+			`,
+			ExpectError: regexp.MustCompile(`"runtime.steps.test.command" is required when "runtime.auto_detect" is false`),
 		},
 	})
 }

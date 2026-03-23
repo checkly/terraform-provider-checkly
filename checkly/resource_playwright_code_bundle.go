@@ -13,7 +13,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
 	"strings"
 
 	checkly "github.com/checkly/checkly-go-sdk"
@@ -90,13 +89,25 @@ func resourcePlaywrightCodeBundle() *schema.Resource {
 						return fmt.Errorf("failed to inspect lockfile in archive: %v", err)
 					}
 
+					if lockfileInfo == nil {
+						return fmt.Errorf(
+							"no lockfile found at the root of the archive; " +
+								"the archive must contain a package-lock.json, pnpm-lock.yaml, or yarn.lock at the root level",
+						)
+					}
+
+					if lockfileInfo.PackageVersion == "" {
+						return fmt.Errorf(
+							"the lockfile does not contain @playwright/test; " +
+								"add @playwright/test to the project's dependencies and regenerate the lockfile",
+						)
+					}
+
 					bundle.Data.Version = 2
 					bundle.Data.ChecksumSha256 = checksum
-					if lockfileInfo != nil {
-						bundle.Data.PlaywrightVersion = lockfileInfo.PackageVersion
-						bundle.Data.PackageManager = lockfileInfo.PackageManager
-						bundle.Data.LockfileChecksum = lockfileInfo.ChecksumSha256
-					}
+					bundle.Data.PlaywrightVersion = lockfileInfo.PackageVersion
+					bundle.Data.PackageManager = lockfileInfo.PackageManager
+					bundle.Data.LockfileChecksum = lockfileInfo.ChecksumSha256
 
 					err = diff.SetNew(metadataAttributeName, bundle.Data.EncodeToString())
 					if err != nil {
@@ -357,8 +368,9 @@ var lockfileParsers = map[string]lockfileParser{
 }
 
 // InspectLockfile opens the tar.gz archive and searches for a lockfile
-// (package-lock.json, pnpm-lock.yaml, or yarn.lock). If found, it returns
-// the detected package manager and the resolved version of the given package.
+// (package-lock.json, pnpm-lock.yaml, or yarn.lock) at the root of the
+// archive. If found, it returns the detected package manager and the
+// resolved version of the given package.
 func (a *PlaywrightCodeBundlePrebuiltArchiveAttribute) InspectLockfile(packageName string) (*LockfileInfo, error) {
 	file, err := os.Open(a.File)
 	if err != nil {
@@ -387,13 +399,13 @@ func (a *PlaywrightCodeBundlePrebuiltArchiveAttribute) InspectLockfile(packageNa
 			continue
 		}
 
-		// Skip files inside node_modules
-		if strings.Contains(header.Name, "node_modules/") {
+		// Only consider files at the root of the archive.
+		name := strings.TrimPrefix(header.Name, "./")
+		if strings.Contains(name, "/") {
 			continue
 		}
 
-		base := path.Base(header.Name)
-		parser, ok := lockfileParsers[base]
+		parser, ok := lockfileParsers[name]
 		if !ok {
 			continue
 		}

@@ -238,20 +238,24 @@ func resourcePlaywrightCheckSuite() *schema.Resource {
 				var isRuntimePlaywrightBlockPresent bool
 				var isRuntimePlaywrightVersionPresent bool
 				var isRuntimePlaywrightDeviceBlockPresent bool
+				var isRuntimeStepsBlockPresent bool
+				var isRuntimeStepsInstallBlockPresent bool
+				var isRuntimeStepsTestBlockPresent bool
+				var isRuntimeStepsTestCommandPresent bool
 
-				it := runtimeListAttr.ElementIterator()
-				if it.Next() {
+				runtimeIt := runtimeListAttr.ElementIterator()
+				if runtimeIt.Next() {
 					isRuntimeBlockPresent = true
 
-					_, planRuntimeAttr := it.Element()
+					_, configRuntimeAttr := runtimeIt.Element()
 
-					playwrightListAttr := planRuntimeAttr.GetAttr("playwright")
+					playwrightListAttr := configRuntimeAttr.GetAttr("playwright")
 
-					it := playwrightListAttr.ElementIterator()
-					if it.Next() {
+					playwrightIt := playwrightListAttr.ElementIterator()
+					if playwrightIt.Next() {
 						isRuntimePlaywrightBlockPresent = true
 
-						_, playwrightAttr := it.Element()
+						_, playwrightAttr := playwrightIt.Element()
 
 						versionAttr := playwrightAttr.GetAttr("version")
 
@@ -259,9 +263,38 @@ func resourcePlaywrightCheckSuite() *schema.Resource {
 
 						deviceListAttr := playwrightAttr.GetAttr("device")
 
-						it := deviceListAttr.ElementIterator()
-						if it.Next() {
+						deviceIt := deviceListAttr.ElementIterator()
+						if deviceIt.Next() {
 							isRuntimePlaywrightDeviceBlockPresent = true
+						}
+					}
+
+					stepsListAttr := configRuntimeAttr.GetAttr("steps")
+
+					stepsIt := stepsListAttr.ElementIterator()
+					if stepsIt.Next() {
+						isRuntimeStepsBlockPresent = true
+
+						_, stepsAttr := stepsIt.Element()
+
+						installListAttr := stepsAttr.GetAttr("install")
+
+						installIt := installListAttr.ElementIterator()
+						if installIt.Next() {
+							isRuntimeStepsInstallBlockPresent = true
+						}
+
+						testListAttr := stepsAttr.GetAttr("test")
+
+						testIt := testListAttr.ElementIterator()
+						if testIt.Next() {
+							isRuntimeStepsTestBlockPresent = true
+
+							_, testAttr := testIt.Element()
+
+							commandAttr := testAttr.GetAttr("command")
+
+							isRuntimeStepsTestCommandPresent = !commandAttr.IsNull()
 						}
 					}
 				}
@@ -304,6 +337,34 @@ func resourcePlaywrightCheckSuite() *schema.Resource {
 				if !isRuntimePlaywrightDeviceBlockPresent {
 					if runtimeAttr.Playwright != nil && runtimeAttr.Playwright.Devices != nil {
 						runtimeAttr.Playwright.Devices = nil
+						overrideRuntime = true
+					}
+				}
+
+				if !isRuntimeStepsBlockPresent {
+					if runtimeAttr.Steps != nil {
+						runtimeAttr.Steps = nil
+						overrideRuntime = true
+					}
+				}
+
+				if !isRuntimeStepsInstallBlockPresent {
+					if runtimeAttr.Steps != nil && runtimeAttr.Steps.Install != nil {
+						runtimeAttr.Steps.Install = nil
+						overrideRuntime = true
+					}
+				}
+
+				if !isRuntimeStepsTestBlockPresent {
+					if runtimeAttr.Steps != nil && runtimeAttr.Steps.Test != nil {
+						runtimeAttr.Steps.Test = nil
+						overrideRuntime = true
+					}
+				}
+
+				if !isRuntimeStepsTestCommandPresent {
+					if runtimeAttr.Steps != nil && runtimeAttr.Steps.Test != nil && runtimeAttr.Steps.Test.Command != "" {
+						runtimeAttr.Steps.Test.Command = ""
 						overrideRuntime = true
 					}
 				}
@@ -598,13 +659,13 @@ func PlaywrightCheckSuiteResourceFromAPIModel(
 	if check.TestCommand != nil || check.InstallCommand != nil {
 		runtimeAttr.Steps = new(PlaywrightCheckSuiteRuntimeStepsAttribute)
 
-		if check.InstallCommand != nil {
+		if check.InstallCommand != nil && *check.InstallCommand != "" {
 			runtimeAttr.Steps.Install = &PlaywrightCheckSuiteRuntimeStepsInstallAttribute{
 				Command: *check.InstallCommand,
 			}
 		}
 
-		if check.TestCommand != nil {
+		if check.TestCommand != nil && *check.TestCommand != "" {
 			runtimeAttr.Steps.Test = &PlaywrightCheckSuiteRuntimeStepsTestAttribute{
 				Command: *check.TestCommand,
 			}
