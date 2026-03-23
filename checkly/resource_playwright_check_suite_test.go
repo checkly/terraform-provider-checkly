@@ -10,7 +10,7 @@ import (
 const playwrightCheckSuiteBase = `
 	resource "checkly_playwright_code_bundle" "test" {
 		prebuilt_archive {
-			file = "../fixtures/playwright-project.tar.gz"
+			file = "../fixtures/playwright-project-pnpm.tar.gz"
 		}
 	}
 `
