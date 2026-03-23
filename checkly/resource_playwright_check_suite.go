@@ -565,35 +565,6 @@ func PlaywrightCheckSuiteResourceFromResourceData(
 		}
 	}
 
-	// Fall back to the Playwright version from the bundle metadata if no
-	// explicit version was set.
-	if (check.PlaywrightVersion == nil || *check.PlaywrightVersion == "") &&
-		bundleAttr != nil && bundleAttr.Metadata.PlaywrightVersion != "" {
-		check.PlaywrightVersion = &bundleAttr.Metadata.PlaywrightVersion
-	}
-
-	if check.PlaywrightVersion == nil || *check.PlaywrightVersion == "" {
-		return PlaywrightCheckSuiteResource{}, fmt.Errorf(
-			"no Playwright version specified and none could be detected from the code bundle's lockfile; " +
-				"set runtime.playwright.version explicitly or ensure the archive contains a lockfile with @playwright/test",
-		)
-	}
-
-	// Default to all three Playwright browser engines if none were
-	// explicitly configured.
-	if len(check.Browsers) == 0 {
-		check.Browsers = slices.Clone(defaultPlaywrightBrowsers)
-	}
-
-	// Default test command based on the detected package manager.
-	if check.TestCommand == nil || *check.TestCommand == "" {
-		if bundleAttr != nil && bundleAttr.Metadata.PackageManager != "" {
-			if cmd, ok := defaultTestCommand[bundleAttr.Metadata.PackageManager]; ok {
-				check.TestCommand = &cmd
-			}
-		}
-	}
-
 	resource := PlaywrightCheckSuiteResource{
 		PlaywrightCheck: &check,
 		Bundle:          bundleAttr,
