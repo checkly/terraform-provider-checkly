@@ -39,3 +39,54 @@ func validateFileExists() func(val any, key string) (warns []string, errs []erro
 		return warns, errs
 	}
 }
+
+// validateGzipArchive checks that the file at the given path is a gzip archive
+// by inspecting the first two bytes (magic number 0x1f 0x8b). If the file
+// appears to be a zip archive instead, the error message says so.
+func validateGzipArchive() func(val any, key string) (warns []string, errs []error) {
+	return func(val any, key string) (warns []string, errs []error) {
+		v := val.(string)
+
+		f, err := os.Open(v)
+		if err != nil {
+			// Let validateFileExists handle this.
+			return warns, errs
+		}
+		defer f.Close()
+
+		var magic [2]byte
+		if _, err := f.Read(magic[:]); err != nil {
+			errs = append(errs, fmt.Errorf("%q could not be read: %w", key, err))
+			return warns, errs
+		}
+
+		if magic[0] == 0x50 && magic[1] == 0x4b {
+			errs = append(errs, fmt.Errorf(
+				"%q appears to be a .zip archive, but a .tar.gz archive is required", key,
+			))
+			return warns, errs
+		}
+
+		if magic[0] != 0x1f || magic[1] != 0x8b {
+			errs = append(errs, fmt.Errorf(
+				"%q is not a valid .tar.gz archive", key,
+			))
+		}
+
+		return warns, errs
+	}
+}
+
+func validateAll(validators ...func(any, string) ([]string, []error)) func(any, string) ([]string, []error) {
+	return func(val any, key string) (warns []string, errs []error) {
+		for _, v := range validators {
+			w, e := v(val, key)
+			warns = append(warns, w...)
+			errs = append(errs, e...)
+			if len(errs) > 0 {
+				return warns, errs
+			}
+		}
+		return warns, errs
+	}
+}

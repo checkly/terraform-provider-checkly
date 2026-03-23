@@ -7,6 +7,51 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 )
 
+func TestAccPlaywrightCodeBundleNonExistingFile(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_playwright_code_bundle" "test" {
+					prebuilt_archive {
+						file = "../fixtures/does-not-exist.tar.gz"
+					}
+				}
+			`,
+			ExpectError: regexp.MustCompile(`non-existing file`),
+		},
+	})
+}
+
+func TestAccPlaywrightCodeBundleZipArchive(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_playwright_code_bundle" "test" {
+					prebuilt_archive {
+						file = "../fixtures/playwright-project.zip"
+					}
+				}
+			`,
+			ExpectError: regexp.MustCompile(`appears to be a \.zip archive, but a \.tar\.gz archive is required`),
+		},
+	})
+}
+
+func TestAccPlaywrightCodeBundleInvalidArchiveFormat(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_playwright_code_bundle" "test" {
+					prebuilt_archive {
+						file = "../fixtures/not-a-gzip-archive.tar"
+					}
+				}
+			`,
+			ExpectError: regexp.MustCompile(`is not a valid \.tar\.gz archive`),
+		},
+	})
+}
+
 func TestAccPlaywrightCodeBundleNoLockfile(t *testing.T) {
 	accTestCase(t, []resource.TestStep{
 		{

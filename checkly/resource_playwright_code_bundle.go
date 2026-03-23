@@ -46,7 +46,7 @@ func resourcePlaywrightCodeBundle() *schema.Resource {
 							Type:         schema.TypeString,
 							Required:     true,
 							ForceNew:     true,
-							ValidateFunc: validateFileExists(),
+							ValidateFunc: validateAll(validateFileExists(), validateGzipArchive()),
 						},
 					},
 				},
