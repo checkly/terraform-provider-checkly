@@ -9,10 +9,17 @@ import (
 	"strings"
 
 	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/customdiff"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 var defaultPlaywrightBrowsers = []string{"chromium", "firefox", "webkit"}
+
+var defaultTestCommand = map[string]string{
+	"npm":  "npx playwright test",
+	"pnpm": "pnpm playwright test",
+	"yarn": "yarn playwright test",
+}
 
 func resourcePlaywrightCheckSuite() *schema.Resource {
 	return &schema.Resource{
@@ -111,14 +118,24 @@ func resourcePlaywrightCheckSuite() *schema.Resource {
 			"runtime": {
 				Description: "Configure the runtime environment of the Playwright check.",
 				Type:        schema.TypeList,
-				Required:    true,
+				Optional:    true,
+				Computed:    true,
 				MaxItems:    1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
+						"auto_detect": {
+							Description: "Whether to automatically detect appropriate runtime environment " +
+								"configuration from the bundle. " +
+								"(Default `true`).",
+							Type:     schema.TypeBool,
+							Default:  true,
+							Optional: true,
+						},
 						"steps": {
 							Description: "Customize the actions taken during test execution.",
 							Type:        schema.TypeList,
 							Optional:    true,
+							Computed:    true,
 							MaxItems:    1,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
@@ -145,6 +162,7 @@ func resourcePlaywrightCheckSuite() *schema.Resource {
 										Description: "Customize the test step.",
 										Type:        schema.TypeList,
 										Optional:    true,
+										Computed:    true,
 										MaxItems:    1,
 										Elem: &schema.Resource{
 											Schema: map[string]*schema.Schema{
@@ -154,6 +172,7 @@ func resourcePlaywrightCheckSuite() *schema.Resource {
 														"manager (e.g. `npx playwright test` for `npm`).",
 													Type:     schema.TypeString,
 													Optional: true,
+													Computed: true,
 												},
 											},
 										},
@@ -211,6 +230,178 @@ func resourcePlaywrightCheckSuite() *schema.Resource {
 			},
 			"trigger_incident": triggerIncidentAttributeSchema,
 		},
+		CustomizeDiff: customdiff.Sequence(
+			func(ctx context.Context, diff *schema.ResourceDiff, meta any) error {
+				runtimeListAttr := diff.GetRawConfig().GetAttr("runtime")
+
+				var isRuntimeBlockPresent bool
+				var isRuntimePlaywrightBlockPresent bool
+				var isRuntimePlaywrightVersionPresent bool
+				var isRuntimePlaywrightDeviceBlockPresent bool
+
+				it := runtimeListAttr.ElementIterator()
+				if it.Next() {
+					isRuntimeBlockPresent = true
+
+					_, planRuntimeAttr := it.Element()
+
+					playwrightListAttr := planRuntimeAttr.GetAttr("playwright")
+
+					it := playwrightListAttr.ElementIterator()
+					if it.Next() {
+						isRuntimePlaywrightBlockPresent = true
+
+						_, playwrightAttr := it.Element()
+
+						versionAttr := playwrightAttr.GetAttr("version")
+
+						isRuntimePlaywrightVersionPresent = !versionAttr.IsNull()
+
+						deviceListAttr := playwrightAttr.GetAttr("device")
+
+						it := deviceListAttr.ElementIterator()
+						if it.Next() {
+							isRuntimePlaywrightDeviceBlockPresent = true
+						}
+					}
+				}
+
+				bundleAttr, err := PlaywrightCheckSuiteBundleAttributeFromList(diff.Get("bundle").([]any))
+				if err != nil {
+					return err
+				}
+
+				runtimeAttr, err := PlaywrightCheckSuiteRuntimeAttributeFromList(diff.Get("runtime").([]any))
+				if err != nil {
+					return fmt.Errorf("failed to convert state runtime attribute to struct: %w\n", err)
+				}
+
+				if runtimeAttr == nil {
+					runtimeAttr = &PlaywrightCheckSuiteRuntimeAttribute{}
+				}
+
+				var overrideRuntime bool
+
+				if !isRuntimeBlockPresent {
+					runtimeAttr.AutoDetect = true
+					overrideRuntime = true
+				}
+
+				if !isRuntimePlaywrightBlockPresent {
+					if runtimeAttr.Playwright != nil {
+						runtimeAttr.Playwright = nil
+						overrideRuntime = true
+					}
+				}
+
+				if !isRuntimePlaywrightVersionPresent {
+					if runtimeAttr.Playwright != nil && runtimeAttr.Playwright.Version != "" {
+						runtimeAttr.Playwright.Version = ""
+						overrideRuntime = true
+					}
+				}
+
+				if !isRuntimePlaywrightDeviceBlockPresent {
+					if runtimeAttr.Playwright != nil && runtimeAttr.Playwright.Devices != nil {
+						runtimeAttr.Playwright.Devices = nil
+						overrideRuntime = true
+					}
+				}
+
+				if runtimeAttr.AutoDetect && bundleAttr != nil {
+					playwrightAttr := runtimeAttr.Playwright
+					if runtimeAttr.Playwright == nil {
+						playwrightAttr = &PlaywrightCheckSuiteRuntimePlaywrightAttribute{}
+						runtimeAttr.Playwright = playwrightAttr
+					}
+
+					if playwrightAttr.Version == "" {
+						playwrightAttr.Version = bundleAttr.Metadata.PlaywrightVersion
+						overrideRuntime = true
+					}
+
+					if playwrightAttr.Devices == nil || len(*playwrightAttr.Devices) == 0 {
+						var devices PlaywrightCheckSuiteRuntimePlaywrightDeviceAttributes
+						for _, device := range defaultPlaywrightBrowsers {
+							devices = append(devices, PlaywrightCheckSuiteRuntimePlaywrightDeviceAttribute{
+								Type: device,
+							})
+						}
+
+						playwrightAttr.Devices = &devices
+						overrideRuntime = true
+					}
+
+					stepsAttr := runtimeAttr.Steps
+					if stepsAttr == nil {
+						stepsAttr = &PlaywrightCheckSuiteRuntimeStepsAttribute{}
+						runtimeAttr.Steps = stepsAttr
+					}
+
+					testAttr := stepsAttr.Test
+					if testAttr == nil {
+						testAttr = &PlaywrightCheckSuiteRuntimeStepsTestAttribute{}
+						stepsAttr.Test = testAttr
+					}
+
+					if testAttr.Command == "" {
+						if defaultTestCommand, ok := defaultTestCommand[bundleAttr.Metadata.PackageManager]; ok {
+							testAttr.Command = defaultTestCommand
+							overrideRuntime = true
+						}
+					}
+
+					// Just assume NPM if we couldn't detect a package manager.
+					if testAttr.Command == "" {
+						if defaultTestCommand, ok := defaultTestCommand["npm"]; ok {
+							testAttr.Command = defaultTestCommand
+							overrideRuntime = true
+						}
+					}
+				}
+
+				if runtimeAttr.Playwright == nil || runtimeAttr.Playwright.Version == "" {
+					if runtimeAttr.AutoDetect {
+						return fmt.Errorf(
+							"unable to detect Playwright version from the code bundle's lockfile; " +
+								"set \"runtime.playwright.version\" explicitly or ensure the archive " +
+								"contains a package-lock.json, pnpm-lock.yaml, or yarn.lock with @playwright/test",
+						)
+					} else {
+						return fmt.Errorf(`"runtime.playwright.version" is required when "runtime.auto_detect" is false`)
+					}
+				}
+
+				if runtimeAttr.Playwright == nil || runtimeAttr.Playwright.Devices == nil || len(*runtimeAttr.Playwright.Devices) == 0 {
+					if runtimeAttr.AutoDetect {
+						return fmt.Errorf(
+							"unable to detect default devices from the code bundle; " +
+								"set \"runtime.playwright.device\" blocks explicitly",
+						)
+					} else {
+						return fmt.Errorf(`at least one "runtime.playwright.device" block is required when "runtime.auto_detect" is false`)
+					}
+				}
+
+				if runtimeAttr.Steps == nil || runtimeAttr.Steps.Test == nil || runtimeAttr.Steps.Test.Command == "" {
+					if runtimeAttr.AutoDetect {
+						return fmt.Errorf(
+							"unable to detect an appropriate test command for the code bundle; " +
+								"set \"runtime.steps.test.command\" explicitly or ensure the archive " +
+								"contains a supported lockfile",
+						)
+					} else {
+						return fmt.Errorf(`"runtime.steps.test.command" is required when "runtime.auto_detect" is false`)
+					}
+				}
+
+				if overrideRuntime {
+					diff.SetNew("runtime", runtimeAttr.ToList())
+				}
+
+				return nil
+			},
+		),
 	}
 }
 
@@ -353,11 +544,11 @@ func PlaywrightCheckSuiteResourceFromResourceData(
 
 	if runtimeAttr != nil {
 		if runtimeAttr.Steps != nil {
-			if runtimeAttr.Steps.Test != nil {
+			if runtimeAttr.Steps.Test != nil && runtimeAttr.Steps.Test.Command != "" {
 				check.TestCommand = &runtimeAttr.Steps.Test.Command
 			}
 
-			if runtimeAttr.Steps.Install != nil {
+			if runtimeAttr.Steps.Install != nil && runtimeAttr.Steps.Install.Command != "" {
 				check.InstallCommand = &runtimeAttr.Steps.Install.Command
 			}
 		}
@@ -396,6 +587,15 @@ func PlaywrightCheckSuiteResourceFromResourceData(
 		check.Browsers = slices.Clone(defaultPlaywrightBrowsers)
 	}
 
+	// Default test command based on the detected package manager.
+	if check.TestCommand == nil || *check.TestCommand == "" {
+		if bundleAttr != nil && bundleAttr.Metadata.PackageManager != "" {
+			if cmd, ok := defaultTestCommand[bundleAttr.Metadata.PackageManager]; ok {
+				check.TestCommand = &cmd
+			}
+		}
+	}
+
 	resource := PlaywrightCheckSuiteResource{
 		PlaywrightCheck: &check,
 		Bundle:          bundleAttr,
@@ -417,7 +617,14 @@ func PlaywrightCheckSuiteResourceFromAPIModel(
 		return PlaywrightCheckSuiteResource{}, err
 	}
 
-	var runtimeAttr PlaywrightCheckSuiteRuntimeAttribute
+	existingRuntimeAttr, err := PlaywrightCheckSuiteRuntimeAttributeFromList(d.Get("runtime").([]any))
+	if err != nil {
+		return PlaywrightCheckSuiteResource{}, err
+	}
+
+	runtimeAttr := PlaywrightCheckSuiteRuntimeAttribute{
+		AutoDetect: existingRuntimeAttr.AutoDetect,
+	}
 
 	if check.TestCommand != nil || check.InstallCommand != nil {
 		runtimeAttr.Steps = new(PlaywrightCheckSuiteRuntimeStepsAttribute)
@@ -547,6 +754,7 @@ func (a *PlaywrightCheckSuiteBundleAttribute) ToList() []tfMap {
 }
 
 type PlaywrightCheckSuiteRuntimeAttribute struct {
+	AutoDetect bool
 	Steps      *PlaywrightCheckSuiteRuntimeStepsAttribute
 	Playwright *PlaywrightCheckSuiteRuntimePlaywrightAttribute
 }
@@ -571,6 +779,7 @@ func PlaywrightCheckSuiteRuntimeAttributeFromList(
 	}
 
 	a := PlaywrightCheckSuiteRuntimeAttribute{
+		AutoDetect: m["auto_detect"].(bool),
 		Steps:      stepsAttr,
 		Playwright: playwrightAttr,
 	}
@@ -585,8 +794,9 @@ func (a *PlaywrightCheckSuiteRuntimeAttribute) ToList() []tfMap {
 
 	return []tfMap{
 		{
-			"steps":      a.Steps.ToList(),
-			"playwright": a.Playwright.ToList(),
+			"auto_detect": a.AutoDetect,
+			"steps":       a.Steps.ToList(),
+			"playwright":  a.Playwright.ToList(),
 		},
 	}
 }

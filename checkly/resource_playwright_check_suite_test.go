@@ -1,7 +1,7 @@
 package checkly
 
 import (
-	"regexp"
+	"fmt"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -104,6 +104,341 @@ func TestAccPlaywrightCheckSuiteWithEnvironmentVariable(t *testing.T) {
 	})
 }
 
+func TestAccPlaywrightCheckSuiteWithoutRuntime(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: playwrightCheckSuiteBase + `
+				resource "checkly_playwright_check_suite" "test" {
+					name                      = "PW Check without runtime"
+					activated                 = true
+					frequency                 = 720
+					use_global_alert_settings = true
+					locations                 = ["us-east-1"]
+
+					bundle {
+						id       = checkly_playwright_code_bundle.test.id
+						metadata = checkly_playwright_code_bundle.test.metadata
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.playwright.0.version",
+					"1.58.2",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.playwright.0.device.#",
+					fmt.Sprintf("%d", len(defaultPlaywrightBrowsers)),
+				),
+			),
+		},
+	})
+}
+
+func TestAccPlaywrightCheckSuiteWithExplicitVersion(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: playwrightCheckSuiteBase + `
+				resource "checkly_playwright_check_suite" "test" {
+					name                      = "PW Check with explicit version"
+					activated                 = true
+					frequency                 = 720
+					use_global_alert_settings = true
+					locations                 = ["us-east-1"]
+
+					bundle {
+						id       = checkly_playwright_code_bundle.test.id
+						metadata = checkly_playwright_code_bundle.test.metadata
+					}
+
+					runtime {
+						playwright {
+							version = "1.56.1"
+						}
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.playwright.0.version",
+					"1.56.1",
+				),
+			),
+		},
+		{
+			Config: playwrightCheckSuiteBase + `
+				resource "checkly_playwright_check_suite" "test" {
+					name                      = "PW Check with explicit version"
+					activated                 = true
+					frequency                 = 720
+					use_global_alert_settings = true
+					locations                 = ["us-east-1"]
+
+					bundle {
+						id       = checkly_playwright_code_bundle.test.id
+						metadata = checkly_playwright_code_bundle.test.metadata
+					}
+
+					runtime {
+						playwright {
+						}
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.playwright.0.version",
+					"1.58.2",
+				),
+			),
+		},
+		{
+			Config: playwrightCheckSuiteBase + `
+				resource "checkly_playwright_check_suite" "test" {
+					name                      = "PW Check with explicit version"
+					activated                 = true
+					frequency                 = 720
+					use_global_alert_settings = true
+					locations                 = ["us-east-1"]
+
+					bundle {
+						id       = checkly_playwright_code_bundle.test.id
+						metadata = checkly_playwright_code_bundle.test.metadata
+					}
+
+					runtime {
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.playwright.0.version",
+					"1.58.2",
+				),
+			),
+		},
+		{
+			Config: playwrightCheckSuiteBase + `
+				resource "checkly_playwright_check_suite" "test" {
+					name                      = "PW Check with explicit version"
+					activated                 = true
+					frequency                 = 720
+					use_global_alert_settings = true
+					locations                 = ["us-east-1"]
+
+					bundle {
+						id       = checkly_playwright_code_bundle.test.id
+						metadata = checkly_playwright_code_bundle.test.metadata
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.playwright.0.version",
+					"1.58.2",
+				),
+			),
+		},
+	})
+}
+
+func TestAccPlaywrightCheckSuiteVersionRemovedWithDevicesKept(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: playwrightCheckSuiteBase + `
+				resource "checkly_playwright_check_suite" "test" {
+					name                      = "PW Check version removed devices kept"
+					activated                 = true
+					frequency                 = 720
+					use_global_alert_settings = true
+					locations                 = ["us-east-1"]
+
+					bundle {
+						id       = checkly_playwright_code_bundle.test.id
+						metadata = checkly_playwright_code_bundle.test.metadata
+					}
+
+					runtime {
+						playwright {
+							version = "1.56.1"
+							device {
+								type = "chromium"
+							}
+						}
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.playwright.0.version",
+					"1.56.1",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.playwright.0.device.#",
+					"1",
+				),
+			),
+		},
+		{
+			Config: playwrightCheckSuiteBase + `
+				resource "checkly_playwright_check_suite" "test" {
+					name                      = "PW Check version removed devices kept"
+					activated                 = true
+					frequency                 = 720
+					use_global_alert_settings = true
+					locations                 = ["us-east-1"]
+
+					bundle {
+						id       = checkly_playwright_code_bundle.test.id
+						metadata = checkly_playwright_code_bundle.test.metadata
+					}
+
+					runtime {
+						playwright {
+							device {
+								type = "chromium"
+							}
+						}
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.playwright.0.version",
+					"1.58.2",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.playwright.0.device.#",
+					"1",
+				),
+			),
+		},
+	})
+}
+
+func TestAccPlaywrightCheckSuiteWithExplicitDevices(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: playwrightCheckSuiteBase + `
+				resource "checkly_playwright_check_suite" "test" {
+					name                      = "PW Check with explicit devices"
+					activated                 = true
+					frequency                 = 720
+					use_global_alert_settings = true
+					locations                 = ["us-east-1"]
+
+					bundle {
+						id       = checkly_playwright_code_bundle.test.id
+						metadata = checkly_playwright_code_bundle.test.metadata
+					}
+
+					runtime {
+						playwright {
+							device {
+								type = "chromium"
+							}
+						}
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.playwright.0.device.#",
+					"1",
+				),
+			),
+		},
+		{
+			Config: playwrightCheckSuiteBase + `
+				resource "checkly_playwright_check_suite" "test" {
+					name                      = "PW Check with explicit devices"
+					activated                 = true
+					frequency                 = 720
+					use_global_alert_settings = true
+					locations                 = ["us-east-1"]
+
+					bundle {
+						id       = checkly_playwright_code_bundle.test.id
+						metadata = checkly_playwright_code_bundle.test.metadata
+					}
+
+					runtime {
+						playwright {
+						}
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.playwright.0.device.#",
+					fmt.Sprintf("%d", len(defaultPlaywrightBrowsers)),
+				),
+			),
+		},
+		{
+			Config: playwrightCheckSuiteBase + `
+				resource "checkly_playwright_check_suite" "test" {
+					name                      = "PW Check with explicit devices"
+					activated                 = true
+					frequency                 = 720
+					use_global_alert_settings = true
+					locations                 = ["us-east-1"]
+
+					bundle {
+						id       = checkly_playwright_code_bundle.test.id
+						metadata = checkly_playwright_code_bundle.test.metadata
+					}
+
+					runtime {
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.playwright.0.device.#",
+					fmt.Sprintf("%d", len(defaultPlaywrightBrowsers)),
+				),
+			),
+		},
+		{
+			Config: playwrightCheckSuiteBase + `
+				resource "checkly_playwright_check_suite" "test" {
+					name                      = "PW Check with explicit devices"
+					activated                 = true
+					frequency                 = 720
+					use_global_alert_settings = true
+					locations                 = ["us-east-1"]
+
+					bundle {
+						id       = checkly_playwright_code_bundle.test.id
+						metadata = checkly_playwright_code_bundle.test.metadata
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.playwright.0.device.#",
+					fmt.Sprintf("%d", len(defaultPlaywrightBrowsers)),
+				),
+			),
+		},
+	})
+}
+
 func TestAccPlaywrightCheckSuiteWithoutDevicesShouldNotCrash(t *testing.T) {
 	accTestCase(t, []resource.TestStep{
 		{
@@ -127,7 +462,18 @@ func TestAccPlaywrightCheckSuiteWithoutDevicesShouldNotCrash(t *testing.T) {
 					}
 				}
 			`,
-			ExpectError: regexp.MustCompile(`browsers.+does not contain 1 required value`),
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.playwright.0.version",
+					"1.56.1",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.playwright.0.device.#",
+					fmt.Sprintf("%d", len(defaultPlaywrightBrowsers)),
+				),
+			),
 		},
 	})
 }

@@ -83,14 +83,17 @@ func resourcePlaywrightCodeBundle() *schema.Resource {
 						return nil
 					}
 
-					pwVersion, err := bundle.PrebuiltArchive.PackageVersion("@playwright/test")
+					lockfileInfo, err := bundle.PrebuiltArchive.InspectLockfile("@playwright/test")
 					if err != nil {
-						return fmt.Errorf("failed to extract playwright version from archive: %v", err)
+						return fmt.Errorf("failed to inspect lockfile in archive: %v", err)
 					}
 
 					bundle.Data.Version = 2
 					bundle.Data.ChecksumSha256 = checksum
-					bundle.Data.PlaywrightVersion = pwVersion
+					if lockfileInfo != nil {
+						bundle.Data.PlaywrightVersion = lockfileInfo.PackageVersion
+						bundle.Data.PackageManager = lockfileInfo.PackageManager
+					}
 
 					err = diff.SetNew(metadataAttributeName, bundle.Data.EncodeToString())
 					if err != nil {
@@ -198,6 +201,7 @@ type PlaywrightCodeBundleMetadata struct {
 	Version           int    `json:"v"`
 	ChecksumSha256    string `json:"s256"`
 	PlaywrightVersion string `json:"pwv,omitempty"`
+	PackageManager    string `json:"pm,omitempty"`
 }
 
 func PlaywrightCodeBundleMetadataFromString(s string) (*PlaywrightCodeBundleMetadata, error) {
@@ -330,30 +334,40 @@ func (a *PlaywrightCodeBundlePrebuiltArchiveAttribute) ChecksumSha256() (string,
 	return checksum, nil
 }
 
-// PackageVersion opens the tar.gz archive and searches for a lockfile
-// (package-lock.json, pnpm-lock.yaml, or yarn.lock). If found, it extracts
-// and returns the resolved version of the given package. Returns an empty
-// string if the package is not found in any lockfile.
-func (a *PlaywrightCodeBundlePrebuiltArchiveAttribute) PackageVersion(packageName string) (string, error) {
+// LockfileInfo contains information extracted from a lockfile found in an archive.
+type LockfileInfo struct {
+	PackageManager string
+	PackageVersion string
+}
+
+type lockfileParser struct {
+	packageManager string
+	parse          func(io.Reader, string) (string, error)
+}
+
+var lockfileParsers = map[string]lockfileParser{
+	"package-lock.json": {"npm", extractPackageVersionFromPackageLock},
+	"pnpm-lock.yaml":    {"pnpm", extractPackageVersionFromPnpmLock},
+	"yarn.lock":         {"yarn", extractPackageVersionFromYarnLock},
+}
+
+// InspectLockfile opens the tar.gz archive and searches for a lockfile
+// (package-lock.json, pnpm-lock.yaml, or yarn.lock). If found, it returns
+// the detected package manager and the resolved version of the given package.
+func (a *PlaywrightCodeBundlePrebuiltArchiveAttribute) InspectLockfile(packageName string) (*LockfileInfo, error) {
 	file, err := os.Open(a.File)
 	if err != nil {
-		return "", fmt.Errorf("failed to open archive file %q: %w", a.File, err)
+		return nil, fmt.Errorf("failed to open archive file %q: %w", a.File, err)
 	}
 	defer file.Close()
 
 	gzr, err := gzip.NewReader(file)
 	if err != nil {
-		return "", fmt.Errorf("failed to create gzip reader for %q: %w", a.File, err)
+		return nil, fmt.Errorf("failed to create gzip reader for %q: %w", a.File, err)
 	}
 	defer gzr.Close()
 
 	tr := tar.NewReader(gzr)
-
-	parsers := map[string]func(io.Reader, string) (string, error){
-		"package-lock.json": extractPackageVersionFromPackageLock,
-		"pnpm-lock.yaml":    extractPackageVersionFromPnpmLock,
-		"yarn.lock":         extractPackageVersionFromYarnLock,
-	}
 
 	for {
 		header, err := tr.Next()
@@ -361,7 +375,7 @@ func (a *PlaywrightCodeBundlePrebuiltArchiveAttribute) PackageVersion(packageNam
 			break
 		}
 		if err != nil {
-			return "", fmt.Errorf("failed to read archive %q: %w", a.File, err)
+			return nil, fmt.Errorf("failed to read archive %q: %w", a.File, err)
 		}
 
 		if header.Typeflag != tar.TypeReg {
@@ -374,22 +388,23 @@ func (a *PlaywrightCodeBundlePrebuiltArchiveAttribute) PackageVersion(packageNam
 		}
 
 		base := path.Base(header.Name)
-		parser, ok := parsers[base]
+		parser, ok := lockfileParsers[base]
 		if !ok {
 			continue
 		}
 
-		version, err := parser(tr, packageName)
+		version, err := parser.parse(tr, packageName)
 		if err != nil {
-			return "", fmt.Errorf("failed to extract package version from %q in archive: %w", header.Name, err)
+			return nil, fmt.Errorf("failed to extract package version from %q in archive: %w", header.Name, err)
 		}
 
-		if version != "" {
-			return version, nil
-		}
+		return &LockfileInfo{
+			PackageManager: parser.packageManager,
+			PackageVersion: version,
+		}, nil
 	}
 
-	return "", nil
+	return nil, nil
 }
 
 func (a *PlaywrightCodeBundlePrebuiltArchiveAttribute) Upload(
