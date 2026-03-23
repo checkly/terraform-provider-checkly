@@ -4,6 +4,8 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
+	"crypto/sha256"
+	"encoding/hex"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -93,6 +95,7 @@ func resourcePlaywrightCodeBundle() *schema.Resource {
 					if lockfileInfo != nil {
 						bundle.Data.PlaywrightVersion = lockfileInfo.PackageVersion
 						bundle.Data.PackageManager = lockfileInfo.PackageManager
+						bundle.Data.LockfileChecksum = lockfileInfo.ChecksumSha256
 					}
 
 					err = diff.SetNew(metadataAttributeName, bundle.Data.EncodeToString())
@@ -198,10 +201,11 @@ func resourcePlaywrightCodeBundleDelete(
 }
 
 type PlaywrightCodeBundleMetadata struct {
-	Version           int    `json:"v"`
-	ChecksumSha256    string `json:"s256"`
-	PlaywrightVersion string `json:"pwv,omitempty"`
-	PackageManager    string `json:"pm,omitempty"`
+	Version            int    `json:"v"`
+	ChecksumSha256     string `json:"s256"`
+	PlaywrightVersion  string `json:"pwv,omitempty"`
+	PackageManager     string `json:"pm,omitempty"`
+	LockfileChecksum   string `json:"lcs,omitempty"`
 }
 
 func PlaywrightCodeBundleMetadataFromString(s string) (*PlaywrightCodeBundleMetadata, error) {
@@ -336,8 +340,9 @@ func (a *PlaywrightCodeBundlePrebuiltArchiveAttribute) ChecksumSha256() (string,
 
 // LockfileInfo contains information extracted from a lockfile found in an archive.
 type LockfileInfo struct {
-	PackageManager string
-	PackageVersion string
+	PackageManager   string
+	PackageVersion   string
+	ChecksumSha256   string
 }
 
 type lockfileParser struct {
@@ -393,14 +398,25 @@ func (a *PlaywrightCodeBundlePrebuiltArchiveAttribute) InspectLockfile(packageNa
 			continue
 		}
 
-		version, err := parser.parse(tr, packageName)
+		// Hash the lockfile content as it flows through the parser.
+		hash := sha256.New()
+		tee := io.TeeReader(tr, hash)
+
+		version, err := parser.parse(tee, packageName)
 		if err != nil {
 			return nil, fmt.Errorf("failed to extract package version from %q in archive: %w", header.Name, err)
+		}
+
+		// Drain any remaining bytes the parser didn't consume so
+		// the checksum covers the entire lockfile.
+		if _, err := io.Copy(io.Discard, tee); err != nil {
+			return nil, fmt.Errorf("failed to read lockfile %q from archive: %w", header.Name, err)
 		}
 
 		return &LockfileInfo{
 			PackageManager: parser.packageManager,
 			PackageVersion: version,
+			ChecksumSha256: hex.EncodeToString(hash.Sum(nil)),
 		}, nil
 	}
 

@@ -532,9 +532,7 @@ func PlaywrightCheckSuiteResourceFromResourceData(
 
 		check.CodeBundlePath = string(bundlePath)
 
-		// We may want to make this configurable in the future, but for now
-		// this will do.
-		check.CacheHash = checksumSha256(strings.NewReader(bundleAttr.Metadata.ChecksumSha256))
+		check.CacheHash = bundleAttr.Metadata.LockfileChecksum
 	}
 
 	runtimeAttr, err := PlaywrightCheckSuiteRuntimeAttributeFromList(d.Get("runtime").([]any))
