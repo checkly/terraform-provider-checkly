@@ -131,6 +131,13 @@ func resourcePlaywrightCheckSuite() *schema.Resource {
 							Default:  true,
 							Optional: true,
 						},
+						"working_dir": {
+							Description: "The working directory in which runtime commands are executed. " +
+								"This is useful for monorepos or workspaces where the Playwright " +
+								"project is in a subdirectory.",
+							Type:     schema.TypeString,
+							Optional: true,
+						},
 						"steps": {
 							Description: "Customize the actions taken during test execution.",
 							Type:        schema.TypeList,
@@ -235,6 +242,7 @@ func resourcePlaywrightCheckSuite() *schema.Resource {
 				runtimeListAttr := diff.GetRawConfig().GetAttr("runtime")
 
 				var isRuntimeBlockPresent bool
+				var isRuntimeWorkingDirPresent bool
 				var isRuntimePlaywrightBlockPresent bool
 				var isRuntimePlaywrightVersionPresent bool
 				var isRuntimePlaywrightDeviceBlockPresent bool
@@ -248,6 +256,9 @@ func resourcePlaywrightCheckSuite() *schema.Resource {
 					isRuntimeBlockPresent = true
 
 					_, configRuntimeAttr := runtimeIt.Element()
+
+					workingDirAttr := configRuntimeAttr.GetAttr("working_dir")
+					isRuntimeWorkingDirPresent = !workingDirAttr.IsNull()
 
 					playwrightListAttr := configRuntimeAttr.GetAttr("playwright")
 
@@ -318,6 +329,13 @@ func resourcePlaywrightCheckSuite() *schema.Resource {
 				if !isRuntimeBlockPresent {
 					runtimeAttr.AutoDetect = true
 					overrideRuntime = true
+				}
+
+				if !isRuntimeWorkingDirPresent {
+					if runtimeAttr.WorkingDir != "" {
+						runtimeAttr.WorkingDir = ""
+						overrideRuntime = true
+					}
 				}
 
 				if !isRuntimePlaywrightBlockPresent {
@@ -602,6 +620,10 @@ func PlaywrightCheckSuiteResourceFromResourceData(
 	}
 
 	if runtimeAttr != nil {
+		if runtimeAttr.WorkingDir != "" {
+			check.WorkingDir = &runtimeAttr.WorkingDir
+		}
+
 		if runtimeAttr.Steps != nil {
 			if runtimeAttr.Steps.Test != nil && runtimeAttr.Steps.Test.Command != "" {
 				check.TestCommand = &runtimeAttr.Steps.Test.Command
@@ -654,6 +676,10 @@ func PlaywrightCheckSuiteResourceFromAPIModel(
 
 	runtimeAttr := PlaywrightCheckSuiteRuntimeAttribute{
 		AutoDetect: existingRuntimeAttr.AutoDetect,
+	}
+
+	if check.WorkingDir != nil && *check.WorkingDir != "" {
+		runtimeAttr.WorkingDir = *check.WorkingDir
 	}
 
 	if check.TestCommand != nil || check.InstallCommand != nil {
@@ -785,6 +811,7 @@ func (a *PlaywrightCheckSuiteBundleAttribute) ToList() []tfMap {
 
 type PlaywrightCheckSuiteRuntimeAttribute struct {
 	AutoDetect bool
+	WorkingDir string
 	Steps      *PlaywrightCheckSuiteRuntimeStepsAttribute
 	Playwright *PlaywrightCheckSuiteRuntimePlaywrightAttribute
 }
@@ -810,6 +837,7 @@ func PlaywrightCheckSuiteRuntimeAttributeFromList(
 
 	a := PlaywrightCheckSuiteRuntimeAttribute{
 		AutoDetect: m["auto_detect"].(bool),
+		WorkingDir: m["working_dir"].(string),
 		Steps:      stepsAttr,
 		Playwright: playwrightAttr,
 	}
@@ -825,6 +853,7 @@ func (a *PlaywrightCheckSuiteRuntimeAttribute) ToList() []tfMap {
 	return []tfMap{
 		{
 			"auto_detect": a.AutoDetect,
+			"working_dir": a.WorkingDir,
 			"steps":       a.Steps.ToList(),
 			"playwright":  a.Playwright.ToList(),
 		},

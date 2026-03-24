@@ -1114,6 +1114,118 @@ func TestAccPlaywrightCheckSuiteAutoDetectFalseMissingTestCommand(t *testing.T) 
 	})
 }
 
+func TestAccPlaywrightCheckSuiteWorkingDir(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		// Step 1: Set an explicit working directory.
+		{
+			Config: playwrightCheckSuiteBase + `
+				resource "checkly_playwright_check_suite" "test" {
+					name                      = "PW Check working dir"
+					activated                 = true
+					frequency                 = 720
+					use_global_alert_settings = true
+					locations                 = ["us-east-1"]
+
+					bundle {
+						id       = checkly_playwright_code_bundle.test.id
+						metadata = checkly_playwright_code_bundle.test.metadata
+					}
+
+					runtime {
+						working_dir = "packages/e2e"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.working_dir",
+					"packages/e2e",
+				),
+			),
+		},
+		// Step 2: Remove working_dir but keep the runtime block.
+		{
+			Config: playwrightCheckSuiteBase + `
+				resource "checkly_playwright_check_suite" "test" {
+					name                      = "PW Check working dir"
+					activated                 = true
+					frequency                 = 720
+					use_global_alert_settings = true
+					locations                 = ["us-east-1"]
+
+					bundle {
+						id       = checkly_playwright_code_bundle.test.id
+						metadata = checkly_playwright_code_bundle.test.metadata
+					}
+
+					runtime {
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.working_dir",
+					"",
+				),
+			),
+		},
+		// Step 3: Set it again so we can test removal via dropping the runtime block.
+		{
+			Config: playwrightCheckSuiteBase + `
+				resource "checkly_playwright_check_suite" "test" {
+					name                      = "PW Check working dir"
+					activated                 = true
+					frequency                 = 720
+					use_global_alert_settings = true
+					locations                 = ["us-east-1"]
+
+					bundle {
+						id       = checkly_playwright_code_bundle.test.id
+						metadata = checkly_playwright_code_bundle.test.metadata
+					}
+
+					runtime {
+						working_dir = "apps/web"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.working_dir",
+					"apps/web",
+				),
+			),
+		},
+		// Step 4: Remove the entire runtime block.
+		{
+			Config: playwrightCheckSuiteBase + `
+				resource "checkly_playwright_check_suite" "test" {
+					name                      = "PW Check working dir"
+					activated                 = true
+					frequency                 = 720
+					use_global_alert_settings = true
+					locations                 = ["us-east-1"]
+
+					bundle {
+						id       = checkly_playwright_code_bundle.test.id
+						metadata = checkly_playwright_code_bundle.test.metadata
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.working_dir",
+					"",
+				),
+			),
+		},
+	})
+}
+
 func TestAccPlaywrightCheckSuiteEnvironmentVariableRemoval(t *testing.T) {
 	accTestCase(t, []resource.TestStep{
 		{
