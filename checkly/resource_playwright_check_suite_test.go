@@ -152,6 +152,11 @@ func TestAccPlaywrightCheckSuiteBundleChange(t *testing.T) {
 					"runtime.0.steps.0.test.0.command",
 					defaultTestCommand["pnpm"],
 				),
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.working_dir",
+					".",
+				),
 			),
 		},
 		// Step 2: Swap to a different archive — auto-detected values should update.
@@ -167,6 +172,11 @@ func TestAccPlaywrightCheckSuiteBundleChange(t *testing.T) {
 					"checkly_playwright_check_suite.test",
 					"runtime.0.steps.0.test.0.command",
 					defaultTestCommand["pnpm"],
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.working_dir",
+					".",
 				),
 			),
 		},
@@ -200,6 +210,11 @@ func TestAccPlaywrightCheckSuiteWithoutRuntime(t *testing.T) {
 					"checkly_playwright_check_suite.test",
 					"runtime.0.playwright.0.device.#",
 					fmt.Sprintf("%d", len(defaultPlaywrightBrowsers)),
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.working_dir",
+					".",
 				),
 			),
 		},
@@ -1110,6 +1125,262 @@ func TestAccPlaywrightCheckSuiteAutoDetectFalseMissingTestCommand(t *testing.T) 
 				}
 			`,
 			ExpectError: regexp.MustCompile(`"runtime.steps.test.command" is required when "runtime.auto_detect" is false`),
+		},
+	})
+}
+
+func TestAccPlaywrightCheckSuiteWorkingDirAutoDetect(t *testing.T) {
+	monorepoBundle := `
+		resource "checkly_playwright_code_bundle" "test" {
+			prebuilt_archive {
+				file = "../fixtures/playwright-project-monorepo-pnpm.tar.gz"
+			}
+		}
+	`
+
+	accTestCase(t, []resource.TestStep{
+		// Step 1: Auto-detect working_dir from a monorepo archive.
+		{
+			Config: monorepoBundle + `
+				resource "checkly_playwright_check_suite" "test" {
+					name                      = "PW Check working dir auto"
+					activated                 = true
+					frequency                 = 720
+					use_global_alert_settings = true
+					locations                 = ["us-east-1"]
+
+					bundle {
+						id       = checkly_playwright_code_bundle.test.id
+						metadata = checkly_playwright_code_bundle.test.metadata
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.working_dir",
+					"packages/e2e",
+				),
+			),
+		},
+		// Step 2: Explicit working_dir overrides auto-detection.
+		{
+			Config: monorepoBundle + `
+				resource "checkly_playwright_check_suite" "test" {
+					name                      = "PW Check working dir auto"
+					activated                 = true
+					frequency                 = 720
+					use_global_alert_settings = true
+					locations                 = ["us-east-1"]
+
+					bundle {
+						id       = checkly_playwright_code_bundle.test.id
+						metadata = checkly_playwright_code_bundle.test.metadata
+					}
+
+					runtime {
+						working_dir = "custom/dir"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.working_dir",
+					"custom/dir",
+				),
+			),
+		},
+		// Step 3: Remove explicit working_dir — falls back to auto-detected.
+		{
+			Config: monorepoBundle + `
+				resource "checkly_playwright_check_suite" "test" {
+					name                      = "PW Check working dir auto"
+					activated                 = true
+					frequency                 = 720
+					use_global_alert_settings = true
+					locations                 = ["us-east-1"]
+
+					bundle {
+						id       = checkly_playwright_code_bundle.test.id
+						metadata = checkly_playwright_code_bundle.test.metadata
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.working_dir",
+					"packages/e2e",
+				),
+			),
+		},
+	})
+}
+
+func TestAccPlaywrightCheckSuiteWorkingDirAutoDetectFlat(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		// Flat project — auto-detected working_dir should be ".".
+		{
+			Config: playwrightCheckSuiteBase + `
+				resource "checkly_playwright_check_suite" "test" {
+					name                      = "PW Check working dir flat"
+					activated                 = true
+					frequency                 = 720
+					use_global_alert_settings = true
+					locations                 = ["us-east-1"]
+
+					bundle {
+						id       = checkly_playwright_code_bundle.test.id
+						metadata = checkly_playwright_code_bundle.test.metadata
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.working_dir",
+					".",
+				),
+			),
+		},
+	})
+}
+
+func TestAccPlaywrightCheckSuiteWorkingDirEmptyStringRejected(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: playwrightCheckSuiteBase + `
+				resource "checkly_playwright_check_suite" "test" {
+					name                      = "PW Check working dir empty"
+					activated                 = true
+					frequency                 = 720
+					use_global_alert_settings = true
+					locations                 = ["us-east-1"]
+
+					bundle {
+						id       = checkly_playwright_code_bundle.test.id
+						metadata = checkly_playwright_code_bundle.test.metadata
+					}
+
+					runtime {
+						working_dir = ""
+					}
+				}
+			`,
+			ExpectError: regexp.MustCompile(`must not be empty`),
+		},
+	})
+}
+
+func TestAccPlaywrightCheckSuiteWorkingDir(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		// Step 1: Set an explicit working directory.
+		{
+			Config: playwrightCheckSuiteBase + `
+				resource "checkly_playwright_check_suite" "test" {
+					name                      = "PW Check working dir"
+					activated                 = true
+					frequency                 = 720
+					use_global_alert_settings = true
+					locations                 = ["us-east-1"]
+
+					bundle {
+						id       = checkly_playwright_code_bundle.test.id
+						metadata = checkly_playwright_code_bundle.test.metadata
+					}
+
+					runtime {
+						working_dir = "packages/e2e"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.working_dir",
+					"packages/e2e",
+				),
+			),
+		},
+		// Step 2: Remove working_dir but keep the runtime block — falls back to auto-detect (".").
+		{
+			Config: playwrightCheckSuiteBase + `
+				resource "checkly_playwright_check_suite" "test" {
+					name                      = "PW Check working dir"
+					activated                 = true
+					frequency                 = 720
+					use_global_alert_settings = true
+					locations                 = ["us-east-1"]
+
+					bundle {
+						id       = checkly_playwright_code_bundle.test.id
+						metadata = checkly_playwright_code_bundle.test.metadata
+					}
+
+					runtime {
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.working_dir",
+					".",
+				),
+			),
+		},
+		// Step 3: Set it again so we can test removal via dropping the runtime block.
+		{
+			Config: playwrightCheckSuiteBase + `
+				resource "checkly_playwright_check_suite" "test" {
+					name                      = "PW Check working dir"
+					activated                 = true
+					frequency                 = 720
+					use_global_alert_settings = true
+					locations                 = ["us-east-1"]
+
+					bundle {
+						id       = checkly_playwright_code_bundle.test.id
+						metadata = checkly_playwright_code_bundle.test.metadata
+					}
+
+					runtime {
+						working_dir = "apps/web"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.working_dir",
+					"apps/web",
+				),
+			),
+		},
+		// Step 4: Remove the entire runtime block — falls back to auto-detect (".").
+		{
+			Config: playwrightCheckSuiteBase + `
+				resource "checkly_playwright_check_suite" "test" {
+					name                      = "PW Check working dir"
+					activated                 = true
+					frequency                 = 720
+					use_global_alert_settings = true
+					locations                 = ["us-east-1"]
+
+					bundle {
+						id       = checkly_playwright_code_bundle.test.id
+						metadata = checkly_playwright_code_bundle.test.metadata
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.working_dir",
+					".",
+				),
+			),
 		},
 	})
 }
