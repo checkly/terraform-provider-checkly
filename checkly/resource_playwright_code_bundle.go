@@ -1,13 +1,19 @@
 package checkly
 
 import (
+	"archive/tar"
 	"bytes"
+	"compress/gzip"
+	"crypto/sha256"
+	"encoding/hex"
 	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
+	"strings"
 
 	checkly "github.com/checkly/checkly-go-sdk"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -40,7 +46,7 @@ func resourcePlaywrightCodeBundle() *schema.Resource {
 							Type:         schema.TypeString,
 							Required:     true,
 							ForceNew:     true,
-							ValidateFunc: validateFileExists(),
+							ValidateFunc: validateAll(validateFileExists(), validateGzipArchive()),
 						},
 					},
 				},
@@ -69,7 +75,7 @@ func resourcePlaywrightCodeBundle() *schema.Resource {
 					}
 
 					switch {
-					case bundle.Data.Version < 1:
+					case bundle.Data.Version < 2:
 						// Data should be updated.
 					case checksum != bundle.Data.ChecksumSha256:
 						// Data should be updated.
@@ -78,8 +84,30 @@ func resourcePlaywrightCodeBundle() *schema.Resource {
 						return nil
 					}
 
-					bundle.Data.Version = 1
+					lockfileInfo, err := bundle.PrebuiltArchive.InspectLockfile("@playwright/test")
+					if err != nil {
+						return fmt.Errorf("failed to inspect lockfile in archive: %v", err)
+					}
+
+					if lockfileInfo == nil {
+						return fmt.Errorf(
+							"no lockfile found at the root of the archive; " +
+								"the archive must contain a package-lock.json, pnpm-lock.yaml, or yarn.lock at the root level",
+						)
+					}
+
+					if lockfileInfo.PackageVersion == "" {
+						return fmt.Errorf(
+							"the lockfile does not contain @playwright/test; " +
+								"add @playwright/test to the project's dependencies and regenerate the lockfile",
+						)
+					}
+
+					bundle.Data.Version = 2
 					bundle.Data.ChecksumSha256 = checksum
+					bundle.Data.PlaywrightVersion = lockfileInfo.PackageVersion
+					bundle.Data.PackageManager = lockfileInfo.PackageManager
+					bundle.Data.LockfileChecksum = lockfileInfo.ChecksumSha256
 
 					err = diff.SetNew(metadataAttributeName, bundle.Data.EncodeToString())
 					if err != nil {
@@ -184,8 +212,11 @@ func resourcePlaywrightCodeBundleDelete(
 }
 
 type PlaywrightCodeBundleMetadata struct {
-	Version        int    `json:"v"`
-	ChecksumSha256 string `json:"s256"`
+	Version            int    `json:"v"`
+	ChecksumSha256     string `json:"s256"`
+	PlaywrightVersion  string `json:"pwv,omitempty"`
+	PackageManager     string `json:"pm,omitempty"`
+	LockfileChecksum   string `json:"lcs,omitempty"`
 }
 
 func PlaywrightCodeBundleMetadataFromString(s string) (*PlaywrightCodeBundleMetadata, error) {
@@ -316,6 +347,92 @@ func (a *PlaywrightCodeBundlePrebuiltArchiveAttribute) ChecksumSha256() (string,
 	checksum := checksumSha256(file)
 
 	return checksum, nil
+}
+
+// LockfileInfo contains information extracted from a lockfile found in an archive.
+type LockfileInfo struct {
+	PackageManager   string
+	PackageVersion   string
+	ChecksumSha256   string
+}
+
+type lockfileParser struct {
+	packageManager string
+	parse          func(io.Reader, string) (string, error)
+}
+
+var lockfileParsers = map[string]lockfileParser{
+	"package-lock.json": {"npm", extractPackageVersionFromPackageLock},
+	"pnpm-lock.yaml":    {"pnpm", extractPackageVersionFromPnpmLock},
+	"yarn.lock":         {"yarn", extractPackageVersionFromYarnLock},
+}
+
+// InspectLockfile opens the tar.gz archive and searches for a lockfile
+// (package-lock.json, pnpm-lock.yaml, or yarn.lock) at the root of the
+// archive. If found, it returns the detected package manager and the
+// resolved version of the given package.
+func (a *PlaywrightCodeBundlePrebuiltArchiveAttribute) InspectLockfile(packageName string) (*LockfileInfo, error) {
+	file, err := os.Open(a.File)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open archive file %q: %w", a.File, err)
+	}
+	defer file.Close()
+
+	gzr, err := gzip.NewReader(file)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create gzip reader for %q: %w", a.File, err)
+	}
+	defer gzr.Close()
+
+	tr := tar.NewReader(gzr)
+
+	for {
+		header, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, fmt.Errorf("failed to read archive %q: %w", a.File, err)
+		}
+
+		if header.Typeflag != tar.TypeReg {
+			continue
+		}
+
+		// Only consider files at the root of the archive.
+		name := strings.TrimPrefix(header.Name, "./")
+		if strings.Contains(name, "/") {
+			continue
+		}
+
+		parser, ok := lockfileParsers[name]
+		if !ok {
+			continue
+		}
+
+		// Hash the lockfile content as it flows through the parser.
+		hash := sha256.New()
+		tee := io.TeeReader(tr, hash)
+
+		version, err := parser.parse(tee, packageName)
+		if err != nil {
+			return nil, fmt.Errorf("failed to extract package version from %q in archive: %w", header.Name, err)
+		}
+
+		// Drain any remaining bytes the parser didn't consume so
+		// the checksum covers the entire lockfile.
+		if _, err := io.Copy(io.Discard, tee); err != nil {
+			return nil, fmt.Errorf("failed to read lockfile %q from archive: %w", header.Name, err)
+		}
+
+		return &LockfileInfo{
+			PackageManager: parser.packageManager,
+			PackageVersion: version,
+			ChecksumSha256: hex.EncodeToString(hash.Sum(nil)),
+		}, nil
+	}
+
+	return nil, nil
 }
 
 func (a *PlaywrightCodeBundlePrebuiltArchiveAttribute) Upload(

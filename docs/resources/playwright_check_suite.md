@@ -75,7 +75,6 @@ resource "checkly_playwright_check_suite" "example-playwright-check" {
 - `bundle` (Block List, Min: 1, Max: 1) Attaches a code bundle to the check. (see [below for nested schema](#nestedblock--bundle))
 - `frequency` (Number) Controls how often the check should run. Defined in minutes. The allowed values are `1` (1 minute), `2` (2 minutes), `5` (5 minutes), `10` (10 minutes), `15` (15 minutes), `30` (30 minutes), `60` (1 hour), `120` (2 hours), `180` (3 hours), `360` (6 hours), `720` (12 hours) and `1440` (24 hours).
 - `name` (String) The name of the check.
-- `runtime` (Block List, Min: 1, Max: 1) Configure the runtime environment of the Playwright check. (see [below for nested schema](#nestedblock--runtime))
 
 ### Optional
 
@@ -88,6 +87,7 @@ resource "checkly_playwright_check_suite" "example-playwright-check" {
 - `muted` (Boolean) Determines if any notifications will be sent out when the check fails and/or recovers. (Default `false`).
 - `private_locations` (Set of String) An array of one or more private locations slugs.
 - `run_parallel` (Boolean) Determines whether the check should run on all selected locations in parallel or round-robin. (Default `false`).
+- `runtime` (Block List, Max: 1) Configure the runtime environment of the Playwright check. (see [below for nested schema](#nestedblock--runtime))
 - `tags` (Set of String) A list of tags for organizing and filtering checks and monitors.
 - `trigger_incident` (Block Set, Max: 1) Create and resolve an incident based on the alert configuration. Useful for status page automation. (see [below for nested schema](#nestedblock--trigger_incident))
 - `use_global_alert_settings` (Boolean) When true, the account level alert settings will be used, not the alert setting defined on this check. (Default `true`).
@@ -103,57 +103,6 @@ Required:
 
 - `id` (String) The ID of the code bundle.
 - `metadata` (String) The generated metadata of the code bundle.
-
-
-<a id="nestedblock--runtime"></a>
-### Nested Schema for `runtime`
-
-Optional:
-
-- `playwright` (Block List, Max: 1) Configure the Playwright capabilities that should be made available to the runtime environment. (see [below for nested schema](#nestedblock--runtime--playwright))
-- `steps` (Block List, Max: 1) Customize the actions taken during test execution. (see [below for nested schema](#nestedblock--runtime--steps))
-
-<a id="nestedblock--runtime--playwright"></a>
-### Nested Schema for `runtime.playwright`
-
-Optional:
-
-- `device` (Block Set) The list of devices that should be made available for Playwright. (see [below for nested schema](#nestedblock--runtime--playwright--device))
-- `version` (String) The Playwright version to use.
-
-<a id="nestedblock--runtime--playwright--device"></a>
-### Nested Schema for `runtime.playwright.device`
-
-Required:
-
-- `type` (String) The type of the device.
-
-
-
-<a id="nestedblock--runtime--steps"></a>
-### Nested Schema for `runtime.steps`
-
-Optional:
-
-- `install` (Block List, Max: 1) Customize the install step, which is used to initialize the environment prior to starting the test run. (see [below for nested schema](#nestedblock--runtime--steps--install))
-- `test` (Block List, Max: 1) Customize the test step. (see [below for nested schema](#nestedblock--runtime--steps--test))
-
-<a id="nestedblock--runtime--steps--install"></a>
-### Nested Schema for `runtime.steps.install`
-
-Optional:
-
-- `command` (String) The command used to install dependencies prior to running Playwright. The default value is the appropriate install command for your package manager (e.g. `npm install` for `npm`).
-
-
-<a id="nestedblock--runtime--steps--test"></a>
-### Nested Schema for `runtime.steps.test`
-
-Optional:
-
-- `command` (String) The command used to run Playwright. The default value is the appropriate exec command for your package manager (e.g. `npx playwright test` for `npm`).
-
-
 
 
 <a id="nestedblock--alert_channel_subscription"></a>
@@ -223,6 +172,58 @@ Optional:
 
 - `locked` (Boolean) If true, the value is not shown by default, but it can be accessed. (Default `false`).
 - `secret` (Boolean) If true, the value will never be visible. (Default `false`).
+
+
+<a id="nestedblock--runtime"></a>
+### Nested Schema for `runtime`
+
+Optional:
+
+- `auto_detect` (Boolean) Whether to automatically detect appropriate runtime environment configuration from the bundle. (Default `true`).
+- `playwright` (Block List, Max: 1) Configure the Playwright capabilities that should be made available to the runtime environment. (see [below for nested schema](#nestedblock--runtime--playwright))
+- `steps` (Block List, Max: 1) Customize the actions taken during test execution. (see [below for nested schema](#nestedblock--runtime--steps))
+
+<a id="nestedblock--runtime--playwright"></a>
+### Nested Schema for `runtime.playwright`
+
+Optional:
+
+- `device` (Block Set) The list of devices that should be made available for Playwright. Defaults to chromium, firefox, and webkit. (see [below for nested schema](#nestedblock--runtime--playwright--device))
+- `version` (String) The Playwright version to use. Defaults to the version detected from the code bundle's lockfile.
+
+<a id="nestedblock--runtime--playwright--device"></a>
+### Nested Schema for `runtime.playwright.device`
+
+Required:
+
+- `type` (String) The type of the device.
+
+
+
+<a id="nestedblock--runtime--steps"></a>
+### Nested Schema for `runtime.steps`
+
+Optional:
+
+- `install` (Block List, Max: 1) Customize the install step, which is used to initialize the environment prior to starting the test run. (see [below for nested schema](#nestedblock--runtime--steps--install))
+- `test` (Block List, Max: 1) Customize the test step. (see [below for nested schema](#nestedblock--runtime--steps--test))
+
+<a id="nestedblock--runtime--steps--install"></a>
+### Nested Schema for `runtime.steps.install`
+
+Optional:
+
+- `command` (String) The command used to install dependencies prior to running Playwright. The default value is the appropriate install command for your package manager (e.g. `npm install` for `npm`).
+
+
+<a id="nestedblock--runtime--steps--test"></a>
+### Nested Schema for `runtime.steps.test`
+
+Optional:
+
+- `command` (String) The command used to run Playwright. The default value is the appropriate exec command for your package manager (e.g. `npx playwright test` for `npm`).
+
+
 
 
 <a id="nestedblock--trigger_incident"></a>
