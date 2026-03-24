@@ -82,6 +82,77 @@ func TestAccPlaywrightCodeBundleNoPlaywrightInLockfile(t *testing.T) {
 	})
 }
 
+func TestIsPlaywrightConfig(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		want bool
+	}{
+		{"playwright.config.ts", true},
+		{"playwright.config.js", true},
+		{"playwright.config.mjs", true},
+		{"playwright.config.cjs", true},
+		{"playwright.config.mts", true},
+		{"playwright.config.cts", true},
+		{"playwright-ct.config.ts", true},
+		{"packages/e2e/playwright.config.ts", true},
+		{"package.json", false},
+		{"playwright.ts", false},
+		{"playwright.config.yaml", false},
+		{"notplaywright.config.ts", false},
+		{"playwright.config.", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if got := isPlaywrightConfig(tt.name); got != tt.want {
+				t.Errorf("isPlaywrightConfig(%q) = %v, want %v", tt.name, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestDetectWorkingDir(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		file string
+		want string
+	}{
+		{
+			name: "flat project at root",
+			file: "../fixtures/playwright-project-pnpm.tar.gz",
+			want: ".",
+		},
+		{
+			name: "monorepo with nested config",
+			file: "../fixtures/playwright-project-monorepo-pnpm.tar.gz",
+			want: "packages/e2e",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			attr := PlaywrightCodeBundlePrebuiltArchiveAttribute{
+				File: tt.file,
+			}
+
+			got, err := attr.DetectWorkingDir()
+			if err != nil {
+				t.Fatalf("DetectWorkingDir failed: %v", err)
+			}
+			if got != tt.want {
+				t.Errorf("DetectWorkingDir() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestInspectLockfile(t *testing.T) {
 	t.Parallel()
 

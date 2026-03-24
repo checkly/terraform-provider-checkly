@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"strings"
 
 	checkly "github.com/checkly/checkly-go-sdk"
@@ -75,7 +76,7 @@ func resourcePlaywrightCodeBundle() *schema.Resource {
 					}
 
 					switch {
-					case bundle.Data.Version < 2:
+					case bundle.Data.Version < 3:
 						// Data should be updated.
 					case checksum != bundle.Data.ChecksumSha256:
 						// Data should be updated.
@@ -103,11 +104,17 @@ func resourcePlaywrightCodeBundle() *schema.Resource {
 						)
 					}
 
-					bundle.Data.Version = 2
+					workingDir, err := bundle.PrebuiltArchive.DetectWorkingDir()
+					if err != nil {
+						return fmt.Errorf("failed to detect working directory in archive: %v", err)
+					}
+
+					bundle.Data.Version = 3
 					bundle.Data.ChecksumSha256 = checksum
 					bundle.Data.PlaywrightVersion = lockfileInfo.PackageVersion
 					bundle.Data.PackageManager = lockfileInfo.PackageManager
 					bundle.Data.LockfileChecksum = lockfileInfo.ChecksumSha256
+					bundle.Data.WorkingDir = workingDir
 
 					err = diff.SetNew(metadataAttributeName, bundle.Data.EncodeToString())
 					if err != nil {
@@ -217,6 +224,7 @@ type PlaywrightCodeBundleMetadata struct {
 	PlaywrightVersion  string `json:"pwv,omitempty"`
 	PackageManager     string `json:"pm,omitempty"`
 	LockfileChecksum   string `json:"lcs,omitempty"`
+	WorkingDir         string `json:"wd,omitempty"`
 }
 
 func PlaywrightCodeBundleMetadataFromString(s string) (*PlaywrightCodeBundleMetadata, error) {
@@ -433,6 +441,103 @@ func (a *PlaywrightCodeBundlePrebuiltArchiveAttribute) InspectLockfile(packageNa
 	}
 
 	return nil, nil
+}
+
+var playwrightConfigExtensions = map[string]bool{
+	".ts": true, ".mts": true, ".cts": true,
+	".js": true, ".mjs": true, ".cjs": true,
+}
+
+// isPlaywrightConfig returns true if the filename matches
+// playwright*.config.{ts,mts,cts,js,mjs,cjs}.
+func isPlaywrightConfig(name string) bool {
+	base := path.Base(name)
+	if !strings.HasPrefix(base, "playwright") {
+		return false
+	}
+
+	// Find ".config." after the "playwright" prefix.
+	rest := base[len("playwright"):]
+	idx := strings.Index(rest, ".config.")
+	if idx < 0 {
+		return false
+	}
+
+	ext := rest[idx+len(".config.")-1:] // includes the leading dot
+	return playwrightConfigExtensions[ext]
+}
+
+// DetectWorkingDir scans the archive for a Playwright config file and
+// returns the directory of the closest ancestor package.json. If the
+// config is at the root or no config is found, it returns an empty string.
+func (a *PlaywrightCodeBundlePrebuiltArchiveAttribute) DetectWorkingDir() (string, error) {
+	file, err := os.Open(a.File)
+	if err != nil {
+		return "", fmt.Errorf("failed to open archive file %q: %w", a.File, err)
+	}
+	defer file.Close()
+
+	gzr, err := gzip.NewReader(file)
+	if err != nil {
+		return "", fmt.Errorf("failed to create gzip reader for %q: %w", a.File, err)
+	}
+	defer gzr.Close()
+
+	tr := tar.NewReader(gzr)
+
+	var configPaths []string
+	packageJSONDirs := map[string]bool{}
+
+	for {
+		header, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return "", fmt.Errorf("failed to read archive %q: %w", a.File, err)
+		}
+
+		if header.Typeflag != tar.TypeReg {
+			continue
+		}
+
+		name := strings.TrimPrefix(header.Name, "./")
+
+		if isPlaywrightConfig(name) {
+			configPaths = append(configPaths, name)
+		}
+
+		if path.Base(name) == "package.json" {
+			packageJSONDirs[path.Dir(name)] = true
+		}
+	}
+
+	if len(configPaths) == 0 {
+		return ".", nil
+	}
+
+	// Pick the config with the shortest path. Break ties lexicographically.
+	shortest := configPaths[0]
+	for _, p := range configPaths[1:] {
+		if len(p) < len(shortest) || (len(p) == len(shortest) && p < shortest) {
+			shortest = p
+		}
+	}
+
+	// Walk up from the config's directory to find the closest package.json.
+	dir := path.Dir(shortest)
+	for {
+		if packageJSONDirs[dir] {
+			return dir, nil
+		}
+
+		parent := path.Dir(dir)
+		if parent == dir {
+			// Reached root without finding package.json.
+			return ".", nil
+		}
+		dir = parent
+	}
 }
 
 func (a *PlaywrightCodeBundlePrebuiltArchiveAttribute) Upload(

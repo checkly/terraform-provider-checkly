@@ -134,9 +134,16 @@ func resourcePlaywrightCheckSuite() *schema.Resource {
 						"working_dir": {
 							Description: "The working directory in which runtime commands are executed. " +
 								"This is useful for monorepos or workspaces where the Playwright " +
-								"project is in a subdirectory.",
+								"project is in a subdirectory. Use \".\" to explicitly specify the root.",
 							Type:     schema.TypeString,
 							Optional: true,
+							Computed: true,
+							ValidateFunc: func(val any, key string) (warns []string, errs []error) {
+								if val.(string) == "" {
+									errs = append(errs, fmt.Errorf("%q must not be empty; use \".\" for the root directory", key))
+								}
+								return
+							},
 						},
 						"steps": {
 							Description: "Customize the actions taken during test execution.",
@@ -388,6 +395,11 @@ func resourcePlaywrightCheckSuite() *schema.Resource {
 				}
 
 				if runtimeAttr.AutoDetect && bundleAttr != nil {
+					if !isRuntimeWorkingDirPresent {
+						runtimeAttr.WorkingDir = bundleAttr.Metadata.WorkingDir
+						overrideRuntime = true
+					}
+
 					playwrightAttr := runtimeAttr.Playwright
 					if runtimeAttr.Playwright == nil {
 						playwrightAttr = &PlaywrightCheckSuiteRuntimePlaywrightAttribute{}
@@ -678,7 +690,7 @@ func PlaywrightCheckSuiteResourceFromAPIModel(
 		AutoDetect: existingRuntimeAttr.AutoDetect,
 	}
 
-	if check.WorkingDir != nil && *check.WorkingDir != "" {
+	if check.WorkingDir != nil {
 		runtimeAttr.WorkingDir = *check.WorkingDir
 	}
 
