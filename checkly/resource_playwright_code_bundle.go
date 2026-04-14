@@ -87,7 +87,7 @@ func resourcePlaywrightCodeBundle() *schema.Resource {
 
 					lockfileInfo, err := bundle.PrebuiltArchive.InspectLockfile("@playwright/test")
 					if err != nil {
-						return fmt.Errorf("failed to inspect lockfile in archive: %v", err)
+						return fmt.Errorf("failed to inspect lockfile in archive: %w", err)
 					}
 
 					if lockfileInfo == nil {
@@ -376,6 +376,14 @@ var lockfileParsers = map[string]lockfileParser{
 	"bun.lock":          {"bun", extractPackageVersionFromBunLock},
 }
 
+// ErrUnsupportedBunLockb signals that the archive contains bun.lockb (Bun's
+// legacy binary lockfile format) but no parseable text-based lockfile.
+var ErrUnsupportedBunLockb = errors.New(
+	"the archive contains a bun.lockb binary lockfile, which is not supported; " +
+		"regenerate it as text with `bun install --save-text-lockfile` or set " +
+		"`saveTextLockfile = true` under `[install.lockfile]` in bunfig.toml, then rebuild the archive",
+)
+
 // InspectLockfile opens the tar.gz archive and searches for a lockfile
 // (package-lock.json, pnpm-lock.yaml, yarn.lock, or bun.lock) at the root
 // of the archive. If found, it returns the detected package manager and
@@ -395,6 +403,7 @@ func (a *PlaywrightCodeBundlePrebuiltArchiveAttribute) InspectLockfile(packageNa
 
 	tr := tar.NewReader(gzr)
 
+	var sawBunLockb bool
 	for {
 		header, err := tr.Next()
 		if err == io.EOF {
@@ -411,6 +420,11 @@ func (a *PlaywrightCodeBundlePrebuiltArchiveAttribute) InspectLockfile(packageNa
 		// Only consider files at the root of the archive.
 		name := strings.TrimPrefix(header.Name, "./")
 		if strings.Contains(name, "/") {
+			continue
+		}
+
+		if name == "bun.lockb" {
+			sawBunLockb = true
 			continue
 		}
 
@@ -439,6 +453,10 @@ func (a *PlaywrightCodeBundlePrebuiltArchiveAttribute) InspectLockfile(packageNa
 			PackageVersion: version,
 			ChecksumSha256: hex.EncodeToString(hash.Sum(nil)),
 		}, nil
+	}
+
+	if sawBunLockb {
+		return nil, ErrUnsupportedBunLockb
 	}
 
 	return nil, nil
