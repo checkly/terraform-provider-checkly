@@ -1,6 +1,7 @@
 package checkly
 
 import (
+	"errors"
 	"regexp"
 	"testing"
 
@@ -164,6 +165,7 @@ func TestInspectLockfile(t *testing.T) {
 		{"npm", "../fixtures/playwright-project-npm.tar.gz", "npm"},
 		{"pnpm", "../fixtures/playwright-project-pnpm.tar.gz", "pnpm"},
 		{"yarn", "../fixtures/playwright-project-yarn.tar.gz", "yarn"},
+		{"bun", "../fixtures/playwright-project-bun.tar.gz", "bun"},
 	}
 
 	for _, fixture := range fixtures {
@@ -215,6 +217,44 @@ func TestInspectLockfile(t *testing.T) {
 		}
 		if info.PackageVersion != "" {
 			t.Errorf("PackageVersion = %q, want empty string", info.PackageVersion)
+		}
+	})
+
+	t.Run("bun.lockb only returns unsupported error", func(t *testing.T) {
+		t.Parallel()
+
+		attr := PlaywrightCodeBundlePrebuiltArchiveAttribute{
+			File: "../fixtures/playwright-project-bun-lockb.tar.gz",
+		}
+
+		info, err := attr.InspectLockfile("@playwright/test")
+		if !errors.Is(err, ErrUnsupportedBunLockb) {
+			t.Fatalf("InspectLockfile error = %v, want ErrUnsupportedBunLockb", err)
+		}
+		if info != nil {
+			t.Errorf("InspectLockfile returned %+v, want nil", info)
+		}
+	})
+
+	t.Run("bun.lock takes precedence over bun.lockb", func(t *testing.T) {
+		t.Parallel()
+
+		attr := PlaywrightCodeBundlePrebuiltArchiveAttribute{
+			File: "../fixtures/playwright-project-bun-with-lockb.tar.gz",
+		}
+
+		info, err := attr.InspectLockfile("@playwright/test")
+		if err != nil {
+			t.Fatalf("InspectLockfile failed: %v", err)
+		}
+		if info == nil {
+			t.Fatal("InspectLockfile returned nil")
+		}
+		if info.PackageManager != "bun" {
+			t.Errorf("PackageManager = %q, want %q", info.PackageManager, "bun")
+		}
+		if info.PackageVersion != "1.58.2" {
+			t.Errorf("PackageVersion = %q, want %q", info.PackageVersion, "1.58.2")
 		}
 	})
 

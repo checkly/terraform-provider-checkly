@@ -19,6 +19,7 @@ var defaultTestCommand = map[string]string{
 	"npm":  "npx playwright test",
 	"pnpm": "pnpm playwright test",
 	"yarn": "yarn playwright test",
+	"bun":  "bunx playwright test",
 }
 
 func resourcePlaywrightCheckSuite() *schema.Resource {
@@ -456,7 +457,7 @@ func resourcePlaywrightCheckSuite() *schema.Resource {
 						return fmt.Errorf(
 							"unable to detect Playwright version from the code bundle's lockfile; " +
 								"set \"runtime.playwright.version\" explicitly or ensure the archive " +
-								"contains a package-lock.json, pnpm-lock.yaml, or yarn.lock with @playwright/test",
+								"contains a package-lock.json, pnpm-lock.yaml, yarn.lock, or bun.lock with @playwright/test",
 						)
 					} else {
 						return fmt.Errorf(`"runtime.playwright.version" is required when "runtime.auto_detect" is false`)
