@@ -122,6 +122,126 @@ func extractVersionFromPnpmPackageKey(key string, packageName string) string {
 	return version
 }
 
+// extractPackageVersionFromBunLock extracts the version of the given package
+// from a bun.lock file. bun.lock is a JSONC-like format (JSON with optional
+// comments and trailing commas). Each entry in the top-level "packages"
+// object is an array whose first element is "name@version".
+func extractPackageVersionFromBunLock(r io.Reader, packageName string) (string, error) {
+	data, err := io.ReadAll(r)
+	if err != nil {
+		return "", fmt.Errorf("failed to read bun.lock: %w", err)
+	}
+
+	normalized := normalizeJSONC(data)
+
+	var lockfile struct {
+		Packages map[string]json.RawMessage `json:"packages"`
+	}
+
+	if err := json.Unmarshal(normalized, &lockfile); err != nil {
+		return "", fmt.Errorf("failed to parse bun.lock: %w", err)
+	}
+
+	prefix := packageName + "@"
+	for _, raw := range lockfile.Packages {
+		var tuple []json.RawMessage
+		if err := json.Unmarshal(raw, &tuple); err != nil || len(tuple) == 0 {
+			continue
+		}
+
+		var first string
+		if err := json.Unmarshal(tuple[0], &first); err != nil {
+			continue
+		}
+
+		if !strings.HasPrefix(first, prefix) {
+			continue
+		}
+
+		version := first[len(prefix):]
+		version = strings.TrimPrefix(version, "npm:")
+
+		// Non-registry protocols (workspace:, git+, file:, link:) aren't
+		// resolvable to a concrete version — skip them.
+		if strings.ContainsRune(version, ':') {
+			continue
+		}
+
+		if version != "" {
+			return version, nil
+		}
+	}
+
+	return "", nil
+}
+
+// normalizeJSONC strips // line comments, /* */ block comments, and trailing
+// commas from JSONC-like input so that encoding/json can parse it. It is not
+// a fully conforming JSONC parser — it is just enough to handle bun.lock.
+func normalizeJSONC(b []byte) []byte {
+	out := make([]byte, 0, len(b))
+	inString := false
+	escape := false
+
+	for i := 0; i < len(b); i++ {
+		c := b[i]
+
+		if inString {
+			out = append(out, c)
+			switch {
+			case escape:
+				escape = false
+			case c == '\\':
+				escape = true
+			case c == '"':
+				inString = false
+			}
+			continue
+		}
+
+		if c == '"' {
+			inString = true
+			out = append(out, c)
+			continue
+		}
+
+		if c == '/' && i+1 < len(b) {
+			if b[i+1] == '/' {
+				i += 2
+				for i < len(b) && b[i] != '\n' {
+					i++
+				}
+				if i < len(b) {
+					out = append(out, b[i])
+				}
+				continue
+			}
+			if b[i+1] == '*' {
+				i += 2
+				for i+1 < len(b) && !(b[i] == '*' && b[i+1] == '/') {
+					i++
+				}
+				i++
+				continue
+			}
+		}
+
+		if c == ',' {
+			j := i + 1
+			for j < len(b) && (b[j] == ' ' || b[j] == '\t' || b[j] == '\n' || b[j] == '\r') {
+				j++
+			}
+			if j < len(b) && (b[j] == '}' || b[j] == ']') {
+				continue
+			}
+		}
+
+		out = append(out, c)
+	}
+
+	return out
+}
+
 var yarnVersionRegexp = regexp.MustCompile(`^version[:\s]+["']?([^"'\s]+)["']?`)
 
 // extractPackageVersionFromYarnLock extracts the version of the given package

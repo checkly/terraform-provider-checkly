@@ -93,7 +93,7 @@ func resourcePlaywrightCodeBundle() *schema.Resource {
 					if lockfileInfo == nil {
 						return fmt.Errorf(
 							"no lockfile found at the root of the archive; " +
-								"the archive must contain a package-lock.json, pnpm-lock.yaml, or yarn.lock at the root level",
+								"the archive must contain a package-lock.json, pnpm-lock.yaml, yarn.lock, or bun.lock at the root level",
 						)
 					}
 
@@ -373,12 +373,13 @@ var lockfileParsers = map[string]lockfileParser{
 	"package-lock.json": {"npm", extractPackageVersionFromPackageLock},
 	"pnpm-lock.yaml":    {"pnpm", extractPackageVersionFromPnpmLock},
 	"yarn.lock":         {"yarn", extractPackageVersionFromYarnLock},
+	"bun.lock":          {"bun", extractPackageVersionFromBunLock},
 }
 
 // InspectLockfile opens the tar.gz archive and searches for a lockfile
-// (package-lock.json, pnpm-lock.yaml, or yarn.lock) at the root of the
-// archive. If found, it returns the detected package manager and the
-// resolved version of the given package.
+// (package-lock.json, pnpm-lock.yaml, yarn.lock, or bun.lock) at the root
+// of the archive. If found, it returns the detected package manager and
+// the resolved version of the given package.
 func (a *PlaywrightCodeBundlePrebuiltArchiveAttribute) InspectLockfile(packageName string) (*LockfileInfo, error) {
 	file, err := os.Open(a.File)
 	if err != nil {

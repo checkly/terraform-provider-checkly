@@ -164,6 +164,7 @@ func TestInspectLockfile(t *testing.T) {
 		{"npm", "../fixtures/playwright-project-npm.tar.gz", "npm"},
 		{"pnpm", "../fixtures/playwright-project-pnpm.tar.gz", "pnpm"},
 		{"yarn", "../fixtures/playwright-project-yarn.tar.gz", "yarn"},
+		{"bun", "../fixtures/playwright-project-bun.tar.gz", "bun"},
 	}
 
 	for _, fixture := range fixtures {

@@ -7,7 +7,7 @@
 # The code bundle must at minimum contain the following files:
 # - The main package.json file
 # - An appropriate lockfile for your package manager
-#   (e.g. package-lock.json, pnpm-lock.yaml)
+#   (e.g. package-lock.json, pnpm-lock.yaml, yarn.lock, bun.lock)
 # - Any files that are needed during the installation process, such as build
 #   scripts and configuration files (e.g. tsconfig.json)
 # - Relevant subpackages if using workspaces
