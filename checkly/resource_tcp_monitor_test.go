@@ -44,6 +44,11 @@ func TestAccTCPMonitorBasic(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_tcp_monitor.test",
+					"description",
+					"TCP monitor description",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
 					"activated",
 					"true",
 				),
@@ -274,6 +279,7 @@ func TestEncodeDecodeTCPMonitorResource(t *testing.T) {
 const tcpMonitor_basic = `
 	resource "checkly_tcp_monitor" "test" {
 	  name                      = "TCP Monitor 1"
+	  description               = "TCP monitor description"
 	  frequency                 = 60
 	  activated                 = true
 	  muted                     = true

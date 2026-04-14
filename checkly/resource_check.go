@@ -33,6 +33,11 @@ func resourceCheck() *schema.Resource {
 				Required:    true,
 				Description: "The name of the check.",
 			},
+			"description": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "A description of the check.",
+			},
 			"type": {
 				Type:        schema.TypeString,
 				Required:    true,
@@ -413,6 +418,7 @@ func resourceCheckDelete(d *schema.ResourceData, client interface{}) error {
 
 func resourceDataFromCheck(c *checkly.Check, d *schema.ResourceData) error {
 	d.Set("name", c.Name)
+	d.Set("description", c.Description)
 	d.Set("type", c.Type)
 	d.Set("activated", c.Activated)
 	d.Set("muted", c.Muted)
@@ -525,6 +531,7 @@ func checkFromResourceData(d *schema.ResourceData) (checkly.Check, error) {
 	check := checkly.Check{
 		ID:                        d.Id(),
 		Name:                      d.Get("name").(string),
+		Description:               d.Get("description").(string),
 		Type:                      d.Get("type").(string),
 		Frequency:                 d.Get(frequencyAttributeName).(int),
 		Activated:                 d.Get("activated").(bool),

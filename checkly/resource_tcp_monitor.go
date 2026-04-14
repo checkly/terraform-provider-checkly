@@ -28,6 +28,11 @@ func resourceTCPMonitor() *schema.Resource {
 				Required:    true,
 				Description: "The name of the check.",
 			},
+			"description": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "A description of the check.",
+			},
 			frequencyAttributeName: makeFrequencyAttributeSchema(FrequencyAttributeSchemaOptions{
 				Monitor:            true,
 				AllowHighFrequency: true,
@@ -283,6 +288,7 @@ func resourceTCPMonitorDelete(d *schema.ResourceData, client interface{}) error 
 
 func resourceDataFromTCPMonitor(c *checkly.TCPMonitor, d *schema.ResourceData) error {
 	d.Set("name", c.Name)
+	d.Set("description", c.Description)
 	d.Set("activated", c.Activated)
 	d.Set("muted", c.Muted)
 	d.Set("should_fail", c.ShouldFail)
@@ -338,6 +344,7 @@ func tcpCheckFromResourceData(d *schema.ResourceData) (checkly.TCPMonitor, error
 	monitor := checkly.TCPMonitor{
 		ID:                        d.Id(),
 		Name:                      d.Get("name").(string),
+		Description:               d.Get("description").(string),
 		Frequency:                 d.Get(frequencyAttributeName).(int),
 		Activated:                 d.Get("activated").(bool),
 		Muted:                     d.Get("muted").(bool),

@@ -44,6 +44,11 @@ func TestAccURLMonitorBasic(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_url_monitor.test",
+					"description",
+					"URL monitor description",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_url_monitor.test",
 					"activated",
 					"true",
 				),
@@ -81,6 +86,30 @@ func TestAccURLMonitorBasic(t *testing.T) {
 					"checkly_url_monitor.test",
 					"request.*.assertion.*.target",
 					"200",
+				),
+			),
+		},
+	})
+}
+
+func TestAccURLMonitorDescriptionRemoval(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: urlMonitor_basic,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_url_monitor.test",
+					"description",
+					"URL monitor description",
+				),
+			),
+		},
+		{
+			Config: urlMonitor_basic_withoutDescription,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckNoResourceAttr(
+					"checkly_url_monitor.test",
+					"description",
 				),
 			),
 		},
@@ -284,6 +313,28 @@ func TestEncodeDecodeURLMonitorResource(t *testing.T) {
 }
 
 const urlMonitor_basic = `
+resource "checkly_url_monitor" "test" {
+  name                      = "URL Monitor 1"
+  description               = "URL monitor description"
+  frequency                 = 60
+  activated                 = true
+  muted                     = true
+  max_response_time         = 3000
+  locations                 = ["us-east-1", "eu-central-1"]
+  use_global_alert_settings = true
+  request {
+    url = "https://api.checklyhq.com"
+    assertion {
+      comparison = "EQUALS"
+      property   = ""
+      source     = "STATUS_CODE"
+      target     = "200"
+    }
+  }
+}
+`
+
+const urlMonitor_basic_withoutDescription = `
 resource "checkly_url_monitor" "test" {
   name                      = "URL Monitor 1"
   frequency                 = 60

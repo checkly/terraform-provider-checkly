@@ -30,6 +30,11 @@ func resourceHeartbeatMonitor() *schema.Resource {
 				Required:    true,
 				Description: "The name of the check.",
 			},
+			"description": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "A description of the check.",
+			},
 			"activated": {
 				Type:        schema.TypeBool,
 				Required:    true,
@@ -192,6 +197,7 @@ func heartbeatMonitorFromResourceData(d *schema.ResourceData) (checkly.Heartbeat
 	monitor := checkly.HeartbeatMonitor{
 		ID:                        d.Id(),
 		Name:                      d.Get("name").(string),
+		Description:               d.Get("description").(string),
 		Activated:                 d.Get("activated").(bool),
 		Muted:                     d.Get("muted").(bool),
 		Tags:                      stringsFromSet(d.Get("tags").(*schema.Set)),
@@ -257,6 +263,7 @@ func heartbeatMonitorFromResourceData(d *schema.ResourceData) (checkly.Heartbeat
 
 func resourceDataFromHeartbeatMonitor(c *checkly.HeartbeatMonitor, d *schema.ResourceData) error {
 	d.Set("name", c.Name)
+	d.Set("description", c.Description)
 	d.Set("activated", c.Activated)
 	d.Set("muted", c.Muted)
 

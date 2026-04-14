@@ -28,6 +28,11 @@ func resourceURLMonitor() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 			},
+			"description": {
+				Description: "A description of the monitor.",
+				Type:        schema.TypeString,
+				Optional:    true,
+			},
 			frequencyAttributeName: makeFrequencyAttributeSchema(FrequencyAttributeSchemaOptions{
 				Monitor:            true,
 				AllowHighFrequency: true,
@@ -262,6 +267,7 @@ func resourceURLMonitorDelete(d *schema.ResourceData, client interface{}) error 
 
 func resourceDataFromURLMonitor(c *checkly.URLMonitor, d *schema.ResourceData) error {
 	d.Set("name", c.Name)
+	d.Set("description", c.Description)
 	d.Set("activated", c.Activated)
 	d.Set("muted", c.Muted)
 	d.Set("should_fail", c.ShouldFail)
@@ -303,6 +309,7 @@ func urlMonitorFromResourceData(d *schema.ResourceData) (checkly.URLMonitor, err
 	check := checkly.URLMonitor{
 		ID:                        d.Id(),
 		Name:                      d.Get("name").(string),
+		Description:               d.Get("description").(string),
 		Frequency:                 d.Get(frequencyAttributeName).(int),
 		Activated:                 d.Get("activated").(bool),
 		Muted:                     d.Get("muted").(bool),

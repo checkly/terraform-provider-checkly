@@ -38,6 +38,7 @@ func TestAccICMPMonitorBasic(t *testing.T) {
 			Config: `
 				resource "checkly_icmp_monitor" "test" {
 					name                      = "ICMP Monitor 1"
+					description               = "ICMP monitor description"
 					frequency                 = 60
 					activated                 = true
 					muted                     = true
@@ -61,6 +62,11 @@ func TestAccICMPMonitorBasic(t *testing.T) {
 					"checkly_icmp_monitor.test",
 					"name",
 					"ICMP Monitor 1",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_icmp_monitor.test",
+					"description",
+					"ICMP monitor description",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_icmp_monitor.test",
