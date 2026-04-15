@@ -624,7 +624,7 @@ func PlaywrightCheckSuiteResourceFromResourceData(
 
 		check.CodeBundlePath = string(bundlePath)
 
-		check.CacheHash = bundleAttr.Metadata.LockfileChecksum
+		check.CacheHash = bundleAttr.Metadata.CacheHash
 	}
 
 	runtimeAttr, err := PlaywrightCheckSuiteRuntimeAttributeFromList(d.Get("runtime").([]any))
