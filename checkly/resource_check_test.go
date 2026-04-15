@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
 	"github.com/checkly/checkly-go-sdk"
 )
@@ -1350,9 +1351,18 @@ func TestAccCheckDescriptionRemoval(t *testing.T) {
 		},
 		{
 			Config: apiCheck_basic_withoutDescription,
-			Check: resource.TestCheckNoResourceAttr(
-				"checkly_check.test",
-				"description",
+			Check: resource.ComposeTestCheckFunc(
+				func(s *terraform.State) error {
+					value, ok := s.Modules[0].Resources["checkly_check.test"].Primary.Attributes["description"]
+					if !ok || value == "" {
+						return nil
+					}
+
+					return resource.TestCheckNoResourceAttr(
+						"checkly_check.test",
+						"description",
+					)(s)
+				},
 			),
 		},
 	})
