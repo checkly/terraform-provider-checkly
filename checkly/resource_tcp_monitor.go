@@ -288,7 +288,11 @@ func resourceTCPMonitorDelete(d *schema.ResourceData, client interface{}) error 
 
 func resourceDataFromTCPMonitor(c *checkly.TCPMonitor, d *schema.ResourceData) error {
 	d.Set("name", c.Name)
-	d.Set("description", c.Description)
+	if c.Description == "" {
+		d.Set("description", nil)
+	} else {
+		d.Set("description", c.Description)
+	}
 	d.Set("activated", c.Activated)
 	d.Set("muted", c.Muted)
 	d.Set("should_fail", c.ShouldFail)

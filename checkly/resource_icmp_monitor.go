@@ -248,7 +248,11 @@ func resourceICMPMonitorDelete(d *schema.ResourceData, client interface{}) error
 
 func resourceDataFromICMPMonitor(c *checkly.ICMPMonitor, d *schema.ResourceData) error {
 	d.Set("name", c.Name)
-	d.Set("description", c.Description)
+	if c.Description == "" {
+		d.Set("description", nil)
+	} else {
+		d.Set("description", c.Description)
+	}
 	d.Set("activated", c.Activated)
 	d.Set("muted", c.Muted)
 	d.Set("run_parallel", c.RunParallel)
