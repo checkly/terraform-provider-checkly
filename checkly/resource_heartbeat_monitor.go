@@ -197,7 +197,7 @@ func heartbeatMonitorFromResourceData(d *schema.ResourceData) (checkly.Heartbeat
 	monitor := checkly.HeartbeatMonitor{
 		ID:                        d.Id(),
 		Name:                      d.Get("name").(string),
-		Description:               d.Get("description").(string),
+		Description:               optionalStringPointerFromResourceData(d, "description"),
 		Activated:                 d.Get("activated").(bool),
 		Muted:                     d.Get("muted").(bool),
 		Tags:                      stringsFromSet(d.Get("tags").(*schema.Set)),
@@ -263,10 +263,8 @@ func heartbeatMonitorFromResourceData(d *schema.ResourceData) (checkly.Heartbeat
 
 func resourceDataFromHeartbeatMonitor(c *checkly.HeartbeatMonitor, d *schema.ResourceData) error {
 	d.Set("name", c.Name)
-	if c.Description == "" {
-		d.Set("description", nil)
-	} else {
-		d.Set("description", c.Description)
+	if err := setOptionalStringResourceData(d, "description", c.Description); err != nil {
+		return fmt.Errorf("error setting description for resource %s: %w", d.Id(), err)
 	}
 	d.Set("activated", c.Activated)
 	d.Set("muted", c.Muted)

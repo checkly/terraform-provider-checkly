@@ -288,10 +288,8 @@ func resourceTCPMonitorDelete(d *schema.ResourceData, client interface{}) error 
 
 func resourceDataFromTCPMonitor(c *checkly.TCPMonitor, d *schema.ResourceData) error {
 	d.Set("name", c.Name)
-	if c.Description == "" {
-		d.Set("description", nil)
-	} else {
-		d.Set("description", c.Description)
+	if err := setOptionalStringResourceData(d, "description", c.Description); err != nil {
+		return fmt.Errorf("error setting description for resource %s: %w", d.Id(), err)
 	}
 	d.Set("activated", c.Activated)
 	d.Set("muted", c.Muted)
@@ -348,7 +346,7 @@ func tcpCheckFromResourceData(d *schema.ResourceData) (checkly.TCPMonitor, error
 	monitor := checkly.TCPMonitor{
 		ID:                        d.Id(),
 		Name:                      d.Get("name").(string),
-		Description:               d.Get("description").(string),
+		Description:               optionalStringPointerFromResourceData(d, "description"),
 		Frequency:                 d.Get(frequencyAttributeName).(int),
 		Activated:                 d.Get("activated").(bool),
 		Muted:                     d.Get("muted").(bool),

@@ -7,7 +7,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
 	"github.com/checkly/checkly-go-sdk"
 )
@@ -597,9 +596,11 @@ EOT
 	})
 }
 
+var wantCheckDescription = "My test check description"
+
 var wantCheck = checkly.Check{
 	Name:                 "My test check",
-	Description:          "My test check description",
+	Description:          &wantCheckDescription,
 	Type:                 checkly.TypeAPI,
 	Frequency:            1,
 	Activated:            true,
@@ -1351,18 +1352,9 @@ func TestAccCheckDescriptionRemoval(t *testing.T) {
 		},
 		{
 			Config: apiCheck_basic_withoutDescription,
-			Check: resource.ComposeTestCheckFunc(
-				func(s *terraform.State) error {
-					value, ok := s.Modules[0].Resources["checkly_check.test"].Primary.Attributes["description"]
-					if !ok || value == "" {
-						return nil
-					}
-
-					return resource.TestCheckNoResourceAttr(
-						"checkly_check.test",
-						"description",
-					)(s)
-				},
+			Check: resource.TestCheckNoResourceAttr(
+				"checkly_check.test",
+				"description",
 			),
 		},
 	})

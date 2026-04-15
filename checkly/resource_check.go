@@ -418,10 +418,8 @@ func resourceCheckDelete(d *schema.ResourceData, client interface{}) error {
 
 func resourceDataFromCheck(c *checkly.Check, d *schema.ResourceData) error {
 	d.Set("name", c.Name)
-	if c.Description == "" {
-		d.Set("description", nil)
-	} else {
-		d.Set("description", c.Description)
+	if err := setOptionalStringResourceData(d, "description", c.Description); err != nil {
+		return fmt.Errorf("error setting description for resource %s: %w", d.Id(), err)
 	}
 	d.Set("type", c.Type)
 	d.Set("activated", c.Activated)
@@ -535,7 +533,7 @@ func checkFromResourceData(d *schema.ResourceData) (checkly.Check, error) {
 	check := checkly.Check{
 		ID:                        d.Id(),
 		Name:                      d.Get("name").(string),
-		Description:               d.Get("description").(string),
+		Description:               optionalStringPointerFromResourceData(d, "description"),
 		Type:                      d.Get("type").(string),
 		Frequency:                 d.Get(frequencyAttributeName).(int),
 		Activated:                 d.Get("activated").(bool),

@@ -6,7 +6,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
 	"github.com/checkly/checkly-go-sdk"
 )
@@ -175,18 +174,9 @@ func TestAccDNSMonitorDescriptionRemoval(t *testing.T) {
 					}
 				}
 			`,
-			Check: resource.ComposeTestCheckFunc(
-				func(s *terraform.State) error {
-					value, ok := s.Modules[0].Resources["checkly_dns_monitor.test"].Primary.Attributes["description"]
-					if !ok || value == "" {
-						return nil
-					}
-
-					return resource.TestCheckNoResourceAttr(
-						"checkly_dns_monitor.test",
-						"description",
-					)(s)
-				},
+			Check: resource.TestCheckNoResourceAttr(
+				"checkly_dns_monitor.test",
+				"description",
 			),
 		},
 	})
