@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
 
 func TestAccHeartbeatMonitorRequiredFields(t *testing.T) {
@@ -229,19 +228,7 @@ func TestAccHeartbeatMonitorDescriptionRemoval(t *testing.T) {
 					grace_unit = "seconds"
 				}
 			}`,
-			Check: resource.ComposeTestCheckFunc(
-				func(s *terraform.State) error {
-					value, ok := s.Modules[0].Resources["checkly_heartbeat_monitor.test"].Primary.Attributes["description"]
-					if !ok || value == "" {
-						return nil
-					}
-
-					return resource.TestCheckNoResourceAttr(
-						"checkly_heartbeat_monitor.test",
-						"description",
-					)(s)
-				},
-			),
+			Check: testCheckOptionalAttrRemoved("checkly_heartbeat_monitor.test", "description"),
 		},
 	})
 }
