@@ -109,7 +109,7 @@ func encodeNumericID(id int64) string {
 }
 
 func optionalStringPointerFromResourceData(d *schema.ResourceData, key string) *string {
-	value, ok := d.GetOkExists(key)
+	value, ok := d.GetOk(key)
 	if !ok {
 		return nil
 	}
