@@ -31,7 +31,7 @@ func resourceTCPMonitor() *schema.Resource {
 			"description": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "A description of the check.",
+				Description: "A description of the monitor.",
 			},
 			frequencyAttributeName: makeFrequencyAttributeSchema(FrequencyAttributeSchemaOptions{
 				Monitor:            true,
