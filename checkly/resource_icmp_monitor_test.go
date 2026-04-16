@@ -113,6 +113,64 @@ func TestAccICMPMonitorBasic(t *testing.T) {
 	})
 }
 
+func TestAccICMPMonitorDescriptionRemoval(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_icmp_monitor" "test" {
+					name                      = "ICMP Monitor 1"
+					description               = "ICMP monitor description"
+					frequency                 = 60
+					activated                 = true
+					muted                     = true
+					locations                 = ["us-east-1", "eu-central-1"]
+					use_global_alert_settings = true
+
+					request {
+						hostname = "example.com"
+
+						assertion {
+							source     = "LATENCY"
+							property   = "avg"
+							comparison = "LESS_THAN"
+							target     = "200"
+						}
+					}
+				}
+			`,
+			Check: resource.TestCheckResourceAttr(
+				"checkly_icmp_monitor.test",
+				"description",
+				"ICMP monitor description",
+			),
+		},
+		{
+			Config: `
+				resource "checkly_icmp_monitor" "test" {
+					name                      = "ICMP Monitor 1"
+					frequency                 = 60
+					activated                 = true
+					muted                     = true
+					locations                 = ["us-east-1", "eu-central-1"]
+					use_global_alert_settings = true
+
+					request {
+						hostname = "example.com"
+
+						assertion {
+							source     = "LATENCY"
+							property   = "avg"
+							comparison = "LESS_THAN"
+							target     = "200"
+						}
+					}
+				}
+			`,
+			Check: testCheckOptionalAttrRemoved("checkly_icmp_monitor.test", "description"),
+		},
+	})
+}
+
 func TestAccICMPMonitorFull(t *testing.T) {
 	accTestCase(t, []resource.TestStep{
 		{
