@@ -97,6 +97,23 @@ func TestAccTCPMonitorBasic(t *testing.T) {
 	})
 }
 
+func TestAccTCPMonitorDescriptionRemoval(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: tcpMonitor_basic,
+			Check: resource.TestCheckResourceAttr(
+				"checkly_tcp_monitor.test",
+				"description",
+				"TCP monitor description",
+			),
+		},
+		{
+			Config: tcpMonitor_basic_withoutDescription,
+			Check:  testCheckOptionalAttrRemoved("checkly_tcp_monitor.test", "description"),
+		},
+	})
+}
+
 func TestAccTCPMonitorFull(t *testing.T) {
 	accTestCase(t, []resource.TestStep{
 		{
@@ -280,6 +297,28 @@ const tcpMonitor_basic = `
 	resource "checkly_tcp_monitor" "test" {
 	  name                      = "TCP Monitor 1"
 	  description               = "TCP monitor description"
+	  frequency                 = 60
+	  activated                 = true
+	  muted                     = true
+	  max_response_time         = 3000
+	  locations                 = [ "us-east-1", "eu-central-1" ]
+	  use_global_alert_settings = true
+	  request {
+		hostname     = "api.checklyhq.com"
+		port         = 80
+		assertion {
+		  comparison = "LESS_THAN"
+		  property   = ""
+		  source     = "RESPONSE_TIME"
+		  target     = "2000"
+		}
+	  }
+	}
+`
+
+const tcpMonitor_basic_withoutDescription = `
+	resource "checkly_tcp_monitor" "test" {
+	  name                      = "TCP Monitor 1"
 	  frequency                 = 60
 	  activated                 = true
 	  muted                     = true
