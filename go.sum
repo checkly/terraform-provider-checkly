@@ -251,12 +251,6 @@ github.com/cespare/xxhash v1.1.0/go.mod h1:XrSqR1VqqWfGrhpAt58auRo0WTKS1nRRg3ghf
 github.com/cespare/xxhash/v2 v2.1.1/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XLFGgcrjCOs=
 github.com/cespare/xxhash/v2 v2.3.0 h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=
 github.com/cespare/xxhash/v2 v2.3.0/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XLFGgcrjCOs=
-github.com/checkly/checkly-go-sdk v1.20.1 h1:mbORCp15BBKgXKBL1IgSoQ+RFg01Tlyvy/T+v6x2hlc=
-github.com/checkly/checkly-go-sdk v1.20.1/go.mod h1:Pd6tBOggAe41NnCU5KwqA8JvD6J20/IctszT2E0AvHo=
-github.com/checkly/checkly-go-sdk v1.20.2-0.20260410080338-8bdef9c3e0b6 h1:WdKLGWwRJmh3s2YhOfs5CX9EZwxbuc1qhFic4YPKSQU=
-github.com/checkly/checkly-go-sdk v1.20.2-0.20260410080338-8bdef9c3e0b6/go.mod h1:Pd6tBOggAe41NnCU5KwqA8JvD6J20/IctszT2E0AvHo=
-github.com/checkly/checkly-go-sdk v1.20.2-0.20260414145647-c05d19a329b5 h1:72tQjfJ0wiarGJggMXrPpmPAuxEgSVB8IDJuwhtfSIQ=
-github.com/checkly/checkly-go-sdk v1.20.2-0.20260414145647-c05d19a329b5/go.mod h1:Pd6tBOggAe41NnCU5KwqA8JvD6J20/IctszT2E0AvHo=
 github.com/checkly/checkly-go-sdk v1.20.2-0.20260415212647-51d604962319 h1:LXkLf+zXQHNYn9CZxAg2xx053OivQjMFra3Vu2WaFPE=
 github.com/checkly/checkly-go-sdk v1.20.2-0.20260415212647-51d604962319/go.mod h1:Pd6tBOggAe41NnCU5KwqA8JvD6J20/IctszT2E0AvHo=
 github.com/cheggaaa/pb v1.0.27/go.mod h1:pQciLPpbU0oxA0h+VJYYLxO+XeDQb5pZijXscXHm81s=
