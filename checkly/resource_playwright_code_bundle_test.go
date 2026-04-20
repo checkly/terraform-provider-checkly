@@ -1,7 +1,11 @@
 package checkly
 
 import (
+	"archive/tar"
+	"compress/gzip"
 	"errors"
+	"os"
+	"path/filepath"
 	"regexp"
 	"testing"
 
@@ -176,7 +180,7 @@ func TestInspectLockfile(t *testing.T) {
 				File: fixture.file,
 			}
 
-			info, err := attr.InspectLockfile("@playwright/test")
+			info, err := attr.InspectLockfile("@playwright/test", InspectLockfileOptions{})
 			if err != nil {
 				t.Fatalf("InspectLockfile failed: %v", err)
 			}
@@ -205,7 +209,7 @@ func TestInspectLockfile(t *testing.T) {
 			File: "../fixtures/playwright-project-no-playwright.tar.gz",
 		}
 
-		info, err := attr.InspectLockfile("@playwright/test")
+		info, err := attr.InspectLockfile("@playwright/test", InspectLockfileOptions{})
 		if err != nil {
 			t.Fatalf("InspectLockfile returned unexpected error: %v", err)
 		}
@@ -227,7 +231,7 @@ func TestInspectLockfile(t *testing.T) {
 			File: "../fixtures/playwright-project-bun-lockb.tar.gz",
 		}
 
-		info, err := attr.InspectLockfile("@playwright/test")
+		info, err := attr.InspectLockfile("@playwright/test", InspectLockfileOptions{})
 		if !errors.Is(err, ErrUnsupportedBunLockb) {
 			t.Fatalf("InspectLockfile error = %v, want ErrUnsupportedBunLockb", err)
 		}
@@ -243,7 +247,7 @@ func TestInspectLockfile(t *testing.T) {
 			File: "../fixtures/playwright-project-bun-with-lockb.tar.gz",
 		}
 
-		info, err := attr.InspectLockfile("@playwright/test")
+		info, err := attr.InspectLockfile("@playwright/test", InspectLockfileOptions{})
 		if err != nil {
 			t.Fatalf("InspectLockfile failed: %v", err)
 		}
@@ -265,7 +269,7 @@ func TestInspectLockfile(t *testing.T) {
 			File: "../fixtures/playwright-project-no-lockfile.tar.gz",
 		}
 
-		info, err := attr.InspectLockfile("@playwright/test")
+		info, err := attr.InspectLockfile("@playwright/test", InspectLockfileOptions{})
 		if err != nil {
 			t.Fatalf("InspectLockfile returned unexpected error: %v", err)
 		}
@@ -283,7 +287,7 @@ func TestInspectLockfile(t *testing.T) {
 				File: fixture.file,
 			}
 
-			info, err := attr.InspectLockfile("@playwright/test")
+			info, err := attr.InspectLockfile("@playwright/test", InspectLockfileOptions{})
 			if err != nil {
 				t.Fatalf("InspectLockfile(%s) failed: %v", fixture.name, err)
 			}
@@ -312,18 +316,200 @@ func TestInspectLockfile(t *testing.T) {
 			File: "../fixtures/playwright-project-pnpm-playwright-next.tar.gz",
 		}
 
-		infoPnpm, err := pnpm.InspectLockfile("@playwright/test")
+		infoPnpm, err := pnpm.InspectLockfile("@playwright/test", InspectLockfileOptions{})
 		if err != nil {
 			t.Fatalf("InspectLockfile(pnpm) failed: %v", err)
 		}
 
-		infoPnpmNext, err := pnpmNext.InspectLockfile("@playwright/test")
+		infoPnpmNext, err := pnpmNext.InspectLockfile("@playwright/test", InspectLockfileOptions{})
 		if err != nil {
 			t.Fatalf("InspectLockfile(pnpm-next) failed: %v", err)
 		}
 
 		if infoPnpm.ChecksumSha256 == infoPnpmNext.ChecksumSha256 {
 			t.Errorf("expected different checksums, both are %q", infoPnpm.ChecksumSha256)
+		}
+	})
+}
+
+type tarEntry struct {
+	name    string
+	content []byte
+}
+
+func buildTarGz(t *testing.T, entries []tarEntry) string {
+	t.Helper()
+
+	p := filepath.Join(t.TempDir(), "archive.tar.gz")
+	f, err := os.Create(p)
+	if err != nil {
+		t.Fatalf("create archive: %v", err)
+	}
+	gz := gzip.NewWriter(f)
+	tw := tar.NewWriter(gz)
+
+	for _, e := range entries {
+		hdr := &tar.Header{
+			Name:     e.name,
+			Mode:     0644,
+			Size:     int64(len(e.content)),
+			Typeflag: tar.TypeReg,
+		}
+		if err := tw.WriteHeader(hdr); err != nil {
+			t.Fatalf("write header %q: %v", e.name, err)
+		}
+		if _, err := tw.Write(e.content); err != nil {
+			t.Fatalf("write body %q: %v", e.name, err)
+		}
+	}
+
+	if err := tw.Close(); err != nil {
+		t.Fatalf("close tar: %v", err)
+	}
+	if err := gz.Close(); err != nil {
+		t.Fatalf("close gzip: %v", err)
+	}
+	if err := f.Close(); err != nil {
+		t.Fatalf("close file: %v", err)
+	}
+	return p
+}
+
+const syntheticPackageLock = `{
+  "name": "example",
+  "version": "1.0.0",
+  "lockfileVersion": 3,
+  "packages": {
+    "": {"name": "example", "version": "1.0.0", "dependencies": {"@playwright/test": "1.58.2"}},
+    "node_modules/@playwright/test": {"version": "1.58.2"}
+  }
+}`
+
+func inspectWithExcludedVersion(t *testing.T, file string) *LockfileInfo {
+	t.Helper()
+	attr := PlaywrightCodeBundlePrebuiltArchiveAttribute{File: file}
+	info, err := attr.InspectLockfile("@playwright/test", InspectLockfileOptions{
+		PackageJSONExcludedFields: []string{"version"},
+	})
+	if err != nil {
+		t.Fatalf("InspectLockfile failed: %v", err)
+	}
+	if info == nil {
+		t.Fatalf("InspectLockfile returned nil")
+	}
+	return info
+}
+
+func TestInspectLockfileChecksumIncludesPackageJSON(t *testing.T) {
+	t.Parallel()
+
+	t.Run("excluded top-level field ignored", func(t *testing.T) {
+		t.Parallel()
+
+		a := buildTarGz(t, []tarEntry{
+			{"package-lock.json", []byte(syntheticPackageLock)},
+			{"package.json", []byte(`{"name":"example","version":"1.0.0"}`)},
+		})
+		b := buildTarGz(t, []tarEntry{
+			{"package-lock.json", []byte(syntheticPackageLock)},
+			{"package.json", []byte(`{"name":"example","version":"2.0.0"}`)},
+		})
+
+		if inspectWithExcludedVersion(t, a).ChecksumSha256 != inspectWithExcludedVersion(t, b).ChecksumSha256 {
+			t.Error("checksum should be stable when only an excluded field changes")
+		}
+	})
+
+	t.Run("non-excluded field affects checksum", func(t *testing.T) {
+		t.Parallel()
+
+		a := buildTarGz(t, []tarEntry{
+			{"package-lock.json", []byte(syntheticPackageLock)},
+			{"package.json", []byte(`{"name":"example","version":"1.0.0"}`)},
+		})
+		b := buildTarGz(t, []tarEntry{
+			{"package-lock.json", []byte(syntheticPackageLock)},
+			{"package.json", []byte(`{"name":"renamed","version":"1.0.0"}`)},
+		})
+
+		if inspectWithExcludedVersion(t, a).ChecksumSha256 == inspectWithExcludedVersion(t, b).ChecksumSha256 {
+			t.Error("checksum should change when a non-excluded field changes")
+		}
+	})
+
+	t.Run("package.json inside node_modules is ignored", func(t *testing.T) {
+		t.Parallel()
+
+		a := buildTarGz(t, []tarEntry{
+			{"package-lock.json", []byte(syntheticPackageLock)},
+			{"package.json", []byte(`{"name":"example","version":"1.0.0"}`)},
+			{"node_modules/@playwright/test/package.json", []byte(`{"name":"@playwright/test","main":"index.js"}`)},
+		})
+		b := buildTarGz(t, []tarEntry{
+			{"package-lock.json", []byte(syntheticPackageLock)},
+			{"package.json", []byte(`{"name":"example","version":"1.0.0"}`)},
+			{"node_modules/@playwright/test/package.json", []byte(`{"name":"different","main":"other.js"}`)},
+		})
+
+		if inspectWithExcludedVersion(t, a).ChecksumSha256 != inspectWithExcludedVersion(t, b).ChecksumSha256 {
+			t.Error("package.json inside node_modules should not contribute to checksum")
+		}
+	})
+
+	t.Run("nested package.json outside node_modules is included", func(t *testing.T) {
+		t.Parallel()
+
+		a := buildTarGz(t, []tarEntry{
+			{"package-lock.json", []byte(syntheticPackageLock)},
+			{"package.json", []byte(`{"name":"root"}`)},
+		})
+		b := buildTarGz(t, []tarEntry{
+			{"package-lock.json", []byte(syntheticPackageLock)},
+			{"package.json", []byte(`{"name":"root"}`)},
+			{"packages/e2e/package.json", []byte(`{"name":"e2e"}`)},
+		})
+
+		if inspectWithExcludedVersion(t, a).ChecksumSha256 == inspectWithExcludedVersion(t, b).ChecksumSha256 {
+			t.Error("adding a nested package.json should change the checksum")
+		}
+	})
+
+	t.Run("whitespace and key order are canonicalized", func(t *testing.T) {
+		t.Parallel()
+
+		a := buildTarGz(t, []tarEntry{
+			{"package-lock.json", []byte(syntheticPackageLock)},
+			{"package.json", []byte(`{"name":"example","scripts":{"test":"playwright test"}}`)},
+		})
+		b := buildTarGz(t, []tarEntry{
+			{"package-lock.json", []byte(syntheticPackageLock)},
+			{"package.json", []byte("{\n  \"scripts\": { \"test\": \"playwright test\" },\n  \"name\": \"example\"\n}\n")},
+		})
+
+		if inspectWithExcludedVersion(t, a).ChecksumSha256 != inspectWithExcludedVersion(t, b).ChecksumSha256 {
+			t.Error("checksum should match regardless of whitespace or key order")
+		}
+	})
+
+	t.Run("tar entry order does not affect checksum", func(t *testing.T) {
+		t.Parallel()
+
+		rootPkg := []byte(`{"name":"root"}`)
+		nestedPkg := []byte(`{"name":"nested"}`)
+
+		a := buildTarGz(t, []tarEntry{
+			{"package-lock.json", []byte(syntheticPackageLock)},
+			{"package.json", rootPkg},
+			{"packages/e2e/package.json", nestedPkg},
+		})
+		b := buildTarGz(t, []tarEntry{
+			{"packages/e2e/package.json", nestedPkg},
+			{"package.json", rootPkg},
+			{"package-lock.json", []byte(syntheticPackageLock)},
+		})
+
+		if inspectWithExcludedVersion(t, a).ChecksumSha256 != inspectWithExcludedVersion(t, b).ChecksumSha256 {
+			t.Error("checksum should be stable regardless of tar entry order")
 		}
 	})
 }

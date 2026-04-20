@@ -4,16 +4,18 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
-	"crypto/sha256"
-	"encoding/hex"
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path"
+	"sort"
 	"strings"
 
 	checkly "github.com/checkly/checkly-go-sdk"
@@ -76,7 +78,11 @@ func resourcePlaywrightCodeBundle() *schema.Resource {
 					}
 
 					switch {
-					case bundle.Data.Version < 3:
+					case bundle.Data.Version < PlaywrightCodeBundleMetadataCurrentVersion:
+						// Older provider has been upgraded to a newer version.
+						// Data should be updated.
+					case bundle.Data.Version > PlaywrightCodeBundleMetadataCurrentVersion:
+						// A newer provider has been downgraded to our version.
 						// Data should be updated.
 					case checksum != bundle.Data.ChecksumSha256:
 						// Data should be updated.
@@ -85,7 +91,16 @@ func resourcePlaywrightCodeBundle() *schema.Resource {
 						return nil
 					}
 
-					lockfileInfo, err := bundle.PrebuiltArchive.InspectLockfile("@playwright/test")
+					lockfileInfo, err := bundle.PrebuiltArchive.InspectLockfile("@playwright/test", InspectLockfileOptions{
+						PackageJSONExcludedFields: []string{
+							// Exclude "version" because CI workflows often
+							// stamp it with a commit hash or build number.
+							// Including it would invalidate the dependency
+							// cache on every build even when no dependencies
+							// actually changed.
+							"version",
+						},
+					})
 					if err != nil {
 						return fmt.Errorf("failed to inspect lockfile in archive: %w", err)
 					}
@@ -109,11 +124,11 @@ func resourcePlaywrightCodeBundle() *schema.Resource {
 						return fmt.Errorf("failed to detect working directory in archive: %v", err)
 					}
 
-					bundle.Data.Version = 3
+					bundle.Data.Version = PlaywrightCodeBundleMetadataCurrentVersion
 					bundle.Data.ChecksumSha256 = checksum
 					bundle.Data.PlaywrightVersion = lockfileInfo.PackageVersion
 					bundle.Data.PackageManager = lockfileInfo.PackageManager
-					bundle.Data.LockfileChecksum = lockfileInfo.ChecksumSha256
+					bundle.Data.CacheHash = lockfileInfo.ChecksumSha256
 					bundle.Data.WorkingDir = workingDir
 
 					err = diff.SetNew(metadataAttributeName, bundle.Data.EncodeToString())
@@ -218,13 +233,15 @@ func resourcePlaywrightCodeBundleDelete(
 	return diags
 }
 
+const PlaywrightCodeBundleMetadataCurrentVersion = 4
+
 type PlaywrightCodeBundleMetadata struct {
-	Version            int    `json:"v"`
-	ChecksumSha256     string `json:"s256"`
-	PlaywrightVersion  string `json:"pwv,omitempty"`
-	PackageManager     string `json:"pm,omitempty"`
-	LockfileChecksum   string `json:"lcs,omitempty"`
-	WorkingDir         string `json:"wd,omitempty"`
+	Version           int    `json:"v"`
+	ChecksumSha256    string `json:"s256"`
+	PlaywrightVersion string `json:"pwv,omitempty"`
+	PackageManager    string `json:"pm,omitempty"`
+	CacheHash         string `json:"ch,omitempty"`
+	WorkingDir        string `json:"wd,omitempty"`
 }
 
 func PlaywrightCodeBundleMetadataFromString(s string) (*PlaywrightCodeBundleMetadata, error) {
@@ -359,9 +376,9 @@ func (a *PlaywrightCodeBundlePrebuiltArchiveAttribute) ChecksumSha256() (string,
 
 // LockfileInfo contains information extracted from a lockfile found in an archive.
 type LockfileInfo struct {
-	PackageManager   string
-	PackageVersion   string
-	ChecksumSha256   string
+	PackageManager string
+	PackageVersion string
+	ChecksumSha256 string
 }
 
 type lockfileParser struct {
@@ -384,11 +401,32 @@ var ErrUnsupportedBunLockb = errors.New(
 		"`saveTextLockfile = true` under `[install.lockfile]` in bunfig.toml, then rebuild the archive",
 )
 
+// InspectLockfileOptions controls optional behavior of InspectLockfile.
+type InspectLockfileOptions struct {
+	// PackageJSONExcludedFields lists top-level keys to remove from every
+	// package.json before it contributes to ChecksumSha256. Useful for
+	// fields that don't affect runtime behavior, like "version".
+	PackageJSONExcludedFields []string
+}
+
+type packageJSONEntry struct {
+	path string
+	raw  []byte
+}
+
 // InspectLockfile opens the tar.gz archive and searches for a lockfile
 // (package-lock.json, pnpm-lock.yaml, yarn.lock, or bun.lock) at the root
 // of the archive. If found, it returns the detected package manager and
 // the resolved version of the given package.
-func (a *PlaywrightCodeBundlePrebuiltArchiveAttribute) InspectLockfile(packageName string) (*LockfileInfo, error) {
+//
+// ChecksumSha256 covers both the lockfile contents and every package.json
+// outside node_modules (at any depth). Each package.json is canonicalized
+// as JSON with opts.PackageJSONExcludedFields removed from the top level,
+// so cosmetic changes and excluded fields don't influence the checksum.
+func (a *PlaywrightCodeBundlePrebuiltArchiveAttribute) InspectLockfile(
+	packageName string,
+	opts InspectLockfileOptions,
+) (*LockfileInfo, error) {
 	file, err := os.Open(a.File)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open archive file %q: %w", a.File, err)
@@ -403,7 +441,15 @@ func (a *PlaywrightCodeBundlePrebuiltArchiveAttribute) InspectLockfile(packageNa
 
 	tr := tar.NewReader(gzr)
 
-	var sawBunLockb bool
+	var (
+		sawBunLockb    bool
+		lockfileName   string
+		lockfileHash   []byte
+		packageManager string
+		packageVersion string
+		packageJSONs   []packageJSONEntry
+	)
+
 	for {
 		header, err := tr.Next()
 		if err == io.EOF {
@@ -417,8 +463,18 @@ func (a *PlaywrightCodeBundlePrebuiltArchiveAttribute) InspectLockfile(packageNa
 			continue
 		}
 
-		// Only consider files at the root of the archive.
 		name := strings.TrimPrefix(header.Name, "./")
+
+		if path.Base(name) == "package.json" && !hasNodeModulesSegment(name) {
+			raw, err := io.ReadAll(tr)
+			if err != nil {
+				return nil, fmt.Errorf("failed to read %q from archive %q: %w", header.Name, a.File, err)
+			}
+			packageJSONs = append(packageJSONs, packageJSONEntry{path: name, raw: raw})
+			continue
+		}
+
+		// Only consider lockfiles at the root of the archive.
 		if strings.Contains(name, "/") {
 			continue
 		}
@@ -430,6 +486,11 @@ func (a *PlaywrightCodeBundlePrebuiltArchiveAttribute) InspectLockfile(packageNa
 
 		parser, ok := lockfileParsers[name]
 		if !ok {
+			continue
+		}
+
+		if lockfileName != "" {
+			// Already parsed a lockfile; ignore any duplicates.
 			continue
 		}
 
@@ -448,18 +509,85 @@ func (a *PlaywrightCodeBundlePrebuiltArchiveAttribute) InspectLockfile(packageNa
 			return nil, fmt.Errorf("failed to read lockfile %q from archive: %w", header.Name, err)
 		}
 
-		return &LockfileInfo{
-			PackageManager: parser.packageManager,
-			PackageVersion: version,
-			ChecksumSha256: hex.EncodeToString(hash.Sum(nil)),
-		}, nil
+		lockfileName = name
+		lockfileHash = hash.Sum(nil)
+		packageManager = parser.packageManager
+		packageVersion = version
 	}
 
-	if sawBunLockb {
-		return nil, ErrUnsupportedBunLockb
+	if lockfileName == "" {
+		if sawBunLockb {
+			return nil, ErrUnsupportedBunLockb
+		}
+		return nil, nil
 	}
 
-	return nil, nil
+	checksum, err := composeBundleChecksum(lockfileName, lockfileHash, packageJSONs, opts.PackageJSONExcludedFields)
+	if err != nil {
+		return nil, fmt.Errorf("failed to compute archive checksum: %w", err)
+	}
+
+	return &LockfileInfo{
+		PackageManager: packageManager,
+		PackageVersion: packageVersion,
+		ChecksumSha256: checksum,
+	}, nil
+}
+
+func hasNodeModulesSegment(p string) bool {
+	return strings.Contains("/"+p+"/", "/node_modules/")
+}
+
+// canonicalizePackageJSON parses raw as JSON, deletes the named top-level
+// fields, and re-encodes. Re-encoding via json.Marshal produces output with
+// map keys sorted alphabetically, so whitespace and key order in the source
+// don't affect the result.
+func canonicalizePackageJSON(raw []byte, excludedFields []string) ([]byte, error) {
+	var obj map[string]any
+	if err := json.Unmarshal(raw, &obj); err != nil {
+		return nil, fmt.Errorf("failed to parse package.json: %w", err)
+	}
+	for _, f := range excludedFields {
+		delete(obj, f)
+	}
+	return json.Marshal(obj)
+}
+
+// composeBundleChecksum combines the lockfile hash and every canonicalized
+// package.json (sorted by path) into a single SHA-256. Records are
+// length-prefixed to prevent collisions from ambiguous concatenation.
+func composeBundleChecksum(
+	lockfileName string,
+	lockfileHash []byte,
+	packageJSONs []packageJSONEntry,
+	excludedFields []string,
+) (string, error) {
+	sort.Slice(packageJSONs, func(i, j int) bool {
+		return packageJSONs[i].path < packageJSONs[j].path
+	})
+
+	h := sha256.New()
+	writeRecord := func(label string, content []byte) {
+		var lenBuf [8]byte
+		binary.BigEndian.PutUint64(lenBuf[:], uint64(len(label)))
+		h.Write(lenBuf[:])
+		h.Write([]byte(label))
+		binary.BigEndian.PutUint64(lenBuf[:], uint64(len(content)))
+		h.Write(lenBuf[:])
+		h.Write(content)
+	}
+
+	writeRecord("lockfile:"+lockfileName, lockfileHash)
+
+	for _, entry := range packageJSONs {
+		canonical, err := canonicalizePackageJSON(entry.raw, excludedFields)
+		if err != nil {
+			return "", fmt.Errorf("failed to canonicalize %q: %w", entry.path, err)
+		}
+		writeRecord("package.json:"+entry.path, canonical)
+	}
+
+	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
 var playwrightConfigExtensions = map[string]bool{
