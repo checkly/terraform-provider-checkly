@@ -78,7 +78,11 @@ func resourcePlaywrightCodeBundle() *schema.Resource {
 					}
 
 					switch {
-					case bundle.Data.Version < 4:
+					case bundle.Data.Version < PlaywrightCodeBundleMetadataCurrentVersion:
+						// Older provider has been upgraded to a newer version.
+						// Data should be updated.
+					case bundle.Data.Version > PlaywrightCodeBundleMetadataCurrentVersion:
+						// A newer provider has been downgraded to our version.
 						// Data should be updated.
 					case checksum != bundle.Data.ChecksumSha256:
 						// Data should be updated.
@@ -120,7 +124,7 @@ func resourcePlaywrightCodeBundle() *schema.Resource {
 						return fmt.Errorf("failed to detect working directory in archive: %v", err)
 					}
 
-					bundle.Data.Version = 4
+					bundle.Data.Version = PlaywrightCodeBundleMetadataCurrentVersion
 					bundle.Data.ChecksumSha256 = checksum
 					bundle.Data.PlaywrightVersion = lockfileInfo.PackageVersion
 					bundle.Data.PackageManager = lockfileInfo.PackageManager
@@ -228,6 +232,8 @@ func resourcePlaywrightCodeBundleDelete(
 	// it is no longer in use.
 	return diags
 }
+
+const PlaywrightCodeBundleMetadataCurrentVersion = 4
 
 type PlaywrightCodeBundleMetadata struct {
 	Version           int    `json:"v"`
