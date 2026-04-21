@@ -38,6 +38,7 @@ func TestAccICMPMonitorBasic(t *testing.T) {
 			Config: `
 				resource "checkly_icmp_monitor" "test" {
 					name                      = "ICMP Monitor 1"
+					description               = "ICMP monitor description"
 					frequency                 = 60
 					activated                 = true
 					muted                     = true
@@ -61,6 +62,11 @@ func TestAccICMPMonitorBasic(t *testing.T) {
 					"checkly_icmp_monitor.test",
 					"name",
 					"ICMP Monitor 1",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_icmp_monitor.test",
+					"description",
+					"ICMP monitor description",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_icmp_monitor.test",
@@ -102,6 +108,68 @@ func TestAccICMPMonitorBasic(t *testing.T) {
 					"request.*.assertion.*.target",
 					"200",
 				),
+			),
+		},
+	})
+}
+
+func TestAccICMPMonitorDescriptionRemoval(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_icmp_monitor" "test" {
+					name                      = "ICMP Monitor 1"
+					description               = "ICMP monitor description"
+					frequency                 = 60
+					activated                 = true
+					muted                     = true
+					locations                 = ["us-east-1", "eu-central-1"]
+					use_global_alert_settings = true
+
+					request {
+						hostname = "example.com"
+
+						assertion {
+							source     = "LATENCY"
+							property   = "avg"
+							comparison = "LESS_THAN"
+							target     = "200"
+						}
+					}
+				}
+			`,
+			Check: resource.TestCheckResourceAttr(
+				"checkly_icmp_monitor.test",
+				"description",
+				"ICMP monitor description",
+			),
+		},
+		{
+			Config: `
+				resource "checkly_icmp_monitor" "test" {
+					name                      = "ICMP Monitor 1"
+					frequency                 = 60
+					activated                 = true
+					muted                     = true
+					locations                 = ["us-east-1", "eu-central-1"]
+					use_global_alert_settings = true
+
+					request {
+						hostname = "example.com"
+
+						assertion {
+							source     = "LATENCY"
+							property   = "avg"
+							comparison = "LESS_THAN"
+							target     = "200"
+						}
+					}
+				}
+			`,
+			Check: resource.TestCheckResourceAttr(
+				"checkly_icmp_monitor.test",
+				"description",
+				"",
 			),
 		},
 	})

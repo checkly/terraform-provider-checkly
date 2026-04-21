@@ -27,6 +27,11 @@ func resourceDNSMonitor() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 			},
+			"description": {
+				Description: "A description of the monitor.",
+				Type:        schema.TypeString,
+				Optional:    true,
+			},
 			frequencyAttributeName: makeFrequencyAttributeSchema(FrequencyAttributeSchemaOptions{
 				Monitor:            true,
 				AllowHighFrequency: true,
@@ -269,6 +274,7 @@ func resourceDNSMonitorDelete(d *schema.ResourceData, client interface{}) error 
 
 func resourceDataFromDNSMonitor(c *checkly.DNSMonitor, d *schema.ResourceData) error {
 	d.Set("name", c.Name)
+	d.Set("description", c.Description)
 	d.Set("activated", c.Activated)
 	d.Set("muted", c.Muted)
 	d.Set("run_parallel", c.RunParallel)
@@ -308,6 +314,7 @@ func dnsMonitorFromResourceData(d *schema.ResourceData) (checkly.DNSMonitor, err
 	check := checkly.DNSMonitor{
 		ID:                        d.Id(),
 		Name:                      d.Get("name").(string),
+		Description:               optionalStringPointerFromResourceData(d, "description"),
 		Frequency:                 d.Get(frequencyAttributeName).(int),
 		Activated:                 d.Get("activated").(bool),
 		Muted:                     d.Get("muted").(bool),

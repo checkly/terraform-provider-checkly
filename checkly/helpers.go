@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func apiCallTimeout() time.Duration {
@@ -105,3 +107,13 @@ func decodeNumericID(id string) (int64, error) {
 func encodeNumericID(id int64) string {
 	return strconv.FormatInt(id, 10)
 }
+
+func optionalStringPointerFromResourceData(d *schema.ResourceData, key string) *string {
+	value, ok := d.GetOk(key)
+	if !ok {
+		return nil
+	}
+	str := value.(string)
+	return &str
+}
+

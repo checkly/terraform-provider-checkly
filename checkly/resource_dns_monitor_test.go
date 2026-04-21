@@ -38,6 +38,7 @@ func TestAccDNSMonitorBasic(t *testing.T) {
 			Config: `
 				resource "checkly_dns_monitor" "test" {
 					name                      = "DNS Monitor 1"
+					description               = "DNS monitor description"
 					frequency                 = 60
 					activated                 = true
 					muted                     = true
@@ -62,6 +63,11 @@ func TestAccDNSMonitorBasic(t *testing.T) {
 					"checkly_dns_monitor.test",
 					"name",
 					"DNS Monitor 1",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test",
+					"description",
+					"DNS monitor description",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_dns_monitor.test",
@@ -108,6 +114,70 @@ func TestAccDNSMonitorBasic(t *testing.T) {
 					"request.*.assertion.*.target",
 					"NOERROR",
 				),
+			),
+		},
+	})
+}
+
+func TestAccDNSMonitorDescriptionRemoval(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_dns_monitor" "test" {
+					name                      = "DNS Monitor 1"
+					description               = "DNS monitor description"
+					frequency                 = 60
+					activated                 = true
+					muted                     = true
+					max_response_time         = 3000
+					locations                 = ["us-east-1", "eu-central-1"]
+					use_global_alert_settings = true
+
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+
+						assertion {
+							source     = "RESPONSE_CODE"
+							comparison = "EQUALS"
+							target     = "NOERROR"
+						}
+					}
+				}
+			`,
+			Check: resource.TestCheckResourceAttr(
+				"checkly_dns_monitor.test",
+				"description",
+				"DNS monitor description",
+			),
+		},
+		{
+			Config: `
+				resource "checkly_dns_monitor" "test" {
+					name                      = "DNS Monitor 1"
+					frequency                 = 60
+					activated                 = true
+					muted                     = true
+					max_response_time         = 3000
+					locations                 = ["us-east-1", "eu-central-1"]
+					use_global_alert_settings = true
+
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+
+						assertion {
+							source     = "RESPONSE_CODE"
+							comparison = "EQUALS"
+							target     = "NOERROR"
+						}
+					}
+				}
+			`,
+			Check: resource.TestCheckResourceAttr(
+				"checkly_dns_monitor.test",
+				"description",
+				"",
 			),
 		},
 	})

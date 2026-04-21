@@ -160,6 +160,7 @@ func TestAccHeartbeatMonitorCreate(t *testing.T) {
 	config := `resource "checkly_heartbeat_monitor" "test" {
 		activated = true
 		name = "heartbeat monitor"
+		description = "Heartbeat monitor description"
 		heartbeat {
 			period = 5
 			period_unit = "days"
@@ -176,6 +177,11 @@ func TestAccHeartbeatMonitorCreate(t *testing.T) {
 					"name",
 					"heartbeat monitor",
 				),
+				resource.TestCheckResourceAttr(
+					"checkly_heartbeat_monitor.test",
+					"description",
+					"Heartbeat monitor description",
+				),
 				testCheckResourceAttrExpr(
 					"checkly_heartbeat_monitor.test",
 					"heartbeat.*.period",
@@ -186,6 +192,46 @@ func TestAccHeartbeatMonitorCreate(t *testing.T) {
 					"heartbeat.*.period_unit",
 					"days",
 				),
+			),
+		},
+	})
+}
+
+func TestAccHeartbeatMonitorDescriptionRemoval(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `resource "checkly_heartbeat_monitor" "test" {
+				activated = true
+				name = "heartbeat monitor"
+				description = "Heartbeat monitor description"
+				heartbeat {
+					period = 5
+					period_unit = "days"
+					grace = 0
+					grace_unit = "seconds"
+				}
+			}`,
+			Check: resource.TestCheckResourceAttr(
+				"checkly_heartbeat_monitor.test",
+				"description",
+				"Heartbeat monitor description",
+			),
+		},
+		{
+			Config: `resource "checkly_heartbeat_monitor" "test" {
+				activated = true
+				name = "heartbeat monitor"
+				heartbeat {
+					period = 5
+					period_unit = "days"
+					grace = 0
+					grace_unit = "seconds"
+				}
+			}`,
+			Check: resource.TestCheckResourceAttr(
+				"checkly_heartbeat_monitor.test",
+				"description",
+				"",
 			),
 		},
 	})

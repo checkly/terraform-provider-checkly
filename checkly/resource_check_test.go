@@ -100,6 +100,11 @@ func TestAccBrowserCheckBasic(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_check.test",
+					"description",
+					"Browser check description",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test",
 					"type",
 					"BROWSER",
 				),
@@ -162,6 +167,11 @@ func TestAccApiCheckBasic(t *testing.T) {
 					"checkly_check.test",
 					"name",
 					"API Check 1",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_check.test",
+					"description",
+					"API check description",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_check.test",
@@ -586,8 +596,11 @@ EOT
 	})
 }
 
+var wantCheckDescription = "My test check description"
+
 var wantCheck = checkly.Check{
 	Name:                 "My test check",
+	Description:          &wantCheckDescription,
 	Type:                 checkly.TypeAPI,
 	Frequency:            1,
 	Activated:            true,
@@ -1327,9 +1340,31 @@ func TestAccCheckRetryStrategyRemoval(t *testing.T) {
 	})
 }
 
+func TestAccCheckDescriptionRemoval(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: apiCheck_basic,
+			Check: resource.TestCheckResourceAttr(
+				"checkly_check.test",
+				"description",
+				"API check description",
+			),
+		},
+		{
+			Config: apiCheck_basic_withoutDescription,
+			Check: resource.TestCheckResourceAttr(
+				"checkly_check.test",
+				"description",
+				"",
+			),
+		},
+	})
+}
+
 const browserCheck_basic = `
 	resource "checkly_check" "test" {
 		name                      = "Browser Check"
+		description               = "Browser check description"
 		type                      = "BROWSER"
 		activated                 = true
 		should_fail               = false
@@ -1358,6 +1393,31 @@ const multiStepCheck_basic = `
 `
 
 const apiCheck_basic = `
+	resource "checkly_check" "test" {
+	  name                      = "API Check 1"
+	  description               = "API check description"
+	  type                      = "API"
+	  frequency                 = 60
+	  activated                 = true
+	  muted                     = true
+	  double_check              = true
+	  max_response_time         = 18000
+	  locations                 = [ "us-east-1", "eu-central-1" ]
+	  use_global_alert_settings = true
+	  request {
+		method     = "GET"
+		url        = "https://api.checklyhq.com/public-stats"
+		assertion {
+		  comparison = "EQUALS"
+		  property   = ""
+		  source     = "STATUS_CODE"
+		  target     = "200"
+		}
+	  }
+	}
+`
+
+const apiCheck_basic_withoutDescription = `
 	resource "checkly_check" "test" {
 	  name                      = "API Check 1"
 	  type                      = "API"
