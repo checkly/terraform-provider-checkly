@@ -121,10 +121,3 @@ func optionalStringPointerFromResourceData(d *schema.ResourceData, key string) *
 	return &str
 }
 
-func setOptionalStringResourceData(d *schema.ResourceData, key string, value *string) error {
-	if value == nil {
-		return d.Set(key, nil)
-	}
-
-	return d.Set(key, *value)
-}

@@ -418,9 +418,7 @@ func resourceCheckDelete(d *schema.ResourceData, client interface{}) error {
 
 func resourceDataFromCheck(c *checkly.Check, d *schema.ResourceData) error {
 	d.Set("name", c.Name)
-	if err := setOptionalStringResourceData(d, "description", c.Description); err != nil {
-		return fmt.Errorf("error setting description for resource %s: %w", d.Id(), err)
-	}
+	d.Set("description", c.Description)
 	d.Set("type", c.Type)
 	d.Set("activated", c.Activated)
 	d.Set("muted", c.Muted)
