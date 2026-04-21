@@ -174,7 +174,11 @@ func TestAccDNSMonitorDescriptionRemoval(t *testing.T) {
 					}
 				}
 			`,
-			Check: testCheckOptionalAttrRemoved("checkly_dns_monitor.test", "description"),
+			Check: resource.TestCheckResourceAttr(
+				"checkly_dns_monitor.test",
+				"description",
+				"",
+			),
 		},
 	})
 }

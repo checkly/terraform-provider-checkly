@@ -63,20 +63,3 @@ func testCheckResourceAttrExpr(resource, attrExpr, value string) func(s *terrafo
 		return err
 	}
 }
-
-// testCheckOptionalAttrRemoved asserts that an optional attribute is either
-// absent from state or empty — the expected shape after a user removes an
-// Optional string field from their Terraform config.
-func testCheckOptionalAttrRemoved(resourceName, attr string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		res, ok := s.Modules[0].Resources[resourceName]
-		if !ok {
-			return fmt.Errorf("Resource not found: %s", resourceName)
-		}
-		value, present := res.Primary.Attributes[attr]
-		if !present || value == "" {
-			return nil
-		}
-		return resource.TestCheckNoResourceAttr(resourceName, attr)(s)
-	}
-}

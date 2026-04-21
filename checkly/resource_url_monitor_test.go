@@ -106,7 +106,11 @@ func TestAccURLMonitorDescriptionRemoval(t *testing.T) {
 		},
 		{
 			Config: urlMonitor_basic_withoutDescription,
-			Check:  testCheckOptionalAttrRemoved("checkly_url_monitor.test", "description"),
+			Check: resource.TestCheckResourceAttr(
+				"checkly_url_monitor.test",
+				"description",
+				"",
+			),
 		},
 	})
 }

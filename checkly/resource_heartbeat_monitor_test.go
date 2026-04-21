@@ -228,7 +228,11 @@ func TestAccHeartbeatMonitorDescriptionRemoval(t *testing.T) {
 					grace_unit = "seconds"
 				}
 			}`,
-			Check: testCheckOptionalAttrRemoved("checkly_heartbeat_monitor.test", "description"),
+			Check: resource.TestCheckResourceAttr(
+				"checkly_heartbeat_monitor.test",
+				"description",
+				"",
+			),
 		},
 	})
 }

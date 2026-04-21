@@ -1352,7 +1352,11 @@ func TestAccCheckDescriptionRemoval(t *testing.T) {
 		},
 		{
 			Config: apiCheck_basic_withoutDescription,
-			Check:  testCheckOptionalAttrRemoved("checkly_check.test", "description"),
+			Check: resource.TestCheckResourceAttr(
+				"checkly_check.test",
+				"description",
+				"",
+			),
 		},
 	})
 }

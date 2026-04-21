@@ -109,7 +109,11 @@ func TestAccTCPMonitorDescriptionRemoval(t *testing.T) {
 		},
 		{
 			Config: tcpMonitor_basic_withoutDescription,
-			Check:  testCheckOptionalAttrRemoved("checkly_tcp_monitor.test", "description"),
+			Check: resource.TestCheckResourceAttr(
+				"checkly_tcp_monitor.test",
+				"description",
+				"",
+			),
 		},
 	})
 }

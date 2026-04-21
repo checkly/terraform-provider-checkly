@@ -166,7 +166,11 @@ func TestAccICMPMonitorDescriptionRemoval(t *testing.T) {
 					}
 				}
 			`,
-			Check: testCheckOptionalAttrRemoved("checkly_icmp_monitor.test", "description"),
+			Check: resource.TestCheckResourceAttr(
+				"checkly_icmp_monitor.test",
+				"description",
+				"",
+			),
 		},
 	})
 }
