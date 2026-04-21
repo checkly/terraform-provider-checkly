@@ -113,11 +113,7 @@ func optionalStringPointerFromResourceData(d *schema.ResourceData, key string) *
 	if !ok {
 		return nil
 	}
-
 	str := value.(string)
-	if str == "" {
-		return nil
-	}
 	return &str
 }
 
