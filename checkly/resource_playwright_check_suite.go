@@ -38,6 +38,11 @@ func resourcePlaywrightCheckSuite() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 			},
+			"description": {
+				Description: "A description of the check.",
+				Type:        schema.TypeString,
+				Optional:    true,
+			},
 			frequencyAttributeName: makeFrequencyAttributeSchema(FrequencyAttributeSchemaOptions{
 				Monitor:            false,
 				AllowHighFrequency: false,
@@ -585,6 +590,7 @@ func PlaywrightCheckSuiteResourceFromResourceData(
 	check := checkly.PlaywrightCheck{
 		ID:                        d.Id(),
 		Name:                      d.Get("name").(string),
+		Description:               optionalStringPointerFromResourceData(d, "description"),
 		Frequency:                 d.Get(frequencyAttributeName).(int),
 		Activated:                 d.Get("activated").(bool),
 		Muted:                     d.Get("muted").(bool),
@@ -746,6 +752,7 @@ func (r *PlaywrightCheckSuiteResource) StoreResourceData(
 	d *schema.ResourceData,
 ) error {
 	d.Set("name", r.Name)
+	d.Set("description", r.Description)
 	d.Set("activated", r.Activated)
 	d.Set("muted", r.Muted)
 	d.Set("run_parallel", r.RunParallel)

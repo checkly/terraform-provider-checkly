@@ -22,6 +22,7 @@ func TestAccPlaywrightCheckSuiteWithEnvironmentVariable(t *testing.T) {
 			Config: playwrightCheckSuiteBase + `
 				resource "checkly_playwright_check_suite" "test" {
 					name                      = "PW Check with env vars"
+					description               = "Playwright check description"
 					activated                 = true
 					frequency                 = 720
 					use_global_alert_settings = true
@@ -67,6 +68,11 @@ func TestAccPlaywrightCheckSuiteWithEnvironmentVariable(t *testing.T) {
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_playwright_check_suite.test",
+					"description",
+					"Playwright check description",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
 					"environment_variable.#",
 					"2",
 				),
@@ -100,6 +106,54 @@ func TestAccPlaywrightCheckSuiteWithEnvironmentVariable(t *testing.T) {
 					"environment_variable.1.locked",
 					"true",
 				),
+			),
+		},
+	})
+}
+
+func TestAccPlaywrightCheckSuiteDescriptionRemoval(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: playwrightCheckSuiteBase + `
+				resource "checkly_playwright_check_suite" "test" {
+					name                      = "PW Check description removal"
+					description               = "Playwright check description"
+					activated                 = true
+					frequency                 = 720
+					use_global_alert_settings = true
+					locations                 = ["us-east-1"]
+
+					bundle {
+						id       = checkly_playwright_code_bundle.test.id
+						metadata = checkly_playwright_code_bundle.test.metadata
+					}
+				}
+			`,
+			Check: resource.TestCheckResourceAttr(
+				"checkly_playwright_check_suite.test",
+				"description",
+				"Playwright check description",
+			),
+		},
+		{
+			Config: playwrightCheckSuiteBase + `
+				resource "checkly_playwright_check_suite" "test" {
+					name                      = "PW Check description removal"
+					activated                 = true
+					frequency                 = 720
+					use_global_alert_settings = true
+					locations                 = ["us-east-1"]
+
+					bundle {
+						id       = checkly_playwright_code_bundle.test.id
+						metadata = checkly_playwright_code_bundle.test.metadata
+					}
+				}
+			`,
+			Check: resource.TestCheckResourceAttr(
+				"checkly_playwright_check_suite.test",
+				"description",
+				"",
 			),
 		},
 	})
