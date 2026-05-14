@@ -177,11 +177,11 @@ func resourceAlertChannel() *schema.Resource {
 						AcFieldWebhookType: {
 							Type:        schema.TypeString,
 							Optional:    true,
-							Description: "Type of the webhook. Possible values are 'WEBHOOK_DISCORD', 'WEBHOOK_FIREHYDRANT', 'WEBHOOK_GITLAB_ALERT', 'WEBHOOK_SPIKESH', 'WEBHOOK_SPLUNK', 'WEBHOOK_MSTEAMS' and 'WEBHOOK_TELEGRAM'.",
+							Description: "Type of the webhook. Possible values are 'WEBHOOK_DISCORD', 'WEBHOOK_FIREHYDRANT', 'WEBHOOK_GITLAB_ALERT', 'WEBHOOK_ROOTLY', 'WEBHOOK_SPIKESH', 'WEBHOOK_SPLUNK', 'WEBHOOK_MSTEAMS' and 'WEBHOOK_TELEGRAM'. For 'WEBHOOK_ROOTLY', two routing modes are supported: In-App Routing uses url 'https://webhooks.rootly.com/webhooks/incoming/checkly_webhooks' and routes via Rootly Alert Routes; Direct Routing uses url 'https://webhooks.rootly.com/webhooks/incoming/checkly_webhooks/notify/<Type>/<ID>' where Type is one of 'Service', 'Group' (Teams), 'EscalationPolicy', or 'Functionality'.",
 							ValidateFunc: func(value interface{}, key string) (warns []string, errs []error) {
 								v := value.(string)
 								isValid := false
-								options := []string{"WEBHOOK_DISCORD", "WEBHOOK_FIREHYDRANT", "WEBHOOK_GITLAB_ALERT", "WEBHOOK_SPIKESH", "WEBHOOK_SPLUNK", "WEBHOOK_MSTEAMS", "WEBHOOK_TELEGRAM"}
+								options := []string{"WEBHOOK_DISCORD", "WEBHOOK_FIREHYDRANT", "WEBHOOK_GITLAB_ALERT", "WEBHOOK_ROOTLY", "WEBHOOK_SPIKESH", "WEBHOOK_SPLUNK", "WEBHOOK_MSTEAMS", "WEBHOOK_TELEGRAM"}
 								for _, option := range options {
 									if v == option {
 										isValid = true
