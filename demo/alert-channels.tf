@@ -93,3 +93,57 @@ resource "checkly_alert_channel" "firehydrant_ac" {
     webhook_type = "WEBHOOK_FIREHYDRANT"
   }
 }
+
+# A Rootly alert channel — In-App Routing mode.
+# Alerts are sent to Rootly and routed internally via Rootly Alert Routes.
+resource "checkly_alert_channel" "rootly_inapp_ac" {
+  webhook {
+    name           = "Rootly (In-App Routing)"
+    method         = "POST"
+    url            = "https://webhooks.rootly.com/webhooks/incoming/checkly_webhooks"
+    webhook_secret = "<rootly-webhook-secret>"
+    webhook_type   = "WEBHOOK_ROOTLY"
+    template       = <<EOT
+{
+  "alert_type": "{{ALERT_TYPE}}",
+  "check_id": "{{CHECK_ID}}",
+  "check_result_id": "{{CHECK_RESULT_ID}}",
+  "check_name": "{{CHECK_NAME}}",
+  "alert_title": "{{ALERT_TITLE}}",
+  "started_at": "{{STARTED_AT}}",
+  "link": "{{RESULT_LINK}}"
+}
+EOT
+  }
+
+  send_recovery = true
+  send_failure  = true
+}
+
+# A Rootly alert channel — Direct Routing mode.
+# Alerts are routed directly to a specific Rootly target via the URL.
+# Type is one of: Service, Group (for Teams), EscalationPolicy, Functionality.
+# The target ID can be found in the Rootly UI for the chosen resource.
+resource "checkly_alert_channel" "rootly_direct_ac" {
+  webhook {
+    name           = "Rootly (Direct Routing)"
+    method         = "POST"
+    url            = "https://webhooks.rootly.com/webhooks/incoming/checkly_webhooks/notify/EscalationPolicy/<rootly-escalation-policy-id>"
+    webhook_secret = "<rootly-webhook-secret>"
+    webhook_type   = "WEBHOOK_ROOTLY"
+    template       = <<EOT
+{
+  "alert_type": "{{ALERT_TYPE}}",
+  "check_id": "{{CHECK_ID}}",
+  "check_result_id": "{{CHECK_RESULT_ID}}",
+  "check_name": "{{CHECK_NAME}}",
+  "alert_title": "{{ALERT_TITLE}}",
+  "started_at": "{{STARTED_AT}}",
+  "link": "{{RESULT_LINK}}"
+}
+EOT
+  }
+
+  send_recovery = true
+  send_failure  = true
+}

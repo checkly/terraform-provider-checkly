@@ -6,7 +6,36 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
+
+func TestWebhookTypeValidation(t *testing.T) {
+	r := resourceAlertChannel()
+	webhookSchema := r.Schema[AcFieldWebhook].Elem.(*schema.Resource).Schema
+	validateFunc := webhookSchema[AcFieldWebhookType].ValidateFunc
+
+	valid := []string{
+		"WEBHOOK_DISCORD",
+		"WEBHOOK_FIREHYDRANT",
+		"WEBHOOK_GITLAB_ALERT",
+		"WEBHOOK_ROOTLY",
+		"WEBHOOK_SPIKESH",
+		"WEBHOOK_SPLUNK",
+		"WEBHOOK_MSTEAMS",
+		"WEBHOOK_TELEGRAM",
+	}
+	for _, v := range valid {
+		_, errs := validateFunc(v, AcFieldWebhookType)
+		if len(errs) > 0 {
+			t.Errorf("expected %q to be valid, got errors: %v", v, errs)
+		}
+	}
+
+	_, errs := validateFunc("WEBHOOK_UNKNOWN", AcFieldWebhookType)
+	if len(errs) == 0 {
+		t.Error("expected 'WEBHOOK_UNKNOWN' to be invalid, but got no errors")
+	}
+}
 
 func TestAccEmail(t *testing.T) {
 	accTestCase(t, []resource.TestStep{
