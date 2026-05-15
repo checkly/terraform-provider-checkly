@@ -49,13 +49,16 @@ const (
 )
 
 var webhookTypes = allowedValues[string]{
+	{Value: "WEBHOOK_CORALOGIX"},
 	{Value: "WEBHOOK_DISCORD"},
 	{Value: "WEBHOOK_FIREHYDRANT"},
 	{Value: "WEBHOOK_GITLAB_ALERT"},
+	{Value: "WEBHOOK_ILERT"},
+	{Value: "WEBHOOK_INCIDENTIO"},
+	{Value: "WEBHOOK_MSTEAMS"},
 	{Value: "WEBHOOK_ROOTLY"},
 	{Value: "WEBHOOK_SPIKESH"},
 	{Value: "WEBHOOK_SPLUNK"},
-	{Value: "WEBHOOK_MSTEAMS"},
 	{Value: "WEBHOOK_TELEGRAM"},
 }
 

@@ -260,4 +260,4 @@ Optional:
 - `query_parameters` (Map of String)
 - `template` (String)
 - `webhook_secret` (String)
-- `webhook_type` (String) Type of the webhook. The allowed values are `WEBHOOK_DISCORD`, `WEBHOOK_FIREHYDRANT`, `WEBHOOK_GITLAB_ALERT`, `WEBHOOK_ROOTLY`, `WEBHOOK_SPIKESH`, `WEBHOOK_SPLUNK`, `WEBHOOK_MSTEAMS` and `WEBHOOK_TELEGRAM`.
+- `webhook_type` (String) Type of the webhook. The allowed values are `WEBHOOK_CORALOGIX`, `WEBHOOK_DISCORD`, `WEBHOOK_FIREHYDRANT`, `WEBHOOK_GITLAB_ALERT`, `WEBHOOK_ILERT`, `WEBHOOK_INCIDENTIO`, `WEBHOOK_MSTEAMS`, `WEBHOOK_ROOTLY`, `WEBHOOK_SPIKESH`, `WEBHOOK_SPLUNK` and `WEBHOOK_TELEGRAM`.
