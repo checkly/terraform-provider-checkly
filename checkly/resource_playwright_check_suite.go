@@ -285,6 +285,7 @@ func resourcePlaywrightCheckSuite() *schema.Resource {
 				var isRuntimeStepsInstallBlockPresent bool
 				var isRuntimeStepsTestBlockPresent bool
 				var isRuntimeStepsTestCommandPresent bool
+				var isRuntimeEngineBlockPresent bool
 
 				runtimeIt := runtimeListAttr.ElementIterator()
 				if runtimeIt.Next() {
@@ -342,6 +343,12 @@ func resourcePlaywrightCheckSuite() *schema.Resource {
 
 							isRuntimeStepsTestCommandPresent = !commandAttr.IsNull()
 						}
+					}
+
+					engineListAttr := configRuntimeAttr.GetAttr("engine")
+					engineIt := engineListAttr.ElementIterator()
+					if engineIt.Next() {
+						isRuntimeEngineBlockPresent = true
 					}
 				}
 
@@ -418,6 +425,13 @@ func resourcePlaywrightCheckSuite() *schema.Resource {
 				if !isRuntimeStepsTestCommandPresent {
 					if runtimeAttr.Steps != nil && runtimeAttr.Steps.Test != nil && runtimeAttr.Steps.Test.Command != "" {
 						runtimeAttr.Steps.Test.Command = ""
+						overrideRuntime = true
+					}
+				}
+
+				if !isRuntimeEngineBlockPresent {
+					if runtimeAttr.Engine != nil {
+						runtimeAttr.Engine = nil
 						overrideRuntime = true
 					}
 				}
