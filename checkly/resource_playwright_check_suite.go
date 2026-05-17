@@ -687,6 +687,11 @@ func PlaywrightCheckSuiteResourceFromResourceData(
 				check.Browsers = browsers
 			}
 		}
+
+		if runtimeAttr.Engine != nil {
+			check.Engine = &runtimeAttr.Engine.Name
+			check.EngineVersion = &runtimeAttr.Engine.Version
+		}
 	}
 
 	resource := PlaywrightCheckSuiteResource{
@@ -758,6 +763,15 @@ func PlaywrightCheckSuiteResourceFromAPIModel(
 			}
 
 			runtimeAttr.Playwright.Devices = &devices
+		}
+	}
+
+	if check.Engine != nil && *check.Engine != "" {
+		runtimeAttr.Engine = &PlaywrightCheckSuiteRuntimeEngineAttribute{
+			Name: *check.Engine,
+		}
+		if check.EngineVersion != nil {
+			runtimeAttr.Engine.Version = *check.EngineVersion
 		}
 	}
 
