@@ -235,6 +235,28 @@ func resourcePlaywrightCheckSuite() *schema.Resource {
 								},
 							},
 						},
+						"engine": {
+							Description: "The JavaScript engine used to run the Playwright tests.",
+							Type:        schema.TypeList,
+							Optional:    true,
+							MaxItems:    1,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"name": {
+										Description:  `The engine name. Valid values are "node" or "bun".`,
+										Type:         schema.TypeString,
+										Required:     true,
+										ValidateFunc: validateOneOf([]string{"node", "bun"}),
+									},
+									"version": {
+										Description:  `The engine version. Valid values: "22", "24" for node; "1.3" for bun.`,
+										Type:         schema.TypeString,
+										Required:     true,
+										ValidateFunc: validateOneOf([]string{"22", "24", "1.3"}),
+									},
+								},
+							},
+						},
 					},
 				},
 			},
