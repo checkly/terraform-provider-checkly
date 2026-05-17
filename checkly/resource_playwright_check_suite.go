@@ -856,6 +856,7 @@ type PlaywrightCheckSuiteRuntimeAttribute struct {
 	WorkingDir string
 	Steps      *PlaywrightCheckSuiteRuntimeStepsAttribute
 	Playwright *PlaywrightCheckSuiteRuntimePlaywrightAttribute
+	Engine     *PlaywrightCheckSuiteRuntimeEngineAttribute
 }
 
 func PlaywrightCheckSuiteRuntimeAttributeFromList(
@@ -877,11 +878,17 @@ func PlaywrightCheckSuiteRuntimeAttributeFromList(
 		return nil, err
 	}
 
+	engineAttr, err := PlaywrightCheckSuiteRuntimeEngineAttributeFromList(m["engine"].([]any))
+	if err != nil {
+		return nil, err
+	}
+
 	a := PlaywrightCheckSuiteRuntimeAttribute{
 		AutoDetect: m["auto_detect"].(bool),
 		WorkingDir: m["working_dir"].(string),
 		Steps:      stepsAttr,
 		Playwright: playwrightAttr,
+		Engine:     engineAttr,
 	}
 
 	return &a, nil
@@ -898,6 +905,7 @@ func (a *PlaywrightCheckSuiteRuntimeAttribute) ToList() []tfMap {
 			"working_dir": a.WorkingDir,
 			"steps":       a.Steps.ToList(),
 			"playwright":  a.Playwright.ToList(),
+			"engine":      a.Engine.ToList(),
 		},
 	}
 }
@@ -1089,4 +1097,30 @@ func (a *PlaywrightCheckSuiteRuntimePlaywrightDeviceAttributes) ToList() []tfMap
 	}
 
 	return m
+}
+
+type PlaywrightCheckSuiteRuntimeEngineAttribute struct {
+	Name    string
+	Version string
+}
+
+func PlaywrightCheckSuiteRuntimeEngineAttributeFromList(list []any) (*PlaywrightCheckSuiteRuntimeEngineAttribute, error) {
+	if len(list) == 0 {
+		return nil, nil
+	}
+	m := list[0].(tfMap)
+	return &PlaywrightCheckSuiteRuntimeEngineAttribute{
+		Name:    m["name"].(string),
+		Version: m["version"].(string),
+	}, nil
+}
+
+func (a *PlaywrightCheckSuiteRuntimeEngineAttribute) ToList() []tfMap {
+	if a == nil {
+		return []tfMap{}
+	}
+	return []tfMap{{
+		"name":    a.Name,
+		"version": a.Version,
+	}}
 }
