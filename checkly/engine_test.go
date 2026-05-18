@@ -197,6 +197,7 @@ func TestDetectEngine(t *testing.T) {
 		name           string
 		files          map[string][]byte
 		packageManager string
+		wantNil        bool
 		wantName       string
 		wantVersion    string
 	}{
@@ -242,11 +243,10 @@ func TestDetectEngine(t *testing.T) {
 			wantVersion:    "1.3",
 		},
 		{
-			name:           "nvmrc with lts skips, falls back to PM",
+			name:           "nvmrc with lts skips, returns nil",
 			files:          map[string][]byte{".nvmrc": []byte("lts/*")},
 			packageManager: "pnpm",
-			wantName:       "node",
-			wantVersion:    "22",
+			wantNil:        true,
 		},
 		{
 			name:           "tool-versions with nodejs",
@@ -291,18 +291,10 @@ func TestDetectEngine(t *testing.T) {
 			wantVersion:    "1.3",
 		},
 		{
-			name:           "no files, bun PM fallback",
+			name:           "no files, returns nil",
 			files:          map[string][]byte{},
 			packageManager: "bun",
-			wantName:       "bun",
-			wantVersion:    "1.3",
-		},
-		{
-			name:           "no files, pnpm PM fallback",
-			files:          map[string][]byte{},
-			packageManager: "pnpm",
-			wantName:       "node",
-			wantVersion:    "22",
+			wantNil:        true,
 		},
 		{
 			name:           "node-version with unavailable version returns unmatched",
@@ -343,11 +335,10 @@ func TestDetectEngine(t *testing.T) {
 			wantVersion:    "24",
 		},
 		{
-			name:           "empty node-version file falls through to PM fallback",
+			name:           "empty node-version file returns nil",
 			files:          map[string][]byte{".node-version": []byte("")},
 			packageManager: "npm",
-			wantName:       "node",
-			wantVersion:    "22",
+			wantNil:        true,
 		},
 		{
 			name: "unmatched node-version + matched bun-version, npm PM selects unmatched node",
@@ -363,6 +354,12 @@ func TestDetectEngine(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := detectEngine(tt.files, tt.packageManager)
+			if tt.wantNil {
+				if got != nil {
+					t.Errorf("detectEngine() = %+v, want nil", got)
+				}
+				return
+			}
 			if got == nil {
 				t.Fatal("detectEngine returned nil")
 			}

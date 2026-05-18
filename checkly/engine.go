@@ -257,9 +257,6 @@ func detectEngine(files map[string][]byte, packageManager string) *EngineDetecti
 		}
 	}
 
-	// 6. Fallback: infer from package manager (no version files found at all)
-	if preferBun {
-		return &EngineDetectionResult{Engine: &EngineInfo{Name: "bun", Version: "1.3"}}
-	}
-	return &EngineDetectionResult{Engine: &EngineInfo{Name: "node", Version: "22"}}
+	// No version files found — return nil to let the runner choose.
+	return nil
 }

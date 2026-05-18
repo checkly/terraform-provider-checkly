@@ -557,7 +557,7 @@ func TestInspectLockfileDetectsEngine(t *testing.T) {
 		}
 	})
 
-	t.Run("no version file falls back to package manager", func(t *testing.T) {
+	t.Run("no version file leaves engine empty", func(t *testing.T) {
 		t.Parallel()
 		archive := buildTarGz(t, []tarEntry{
 			{name: "package-lock.json", content: []byte(syntheticPackageLock)},
@@ -568,11 +568,11 @@ func TestInspectLockfileDetectsEngine(t *testing.T) {
 		if err != nil {
 			t.Fatalf("InspectLockfile failed: %v", err)
 		}
-		if info.Engine != "node" {
-			t.Errorf("Engine = %q, want %q", info.Engine, "node")
+		if info.Engine != "" {
+			t.Errorf("Engine = %q, want empty", info.Engine)
 		}
-		if info.EngineVersion != "22" {
-			t.Errorf("EngineVersion = %q, want %q", info.EngineVersion, "22")
+		if info.EngineVersion != "" {
+			t.Errorf("EngineVersion = %q, want empty", info.EngineVersion)
 		}
 	})
 
