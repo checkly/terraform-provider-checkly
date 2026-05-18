@@ -16,6 +16,12 @@ type EngineInfo struct {
 	Version string
 }
 
+type EngineDetectionResult struct {
+	Engine     *EngineInfo
+	RawVersion string
+	Source     string
+}
+
 func parseNodeVersionFile(content []byte) string {
 	s := strings.TrimSpace(string(content))
 	s = strings.TrimPrefix(s, "v")
@@ -123,7 +129,6 @@ func matchSemverConstraint(constraint string, available []string) string {
 	var best string
 	var bestVer *semver.Version
 	for _, v := range available {
-		// Pad to valid semver: "22" → "22.0.0", "1.3" → "1.3.0"
 		padded := v
 		switch strings.Count(padded, ".") {
 		case 0:
@@ -145,102 +150,116 @@ func matchSemverConstraint(constraint string, available []string) string {
 	return best
 }
 
-func detectEngine(files map[string][]byte, packageManager string) *EngineInfo {
+func detectEngine(files map[string][]byte, packageManager string) *EngineDetectionResult {
 	preferBun := packageManager == "bun"
 
 	type candidate struct {
-		engine  string
-		version string
+		engine     string
+		version    string
+		rawVersion string
+		source     string
 	}
 
 	var nodeCandidate, bunCandidate *candidate
 
-	// 1. .node-version
+	// Helper: try to match a raw version to available node versions, record candidate either way.
+	tryNode := func(raw, source string) {
+		if nodeCandidate != nil {
+			return
+		}
+		major := resolveNodeMajorVersion(raw)
+		matched := matchAvailableVersion(major, availableNodeVersions)
+		nodeCandidate = &candidate{engine: "node", version: matched, rawVersion: raw, source: source}
+	}
+
+	tryBun := func(raw, source string) {
+		if bunCandidate != nil {
+			return
+		}
+		minor := resolveBunVersion(raw)
+		matched := matchAvailableVersion(minor, availableBunVersions)
+		bunCandidate = &candidate{engine: "bun", version: matched, rawVersion: raw, source: source}
+	}
+
+	// 1. .node-version (pinning file)
 	if raw, ok := files[".node-version"]; ok {
 		if parsed := parseNodeVersionFile(raw); parsed != "" {
-			major := resolveNodeMajorVersion(parsed)
-			if matched := matchAvailableVersion(major, availableNodeVersions); matched != "" {
-				nodeCandidate = &candidate{engine: "node", version: matched}
-			}
+			tryNode(parsed, ".node-version")
 		}
 	}
 
-	// 2. .nvmrc (only if no .node-version match yet)
+	// 2. .nvmrc (pinning file, only if no .node-version found)
 	if nodeCandidate == nil {
 		if raw, ok := files[".nvmrc"]; ok {
 			if parsed := parseNvmrcFile(raw); parsed != "" {
-				major := resolveNodeMajorVersion(parsed)
-				if matched := matchAvailableVersion(major, availableNodeVersions); matched != "" {
-					nodeCandidate = &candidate{engine: "node", version: matched}
-				}
+				tryNode(parsed, ".nvmrc")
 			}
 		}
 	}
 
-	// 3. .tool-versions
+	// 3. .tool-versions (pinning file)
 	if raw, ok := files[".tool-versions"]; ok {
 		tvNodeVersion, tvBunVersion := parseToolVersionsFile(raw)
 		if tvNodeVersion != "" && nodeCandidate == nil {
-			major := resolveNodeMajorVersion(tvNodeVersion)
-			if matched := matchAvailableVersion(major, availableNodeVersions); matched != "" {
-				nodeCandidate = &candidate{engine: "node", version: matched}
-			}
+			tryNode(tvNodeVersion, ".tool-versions")
 		}
 		if tvBunVersion != "" && bunCandidate == nil {
-			minor := resolveBunVersion(tvBunVersion)
-			if matched := matchAvailableVersion(minor, availableBunVersions); matched != "" {
-				bunCandidate = &candidate{engine: "bun", version: matched}
-			}
+			tryBun(tvBunVersion, ".tool-versions")
 		}
 	}
 
-	// 4. .bun-version
+	// 4. .bun-version (pinning file)
 	if bunCandidate == nil {
 		if raw, ok := files[".bun-version"]; ok {
 			if parsed := parseBunVersionFile(raw); parsed != "" {
-				minor := resolveBunVersion(parsed)
-				if matched := matchAvailableVersion(minor, availableBunVersions); matched != "" {
-					bunCandidate = &candidate{engine: "bun", version: matched}
-				}
+				tryBun(parsed, ".bun-version")
 			}
 		}
 	}
 
-	// 5. package.json engines
+	// 5. package.json engines (range file — only consulted when no pinning file was found for that engine)
 	if raw, ok := files["package.json"]; ok {
 		nodeRange, bunRange := parsePackageJSONEngines(raw)
 		if nodeCandidate == nil && nodeRange != "" {
 			if matched := matchSemverConstraint(nodeRange, availableNodeVersions); matched != "" {
-				nodeCandidate = &candidate{engine: "node", version: matched}
+				nodeCandidate = &candidate{engine: "node", version: matched, rawVersion: nodeRange, source: "package.json engines.node"}
 			}
 		}
 		if bunCandidate == nil && bunRange != "" {
 			if matched := matchSemverConstraint(bunRange, availableBunVersions); matched != "" {
-				bunCandidate = &candidate{engine: "bun", version: matched}
+				bunCandidate = &candidate{engine: "bun", version: matched, rawVersion: bunRange, source: "package.json engines.bun"}
 			}
 		}
 	}
 
 	// Select based on package manager tiebreaker
-	if preferBun {
-		if bunCandidate != nil {
-			return &EngineInfo{Name: bunCandidate.engine, Version: bunCandidate.version}
-		}
-		if nodeCandidate != nil {
-			return &EngineInfo{Name: nodeCandidate.engine, Version: nodeCandidate.version}
-		}
-	} else {
-		if nodeCandidate != nil {
-			return &EngineInfo{Name: nodeCandidate.engine, Version: nodeCandidate.version}
-		}
-		if bunCandidate != nil {
-			return &EngineInfo{Name: bunCandidate.engine, Version: bunCandidate.version}
+	toResult := func(c *candidate) *EngineDetectionResult {
+		return &EngineDetectionResult{
+			Engine:     &EngineInfo{Name: c.engine, Version: c.version},
+			RawVersion: c.rawVersion,
+			Source:     c.source,
 		}
 	}
 
-	// 6. Fallback: infer from package manager
 	if preferBun {
-		return &EngineInfo{Name: "bun", Version: "1.3"}
+		if bunCandidate != nil {
+			return toResult(bunCandidate)
+		}
+		if nodeCandidate != nil {
+			return toResult(nodeCandidate)
+		}
+	} else {
+		if nodeCandidate != nil {
+			return toResult(nodeCandidate)
+		}
+		if bunCandidate != nil {
+			return toResult(bunCandidate)
+		}
 	}
-	return &EngineInfo{Name: "node", Version: "22"}
+
+	// 6. Fallback: infer from package manager (no version files found at all)
+	if preferBun {
+		return &EngineDetectionResult{Engine: &EngineInfo{Name: "bun", Version: "1.3"}}
+	}
+	return &EngineDetectionResult{Engine: &EngineInfo{Name: "node", Version: "22"}}
 }

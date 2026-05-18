@@ -305,11 +305,35 @@ func TestDetectEngine(t *testing.T) {
 			wantVersion:    "22",
 		},
 		{
-			name:           "node-version with unavailable version falls through",
+			name:           "node-version with unavailable version returns unmatched",
 			files:          map[string][]byte{".node-version": []byte("16.20.0")},
 			packageManager: "npm",
 			wantName:       "node",
-			wantVersion:    "22",
+			wantVersion:    "",
+		},
+		{
+			name:           "nvmrc with unsupported version returns unmatched",
+			files:          map[string][]byte{".nvmrc": []byte("25")},
+			packageManager: "npm",
+			wantName:       "node",
+			wantVersion:    "",
+		},
+		{
+			name:           "bun-version with unsupported version returns unmatched",
+			files:          map[string][]byte{".bun-version": []byte("2.0.0")},
+			packageManager: "bun",
+			wantName:       "bun",
+			wantVersion:    "",
+		},
+		{
+			name: "nvmrc with 25 + package.json engines >=22, pinning file is authoritative",
+			files: map[string][]byte{
+				".nvmrc":       []byte("25"),
+				"package.json": []byte(`{"engines":{"node":">=22"}}`),
+			},
+			packageManager: "npm",
+			wantName:       "node",
+			wantVersion:    "",
 		},
 		{
 			name:           "nvmrc takes over when node-version absent",
@@ -319,11 +343,21 @@ func TestDetectEngine(t *testing.T) {
 			wantVersion:    "24",
 		},
 		{
-			name:           "empty node-version file falls through",
+			name:           "empty node-version file falls through to PM fallback",
 			files:          map[string][]byte{".node-version": []byte("")},
 			packageManager: "npm",
 			wantName:       "node",
 			wantVersion:    "22",
+		},
+		{
+			name: "unmatched node-version + matched bun-version, npm PM selects unmatched node",
+			files: map[string][]byte{
+				".node-version": []byte("25"),
+				".bun-version":  []byte("1.3.11"),
+			},
+			packageManager: "npm",
+			wantName:       "node",
+			wantVersion:    "",
 		},
 	}
 	for _, tt := range tests {
@@ -332,11 +366,14 @@ func TestDetectEngine(t *testing.T) {
 			if got == nil {
 				t.Fatal("detectEngine returned nil")
 			}
-			if got.Name != tt.wantName {
-				t.Errorf("detectEngine().Name = %q, want %q", got.Name, tt.wantName)
+			if got.Engine == nil {
+				t.Fatal("detectEngine().Engine is nil")
 			}
-			if got.Version != tt.wantVersion {
-				t.Errorf("detectEngine().Version = %q, want %q", got.Version, tt.wantVersion)
+			if got.Engine.Name != tt.wantName {
+				t.Errorf("detectEngine().Engine.Name = %q, want %q", got.Engine.Name, tt.wantName)
+			}
+			if got.Engine.Version != tt.wantVersion {
+				t.Errorf("detectEngine().Engine.Version = %q, want %q", got.Engine.Version, tt.wantVersion)
 			}
 		})
 	}

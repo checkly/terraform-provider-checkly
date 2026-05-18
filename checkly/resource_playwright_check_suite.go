@@ -500,6 +500,22 @@ func resourcePlaywrightCheckSuite() *schema.Resource {
 						}
 						overrideRuntime = true
 					}
+
+					if runtimeAttr.Engine != nil && runtimeAttr.Engine.Version == "" &&
+						bundleAttr.Metadata.EngineRawVersion != "" {
+						available := availableNodeVersions
+						if runtimeAttr.Engine.Name == "bun" {
+							available = availableBunVersions
+						}
+						return fmt.Errorf(
+							"detected %s version %q from %s, but no supported engine version matches "+
+								"(available: %s); set \"runtime.engine\" explicitly or update to a supported version",
+							runtimeAttr.Engine.Name,
+							bundleAttr.Metadata.EngineRawVersion,
+							bundleAttr.Metadata.EngineSource,
+							strings.Join(available, ", "),
+						)
+					}
 				}
 
 				if runtimeAttr.Playwright == nil || runtimeAttr.Playwright.Version == "" {

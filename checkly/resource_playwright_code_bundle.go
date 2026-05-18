@@ -132,6 +132,8 @@ func resourcePlaywrightCodeBundle() *schema.Resource {
 					bundle.Data.WorkingDir = workingDir
 					bundle.Data.Engine = lockfileInfo.Engine
 					bundle.Data.EngineVersion = lockfileInfo.EngineVersion
+					bundle.Data.EngineRawVersion = lockfileInfo.EngineRawVersion
+					bundle.Data.EngineSource = lockfileInfo.EngineSource
 
 					err = diff.SetNew(metadataAttributeName, bundle.Data.EncodeToString())
 					if err != nil {
@@ -235,7 +237,7 @@ func resourcePlaywrightCodeBundleDelete(
 	return diags
 }
 
-const PlaywrightCodeBundleMetadataCurrentVersion = 5
+const PlaywrightCodeBundleMetadataCurrentVersion = 6
 
 type PlaywrightCodeBundleMetadata struct {
 	Version           int    `json:"v"`
@@ -246,6 +248,8 @@ type PlaywrightCodeBundleMetadata struct {
 	WorkingDir        string `json:"wd,omitempty"`
 	Engine            string `json:"en,omitempty"`
 	EngineVersion     string `json:"ev,omitempty"`
+	EngineRawVersion  string `json:"erv,omitempty"`
+	EngineSource      string `json:"es,omitempty"`
 }
 
 func PlaywrightCodeBundleMetadataFromString(s string) (*PlaywrightCodeBundleMetadata, error) {
@@ -380,11 +384,13 @@ func (a *PlaywrightCodeBundlePrebuiltArchiveAttribute) ChecksumSha256() (string,
 
 // LockfileInfo contains information extracted from a lockfile found in an archive.
 type LockfileInfo struct {
-	PackageManager string
-	PackageVersion string
-	ChecksumSha256 string
-	Engine         string
-	EngineVersion  string
+	PackageManager   string
+	PackageVersion   string
+	ChecksumSha256   string
+	Engine           string
+	EngineVersion    string
+	EngineRawVersion string
+	EngineSource     string
 }
 
 type lockfileParser struct {
@@ -552,16 +558,18 @@ func (a *PlaywrightCodeBundlePrebuiltArchiveAttribute) InspectLockfile(
 		}
 	}
 
-	engineInfo := detectEngine(engineFiles, packageManager)
+	engineResult := detectEngine(engineFiles, packageManager)
 
 	info := &LockfileInfo{
 		PackageManager: packageManager,
 		PackageVersion: packageVersion,
 		ChecksumSha256: checksum,
 	}
-	if engineInfo != nil {
-		info.Engine = engineInfo.Name
-		info.EngineVersion = engineInfo.Version
+	if engineResult != nil && engineResult.Engine != nil {
+		info.Engine = engineResult.Engine.Name
+		info.EngineVersion = engineResult.Engine.Version
+		info.EngineRawVersion = engineResult.RawVersion
+		info.EngineSource = engineResult.Source
 	}
 	return info, nil
 }
