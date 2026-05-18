@@ -253,7 +253,7 @@ func resourcePlaywrightCheckSuite() *schema.Resource {
 										Description:  `The engine version. Valid values: "22", "24" for node; "1.3" for bun.`,
 										Type:         schema.TypeString,
 										Required:     true,
-										ValidateFunc: validateOneOf([]string{"22", "24", "1.3"}),
+										ValidateFunc: validateOneOf(append(availableNodeVersions, availableBunVersions...)),
 									},
 								},
 							},
