@@ -11,7 +11,10 @@ require (
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.38.2
 )
 
-require gopkg.in/yaml.v3 v3.0.1
+require (
+	github.com/Masterminds/semver/v3 v3.2.0
+	gopkg.in/yaml.v3 v3.0.1
+)
 
 require (
 	cel.dev/expr v0.24.0 // indirect
@@ -28,7 +31,6 @@ require (
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapping v0.50.0 // indirect
 	github.com/Kunde21/markdownfmt/v3 v3.1.0 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
-	github.com/Masterminds/semver/v3 v3.2.0 // indirect
 	github.com/Masterminds/sprig/v3 v3.2.3 // indirect
 	github.com/ProtonMail/go-crypto v1.4.1 // indirect
 	github.com/agext/levenshtein v1.2.3 // indirect
