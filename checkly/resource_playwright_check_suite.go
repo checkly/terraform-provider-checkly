@@ -239,6 +239,7 @@ func resourcePlaywrightCheckSuite() *schema.Resource {
 							Description: "The JavaScript engine used to run the Playwright tests.",
 							Type:        schema.TypeList,
 							Optional:    true,
+							Computed:    true,
 							MaxItems:    1,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
@@ -490,6 +491,14 @@ func resourcePlaywrightCheckSuite() *schema.Resource {
 							testAttr.Command = defaultTestCommand
 							overrideRuntime = true
 						}
+					}
+
+					if runtimeAttr.Engine == nil && bundleAttr.Metadata.Engine != "" {
+						runtimeAttr.Engine = &PlaywrightCheckSuiteRuntimeEngineAttribute{
+							Name:    bundleAttr.Metadata.Engine,
+							Version: bundleAttr.Metadata.EngineVersion,
+						}
+						overrideRuntime = true
 					}
 				}
 

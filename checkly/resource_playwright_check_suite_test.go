@@ -1626,8 +1626,13 @@ func TestAccPlaywrightCheckSuiteWithEngine(t *testing.T) {
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_playwright_check_suite.test",
-					"runtime.0.engine.#",
-					"0",
+					"runtime.0.engine.0.name",
+					"node",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_playwright_check_suite.test",
+					"runtime.0.engine.0.version",
+					"22",
 				),
 			),
 		},
