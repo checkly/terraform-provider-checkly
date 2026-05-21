@@ -71,7 +71,7 @@ After you have installed Terraform and Go, you can clone the repository and star
   $ go mod tidy
   ```
 
-4. Run build process to ensure that everyhing is on place
+4. Run build process to ensure that everything is on place
   ```sh
   $ go build
   ```
