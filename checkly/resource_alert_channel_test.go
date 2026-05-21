@@ -72,6 +72,23 @@ func TestAccSlack(t *testing.T) {
 	})
 }
 
+func TestAccSlackApp(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `resource "checkly_alert_channel" "slack_app_ac" {
+				slack_app {
+					slack_channels = ["#ops", "@John"]
+				}
+				send_recovery        = true
+				send_failure         = true
+				send_degraded        = false
+				ssl_expiry           = true
+				ssl_expiry_threshold = 11
+			}`,
+		},
+	})
+}
+
 func TestAccSMS(t *testing.T) {
 	accTestCase(t, []resource.TestStep{
 		{

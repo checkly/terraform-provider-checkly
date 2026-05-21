@@ -176,7 +176,8 @@ resource "checkly_check" "example_check" {
 - `send_degraded` (Boolean) (Default `false`)
 - `send_failure` (Boolean) (Default `true`)
 - `send_recovery` (Boolean) (Default `true`)
-- `slack` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--slack))
+- `slack` (Block Set, Max: 1, Deprecated) (see [below for nested schema](#nestedblock--slack))
+- `slack_app` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--slack_app))
 - `sms` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--sms))
 - `ssl_expiry` (Boolean) (Default `false`)
 - `ssl_expiry_threshold` (Number) Value must be between 1 and 30 (Default `30`)
@@ -234,6 +235,14 @@ Required:
 
 - `channel` (String) The name of the alert's Slack channel
 - `url` (String) The Slack webhook URL
+
+
+<a id="nestedblock--slack_app"></a>
+### Nested Schema for `slack_app`
+
+Required:
+
+- `slack_channels` (List of String) The Slack channels or users to notify, e.g. `["#ops", "@John"]`.
 
 
 <a id="nestedblock--sms"></a>

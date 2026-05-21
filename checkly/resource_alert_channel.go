@@ -17,6 +17,8 @@ const (
 	AcFieldSlack                = "slack"
 	AcFieldSlackURL             = "url"
 	AcFieldSlackChannel         = "channel"
+	AcFieldSlackApp             = "slack_app"
+	AcFieldSlackAppChannels     = "slack_channels"
 	AcFieldSMS                  = "sms"
 	AcFieldSMSName              = "name"
 	AcFieldSMSNumber            = "number"
@@ -88,9 +90,10 @@ func resourceAlertChannel() *schema.Resource {
 				},
 			},
 			AcFieldSlack: {
-				Type:     schema.TypeSet,
-				Optional: true,
-				MaxItems: 1,
+				Type:       schema.TypeSet,
+				Optional:   true,
+				MaxItems:   1,
+				Deprecated: "The `slack` block uses the legacy Slack webhook integration and will be removed in a future major release. Use `slack_app` instead.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						AcFieldSlackURL: {
@@ -102,6 +105,22 @@ func resourceAlertChannel() *schema.Resource {
 							Type:        schema.TypeString,
 							Required:    true,
 							Description: "The name of the alert's Slack channel",
+						},
+					},
+				},
+			},
+			AcFieldSlackApp: {
+				Type:     schema.TypeSet,
+				Optional: true,
+				MaxItems: 1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						AcFieldSlackAppChannels: {
+							Type:        schema.TypeList,
+							Required:    true,
+							MinItems:    1,
+							Elem:        &schema.Schema{Type: schema.TypeString},
+							Description: "The Slack channels or users to notify, e.g. `[\"#ops\", \"@John\"]`.",
 						},
 					},
 				},
@@ -359,6 +378,7 @@ func resourceDataFromAlertChannel(it *checkly.AlertChannel, d *schema.ResourceDa
 	d.Set(AcFieldSMS, setFromSMS(it.SMS))
 	d.Set(AcFieldCall, setFromCall(it.CALL))
 	d.Set(AcFieldSlack, setFromSlack(it.Slack))
+	d.Set(AcFieldSlackApp, setFromSlackApp(it.SlackApp))
 	d.Set(AcFieldWebhook, setFromWebhook(it.Webhook))
 	d.Set(AcFieldOpsgenie, setFromOpsgenie(it.Opsgenie))
 	d.Set(AcFieldPagerduty, setFromPagerduty(it.Pagerduty))
@@ -407,7 +427,7 @@ func alertChannelFromResourceData(d *schema.ResourceData) (checkly.AlertChannel,
 		ac.SSLExpiryThreshold = &i
 	}
 
-	fields := []string{AcFieldEmail, AcFieldSMS, AcFieldCall, AcFieldSlack, AcFieldWebhook, AcFieldOpsgenie, AcFieldPagerduty}
+	fields := []string{AcFieldEmail, AcFieldSMS, AcFieldCall, AcFieldSlack, AcFieldSlackApp, AcFieldWebhook, AcFieldOpsgenie, AcFieldPagerduty}
 	setCount := 0
 	for _, field := range fields {
 		cfgSet := (d.Get(field)).(*schema.Set)
@@ -451,6 +471,15 @@ func alertChannelConfigFromSet(channelType string, s *schema.Set) (interface{}, 
 		return &checkly.AlertChannelSlack{
 			Channel:    cfg[AcFieldSlackChannel].(string),
 			WebhookURL: cfg[AcFieldSlackURL].(string),
+		}, nil
+	case checkly.AlertTypeSlackApp:
+		raw := cfg[AcFieldSlackAppChannels].([]interface{})
+		channels := make([]string, 0, len(raw))
+		for _, v := range raw {
+			channels = append(channels, v.(string))
+		}
+		return &checkly.AlertChannelSlackApp{
+			SlackChannels: channels,
 		}, nil
 	case checkly.AlertTypeOpsgenie:
 		return &checkly.AlertChannelOpsgenie{
@@ -523,6 +552,21 @@ func setFromSlack(cfg *checkly.AlertChannelSlack) []tfMap {
 		{
 			AcFieldSlackChannel: cfg.Channel,
 			AcFieldSlackURL:     cfg.WebhookURL,
+		},
+	}
+}
+
+func setFromSlackApp(cfg *checkly.AlertChannelSlackApp) []tfMap {
+	if cfg == nil {
+		return []tfMap{}
+	}
+	channels := make([]interface{}, 0, len(cfg.SlackChannels))
+	for _, c := range cfg.SlackChannels {
+		channels = append(channels, c)
+	}
+	return []tfMap{
+		{
+			AcFieldSlackAppChannels: channels,
 		},
 	}
 }
