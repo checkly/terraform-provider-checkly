@@ -8,7 +8,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 )
 
-var availableNodeVersions = []string{"22", "24"}
+var availableNodeVersions = []string{"22", "24", "26"}
 var availableBunVersions = []string{"1.3"}
 
 type EngineInfo struct {
