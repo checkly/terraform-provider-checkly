@@ -610,8 +610,8 @@ func TestInspectLockfileDetectsEngine(t *testing.T) {
 		if info.Engine != "node" {
 			t.Errorf("Engine = %q, want %q", info.Engine, "node")
 		}
-		if info.EngineVersion != "24" {
-			t.Errorf("EngineVersion = %q, want %q", info.EngineVersion, "24")
+		if info.EngineVersion != "26" {
+			t.Errorf("EngineVersion = %q, want %q", info.EngineVersion, "26")
 		}
 	})
 }

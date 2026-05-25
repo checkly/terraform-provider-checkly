@@ -167,26 +167,47 @@ func TestResolveBunVersion(t *testing.T) {
 	}
 }
 
-func TestMatchSemverConstraint(t *testing.T) {
+func TestResolveEngineVersion(t *testing.T) {
+	nodeConfig := engineConfigs["node"]
+	bunConfig := engineConfigs["bun"]
+
 	tests := []struct {
-		name       string
-		constraint string
-		available  []string
-		want       string
+		name        string
+		version     string
+		config      engineVersionConfig
+		wantVersion string
+		wantDenied  bool
+		wantNotice  bool
 	}{
-		{">=18 with node versions", ">=18", []string{"22", "24"}, "24"},
-		{"^22 with node versions", "^22", []string{"22", "24"}, "22"},
-		{">=25 no match", ">=25", []string{"22", "24"}, ""},
-		{">=1.0 with bun", ">=1.0", []string{"1.3"}, "1.3"},
-		{"invalid constraint", "not-valid", []string{"22"}, ""},
-		{"22 || 24", "22 || 24", []string{"22", "24"}, "24"},
+		{"node 22 allowed", "22", nodeConfig, "22", false, false},
+		{"node 24 allowed", "24", nodeConfig, "24", false, false},
+		{"node 26 allowed", "26", nodeConfig, "26", false, false},
+		{"node 18 remapped to 22 with notice", "18", nodeConfig, "22", false, true},
+		{"node 20 remapped to 22 with notice", "20", nodeConfig, "22", false, true},
+		{"node 21 remapped to 22 with notice", "21", nodeConfig, "22", false, true},
+		{"node 23 remapped to 24 with notice", "23", nodeConfig, "24", false, true},
+		{"node 25 remapped to 26 with notice", "25", nodeConfig, "26", false, true},
+		{"node 27 remapped to 26 with notice", "27", nodeConfig, "26", false, true},
+		{"node 16 remapped to 22 with notice", "16", nodeConfig, "22", false, true},
+		{"bun 1.3 allowed", "1.3", bunConfig, "1.3", false, false},
+		{"bun 1.2 remapped to 1.3 with notice", "1.2", bunConfig, "1.3", false, true},
+		{"bun 1.4 remapped to 1.3 with notice", "1.4", bunConfig, "1.3", false, true},
+		{"bun 2.0 denied", "2.0", bunConfig, "", true, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := matchSemverConstraint(tt.constraint, tt.available)
-			if got != tt.want {
-				t.Errorf("matchSemverConstraint(%q, %v) = %q, want %q",
-					tt.constraint, tt.available, got, tt.want)
+			res := resolveEngineVersion(tt.version, tt.config)
+			if res.Denied != tt.wantDenied {
+				t.Errorf("Denied = %v, want %v", res.Denied, tt.wantDenied)
+			}
+			if !tt.wantDenied && res.Version != tt.wantVersion {
+				t.Errorf("Version = %q, want %q", res.Version, tt.wantVersion)
+			}
+			if tt.wantNotice && len(res.Notices) == 0 {
+				t.Error("expected notice but got none")
+			}
+			if !tt.wantNotice && len(res.Notices) > 0 {
+				t.Errorf("expected no notice but got %v", res.Notices)
 			}
 		})
 	}
@@ -281,7 +302,7 @@ func TestDetectEngine(t *testing.T) {
 			files:          map[string][]byte{"package.json": []byte(`{"engines":{"node":">=22"}}`)},
 			packageManager: "npm",
 			wantName:       "node",
-			wantVersion:    "24",
+			wantVersion:    "26",
 		},
 		{
 			name:           "package.json engines bun",
@@ -297,21 +318,21 @@ func TestDetectEngine(t *testing.T) {
 			wantNil:        true,
 		},
 		{
-			name:           "node-version with unavailable version returns unmatched",
+			name:           "node-version with old version remaps to 22",
 			files:          map[string][]byte{".node-version": []byte("16.20.0")},
 			packageManager: "npm",
 			wantName:       "node",
-			wantVersion:    "",
+			wantVersion:    "22",
 		},
 		{
-			name:           "nvmrc with unsupported version returns unmatched",
+			name:           "nvmrc with 25 remaps to 26",
 			files:          map[string][]byte{".nvmrc": []byte("25")},
 			packageManager: "npm",
 			wantName:       "node",
-			wantVersion:    "",
+			wantVersion:    "26",
 		},
 		{
-			name:           "bun-version with unsupported version returns unmatched",
+			name:           "bun-version 2.0 denied returns empty",
 			files:          map[string][]byte{".bun-version": []byte("2.0.0")},
 			packageManager: "bun",
 			wantName:       "bun",
@@ -325,7 +346,7 @@ func TestDetectEngine(t *testing.T) {
 			},
 			packageManager: "npm",
 			wantName:       "node",
-			wantVersion:    "",
+			wantVersion:    "26",
 		},
 		{
 			name:           "nvmrc takes over when node-version absent",
@@ -341,14 +362,14 @@ func TestDetectEngine(t *testing.T) {
 			wantNil:        true,
 		},
 		{
-			name: "unmatched node-version + matched bun-version, npm PM selects unmatched node",
+			name: "node-version 25 remapped to 26, preferred over bun",
 			files: map[string][]byte{
 				".node-version": []byte("25"),
 				".bun-version":  []byte("1.3.11"),
 			},
 			packageManager: "npm",
 			wantName:       "node",
-			wantVersion:    "",
+			wantVersion:    "26",
 		},
 	}
 	for _, tt := range tests {

@@ -3,13 +3,11 @@ package checkly
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
 )
-
-var availableNodeVersions = []string{"22", "24", "26"}
-var availableBunVersions = []string{"1.3"}
 
 type EngineInfo struct {
 	Name    string
@@ -20,6 +18,7 @@ type EngineDetectionResult struct {
 	Engine     *EngineInfo
 	RawVersion string
 	Source     string
+	Notices    []string
 }
 
 func parseNodeVersionFile(content []byte) string {
@@ -111,43 +110,91 @@ func resolveBunVersion(raw string) string {
 	return fmt.Sprintf("%s.%s", parts[0], parts[1])
 }
 
-func matchAvailableVersion(parsed string, available []string) string {
-	for _, v := range available {
-		if v == parsed {
-			return v
-		}
-	}
-	return ""
+var firstVersionRegex = regexp.MustCompile(`\d+(\.\d+)*`)
+
+// extractVersionFromConstraint extracts the first version-like string from a
+// semver constraint (e.g., ">=22" → "22", "^1.3" → "1.3").
+func extractVersionFromConstraint(constraint string) string {
+	m := firstVersionRegex.FindString(constraint)
+	return m
 }
 
-func matchSemverConstraint(constraint string, available []string) string {
-	c, err := semver.NewConstraint(constraint)
-	if err != nil {
-		return ""
+// resolveVersionForEngine resolves a raw version string using the engine rules.
+// Returns the resolved version (or empty if denied/unparseable) and any notices.
+func resolveVersionForEngine(engineName string, rawVersion string) (string, []string) {
+	config, ok := engineConfigs[engineName]
+	if !ok {
+		return rawVersion, nil
 	}
 
-	var best string
-	var bestVer *semver.Version
-	for _, v := range available {
-		padded := v
-		switch strings.Count(padded, ".") {
-		case 0:
-			padded += ".0.0"
-		case 1:
-			padded += ".0"
-		}
-		sv, err := semver.NewVersion(padded)
-		if err != nil {
-			continue
-		}
-		if c.Check(sv) {
-			if bestVer == nil || sv.GreaterThan(bestVer) {
-				best = v
-				bestVer = sv
+	var version string
+	if engineName == "node" {
+		version = resolveNodeMajorVersion(rawVersion)
+	} else {
+		version = resolveBunVersion(rawVersion)
+	}
+	if version == "" {
+		return "", nil
+	}
+
+	res := resolveEngineVersion(version, config)
+	if res.Denied {
+		return "", res.Notices
+	}
+	return res.Version, res.Notices
+}
+
+// resolveConstraintForEngine resolves a semver constraint (from package.json engines)
+// through the engine rules. Extracts the base version, then applies rules.
+func resolveConstraintForEngine(engineName string, constraint string) (string, []string) {
+	// Try semver.minVersion first for accurate resolution
+	c, err := semver.NewConstraint(constraint)
+	if err == nil {
+		// Test versions from the rules' targets to find the best match
+		config := engineConfigs[engineName]
+		var best string
+		var bestVer *semver.Version
+		targets := collectTargets(config)
+		for _, t := range targets {
+			sv, err := semver.NewVersion(t)
+			if err != nil {
+				continue
+			}
+			if c.Check(sv) {
+				if bestVer == nil || sv.GreaterThan(bestVer) {
+					best = t
+					bestVer = sv
+				}
 			}
 		}
+		if best != "" {
+			return resolveVersionForEngine(engineName, best)
+		}
 	}
-	return best
+
+	// Fallback: extract first version-like string from constraint
+	extracted := extractVersionFromConstraint(constraint)
+	if extracted == "" {
+		return "", nil
+	}
+	return resolveVersionForEngine(engineName, extracted)
+}
+
+// collectTargets returns all unique target versions from the rules (plus default).
+func collectTargets(config engineVersionConfig) []string {
+	seen := make(map[string]bool)
+	var targets []string
+	if config.Default != "" {
+		seen[config.Default] = true
+		targets = append(targets, config.Default)
+	}
+	for _, r := range config.Rules {
+		if r.Target != "" && !seen[r.Target] {
+			seen[r.Target] = true
+			targets = append(targets, r.Target)
+		}
+	}
+	return targets
 }
 
 func detectEngine(files map[string][]byte, packageManager string) *EngineDetectionResult {
@@ -158,27 +205,25 @@ func detectEngine(files map[string][]byte, packageManager string) *EngineDetecti
 		version    string
 		rawVersion string
 		source     string
+		notices    []string
 	}
 
 	var nodeCandidate, bunCandidate *candidate
 
-	// Helper: try to match a raw version to available node versions, record candidate either way.
 	tryNode := func(raw, source string) {
 		if nodeCandidate != nil {
 			return
 		}
-		major := resolveNodeMajorVersion(raw)
-		matched := matchAvailableVersion(major, availableNodeVersions)
-		nodeCandidate = &candidate{engine: "node", version: matched, rawVersion: raw, source: source}
+		resolved, notices := resolveVersionForEngine("node", raw)
+		nodeCandidate = &candidate{engine: "node", version: resolved, rawVersion: raw, source: source, notices: notices}
 	}
 
 	tryBun := func(raw, source string) {
 		if bunCandidate != nil {
 			return
 		}
-		minor := resolveBunVersion(raw)
-		matched := matchAvailableVersion(minor, availableBunVersions)
-		bunCandidate = &candidate{engine: "bun", version: matched, rawVersion: raw, source: source}
+		resolved, notices := resolveVersionForEngine("bun", raw)
+		bunCandidate = &candidate{engine: "bun", version: resolved, rawVersion: raw, source: source, notices: notices}
 	}
 
 	// 1. .node-version (pinning file)
@@ -221,23 +266,23 @@ func detectEngine(files map[string][]byte, packageManager string) *EngineDetecti
 	if raw, ok := files["package.json"]; ok {
 		nodeRange, bunRange := parsePackageJSONEngines(raw)
 		if nodeCandidate == nil && nodeRange != "" {
-			if matched := matchSemverConstraint(nodeRange, availableNodeVersions); matched != "" {
-				nodeCandidate = &candidate{engine: "node", version: matched, rawVersion: nodeRange, source: "package.json engines.node"}
+			if resolved, notices := resolveConstraintForEngine("node", nodeRange); resolved != "" {
+				nodeCandidate = &candidate{engine: "node", version: resolved, rawVersion: nodeRange, source: "package.json engines.node", notices: notices}
 			}
 		}
 		if bunCandidate == nil && bunRange != "" {
-			if matched := matchSemverConstraint(bunRange, availableBunVersions); matched != "" {
-				bunCandidate = &candidate{engine: "bun", version: matched, rawVersion: bunRange, source: "package.json engines.bun"}
+			if resolved, notices := resolveConstraintForEngine("bun", bunRange); resolved != "" {
+				bunCandidate = &candidate{engine: "bun", version: resolved, rawVersion: bunRange, source: "package.json engines.bun", notices: notices}
 			}
 		}
 	}
 
-	// Select based on package manager tiebreaker
 	toResult := func(c *candidate) *EngineDetectionResult {
 		return &EngineDetectionResult{
 			Engine:     &EngineInfo{Name: c.engine, Version: c.version},
 			RawVersion: c.rawVersion,
 			Source:     c.source,
+			Notices:    c.notices,
 		}
 	}
 
@@ -257,6 +302,5 @@ func detectEngine(files map[string][]byte, packageManager string) *EngineDetecti
 		}
 	}
 
-	// No version files found — return nil to let the runner choose.
 	return nil
 }

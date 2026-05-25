@@ -250,10 +250,10 @@ func resourcePlaywrightCheckSuite() *schema.Resource {
 										ValidateFunc: validateOneOf([]string{"node", "bun"}),
 									},
 									"version": {
-										Description:  `The engine version. Valid values: "22", "24" for node; "1.3" for bun.`,
+										Description:  `The engine version (e.g. "22", "24", "26" for node; "1.3" for bun).`,
 										Type:         schema.TypeString,
 										Required:     true,
-										ValidateFunc: validateOneOf(append(availableNodeVersions, availableBunVersions...)),
+										ValidateFunc: validateVersionFormat,
 									},
 								},
 							},
@@ -503,17 +503,12 @@ func resourcePlaywrightCheckSuite() *schema.Resource {
 
 					if runtimeAttr.Engine != nil && runtimeAttr.Engine.Version == "" &&
 						bundleAttr.Metadata.EngineRawVersion != "" {
-						available := availableNodeVersions
-						if runtimeAttr.Engine.Name == "bun" {
-							available = availableBunVersions
-						}
 						return fmt.Errorf(
-							"detected %s version %q from %s, but no supported engine version matches "+
-								"(available: %s); set \"runtime.engine\" explicitly or update to a supported version",
+							"detected %s version %q from %s, but the version was denied or could not be resolved; "+
+								"set \"runtime.engine\" explicitly or update to a supported version",
 							runtimeAttr.Engine.Name,
 							bundleAttr.Metadata.EngineRawVersion,
 							bundleAttr.Metadata.EngineSource,
-							strings.Join(available, ", "),
 						)
 					}
 				}
