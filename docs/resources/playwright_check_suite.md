@@ -230,9 +230,19 @@ Optional:
 Optional:
 
 - `auto_detect` (Boolean) Whether to automatically detect appropriate runtime environment configuration from the bundle. (Default `true`).
+- `engine` (Block List, Max: 1) The JavaScript engine used to run the Playwright tests. (see [below for nested schema](#nestedblock--runtime--engine))
 - `playwright` (Block List, Max: 1) Configure the Playwright capabilities that should be made available to the runtime environment. (see [below for nested schema](#nestedblock--runtime--playwright))
 - `steps` (Block List, Max: 1) Customize the actions taken during test execution. (see [below for nested schema](#nestedblock--runtime--steps))
 - `working_dir` (String) The working directory in which runtime commands are executed. This is useful for monorepos or workspaces where the Playwright project is in a subdirectory. Use "." to explicitly specify the root.
+
+<a id="nestedblock--runtime--engine"></a>
+### Nested Schema for `runtime.engine`
+
+Required:
+
+- `name` (String) The engine name. Valid values are "node" or "bun".
+- `version` (String) The engine version (e.g. "22", "24", "26" for node; "1.3" for bun).
+
 
 <a id="nestedblock--runtime--playwright"></a>
 ### Nested Schema for `runtime.playwright`
