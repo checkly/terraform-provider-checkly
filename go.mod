@@ -4,14 +4,17 @@ go 1.25.8
 
 require (
 	github.com/aws/aws-sdk-go v1.44.122 // indirect
-	github.com/checkly/checkly-go-sdk v1.20.2
+	github.com/checkly/checkly-go-sdk v1.20.3
 	github.com/google/go-cmp v0.7.0
 	github.com/gruntwork-io/terratest v0.41.16
 	github.com/hashicorp/terraform-plugin-docs v0.25.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.38.2
 )
 
-require gopkg.in/yaml.v3 v3.0.1
+require (
+	github.com/Masterminds/semver/v3 v3.2.0
+	gopkg.in/yaml.v3 v3.0.1
+)
 
 require (
 	cel.dev/expr v0.24.0 // indirect
@@ -28,7 +31,6 @@ require (
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapping v0.50.0 // indirect
 	github.com/Kunde21/markdownfmt/v3 v3.1.0 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
-	github.com/Masterminds/semver/v3 v3.2.0 // indirect
 	github.com/Masterminds/sprig/v3 v3.2.3 // indirect
 	github.com/ProtonMail/go-crypto v1.4.1 // indirect
 	github.com/agext/levenshtein v1.2.3 // indirect

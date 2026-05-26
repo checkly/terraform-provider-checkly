@@ -513,3 +513,105 @@ func TestInspectLockfileChecksumIncludesPackageJSON(t *testing.T) {
 		}
 	})
 }
+
+func TestInspectLockfileDetectsEngine(t *testing.T) {
+	t.Parallel()
+
+	t.Run("node-version file selects node", func(t *testing.T) {
+		t.Parallel()
+		archive := buildTarGz(t, []tarEntry{
+			{name: "package-lock.json", content: []byte(syntheticPackageLock)},
+			{name: "package.json", content: []byte(`{"name":"test","dependencies":{"@playwright/test":"1.58.2"}}`)},
+			{name: ".node-version", content: []byte("24.1.0")},
+		})
+		attr := PlaywrightCodeBundlePrebuiltArchiveAttribute{File: archive}
+		info, err := attr.InspectLockfile("@playwright/test", InspectLockfileOptions{})
+		if err != nil {
+			t.Fatalf("InspectLockfile failed: %v", err)
+		}
+		if info.Engine != "node" {
+			t.Errorf("Engine = %q, want %q", info.Engine, "node")
+		}
+		if info.EngineVersion != "24" {
+			t.Errorf("EngineVersion = %q, want %q", info.EngineVersion, "24")
+		}
+	})
+
+	t.Run("bun-version file selects bun", func(t *testing.T) {
+		t.Parallel()
+		archive := buildTarGz(t, []tarEntry{
+			{name: "bun.lock", content: []byte(`{"packages":{"":{},"@playwright/test@1.58.2":["@playwright/test@1.58.2","",{},""]}}`)},
+			{name: "package.json", content: []byte(`{"name":"test","dependencies":{"@playwright/test":"1.58.2"}}`)},
+			{name: ".bun-version", content: []byte("1.3.11")},
+		})
+		attr := PlaywrightCodeBundlePrebuiltArchiveAttribute{File: archive}
+		info, err := attr.InspectLockfile("@playwright/test", InspectLockfileOptions{})
+		if err != nil {
+			t.Fatalf("InspectLockfile failed: %v", err)
+		}
+		if info.Engine != "bun" {
+			t.Errorf("Engine = %q, want %q", info.Engine, "bun")
+		}
+		if info.EngineVersion != "1.3" {
+			t.Errorf("EngineVersion = %q, want %q", info.EngineVersion, "1.3")
+		}
+	})
+
+	t.Run("no version file leaves engine empty", func(t *testing.T) {
+		t.Parallel()
+		archive := buildTarGz(t, []tarEntry{
+			{name: "package-lock.json", content: []byte(syntheticPackageLock)},
+			{name: "package.json", content: []byte(`{"name":"test","dependencies":{"@playwright/test":"1.58.2"}}`)},
+		})
+		attr := PlaywrightCodeBundlePrebuiltArchiveAttribute{File: archive}
+		info, err := attr.InspectLockfile("@playwright/test", InspectLockfileOptions{})
+		if err != nil {
+			t.Fatalf("InspectLockfile failed: %v", err)
+		}
+		if info.Engine != "" {
+			t.Errorf("Engine = %q, want empty", info.Engine)
+		}
+		if info.EngineVersion != "" {
+			t.Errorf("EngineVersion = %q, want empty", info.EngineVersion)
+		}
+	})
+
+	t.Run("tool-versions with nodejs", func(t *testing.T) {
+		t.Parallel()
+		archive := buildTarGz(t, []tarEntry{
+			{name: "package-lock.json", content: []byte(syntheticPackageLock)},
+			{name: "package.json", content: []byte(`{"name":"test","dependencies":{"@playwright/test":"1.58.2"}}`)},
+			{name: ".tool-versions", content: []byte("nodejs 24.1.0\npython 3.12.0")},
+		})
+		attr := PlaywrightCodeBundlePrebuiltArchiveAttribute{File: archive}
+		info, err := attr.InspectLockfile("@playwright/test", InspectLockfileOptions{})
+		if err != nil {
+			t.Fatalf("InspectLockfile failed: %v", err)
+		}
+		if info.Engine != "node" {
+			t.Errorf("Engine = %q, want %q", info.Engine, "node")
+		}
+		if info.EngineVersion != "24" {
+			t.Errorf("EngineVersion = %q, want %q", info.EngineVersion, "24")
+		}
+	})
+
+	t.Run("package.json engines.node", func(t *testing.T) {
+		t.Parallel()
+		archive := buildTarGz(t, []tarEntry{
+			{name: "package-lock.json", content: []byte(syntheticPackageLock)},
+			{name: "package.json", content: []byte(`{"name":"test","dependencies":{"@playwright/test":"1.58.2"},"engines":{"node":">=22"}}`)},
+		})
+		attr := PlaywrightCodeBundlePrebuiltArchiveAttribute{File: archive}
+		info, err := attr.InspectLockfile("@playwright/test", InspectLockfileOptions{})
+		if err != nil {
+			t.Fatalf("InspectLockfile failed: %v", err)
+		}
+		if info.Engine != "node" {
+			t.Errorf("Engine = %q, want %q", info.Engine, "node")
+		}
+		if info.EngineVersion != "26" {
+			t.Errorf("EngineVersion = %q, want %q", info.EngineVersion, "26")
+		}
+	})
+}

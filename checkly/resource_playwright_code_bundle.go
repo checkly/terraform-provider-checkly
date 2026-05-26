@@ -130,6 +130,10 @@ func resourcePlaywrightCodeBundle() *schema.Resource {
 					bundle.Data.PackageManager = lockfileInfo.PackageManager
 					bundle.Data.CacheHash = lockfileInfo.ChecksumSha256
 					bundle.Data.WorkingDir = workingDir
+					bundle.Data.Engine = lockfileInfo.Engine
+					bundle.Data.EngineVersion = lockfileInfo.EngineVersion
+					bundle.Data.EngineRawVersion = lockfileInfo.EngineRawVersion
+					bundle.Data.EngineSource = lockfileInfo.EngineSource
 
 					err = diff.SetNew(metadataAttributeName, bundle.Data.EncodeToString())
 					if err != nil {
@@ -233,7 +237,7 @@ func resourcePlaywrightCodeBundleDelete(
 	return diags
 }
 
-const PlaywrightCodeBundleMetadataCurrentVersion = 4
+const PlaywrightCodeBundleMetadataCurrentVersion = 6
 
 type PlaywrightCodeBundleMetadata struct {
 	Version           int    `json:"v"`
@@ -242,6 +246,10 @@ type PlaywrightCodeBundleMetadata struct {
 	PackageManager    string `json:"pm,omitempty"`
 	CacheHash         string `json:"ch,omitempty"`
 	WorkingDir        string `json:"wd,omitempty"`
+	Engine            string `json:"en,omitempty"`
+	EngineVersion     string `json:"ev,omitempty"`
+	EngineRawVersion  string `json:"erv,omitempty"`
+	EngineSource      string `json:"es,omitempty"`
 }
 
 func PlaywrightCodeBundleMetadataFromString(s string) (*PlaywrightCodeBundleMetadata, error) {
@@ -376,9 +384,13 @@ func (a *PlaywrightCodeBundlePrebuiltArchiveAttribute) ChecksumSha256() (string,
 
 // LockfileInfo contains information extracted from a lockfile found in an archive.
 type LockfileInfo struct {
-	PackageManager string
-	PackageVersion string
-	ChecksumSha256 string
+	PackageManager   string
+	PackageVersion   string
+	ChecksumSha256   string
+	Engine           string
+	EngineVersion    string
+	EngineRawVersion string
+	EngineSource     string
 }
 
 type lockfileParser struct {
@@ -448,6 +460,7 @@ func (a *PlaywrightCodeBundlePrebuiltArchiveAttribute) InspectLockfile(
 		packageManager string
 		packageVersion string
 		packageJSONs   []packageJSONEntry
+		engineFiles    = make(map[string][]byte)
 	)
 
 	for {
@@ -474,8 +487,18 @@ func (a *PlaywrightCodeBundlePrebuiltArchiveAttribute) InspectLockfile(
 			continue
 		}
 
-		// Only consider lockfiles at the root of the archive.
+		// Only consider lockfiles and engine version files at the root of the archive.
 		if strings.Contains(name, "/") {
+			continue
+		}
+
+		switch name {
+		case ".node-version", ".nvmrc", ".tool-versions", ".bun-version":
+			raw, err := io.ReadAll(tr)
+			if err != nil {
+				return nil, fmt.Errorf("failed to read %q from archive %q: %w", header.Name, a.File, err)
+			}
+			engineFiles[name] = raw
 			continue
 		}
 
@@ -527,11 +550,28 @@ func (a *PlaywrightCodeBundlePrebuiltArchiveAttribute) InspectLockfile(
 		return nil, fmt.Errorf("failed to compute archive checksum: %w", err)
 	}
 
-	return &LockfileInfo{
+	// Add root package.json to engine files for engines field detection
+	for _, entry := range packageJSONs {
+		if entry.path == "package.json" {
+			engineFiles["package.json"] = entry.raw
+			break
+		}
+	}
+
+	engineResult := detectEngine(engineFiles, packageManager)
+
+	info := &LockfileInfo{
 		PackageManager: packageManager,
 		PackageVersion: packageVersion,
 		ChecksumSha256: checksum,
-	}, nil
+	}
+	if engineResult != nil && engineResult.Engine != nil {
+		info.Engine = engineResult.Engine.Name
+		info.EngineVersion = engineResult.Engine.Version
+		info.EngineRawVersion = engineResult.RawVersion
+		info.EngineSource = engineResult.Source
+	}
+	return info, nil
 }
 
 func hasNodeModulesSegment(p string) bool {

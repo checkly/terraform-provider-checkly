@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"fmt"
 	"os"
+	"regexp"
 	"slices"
 )
 
@@ -89,4 +90,14 @@ func validateAll(validators ...func(any, string) ([]string, []error)) func(any, 
 		}
 		return warns, errs
 	}
+}
+
+var versionFormatRegex = regexp.MustCompile(`^\d+(\.\d+){0,2}$`)
+
+func validateVersionFormat(val any, key string) (warns []string, errs []error) {
+	v := val.(string)
+	if !versionFormatRegex.MatchString(v) {
+		errs = append(errs, fmt.Errorf("%q must be a version number (e.g. \"22\", \"24\", \"1.3\"), got: %s", key, v))
+	}
+	return warns, errs
 }

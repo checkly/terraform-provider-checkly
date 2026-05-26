@@ -235,6 +235,29 @@ func resourcePlaywrightCheckSuite() *schema.Resource {
 								},
 							},
 						},
+						"engine": {
+							Description: "The JavaScript engine used to run the Playwright tests.",
+							Type:        schema.TypeList,
+							Optional:    true,
+							Computed:    true,
+							MaxItems:    1,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"name": {
+										Description:  `The engine name. Valid values are "node" or "bun".`,
+										Type:         schema.TypeString,
+										Required:     true,
+										ValidateFunc: validateOneOf([]string{"node", "bun"}),
+									},
+									"version": {
+										Description:  `The engine version (e.g. "22", "24", "26" for node; "1.3" for bun).`,
+										Type:         schema.TypeString,
+										Required:     true,
+										ValidateFunc: validateVersionFormat,
+									},
+								},
+							},
+						},
 					},
 				},
 			},
@@ -263,6 +286,7 @@ func resourcePlaywrightCheckSuite() *schema.Resource {
 				var isRuntimeStepsInstallBlockPresent bool
 				var isRuntimeStepsTestBlockPresent bool
 				var isRuntimeStepsTestCommandPresent bool
+				var isRuntimeEngineBlockPresent bool
 
 				runtimeIt := runtimeListAttr.ElementIterator()
 				if runtimeIt.Next() {
@@ -320,6 +344,12 @@ func resourcePlaywrightCheckSuite() *schema.Resource {
 
 							isRuntimeStepsTestCommandPresent = !commandAttr.IsNull()
 						}
+					}
+
+					engineListAttr := configRuntimeAttr.GetAttr("engine")
+					engineIt := engineListAttr.ElementIterator()
+					if engineIt.Next() {
+						isRuntimeEngineBlockPresent = true
 					}
 				}
 
@@ -400,6 +430,26 @@ func resourcePlaywrightCheckSuite() *schema.Resource {
 					}
 				}
 
+				if !isRuntimeEngineBlockPresent {
+					if runtimeAttr.Engine != nil {
+						runtimeAttr.Engine = nil
+						overrideRuntime = true
+					}
+				}
+
+				if isRuntimeEngineBlockPresent && runtimeAttr.Engine != nil {
+					config, ok := engineConfigs[runtimeAttr.Engine.Name]
+					if ok {
+						res := resolveEngineVersion(runtimeAttr.Engine.Version, config)
+						if res.Denied || len(res.Notices) > 0 {
+							return fmt.Errorf(
+								"\"runtime.engine.version\" is not valid: %s",
+								strings.Join(res.Notices, "; "),
+							)
+						}
+					}
+				}
+
 				if runtimeAttr.AutoDetect && bundleAttr != nil {
 					if !isRuntimeWorkingDirPresent {
 						runtimeAttr.WorkingDir = bundleAttr.Metadata.WorkingDir
@@ -454,6 +504,25 @@ func resourcePlaywrightCheckSuite() *schema.Resource {
 							testAttr.Command = defaultTestCommand
 							overrideRuntime = true
 						}
+					}
+
+					if runtimeAttr.Engine == nil && bundleAttr.Metadata.Engine != "" {
+						runtimeAttr.Engine = &PlaywrightCheckSuiteRuntimeEngineAttribute{
+							Name:    bundleAttr.Metadata.Engine,
+							Version: bundleAttr.Metadata.EngineVersion,
+						}
+						overrideRuntime = true
+					}
+
+					if runtimeAttr.Engine != nil && runtimeAttr.Engine.Version == "" &&
+						bundleAttr.Metadata.EngineRawVersion != "" {
+						return fmt.Errorf(
+							"detected %s version %q from %s, but the version was denied or could not be resolved; "+
+								"set \"runtime.engine\" explicitly or update to a supported version",
+							runtimeAttr.Engine.Name,
+							bundleAttr.Metadata.EngineRawVersion,
+							bundleAttr.Metadata.EngineSource,
+						)
 					}
 				}
 
@@ -665,6 +734,11 @@ func PlaywrightCheckSuiteResourceFromResourceData(
 				check.Browsers = browsers
 			}
 		}
+
+		if runtimeAttr.Engine != nil {
+			check.Engine = &runtimeAttr.Engine.Name
+			check.EngineVersion = &runtimeAttr.Engine.Version
+		}
 	}
 
 	resource := PlaywrightCheckSuiteResource{
@@ -736,6 +810,15 @@ func PlaywrightCheckSuiteResourceFromAPIModel(
 			}
 
 			runtimeAttr.Playwright.Devices = &devices
+		}
+	}
+
+	if check.Engine != nil && *check.Engine != "" {
+		runtimeAttr.Engine = &PlaywrightCheckSuiteRuntimeEngineAttribute{
+			Name: *check.Engine,
+		}
+		if check.EngineVersion != nil {
+			runtimeAttr.Engine.Version = *check.EngineVersion
 		}
 	}
 
@@ -834,6 +917,7 @@ type PlaywrightCheckSuiteRuntimeAttribute struct {
 	WorkingDir string
 	Steps      *PlaywrightCheckSuiteRuntimeStepsAttribute
 	Playwright *PlaywrightCheckSuiteRuntimePlaywrightAttribute
+	Engine     *PlaywrightCheckSuiteRuntimeEngineAttribute
 }
 
 func PlaywrightCheckSuiteRuntimeAttributeFromList(
@@ -855,11 +939,17 @@ func PlaywrightCheckSuiteRuntimeAttributeFromList(
 		return nil, err
 	}
 
+	engineAttr, err := PlaywrightCheckSuiteRuntimeEngineAttributeFromList(m["engine"].([]any))
+	if err != nil {
+		return nil, err
+	}
+
 	a := PlaywrightCheckSuiteRuntimeAttribute{
 		AutoDetect: m["auto_detect"].(bool),
 		WorkingDir: m["working_dir"].(string),
 		Steps:      stepsAttr,
 		Playwright: playwrightAttr,
+		Engine:     engineAttr,
 	}
 
 	return &a, nil
@@ -876,6 +966,7 @@ func (a *PlaywrightCheckSuiteRuntimeAttribute) ToList() []tfMap {
 			"working_dir": a.WorkingDir,
 			"steps":       a.Steps.ToList(),
 			"playwright":  a.Playwright.ToList(),
+			"engine":      a.Engine.ToList(),
 		},
 	}
 }
@@ -1067,4 +1158,37 @@ func (a *PlaywrightCheckSuiteRuntimePlaywrightDeviceAttributes) ToList() []tfMap
 	}
 
 	return m
+}
+
+type PlaywrightCheckSuiteRuntimeEngineAttribute struct {
+	Name    string
+	Version string
+}
+
+func PlaywrightCheckSuiteRuntimeEngineAttributeFromList(list []any) (*PlaywrightCheckSuiteRuntimeEngineAttribute, error) {
+	if len(list) == 0 || list[0] == nil {
+		return nil, nil
+	}
+	m := list[0].(tfMap)
+	attr := &PlaywrightCheckSuiteRuntimeEngineAttribute{
+		Name:    m["name"].(string),
+		Version: m["version"].(string),
+	}
+	if attr.Name == "" || attr.Version == "" {
+		return nil, nil
+	}
+	return attr, nil
+}
+
+func (a *PlaywrightCheckSuiteRuntimeEngineAttribute) ToList() []tfMap {
+	if a == nil {
+		return []tfMap{{
+			"name":    "",
+			"version": "",
+		}}
+	}
+	return []tfMap{{
+		"name":    a.Name,
+		"version": a.Version,
+	}}
 }
