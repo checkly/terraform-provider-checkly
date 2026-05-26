@@ -1638,3 +1638,56 @@ func TestAccPlaywrightCheckSuiteWithEngine(t *testing.T) {
 		},
 	})
 }
+
+func TestAccPlaywrightCheckSuiteEngineVersionValidation(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: playwrightCheckSuiteBase + `
+				resource "checkly_playwright_check_suite" "test" {
+					name                      = "PW Check engine validation"
+					activated                 = true
+					frequency                 = 720
+					use_global_alert_settings = true
+					locations                 = ["us-east-1"]
+
+					bundle {
+						id       = checkly_playwright_code_bundle.test.id
+						metadata = checkly_playwright_code_bundle.test.metadata
+					}
+
+					runtime {
+						engine {
+							name    = "node"
+							version = "18"
+						}
+					}
+				}
+			`,
+			ExpectError: regexp.MustCompile(`"runtime.engine.version" is not valid`),
+		},
+		{
+			Config: playwrightCheckSuiteBase + `
+				resource "checkly_playwright_check_suite" "test" {
+					name                      = "PW Check engine validation"
+					activated                 = true
+					frequency                 = 720
+					use_global_alert_settings = true
+					locations                 = ["us-east-1"]
+
+					bundle {
+						id       = checkly_playwright_code_bundle.test.id
+						metadata = checkly_playwright_code_bundle.test.metadata
+					}
+
+					runtime {
+						engine {
+							name    = "bun"
+							version = "2.0"
+						}
+					}
+				}
+			`,
+			ExpectError: regexp.MustCompile(`"runtime.engine.version" is not valid`),
+		},
+	})
+}

@@ -437,6 +437,19 @@ func resourcePlaywrightCheckSuite() *schema.Resource {
 					}
 				}
 
+				if isRuntimeEngineBlockPresent && runtimeAttr.Engine != nil {
+					config, ok := engineConfigs[runtimeAttr.Engine.Name]
+					if ok {
+						res := resolveEngineVersion(runtimeAttr.Engine.Version, config)
+						if res.Denied || len(res.Notices) > 0 {
+							return fmt.Errorf(
+								"\"runtime.engine.version\" is not valid: %s",
+								strings.Join(res.Notices, "; "),
+							)
+						}
+					}
+				}
+
 				if runtimeAttr.AutoDetect && bundleAttr != nil {
 					if !isRuntimeWorkingDirPresent {
 						runtimeAttr.WorkingDir = bundleAttr.Metadata.WorkingDir
