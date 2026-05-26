@@ -1153,19 +1153,26 @@ type PlaywrightCheckSuiteRuntimeEngineAttribute struct {
 }
 
 func PlaywrightCheckSuiteRuntimeEngineAttributeFromList(list []any) (*PlaywrightCheckSuiteRuntimeEngineAttribute, error) {
-	if len(list) == 0 {
+	if len(list) == 0 || list[0] == nil {
 		return nil, nil
 	}
 	m := list[0].(tfMap)
-	return &PlaywrightCheckSuiteRuntimeEngineAttribute{
+	attr := &PlaywrightCheckSuiteRuntimeEngineAttribute{
 		Name:    m["name"].(string),
 		Version: m["version"].(string),
-	}, nil
+	}
+	if attr.Name == "" || attr.Version == "" {
+		return nil, nil
+	}
+	return attr, nil
 }
 
 func (a *PlaywrightCheckSuiteRuntimeEngineAttribute) ToList() []tfMap {
 	if a == nil {
-		return []tfMap{}
+		return []tfMap{{
+			"name":    "",
+			"version": "",
+		}}
 	}
 	return []tfMap{{
 		"name":    a.Name,
