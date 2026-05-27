@@ -107,7 +107,7 @@ jobs:
     - name: Sanitize artifact name
       id: artifact-name
       if: always()
-      uses: actions/github-script@v8
+      uses: actions/github-script@v9
       with:
         result-encoding: string
         script: |
