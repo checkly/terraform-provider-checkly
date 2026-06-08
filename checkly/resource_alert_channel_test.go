@@ -3,6 +3,7 @@ package checkly
 import (
 	"fmt"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -73,11 +74,11 @@ func TestAccSlack(t *testing.T) {
 }
 
 func TestAccSlackApp(t *testing.T) {
-	accTestCase(t, []resource.TestStep{
+	accTestCaseWithErrorCheck(t, []resource.TestStep{
 		{
 			Config: `resource "checkly_alert_channel" "slack_app_ac" {
 				slack_app {
-					slack_channels = ["#ops", "@John"]
+					slack_channels = ["#terraform-e2e-slack-app-alert-target"]
 				}
 				send_recovery        = true
 				send_failure         = true
@@ -86,6 +87,15 @@ func TestAccSlackApp(t *testing.T) {
 				ssl_expiry_threshold = 11
 			}`,
 		},
+	}, func(err error) error {
+		// A SLACK_APP alert channel can only be created on accounts that have
+		// connected the Checkly Slack App. Without it the API responds with a
+		// slack_integration_not_connected error, which is account setup rather
+		// than a provider defect, so skip instead of failing.
+		if err != nil && strings.Contains(err.Error(), "slack_integration_not_connected") {
+			t.Skipf("Slack App integration is not connected on this account; skipping: %v", err)
+		}
+		return err
 	})
 }
 
