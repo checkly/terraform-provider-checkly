@@ -9,7 +9,7 @@ resource "checkly_alert_channel" "email_ac" {
   ssl_expiry    = false
 }
 
-# Slack Alert Channel
+# Slack App Alert Channel
 resource "checkly_alert_channel" "slack_app_ac" {
   slack_app {
     slack_channels = ["#ops", "@John"]
