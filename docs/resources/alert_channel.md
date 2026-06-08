@@ -35,7 +35,15 @@ resource "checkly_alert_channel" "sms_ac" {
   send_failure  = true
 }
 
-# A Slack alert channel
+# A Slack App alert channel, using the Checkly Slack App
+resource "checkly_alert_channel" "slack_app_ac" {
+  slack_app {
+    slack_channels = ["#checkly-notifications", "@john"]
+  }
+}
+
+# A legacy Slack alert channel, using a Slack webhook URL.
+# Deprecated: use the slack_app block instead.
 resource "checkly_alert_channel" "slack_ac" {
   slack {
     channel = "#checkly-notifications"
