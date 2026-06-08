@@ -31,12 +31,21 @@ func testAccPreCheck(t *testing.T) {
 }
 
 func accTestCase(t *testing.T, steps []resource.TestStep) {
+	accTestCaseWithErrorCheck(t, steps, nil)
+}
+
+// accTestCaseWithErrorCheck behaves like accTestCase but routes any step error
+// through errorCheck before the framework reports it. This lets a test skip
+// when the account lacks setup the test depends on (e.g. a connected
+// integration) rather than failing.
+func accTestCaseWithErrorCheck(t *testing.T, steps []resource.TestStep, errorCheck resource.ErrorCheckFunc) {
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
 		},
 		Providers:    testAccProviders,
 		CheckDestroy: nil,
+		ErrorCheck:   errorCheck,
 		Steps:        steps,
 	})
 }

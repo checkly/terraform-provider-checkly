@@ -4,7 +4,7 @@ go 1.25.8
 
 require (
 	github.com/aws/aws-sdk-go v1.44.122 // indirect
-	github.com/checkly/checkly-go-sdk v1.20.3
+	github.com/checkly/checkly-go-sdk v1.21.0
 	github.com/google/go-cmp v0.7.0
 	github.com/gruntwork-io/terratest v0.41.16
 	github.com/hashicorp/terraform-plugin-docs v0.25.0
