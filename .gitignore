@@ -12,3 +12,4 @@ dist/*
 __debug_bin
 local/*
 .idea
+tools/tfplugindocs
