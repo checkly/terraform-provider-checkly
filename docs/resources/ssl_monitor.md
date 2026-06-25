@@ -102,7 +102,7 @@ resource "checkly_ssl_monitor" "example-ssl-monitor-2" {
 - `activated` (Boolean) Determines if the monitor is running or not. Possible values `true`, and `false`.
 - `frequency` (Number) Controls how often the monitor should run. Defined in minutes. The allowed values are `0` (high frequency - use `frequency_offset` to define the actual frequency), `1` (1 minute), `2` (2 minutes), `5` (5 minutes), `10` (10 minutes), `15` (15 minutes), `30` (30 minutes), `60` (1 hour), `120` (2 hours), `180` (3 hours), `360` (6 hours), `720` (12 hours) and `1440` (24 hours).
 - `name` (String) The name of the monitor.
-- `request` (Block Set, Min: 1, Max: 1) The parameters for the SSL connection. (see [below for nested schema](#nestedblock--request))
+- `request` (Block List, Min: 1, Max: 1) The parameters for the SSL connection. (see [below for nested schema](#nestedblock--request))
 
 ### Optional
 
