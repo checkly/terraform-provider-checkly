@@ -119,7 +119,7 @@ func resourceGRPCMonitor() *schema.Resource {
 				Description: "When true, the account level alert settings will be used, not the alert setting defined on this monitor.",
 			},
 			"request": {
-				Type:     schema.TypeSet,
+				Type:     schema.TypeList,
 				Required: true,
 				MaxItems: 1,
 				Elem: &schema.Resource{
@@ -433,18 +433,18 @@ func grpcCheckFromResourceData(d *schema.ResourceData) (checkly.GRPCMonitor, err
 	privateLocations := stringsFromSet(d.Get("private_locations").(*schema.Set))
 	monitor.PrivateLocations = &privateLocations
 
-	monitor.Request = grpcRequestFromSet(d.Get("request").(*schema.Set))
+	monitor.Request = grpcRequestFromList(d.Get("request").([]any))
 
 	monitor.FrequencyOffset = d.Get(frequencyOffsetAttributeName).(int)
 
 	return monitor, nil
 }
 
-func grpcRequestFromSet(s *schema.Set) checkly.GRPCRequest {
-	if s.Len() == 0 {
+func grpcRequestFromList(s []any) checkly.GRPCRequest {
+	if len(s) == 0 || s[0] == nil {
 		return checkly.GRPCRequest{}
 	}
-	res := s.List()[0].(tfMap)
+	res := s[0].(tfMap)
 	return checkly.GRPCRequest{
 		URL:        res["host"].(string),
 		Port:       res["port"].(int),

@@ -107,7 +107,7 @@ func resourceSSLMonitor() *schema.Resource {
 				Description: "When true, the account level alert settings will be used, not the alert setting defined on this monitor.",
 			},
 			"request": {
-				Type:     schema.TypeSet,
+				Type:     schema.TypeList,
 				Required: true,
 				MaxItems: 1,
 				Elem: &schema.Resource{
@@ -446,7 +446,7 @@ func sslCheckFromResourceData(d *schema.ResourceData) (checkly.SSLMonitor, error
 	privateLocations := stringsFromSet(d.Get("private_locations").(*schema.Set))
 	monitor.PrivateLocations = &privateLocations
 
-	request, err := sslRequestFromSet(d.Get("request").(*schema.Set))
+	request, err := sslRequestFromList(d.Get("request").([]any))
 	if err != nil {
 		return checkly.SSLMonitor{}, err
 	}
@@ -457,11 +457,11 @@ func sslCheckFromResourceData(d *schema.ResourceData) (checkly.SSLMonitor, error
 	return monitor, nil
 }
 
-func sslRequestFromSet(s *schema.Set) (checkly.SSLRequest, error) {
-	if s.Len() == 0 {
+func sslRequestFromList(s []any) (checkly.SSLRequest, error) {
+	if len(s) == 0 || s[0] == nil {
 		return checkly.SSLRequest{}, nil
 	}
-	res := s.List()[0].(tfMap)
+	res := s[0].(tfMap)
 
 	cfg := checkly.SSLConfig{
 		Hostname:               res["hostname"].(string),

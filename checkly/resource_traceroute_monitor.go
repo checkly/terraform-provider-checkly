@@ -108,7 +108,7 @@ func resourceTracerouteMonitor() *schema.Resource {
 				Description: "When true, the account level alert settings will be used, not the alert setting defined on this monitor.",
 			},
 			"request": {
-				Type:     schema.TypeSet,
+				Type:     schema.TypeList,
 				Required: true,
 				MaxItems: 1,
 				Elem: &schema.Resource{
@@ -380,18 +380,18 @@ func tracerouteCheckFromResourceData(d *schema.ResourceData) (checkly.Traceroute
 	// Traceroute monitors do not support private locations: the public API
 	// marks `privateLocations` forbidden, so the field is omitted entirely.
 
-	monitor.Request = tracerouteRequestFromSet(d.Get("request").(*schema.Set))
+	monitor.Request = tracerouteRequestFromList(d.Get("request").([]any))
 
 	monitor.FrequencyOffset = d.Get(frequencyOffsetAttributeName).(int)
 
 	return monitor, nil
 }
 
-func tracerouteRequestFromSet(s *schema.Set) checkly.TracerouteRequest {
-	if s.Len() == 0 {
+func tracerouteRequestFromList(s []any) checkly.TracerouteRequest {
+	if len(s) == 0 || s[0] == nil {
 		return checkly.TracerouteRequest{}
 	}
-	res := s.List()[0].(tfMap)
+	res := s[0].(tfMap)
 	// PtrLookup is sent as an explicit pointer so the schema's `false` reaches the
 	// wire; the SDK's MarshalJSON drops `port` when protocol is "ICMP".
 	ptrLookup := res["ptr_lookup"].(bool)
