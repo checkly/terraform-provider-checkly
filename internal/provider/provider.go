@@ -168,8 +168,14 @@ func (p *ChecklyProvider) Configure(ctx context.Context, req provider.ConfigureR
 
 func (p *ChecklyProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
+		NewClientCertificateResource,
 		NewEnvironmentVariableResource,
+		NewPrivateLocationResource,
 		NewSnippetResource,
+		NewStatusPageResource,
+		NewStatusPageServiceResource,
+		NewTriggerCheckResource,
+		NewTriggerGroupResource,
 	}
 }
 
