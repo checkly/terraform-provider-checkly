@@ -76,25 +76,26 @@ resource "checkly_playwright_check_suite" "example-playwright-check-custom" {
     metadata = checkly_playwright_code_bundle.playwright-bundle.metadata
   }
 
-  runtime {
+  runtime = {
     working_dir = "./packages/e2e"
 
-    steps {
-      test {
+    steps = {
+      test = {
         command = "npx playwright test --config \"playwright.config.ts\""
       }
     }
 
-    playwright {
+    playwright = {
       version = "1.56.1"
 
-      device {
-        type = "chromium"
-      }
-
-      device {
-        type = "firefox"
-      }
+      device = [
+        {
+          type = "chromium"
+        },
+        {
+          type = "firefox"
+        },
+      ]
     }
   }
 }

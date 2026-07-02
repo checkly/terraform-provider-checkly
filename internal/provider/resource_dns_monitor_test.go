@@ -1,0 +1,1624 @@
+package provider
+
+import (
+	"context"
+	"fmt"
+	"regexp"
+	"strconv"
+	"testing"
+
+	"github.com/google/go-cmp/cmp"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
+
+	"github.com/checkly/checkly-go-sdk"
+)
+
+// dnsMonitorTestCheckAlertChannelSubscription checks that the resource has an
+// alert_channel_subscription for the channel created by channelIDAttr with
+// the expected activation state.
+func dnsMonitorTestCheckAlertChannelSubscription(resourceName, blockPath string, channelIDAttr string, expectedActivated string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return fmt.Errorf("resource not found: %s", resourceName)
+		}
+
+		// Resolve the channel_id from another resource's attribute
+		channelRS, ok := s.RootModule().Resources[channelIDAttr]
+		if !ok {
+			return fmt.Errorf("resource not found: %s", channelIDAttr)
+		}
+		wantChannelID := channelRS.Primary.Attributes["id"]
+
+		count := rs.Primary.Attributes[blockPath+".#"]
+		n, _ := strconv.Atoi(count)
+		for i := range n {
+			prefix := fmt.Sprintf("%s.%d", blockPath, i)
+			if rs.Primary.Attributes[prefix+".channel_id"] == wantChannelID {
+				got := rs.Primary.Attributes[prefix+".activated"]
+				if got != expectedActivated {
+					return fmt.Errorf("channel %s: expected activated=%s, got %s", wantChannelID, expectedActivated, got)
+				}
+				return nil
+			}
+		}
+
+		return fmt.Errorf("no alert_channel_subscription with channel_id=%s found", wantChannelID)
+	}
+}
+
+func TestAccDNSMonitorRequiredFields(t *testing.T) {
+	config := `resource "checkly_dns_monitor" "test" {}`
+	accTestCase(t, []resource.TestStep{
+		{
+			Config:      config,
+			ExpectError: regexp.MustCompile(`The argument "name" is required, but no definition was found.`),
+		},
+		{
+			Config:      config,
+			ExpectError: regexp.MustCompile(`The argument "activated" is required, but no definition was found.`),
+		},
+		{
+			Config:      config,
+			ExpectError: regexp.MustCompile(`The argument "frequency" is required, but no definition was found.`),
+		},
+		{
+			// Terraform only reports the missing request block once all
+			// required attributes are present.
+			Config: `
+				resource "checkly_dns_monitor" "test" {
+					name      = "test-required-fields"
+					activated = true
+					frequency = 60
+				}
+			`,
+			ExpectError: regexp.MustCompile(`Block request must have a configuration value`),
+		},
+	})
+}
+
+func TestAccDNSMonitorBasic(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_dns_monitor" "test" {
+					name                      = "DNS Monitor 1"
+					description               = "DNS monitor description"
+					frequency                 = 60
+					activated                 = true
+					muted                     = true
+					max_response_time         = 3000
+					locations                 = ["us-east-1", "eu-central-1"]
+					use_global_alert_settings = true
+
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+
+						assertion {
+							source     = "RESPONSE_CODE"
+							comparison = "EQUALS"
+							target     = "NOERROR"
+						}
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test",
+					"name",
+					"DNS Monitor 1",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test",
+					"description",
+					"DNS monitor description",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test",
+					"activated",
+					"true",
+				),
+				testCheckResourceAttrExpr(
+					"checkly_dns_monitor.test",
+					"locations.*",
+					"eu-central-1",
+				),
+				testCheckResourceAttrExpr(
+					"checkly_dns_monitor.test",
+					"locations.*",
+					"us-east-1",
+				),
+				testCheckResourceAttrExpr(
+					"checkly_dns_monitor.test",
+					"request.*.record_type",
+					"A",
+				),
+				testCheckResourceAttrExpr(
+					"checkly_dns_monitor.test",
+					"request.*.query",
+					"welcome.checklyhq.com",
+				),
+				testCheckResourceAttrExpr(
+					"checkly_dns_monitor.test",
+					"request.*.assertion.*.comparison",
+					"EQUALS",
+				),
+				testCheckResourceAttrExpr(
+					"checkly_dns_monitor.test",
+					"request.*.assertion.*.property",
+					"",
+				),
+				testCheckResourceAttrExpr(
+					"checkly_dns_monitor.test",
+					"request.*.assertion.*.source",
+					"RESPONSE_CODE",
+				),
+				testCheckResourceAttrExpr(
+					"checkly_dns_monitor.test",
+					"request.*.assertion.*.target",
+					"NOERROR",
+				),
+			),
+		},
+	})
+}
+
+func TestAccDNSMonitorDescriptionRemoval(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_dns_monitor" "test" {
+					name                      = "DNS Monitor 1"
+					description               = "DNS monitor description"
+					frequency                 = 60
+					activated                 = true
+					muted                     = true
+					max_response_time         = 3000
+					locations                 = ["us-east-1", "eu-central-1"]
+					use_global_alert_settings = true
+
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+
+						assertion {
+							source     = "RESPONSE_CODE"
+							comparison = "EQUALS"
+							target     = "NOERROR"
+						}
+					}
+				}
+			`,
+			Check: resource.TestCheckResourceAttr(
+				"checkly_dns_monitor.test",
+				"description",
+				"DNS monitor description",
+			),
+		},
+		{
+			Config: `
+				resource "checkly_dns_monitor" "test" {
+					name                      = "DNS Monitor 1"
+					frequency                 = 60
+					activated                 = true
+					muted                     = true
+					max_response_time         = 3000
+					locations                 = ["us-east-1", "eu-central-1"]
+					use_global_alert_settings = true
+
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+
+						assertion {
+							source     = "RESPONSE_CODE"
+							comparison = "EQUALS"
+							target     = "NOERROR"
+						}
+					}
+				}
+			`,
+			Check: resource.TestCheckResourceAttr(
+				"checkly_dns_monitor.test",
+				"description",
+				"",
+			),
+		},
+	})
+}
+
+func TestAccDNSMonitorFull(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_dns_monitor" "test" {
+					name                   = "DNS Monitor 2"
+					frequency              = 120
+					activated              = true
+					muted                  = true
+					degraded_response_time = 400
+					max_response_time      = 500
+
+					locations = [
+						"eu-central-1",
+						"us-east-1",
+						"ap-northeast-1"
+					]
+
+					request {
+						record_type  = "AAAA"
+						query        = "api.checklyhq.com"
+						protocol     = "TCP"
+
+						name_server {
+							host = "1.1.1.1"
+							port = 53
+						}
+
+						assertion {
+							source     = "RESPONSE_CODE"
+							comparison = "EQUALS"
+							target     = "NOERROR"
+						}
+
+						assertion {
+							source     = "RESPONSE_TIME"
+							comparison = "LESS_THAN"
+							target     = "300"
+						}
+					}
+
+					alert_settings = {
+						escalation_type = "RUN_BASED"
+
+						reminders = {
+							amount   = 0
+							interval = 5
+						}
+
+						run_based_escalation = {
+							failed_run_threshold = 1
+						}
+
+						parallel_run_failure_threshold = {
+							enabled    = false
+							percentage = 10
+						}
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test",
+					"degraded_response_time",
+					"400",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test",
+					"max_response_time",
+					"500",
+				),
+				testCheckResourceAttrExpr(
+					"checkly_dns_monitor.test",
+					`"locations.#"`,
+					"3",
+				),
+				testCheckResourceAttrExpr(
+					"checkly_dns_monitor.test",
+					"request.*.record_type",
+					"AAAA",
+				),
+				testCheckResourceAttrExpr(
+					"checkly_dns_monitor.test",
+					"request.*.query",
+					"api.checklyhq.com",
+				),
+				testCheckResourceAttrExpr(
+					"checkly_dns_monitor.test",
+					"request.*.name_server.*.host",
+					"1.1.1.1",
+				),
+				testCheckResourceAttrExpr(
+					"checkly_dns_monitor.test",
+					"request.*.name_server.*.port",
+					"53",
+				),
+				testCheckResourceAttrExpr(
+					"checkly_dns_monitor.test",
+					"request.*.protocol",
+					"TCP",
+				),
+				testCheckResourceAttrExpr(
+					"checkly_dns_monitor.test",
+					"request.*.assertion.#",
+					"2",
+				),
+				testCheckResourceAttrExpr(
+					"checkly_dns_monitor.test",
+					"request.*.assertion.*.comparison",
+					"EQUALS",
+				),
+				testCheckResourceAttrExpr(
+					"checkly_dns_monitor.test",
+					"request.*.assertion.*.comparison",
+					"LESS_THAN",
+				),
+				testCheckResourceAttrExpr(
+					"checkly_dns_monitor.test",
+					"request.*.assertion.*.target",
+					"NOERROR",
+				),
+				testCheckResourceAttrExpr(
+					"checkly_dns_monitor.test",
+					"request.*.assertion.*.target",
+					"300",
+				),
+			),
+		},
+	})
+}
+
+func TestAccDNSMonitorWithTriggerIncident(t *testing.T) {
+	dnsMonitorWithTriggerIncident := `
+resource "checkly_status_page_service" "test_dns_service" {
+	name = "DNS Test Service"
+}
+
+resource "checkly_dns_monitor" "test_trigger_incident" {
+	name          = "DNS Monitor with Trigger Incident"
+	activated     = true
+	frequency     = 30
+	locations     = ["eu-west-2", "us-east-1"]
+
+	request {
+		record_type = "A"
+		query       = "welcome.checklyhq.com"
+
+		assertion {
+			source     = "RESPONSE_CODE"
+			comparison = "EQUALS"
+			target     = "NOERROR"
+		}
+	}
+
+	trigger_incident {
+		service_id         = checkly_status_page_service.test_dns_service.id
+		severity           = "CRITICAL"
+		name               = "Missing DNS Record"
+		description        = "The DNS monitor has detected that a record may be missing"
+		notify_subscribers = true
+	}
+
+	use_global_alert_settings = true
+}
+`
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: dnsMonitorWithTriggerIncident,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test_trigger_incident",
+					"name",
+					"DNS Monitor with Trigger Incident",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test_trigger_incident",
+					"activated",
+					"true",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test_trigger_incident",
+					"frequency",
+					"30",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test_trigger_incident",
+					"trigger_incident.0.severity",
+					"CRITICAL",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test_trigger_incident",
+					"trigger_incident.0.name",
+					"Missing DNS Record",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test_trigger_incident",
+					"trigger_incident.0.description",
+					"The DNS monitor has detected that a record may be missing",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test_trigger_incident",
+					"trigger_incident.0.notify_subscribers",
+					"true",
+				),
+			),
+		},
+	})
+}
+
+var wantDNSMonitor = checkly.DNSMonitor{
+	Name:                 "My test check",
+	Frequency:            1,
+	Activated:            true,
+	Muted:                false,
+	Locations:            []string{"eu-west-1"},
+	DegradedResponseTime: 4000,
+	MaxResponseTime:      5000,
+	Tags: []string{
+		"foo",
+		"bar",
+	},
+	AlertSettings: &checkly.AlertSettings{
+		EscalationType: checkly.RunBased,
+		RunBasedEscalation: checkly.RunBasedEscalation{
+			FailedRunThreshold: 1,
+		},
+		Reminders: checkly.Reminders{
+			Interval: 5,
+		},
+	},
+	UseGlobalAlertSettings: false,
+	RetryStrategy:          &checkly.RetryStrategy{Type: "NO_RETRIES"},
+	Request: checkly.DNSRequest{
+		RecordType: "AAAA",
+		Query:      "example.com",
+		NameServer: "1.1.1.1",
+		Port:       53,
+		Protocol:   "UDP",
+		Assertions: []checkly.Assertion{
+			{
+				Source:     "RESPONSE_CODE",
+				Comparison: checkly.Equals,
+				Target:     "NOERROR",
+			},
+		},
+	},
+}
+
+func TestEncodeDecodeDNSMonitorResource(t *testing.T) {
+	ctx := context.Background()
+
+	var diags diag.Diagnostics
+
+	// Start from a model whose prior-aware values are typed nulls, as they
+	// would be when decoded from an empty plan or state.
+	model := DNSMonitorResourceModel{
+		RetryStrategy: types.ObjectNull(retryStrategyAttrTypes(false)),
+		AlertSettings: types.ObjectNull(alertSettingsAttrTypes),
+	}
+
+	want := wantDNSMonitor
+	want.AlertChannelSubscriptions = []checkly.AlertChannelSubscription{}
+
+	dnsMonitorToModel(ctx, &want, &model, &diags)
+	if diags.HasError() {
+		t.Fatal(diags)
+	}
+
+	got := dnsMonitorFromModel(ctx, &model, &diags)
+	if diags.HasError() {
+		t.Fatal(diags)
+	}
+
+	if !cmp.Equal(want, got) {
+		t.Error(cmp.Diff(want, got))
+	}
+}
+
+func TestAccDNSMonitorWithSingleRetry(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_dns_monitor" "test" {
+					name      = "test-single-retry"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+					}
+					retry_strategy = {
+						type                 = "SINGLE_RETRY"
+						base_backoff_seconds = 30
+						same_region          = true
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test",
+					"retry_strategy.type",
+					"SINGLE_RETRY",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test",
+					"retry_strategy.base_backoff_seconds",
+					"30",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test",
+					"retry_strategy.max_retries",
+					"2",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test",
+					"retry_strategy.max_duration_seconds",
+					"600",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test",
+					"retry_strategy.same_region",
+					"true",
+				),
+			),
+		},
+	})
+
+}
+
+func TestAccDNSMonitorWithNoRetries(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_dns_monitor" "test" {
+					name      = "test-no-retries"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+					}
+					retry_strategy = {
+						type = "NO_RETRIES"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test",
+					"retry_strategy.type",
+					"NO_RETRIES",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test",
+					"retry_strategy.base_backoff_seconds",
+					"60",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test",
+					"retry_strategy.max_retries",
+					"2",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test",
+					"retry_strategy.max_duration_seconds",
+					"600",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test",
+					"retry_strategy.same_region",
+					"true",
+				),
+			),
+		},
+	})
+}
+
+func TestAccDNSMonitorWithDefaultNoRetries(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_dns_monitor" "test" {
+					name      = "test-no-retries"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test",
+					"retry_strategy.type",
+					"NO_RETRIES",
+				),
+				resource.TestCheckNoResourceAttr(
+					"checkly_dns_monitor.test",
+					"retry_strategy.base_backoff_seconds",
+				),
+				resource.TestCheckNoResourceAttr(
+					"checkly_dns_monitor.test",
+					"retry_strategy.max_retries",
+				),
+				resource.TestCheckNoResourceAttr(
+					"checkly_dns_monitor.test",
+					"retry_strategy.max_duration_seconds",
+				),
+				resource.TestCheckNoResourceAttr(
+					"checkly_dns_monitor.test",
+					"retry_strategy.same_region",
+				),
+			),
+		},
+	})
+}
+
+func TestAccDNSMonitorWithFixedRetry(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_dns_monitor" "test" {
+					name      = "test-fixed-retry"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+					}
+					retry_strategy = {
+						type                 = "FIXED"
+						base_backoff_seconds = 30
+						max_retries          = 3
+						max_duration_seconds = 300
+						same_region          = false
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test",
+					"retry_strategy.type",
+					"FIXED",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test",
+					"retry_strategy.base_backoff_seconds",
+					"30",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test",
+					"retry_strategy.max_retries",
+					"3",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test",
+					"retry_strategy.max_duration_seconds",
+					"300",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test",
+					"retry_strategy.same_region",
+					"false",
+				),
+			),
+		},
+	})
+}
+
+func TestAccDNSMonitorWithExponentialRetry(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_dns_monitor" "test" {
+					name      = "test-exponential-retry"
+					activated = true
+					frequency = 720
+					locations = ["eu-central-1"]
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+					}
+					retry_strategy = {
+						type                 = "EXPONENTIAL"
+						base_backoff_seconds = 60
+						max_retries          = 5
+						max_duration_seconds = 600
+						same_region          = true
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test",
+					"retry_strategy.type",
+					"EXPONENTIAL",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test",
+					"retry_strategy.base_backoff_seconds",
+					"60",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test",
+					"retry_strategy.max_retries",
+					"5",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test",
+					"retry_strategy.max_duration_seconds",
+					"600",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test",
+					"retry_strategy.same_region",
+					"true",
+				),
+			),
+		},
+	})
+}
+
+func TestAccDNSMonitorWithLinearRetry(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_dns_monitor" "test" {
+					name      = "test-linear-retry"
+					activated = true
+					frequency = 720
+					locations = ["eu-central-1"]
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+					}
+					retry_strategy = {
+						type                 = "LINEAR"
+						base_backoff_seconds = 45
+						max_retries          = 4
+						max_duration_seconds = 450
+						same_region          = false
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test",
+					"retry_strategy.type",
+					"LINEAR",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test",
+					"retry_strategy.base_backoff_seconds",
+					"45",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test",
+					"retry_strategy.max_retries",
+					"4",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test",
+					"retry_strategy.max_duration_seconds",
+					"450",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test",
+					"retry_strategy.same_region",
+					"false",
+				),
+			),
+		},
+	})
+}
+
+// DNS monitors do not support retry conditions, so their retry_strategy has
+// no only_on attribute. Terraform's object conversion rules silently drop
+// unexpected attributes from attribute values, so a configured only_on is
+// ignored rather than rejected.
+func TestAccDNSMonitorWithOnlyOnNetworkErrorIgnored(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_dns_monitor" "test" {
+					name      = "test-only-on-ignored"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+					}
+					retry_strategy = {
+						type = "SINGLE_RETRY"
+
+						only_on = {
+							network_error = true
+						}
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test",
+					"retry_strategy.type",
+					"SINGLE_RETRY",
+				),
+				resource.TestCheckNoResourceAttr(
+					"checkly_dns_monitor.test",
+					"retry_strategy.only_on.network_error",
+				),
+			),
+		},
+	})
+}
+
+func TestAccDNSMonitorRetryStrategyRemoval(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_dns_monitor" "test" {
+					name      = "test-single-retry"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+					}
+					retry_strategy = {
+						type = "LINEAR"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test",
+					"retry_strategy.type",
+					"LINEAR",
+				),
+			),
+		},
+		{
+			Config: `
+				resource "checkly_dns_monitor" "test" {
+					name      = "test-single-retry"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test",
+					"retry_strategy.type",
+					"NO_RETRIES",
+				),
+			),
+		},
+	})
+}
+
+func TestAccDNSMonitorGroupAssignment(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_check_group" "test1" {
+					name        = "test-group-assignment"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+				}
+
+				resource "checkly_check_group" "test2" {
+					name        = "test-group-assignment"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+				}
+
+				resource "checkly_dns_monitor" "test1" {
+					name      = "test-group-assignment"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					group_id  = checkly_check_group.test1.id
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+					}
+				}
+
+				resource "checkly_dns_monitor" "test2" {
+					name      = "test-group-assignment"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttrPair(
+					"checkly_dns_monitor.test1",
+					"group_id",
+					"checkly_check_group.test1",
+					"id",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test2",
+					"group_id",
+					"0",
+				),
+			),
+		},
+		{
+			Config: `
+				resource "checkly_check_group" "test1" {
+					name        = "test-group-assignment"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+				}
+
+				resource "checkly_check_group" "test2" {
+					name        = "test-group-assignment"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+				}
+
+				resource "checkly_dns_monitor" "test1" {
+					name      = "test-group-assignment"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					group_id  = checkly_check_group.test2.id
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+					}
+				}
+
+				resource "checkly_dns_monitor" "test2" {
+					name      = "test-group-assignment"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					group_id  = checkly_check_group.test2.id
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttrPair(
+					"checkly_dns_monitor.test1",
+					"group_id",
+					"checkly_check_group.test2",
+					"id",
+				),
+				resource.TestCheckResourceAttrPair(
+					"checkly_dns_monitor.test2",
+					"group_id",
+					"checkly_check_group.test2",
+					"id",
+				),
+			),
+		},
+		{
+			Config: `
+				resource "checkly_check_group" "test1" {
+					name        = "test-group-assignment"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+				}
+
+				resource "checkly_check_group" "test2" {
+					name        = "test-group-assignment"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+				}
+
+				resource "checkly_dns_monitor" "test1" {
+					name      = "test-group-assignment"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+					}
+				}
+
+				resource "checkly_dns_monitor" "test2" {
+					name      = "test-group-assignment"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test1",
+					"group_id",
+					"0",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test2",
+					"group_id",
+					"0",
+				),
+			),
+		},
+	})
+}
+
+func TestAccDNSMonitorNameServerRemoval(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_dns_monitor" "test" {
+					name      = "test-name-server-removal"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+
+						name_server {
+							host = "1.1.1.1"
+							port = 53
+						}
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test",
+					"request.0.name_server.#",
+					"1",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test",
+					"request.0.name_server.0.host",
+					"1.1.1.1",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test",
+					"request.0.name_server.0.port",
+					"53",
+				),
+			),
+		},
+		{
+			Config: `
+				resource "checkly_dns_monitor" "test" {
+					name      = "test-name-server-removal"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test",
+					"request.0.name_server.#",
+					"0",
+				),
+				resource.TestCheckNoResourceAttr(
+					"checkly_dns_monitor.test",
+					"request.0.name_server.0.host",
+				),
+				resource.TestCheckNoResourceAttr(
+					"checkly_dns_monitor.test",
+					"request.0.name_server.0.port",
+				),
+			),
+		},
+	})
+}
+
+func TestAccDNSMonitorNameServerEmptyBlock(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_dns_monitor" "test" {
+					name      = "test-name-server-empty"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+
+						name_server {}
+					}
+				}
+			`,
+			ExpectError: regexp.MustCompile(`Invalid Name Server`),
+		},
+	})
+}
+
+func TestAccDNSMonitorFrequencyValidation(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_dns_monitor" "test-missing-frequency_offset" {
+					name      = "test-missing-frequency_offset"
+					activated = true
+					frequency = 0
+					locations = ["eu-central-1"]
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+					}
+				}
+			`,
+			ExpectError: regexp.MustCompile(`"frequency_offset" is required when "frequency" is 0`),
+		},
+		{
+			Config: `
+				resource "checkly_dns_monitor" "test-frequency_offset-ok-10" {
+					name             = "test-frequency_offset-ok-10"
+					activated        = true
+					frequency        = 0
+					frequency_offset = 10
+					locations        = ["eu-central-1"]
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+					}
+				}
+
+				resource "checkly_dns_monitor" "test-frequency_offset-ok-20" {
+					name             = "test-frequency_offset-ok-20"
+					activated        = true
+					frequency        = 0
+					frequency_offset = 20
+					locations        = ["eu-central-1"]
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+					}
+				}
+
+				resource "checkly_dns_monitor" "test-frequency_offset-ok-30" {
+					name             = "test-frequency_offset-ok-30"
+					activated        = true
+					frequency        = 0
+					frequency_offset = 30
+					locations        = ["eu-central-1"]
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test-frequency_offset-ok-10",
+					"frequency",
+					"0",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test-frequency_offset-ok-10",
+					"frequency_offset",
+					"10",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test-frequency_offset-ok-20",
+					"frequency",
+					"0",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test-frequency_offset-ok-20",
+					"frequency_offset",
+					"20",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test-frequency_offset-ok-30",
+					"frequency",
+					"0",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test-frequency_offset-ok-30",
+					"frequency_offset",
+					"30",
+				),
+			),
+		},
+		{
+			Config: `
+				resource "checkly_dns_monitor" "test-extra-frequency_offset" {
+					name             = "test-extra-frequency_offset"
+					activated        = true
+					frequency        = 60
+					frequency_offset = 30
+					locations        = ["eu-central-1"]
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+					}
+				}
+			`,
+			ExpectError: regexp.MustCompile(`"frequency_offset" can only be set when "frequency" is 0`),
+		},
+		{
+			Config: `
+				resource "checkly_dns_monitor" "test-bad-frequency" {
+					name      = "test-bad-frequency"
+					activated = true
+					frequency = 9999
+					locations = ["eu-central-1"]
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+					}
+				}
+			`,
+			ExpectError: regexp.MustCompile(`Attribute frequency value must be one of`),
+		},
+		{
+			Config: `
+				resource "checkly_dns_monitor" "test-bad-frequency_offset" {
+					name             = "test-bad-frequency_offset"
+					activated        = true
+					frequency        = 60
+					frequency_offset = 99
+					locations        = ["eu-central-1"]
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+					}
+				}
+			`,
+			ExpectError: regexp.MustCompile(`Attribute frequency_offset value must be one of`),
+		},
+		{
+			Config: `
+				resource "checkly_dns_monitor" "test-frequency-ok-60" {
+					name             = "test-frequency-ok-60"
+					activated        = true
+					frequency        = 60
+					frequency_offset = 0
+					locations        = ["eu-central-1"]
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test-frequency-ok-60",
+					"frequency",
+					"60",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test-frequency-ok-60",
+					"frequency_offset",
+					"0",
+				),
+			),
+		},
+	})
+}
+
+func TestAccDNSMonitorFrequencyUpdates(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_dns_monitor" "test1" {
+					name      = "test-normal-frequency"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+					}
+				}
+
+				resource "checkly_dns_monitor" "test2" {
+					name             = "test-high-frequency"
+					activated        = true
+					frequency        = 0
+					frequency_offset = 30
+					locations        = ["eu-central-1"]
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test1",
+					"frequency",
+					"60",
+				),
+				resource.TestCheckNoResourceAttr(
+					"checkly_dns_monitor.test1",
+					"frequency_offset",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test2",
+					"frequency",
+					"0",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test2",
+					"frequency_offset",
+					"30",
+				),
+			),
+		},
+		{
+			Config: `
+				resource "checkly_dns_monitor" "test1" {
+					name             = "test-normal-frequency-updated-to-high"
+					activated        = true
+					frequency        = 0
+					frequency_offset = 10
+					locations        = ["eu-central-1"]
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+					}
+				}
+
+				resource "checkly_dns_monitor" "test2" {
+					name      = "test-high-frequency-updated-to-normal"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test1",
+					"frequency",
+					"0",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test1",
+					"frequency_offset",
+					"10",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test2",
+					"frequency",
+					"60",
+				),
+				resource.TestCheckNoResourceAttr(
+					"checkly_dns_monitor.test2",
+					"frequency_offset",
+				),
+			),
+		},
+	})
+}
+
+func TestAccDNSMonitorAlertChannelSubscriptions(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		// Step 1: Add two alert channel subscriptions.
+		{
+			Config: `
+				resource "checkly_alert_channel" "email_1" {
+					email {
+						address = "dns-acs-1@example.com"
+					}
+				}
+
+				resource "checkly_alert_channel" "email_2" {
+					email {
+						address = "dns-acs-2@example.com"
+					}
+				}
+
+				resource "checkly_alert_channel" "email_3" {
+					email {
+						address = "dns-acs-3@example.com"
+					}
+				}
+
+				resource "checkly_dns_monitor" "test" {
+					name      = "dns-alert-channel-sub-test"
+					frequency = 60
+					activated = true
+					locations = ["eu-central-1"]
+
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+
+						assertion {
+							source     = "RESPONSE_CODE"
+							comparison = "EQUALS"
+							target     = "NOERROR"
+						}
+					}
+
+					alert_channel_subscription {
+						channel_id = checkly_alert_channel.email_1.id
+						activated  = true
+					}
+
+					alert_channel_subscription {
+						channel_id = checkly_alert_channel.email_2.id
+						activated  = false
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test",
+					"alert_channel_subscription.#",
+					"2",
+				),
+				dnsMonitorTestCheckAlertChannelSubscription(
+					"checkly_dns_monitor.test",
+					"alert_channel_subscription",
+					"checkly_alert_channel.email_1",
+					"true",
+				),
+				dnsMonitorTestCheckAlertChannelSubscription(
+					"checkly_dns_monitor.test",
+					"alert_channel_subscription",
+					"checkly_alert_channel.email_2",
+					"false",
+				),
+			),
+		},
+		// Step 2: Change activations and add a third subscription.
+		{
+			Config: `
+				resource "checkly_alert_channel" "email_1" {
+					email {
+						address = "dns-acs-1@example.com"
+					}
+				}
+
+				resource "checkly_alert_channel" "email_2" {
+					email {
+						address = "dns-acs-2@example.com"
+					}
+				}
+
+				resource "checkly_alert_channel" "email_3" {
+					email {
+						address = "dns-acs-3@example.com"
+					}
+				}
+
+				resource "checkly_dns_monitor" "test" {
+					name      = "dns-alert-channel-sub-test"
+					frequency = 60
+					activated = true
+					locations = ["eu-central-1"]
+
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+
+						assertion {
+							source     = "RESPONSE_CODE"
+							comparison = "EQUALS"
+							target     = "NOERROR"
+						}
+					}
+
+					alert_channel_subscription {
+						channel_id = checkly_alert_channel.email_1.id
+						activated  = false
+					}
+
+					alert_channel_subscription {
+						channel_id = checkly_alert_channel.email_2.id
+						activated  = true
+					}
+
+					alert_channel_subscription {
+						channel_id = checkly_alert_channel.email_3.id
+						activated  = true
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test",
+					"alert_channel_subscription.#",
+					"3",
+				),
+				dnsMonitorTestCheckAlertChannelSubscription(
+					"checkly_dns_monitor.test",
+					"alert_channel_subscription",
+					"checkly_alert_channel.email_1",
+					"false",
+				),
+				dnsMonitorTestCheckAlertChannelSubscription(
+					"checkly_dns_monitor.test",
+					"alert_channel_subscription",
+					"checkly_alert_channel.email_2",
+					"true",
+				),
+				dnsMonitorTestCheckAlertChannelSubscription(
+					"checkly_dns_monitor.test",
+					"alert_channel_subscription",
+					"checkly_alert_channel.email_3",
+					"true",
+				),
+			),
+		},
+		// Step 3: Remove all alert channel subscriptions.
+		{
+			Config: `
+				resource "checkly_alert_channel" "email_1" {
+					email {
+						address = "dns-acs-1@example.com"
+					}
+				}
+
+				resource "checkly_alert_channel" "email_2" {
+					email {
+						address = "dns-acs-2@example.com"
+					}
+				}
+
+				resource "checkly_alert_channel" "email_3" {
+					email {
+						address = "dns-acs-3@example.com"
+					}
+				}
+
+				resource "checkly_dns_monitor" "test" {
+					name      = "dns-alert-channel-sub-test"
+					frequency = 60
+					activated = true
+					locations = ["eu-central-1"]
+
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+
+						assertion {
+							source     = "RESPONSE_CODE"
+							comparison = "EQUALS"
+							target     = "NOERROR"
+						}
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_dns_monitor.test",
+					"alert_channel_subscription.#",
+					"0",
+				),
+			),
+		},
+	})
+}

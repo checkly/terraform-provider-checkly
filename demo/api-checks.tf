@@ -5,7 +5,6 @@ resource "checkly_check" "api-check-1" {
   frequency         = 60
   activated         = true
   muted             = true
-  double_check      = true
   max_response_time = 18000
   locations = [
     "eu-central-1",
@@ -45,7 +44,6 @@ resource "checkly_check" "api-check-2" {
   frequency              = 120
   activated              = true
   muted                  = true
-  double_check           = true
   degraded_response_time = 15000
   max_response_time      = 30000
   locations = [
@@ -72,7 +70,7 @@ resource "checkly_check" "api-check-2" {
       param2 = "bar"
     }
 
-    basic_auth {
+    basic_auth = {
       username = "user"
       password = "pass"
 
@@ -104,16 +102,16 @@ resource "checkly_check" "api-check-2" {
     }
   }
 
-  alert_settings {
+  alert_settings = {
     escalation_type = "RUN_BASED"
-    reminders {
+    reminders = {
       amount   = 0
       interval = 5
     }
-    run_based_escalation {
+    run_based_escalation = {
       failed_run_threshold = 1
     }
-    time_based_escalation {
+    time_based_escalation = {
       minutes_failing_threshold = 5
     }
   }
@@ -121,11 +119,10 @@ resource "checkly_check" "api-check-2" {
 
 #  POST API Check with json body
 resource "checkly_check" "api-check-3" {
-  name         = "Canonical API check 3"
-  type         = "API"
-  activated    = true
-  double_check = true
-  frequency    = 720
+  name      = "Canonical API check 3"
+  type      = "API"
+  activated = true
+  frequency = 720
   locations = [
     "eu-central-1",
     "us-east-2",
@@ -195,7 +192,7 @@ resource "checkly_check" "api-check-4" {
     skip_ssl         = true
     url              = "https://api.checklyhq.com/public-stats"
 
-    basic_auth {
+    basic_auth = {
       username = ""
       password = ""
     }
@@ -259,7 +256,6 @@ resource "checkly_check" "check-with-alert-channels" {
   frequency         = 60
   activated         = true
   muted             = true
-  double_check      = true
   max_response_time = 18000
   locations         = ["us-east-1"]
 

@@ -30,7 +30,7 @@ resource "checkly_check_group" "check-group-2" {
     "eu-west-1",
     "eu-west-2",
   ]
-  api_check_defaults {
+  api_check_defaults = {
     url = "http://example.com/"
   }
 }
@@ -41,14 +41,13 @@ resource "checkly_check_group" "check-group-3" {
   activated                 = true
   muted                     = false
   concurrency               = 3
-  double_check              = true
   use_global_alert_settings = false
   locations = [
     "eu-west-1",
     "eu-west-2",
   ]
 
-  api_check_defaults {
+  api_check_defaults = {
     url = "http://example.com/"
 
     headers = {
@@ -59,14 +58,16 @@ resource "checkly_check_group" "check-group-3" {
       query = "foo-val"
     }
 
-    assertion {
-      source     = "STATUS_CODE"
-      property   = ""
-      comparison = "EQUALS"
-      target     = "200"
-    }
+    assertion = [
+      {
+        source     = "STATUS_CODE"
+        property   = ""
+        comparison = "EQUALS"
+        target     = "200"
+      }
+    ]
 
-    basic_auth {
+    basic_auth = {
       username = "user"
       password = "pass"
     }
@@ -79,18 +80,18 @@ resource "checkly_check_group" "check-group-3" {
     secret = true
   }
 
-  alert_settings {
+  alert_settings = {
     escalation_type = "RUN_BASED"
 
-    run_based_escalation {
+    run_based_escalation = {
       failed_run_threshold = 1
     }
 
-    time_based_escalation {
+    time_based_escalation = {
       minutes_failing_threshold = 5
     }
 
-    reminders {
+    reminders = {
       amount   = 2
       interval = 5
     }

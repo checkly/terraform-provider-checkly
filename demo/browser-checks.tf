@@ -5,7 +5,6 @@ resource "checkly_check" "browser-check-1" {
   activated                 = true
   should_fail               = false
   frequency                 = 2
-  double_check              = true
   use_global_alert_settings = true
   locations = [
     "us-west-1"
@@ -32,7 +31,6 @@ resource "checkly_check" "browser-check-2" {
   activated                 = true
   should_fail               = false
   frequency                 = 15
-  double_check              = true
   use_global_alert_settings = true
 
   script = "console.log(process.env.URL)"

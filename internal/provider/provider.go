@@ -168,14 +168,29 @@ func (p *ChecklyProvider) Configure(ctx context.Context, req provider.ConfigureR
 
 func (p *ChecklyProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
+		NewAlertChannelResource,
+		NewCheckResource,
+		NewCheckGroupResource,
+		NewCheckGroupV2Resource,
 		NewClientCertificateResource,
+		NewDashboardResource,
+		NewDNSMonitorResource,
 		NewEnvironmentVariableResource,
+		NewHeartbeatResource,
+		NewHeartbeatMonitorResource,
+		NewICMPMonitorResource,
+		NewMaintenanceWindowResource,
+		NewPlaywrightCheckSuiteResource,
+		NewPlaywrightCodeBundleResource,
 		NewPrivateLocationResource,
 		NewSnippetResource,
 		NewStatusPageResource,
 		NewStatusPageServiceResource,
+		NewTCPCheckResource,
+		NewTCPMonitorResource,
 		NewTriggerCheckResource,
 		NewTriggerGroupResource,
+		NewURLMonitorResource,
 	}
 }
 
