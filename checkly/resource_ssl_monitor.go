@@ -70,6 +70,20 @@ func resourceSSLMonitor() *schema.Resource {
 				},
 				Description: "An array of one or more data center locations where to run this monitor. (Default [\"us-east-1\"])",
 			},
+			"degraded_response_time": {
+				Type:         schema.TypeInt,
+				Optional:     true,
+				Default:      3000,
+				ValidateFunc: validateBetween(0, 30000),
+				Description:  "The handshake time in milliseconds above which the monitor is considered degraded. Possible values are between 0 and 30000. (Default `3000`).",
+			},
+			"max_response_time": {
+				Type:         schema.TypeInt,
+				Optional:     true,
+				Default:      10000,
+				ValidateFunc: validateBetween(0, 30000),
+				Description:  "The handshake time in milliseconds above which the monitor is considered failing. Must be greater than or equal to `degraded_response_time`. Possible values are between 0 and 30000. (Default `10000`).",
+			},
 			"tags": {
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -155,20 +169,6 @@ func resourceSSLMonitor() *schema.Resource {
 							Default:      20,
 							ValidateFunc: validateBetween(1, 365),
 							Description:  "Raise an alert when the certificate is within this many days of expiry. Possible values are between 1 and 365. (Default `20`).",
-						},
-						"degraded_response_time_ms": {
-							Type:         schema.TypeInt,
-							Optional:     true,
-							Computed:     true,
-							ValidateFunc: validateBetween(0, 30000),
-							Description:  "The handshake time in milliseconds above which the monitor is considered degraded. Possible values are between 0 and 30000. (Default `3000`).",
-						},
-						"max_response_time_ms": {
-							Type:         schema.TypeInt,
-							Optional:     true,
-							Computed:     true,
-							ValidateFunc: validateBetween(0, 30000),
-							Description:  "The handshake time in milliseconds above which the monitor is considered failing. Must be greater than or equal to `degraded_response_time_ms`. Possible values are between 0 and 30000. (Default `10000`).",
 						},
 						"security_baseline": {
 							Type:             schema.TypeString,
@@ -324,6 +324,8 @@ func resourceDataFromSSLMonitor(c *checkly.SSLMonitor, d *schema.ResourceData) e
 	d.Set("should_fail", c.ShouldFail)
 	d.Set("run_parallel", c.RunParallel)
 	d.Set("locations", c.Locations)
+	d.Set("degraded_response_time", c.DegradedResponseTime)
+	d.Set("max_response_time", c.MaxResponseTime)
 
 	sort.Strings(c.Tags)
 	d.Set("tags", c.Tags)
@@ -375,8 +377,6 @@ func setFromSSLRequest(r checkly.SSLRequest) ([]tfMap, error) {
 	s["skip_chain_validation"] = cfg.SkipChainValidation
 	s["handshake_timeout_ms"] = cfg.HandshakeTimeoutMs
 	s["alert_days_before_expiry"] = cfg.AlertDaysBeforeExpiry
-	s["degraded_response_time_ms"] = cfg.DegradedResponseTimeMs
-	s["max_response_time_ms"] = cfg.MaxResponseTimeMs
 
 	// SecurityBaseline round-trips as a jsonencode'd string. A nil baseline
 	// (server inheriting its default) flattens to an empty string; the schema's
@@ -424,6 +424,8 @@ func sslCheckFromResourceData(d *schema.ResourceData) (checkly.SSLMonitor, error
 		ShouldFail:                d.Get("should_fail").(bool),
 		RunParallel:               d.Get("run_parallel").(bool),
 		Locations:                 stringsFromSet(d.Get("locations").(*schema.Set)),
+		DegradedResponseTime:      d.Get("degraded_response_time").(int),
+		MaxResponseTime:           d.Get("max_response_time").(int),
 		Tags:                      stringsFromSet(d.Get("tags").(*schema.Set)),
 		UseGlobalAlertSettings:    d.Get("use_global_alert_settings").(bool),
 		GroupID:                   int64(d.Get("group_id").(int)),
@@ -464,14 +466,12 @@ func sslRequestFromList(s []any) (checkly.SSLRequest, error) {
 	res := s[0].(tfMap)
 
 	cfg := checkly.SSLConfig{
-		Hostname:               res["hostname"].(string),
-		Port:                   res["port"].(int),
-		IPFamily:               res["ip_family"].(string),
-		SkipChainValidation:    res["skip_chain_validation"].(bool),
-		HandshakeTimeoutMs:     res["handshake_timeout_ms"].(int),
-		AlertDaysBeforeExpiry:  res["alert_days_before_expiry"].(int),
-		DegradedResponseTimeMs: res["degraded_response_time_ms"].(int),
-		MaxResponseTimeMs:      res["max_response_time_ms"].(int),
+		Hostname:              res["hostname"].(string),
+		Port:                  res["port"].(int),
+		IPFamily:              res["ip_family"].(string),
+		SkipChainValidation:   res["skip_chain_validation"].(bool),
+		HandshakeTimeoutMs:    res["handshake_timeout_ms"].(int),
+		AlertDaysBeforeExpiry: res["alert_days_before_expiry"].(int),
 	}
 
 	// serverName is nullable in the API; send a pointer only when set.

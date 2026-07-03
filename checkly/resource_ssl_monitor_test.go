@@ -94,9 +94,9 @@ func TestAccSSLMonitorFull(t *testing.T) {
 					"request.*.handshake_timeout_ms",
 					"10000",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_ssl_monitor.test",
-					"request.*.degraded_response_time_ms",
+					"degraded_response_time",
 					"3000",
 				),
 				testCheckResourceAttrExpr(
@@ -179,24 +179,24 @@ const sslMonitor_basic = `
 
 const sslMonitor_full = `
 	resource "checkly_ssl_monitor" "test" {
-	  name      = "sslMonitor_full"
-	  activated = true
-	  frequency = 60
-	  muted     = true
+	  name                   = "sslMonitor_full"
+	  activated              = true
+	  frequency              = 60
+	  muted                  = true
+	  degraded_response_time = 3000
+	  max_response_time      = 10000
 	  locations = [
 		"us-east-1",
 		"eu-central-1",
 	  ]
 	  request {
-		hostname                  = "api.checklyhq.com"
-		port                      = 443
-		server_name               = "api.checklyhq.com"
-		ip_family                 = "IPv4"
-		skip_chain_validation     = false
-		handshake_timeout_ms      = 10000
-		alert_days_before_expiry  = 20
-		degraded_response_time_ms = 3000
-		max_response_time_ms      = 10000
+		hostname                 = "api.checklyhq.com"
+		port                     = 443
+		server_name              = "api.checklyhq.com"
+		ip_family                = "IPv4"
+		skip_chain_validation    = false
+		handshake_timeout_ms     = 10000
+		alert_days_before_expiry = 20
 
 		security_baseline = jsonencode({
 		  enabled                 = true

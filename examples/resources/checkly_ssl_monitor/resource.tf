@@ -20,10 +20,12 @@ resource "checkly_ssl_monitor" "example-ssl-monitor" {
 # A more complex example with response-time thresholds, a custom security
 # baseline and certificate assertions
 resource "checkly_ssl_monitor" "example-ssl-monitor-2" {
-  name        = "Example SSL monitor 2"
-  activated   = true
-  should_fail = false
-  frequency   = 60
+  name                   = "Example SSL monitor 2"
+  activated              = true
+  should_fail            = false
+  frequency              = 60
+  degraded_response_time = 3000
+  max_response_time      = 10000
 
   locations = [
     "us-west-1",
@@ -43,15 +45,13 @@ resource "checkly_ssl_monitor" "example-ssl-monitor-2" {
   }
 
   request {
-    hostname                  = "api.checklyhq.com"
-    port                      = 443
-    server_name               = "api.checklyhq.com"
-    ip_family                 = "IPv4"
-    skip_chain_validation     = false
-    handshake_timeout_ms      = 10000
-    alert_days_before_expiry  = 20
-    degraded_response_time_ms = 3000
-    max_response_time_ms      = 10000
+    hostname                 = "api.checklyhq.com"
+    port                     = 443
+    server_name              = "api.checklyhq.com"
+    ip_family                = "IPv4"
+    skip_chain_validation    = false
+    handshake_timeout_ms     = 10000
+    alert_days_before_expiry = 20
 
     security_baseline = jsonencode({
       minTlsVersion = "TLS1.2"
