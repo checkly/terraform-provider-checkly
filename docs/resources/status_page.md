@@ -45,12 +45,12 @@ resource "checkly_status_page" "example" {
 
 ### Required
 
-- `card` (Block List, Min: 1) A list of cards to include on the status page. (see [below for nested schema](#nestedblock--card))
 - `name` (String) The name of the status page.
 - `url` (String) The URL of the status page.
 
 ### Optional
 
+- `card` (Block List) A list of cards to include on the status page. (see [below for nested schema](#nestedblock--card))
 - `custom_domain` (String) A custom user domain, e.g. "status.example.com". See the docs on updating your DNS and SSL usage.
 - `default_theme` (String) Possible values are `AUTO`, `DARK`, and `LIGHT`. (Default `AUTO`).
 - `favicon` (String) A URL to an image file to use as the favicon of the status page.
@@ -59,7 +59,7 @@ resource "checkly_status_page" "example" {
 
 ### Read-Only
 
-- `id` (String) The ID of this resource.
+- `id` (String) The ID of the status page.
 
 <a id="nestedblock--card"></a>
 ### Nested Schema for `card`
@@ -67,7 +67,10 @@ resource "checkly_status_page" "example" {
 Required:
 
 - `name` (String) The name of the card.
-- `service_attachment` (Block List, Min: 1) A list of services to attach to the card. (see [below for nested schema](#nestedblock--card--service_attachment))
+
+Optional:
+
+- `service_attachment` (Block List) A list of services to attach to the card. (see [below for nested schema](#nestedblock--card--service_attachment))
 
 <a id="nestedblock--card--service_attachment"></a>
 ### Nested Schema for `card.service_attachment`

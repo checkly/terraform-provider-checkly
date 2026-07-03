@@ -3,12 +3,12 @@
 page_title: "checkly_trigger_group Resource - terraform-provider-checkly"
 subcategory: ""
 description: |-
-  
+  Triggers allow you to run checks in a group from your CI/CD pipeline or from an external system using a webhook URL.
 ---
 
 # checkly_trigger_group (Resource)
 
-
+Triggers allow you to run checks in a group from your CI/CD pipeline or from an external system using a webhook URL.
 
 ## Example Usage
 
@@ -18,8 +18,7 @@ resource "checkly_trigger_group" "test_trigger_group" {
 }
 
 output "test_trigger_group_url" {
-  value     = checkly_trigger_group.test_trigger_group.url
-  sensitive = true
+  value = checkly_trigger_group.test_trigger_group.url
 }
 ```
 
@@ -30,11 +29,8 @@ output "test_trigger_group_url" {
 
 - `group_id` (Number) The id of the group that you want to attach the trigger to.
 
-### Optional
-
-- `token` (String, Sensitive) The token value created to trigger the group
-- `url` (String, Sensitive) The request URL to trigger the group run.
-
 ### Read-Only
 
-- `id` (String) The ID of this resource.
+- `id` (String) The ID of the trigger.
+- `token` (String) The token value created to trigger the group
+- `url` (String) The request URL to trigger the group run.

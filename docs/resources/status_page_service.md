@@ -31,4 +31,4 @@ resource "checkly_status_page_service" "frontend" {
 
 ### Read-Only
 
-- `id` (String) The ID of this resource.
+- `id` (String) The ID of the service.

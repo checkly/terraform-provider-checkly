@@ -33,5 +33,5 @@ resource "checkly_private_location" "location" {
 
 ### Read-Only
 
-- `id` (String) The ID of this resource.
+- `id` (String) The ID of the private location.
 - `keys` (Set of String, Sensitive) Private location API keys.

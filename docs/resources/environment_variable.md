@@ -3,12 +3,12 @@
 page_title: "checkly_environment_variable Resource - terraform-provider-checkly"
 subcategory: ""
 description: |-
-  
+  Global environment variables that can be referenced from check scripts.
 ---
 
 # checkly_environment_variable (Resource)
 
-
+Global environment variables that can be referenced from check scripts.
 
 ## Example Usage
 
@@ -31,14 +31,14 @@ resource "checkly_environment_variable" "variable_2" {
 
 ### Required
 
-- `key` (String)
-- `value` (String)
+- `key` (String) The name of the environment variable. Changing the name forces the environment variable to be replaced.
+- `value` (String, Sensitive) The value of the environment variable.
 
 ### Optional
 
-- `locked` (Boolean)
-- `secret` (Boolean)
+- `locked` (Boolean) If true, the value is hidden in the Checkly UI by default, but it can be revealed. (Default `false`).
+- `secret` (Boolean) If true, the value can never be revealed after creation. (Default `false`).
 
 ### Read-Only
 
-- `id` (String) The ID of this resource.
+- `id` (String) The ID of the environment variable. Identical to the key.

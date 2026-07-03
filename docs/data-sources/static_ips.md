@@ -3,12 +3,12 @@
 page_title: "checkly_static_ips Data Source - terraform-provider-checkly"
 subcategory: ""
 description: |-
-  
+  Static IP addresses for Checkly's runner infrastructure. Useful when you need to allowlist Checkly traffic.
 ---
 
 # checkly_static_ips (Data Source)
 
-
+Static IP addresses for Checkly's runner infrastructure. Useful when you need to allowlist Checkly traffic.
 
 
 

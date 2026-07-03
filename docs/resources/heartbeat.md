@@ -3,16 +3,16 @@
 page_title: "checkly_heartbeat Resource - terraform-provider-checkly"
 subcategory: ""
 description: |-
-  The checkly_heartbeat resource has been renamed to checkly_heartbeat_monitor to better reflect its position in the Checkly product lineup.
-  The old resource type will not be deprecated until the Checkly provider is updated to the Terraform Plugin Framework, which makes it possible to easily move resources between resource types.
+  The checkly_heartbeat resource has been renamed to checkly_heartbeat_monitor to better reflect its position in the Checkly product lineup. The checkly_heartbeat resource type is deprecated and will be removed in a future version of the provider.
+  The schemas of both resource types are identical, and existing checkly_heartbeat resources can be migrated to checkly_heartbeat_monitor using a moved block.
   We recommend using the checkly_heartbeat_monitor resource type for any new resources.
 ---
 
 # checkly_heartbeat (Resource)
 
-The `checkly_heartbeat` resource has been renamed to `checkly_heartbeat_monitor` to better reflect its position in the Checkly product lineup.
+The `checkly_heartbeat` resource has been renamed to `checkly_heartbeat_monitor` to better reflect its position in the Checkly product lineup. The `checkly_heartbeat` resource type is deprecated and will be removed in a future version of the provider.
 
-The old resource type will not be deprecated until the Checkly provider is updated to the Terraform Plugin Framework, which makes it possible to easily move resources between resource types.
+The schemas of both resource types are identical, and existing `checkly_heartbeat` resources can be migrated to `checkly_heartbeat_monitor` using a `moved` block.
 
 We recommend using the `checkly_heartbeat_monitor` resource type for any new resources.
 
@@ -38,37 +38,22 @@ resource "checkly_heartbeat" "example-heartbeat" {
 ### Required
 
 - `activated` (Boolean) Determines if the check is running or not. Possible values `true`, and `false`.
-- `heartbeat` (Block Set, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--heartbeat))
 - `name` (String) The name of the check.
 
 ### Optional
 
 - `alert_channel_subscription` (Block Set) An array of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your monitor, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedblock--alert_channel_subscription))
-- `alert_settings` (Block List, Max: 1) Determines the alert escalation policy for the monitor. (see [below for nested schema](#nestedblock--alert_settings))
+- `alert_settings` (Attributes) Determines the alert escalation policy for the monitor. (see [below for nested schema](#nestedatt--alert_settings))
 - `description` (String) A description of the monitor.
+- `heartbeat` (Block, Optional) The heartbeat schedule and grace period. (see [below for nested schema](#nestedblock--heartbeat))
 - `muted` (Boolean) Determines if any notifications will be sent out when a check fails/degrades/recovers.
 - `tags` (Set of String) A list of tags for organizing and filtering checks.
-- `trigger_incident` (Block Set, Max: 1) Create and resolve an incident based on the alert configuration. Useful for status page automation. (see [below for nested schema](#nestedblock--trigger_incident))
+- `trigger_incident` (Block Set) Create and resolve an incident based on the alert configuration. Useful for status page automation. (see [below for nested schema](#nestedblock--trigger_incident))
 - `use_global_alert_settings` (Boolean) When true, the account level alert settings will be used, not the alert setting defined on this check.
 
 ### Read-Only
 
-- `id` (String) The ID of this resource.
-
-<a id="nestedblock--heartbeat"></a>
-### Nested Schema for `heartbeat`
-
-Required:
-
-- `grace` (Number) How long Checkly should wait before triggering any alerts when a ping does not arrive within the set period.
-- `grace_unit` (String) Possible values `seconds`, `minutes`, `hours` and `days`.
-- `period` (Number) How often you expect a ping to the ping URL.
-- `period_unit` (String) Possible values `seconds`, `minutes`, `hours` and `days`.
-
-Optional:
-
-- `ping_token` (String) Custom token to generate your ping URL. Checkly will expect a ping to `https://ping.checklyhq.com/[PING_TOKEN]`.
-
+- `id` (String) The ID of the monitor.
 
 <a id="nestedblock--alert_channel_subscription"></a>
 ### Nested Schema for `alert_channel_subscription`
@@ -79,19 +64,18 @@ Required:
 - `channel_id` (Number) The ID of the alert channel.
 
 
-<a id="nestedblock--alert_settings"></a>
+<a id="nestedatt--alert_settings"></a>
 ### Nested Schema for `alert_settings`
 
 Optional:
 
 - `escalation_type` (String) Determines the type of escalation to use. Possible values are `RUN_BASED` and `TIME_BASED`. (Default `RUN_BASED`).
-- `parallel_run_failure_threshold` (Block List) Configuration for parallel run failure threshold. (see [below for nested schema](#nestedblock--alert_settings--parallel_run_failure_threshold))
-- `reminders` (Block List) Defines how often to send reminder notifications after initial alert. (see [below for nested schema](#nestedblock--alert_settings--reminders))
-- `run_based_escalation` (Block List) Configuration for run-based escalation. (see [below for nested schema](#nestedblock--alert_settings--run_based_escalation))
-- `ssl_certificates` (Block Set, Deprecated) (see [below for nested schema](#nestedblock--alert_settings--ssl_certificates))
-- `time_based_escalation` (Block List) Configuration for time-based escalation. (see [below for nested schema](#nestedblock--alert_settings--time_based_escalation))
+- `parallel_run_failure_threshold` (Attributes) Configuration for parallel run failure threshold. (see [below for nested schema](#nestedatt--alert_settings--parallel_run_failure_threshold))
+- `reminders` (Attributes) Defines how often to send reminder notifications after the initial alert. (see [below for nested schema](#nestedatt--alert_settings--reminders))
+- `run_based_escalation` (Attributes) Configuration for run-based escalation. (see [below for nested schema](#nestedatt--alert_settings--run_based_escalation))
+- `time_based_escalation` (Attributes) Configuration for time-based escalation. (see [below for nested schema](#nestedatt--alert_settings--time_based_escalation))
 
-<a id="nestedblock--alert_settings--parallel_run_failure_threshold"></a>
+<a id="nestedatt--alert_settings--parallel_run_failure_threshold"></a>
 ### Nested Schema for `alert_settings.parallel_run_failure_threshold`
 
 Optional:
@@ -100,7 +84,7 @@ Optional:
 - `percentage` (Number) Percentage of runs that must fail to trigger alert. Possible values are `10`, `20`, `30`, `40`, `50`, `60`, `70`, `80`, `90`, and `100`. (Default `10`).
 
 
-<a id="nestedblock--alert_settings--reminders"></a>
+<a id="nestedatt--alert_settings--reminders"></a>
 ### Nested Schema for `alert_settings.reminders`
 
 Optional:
@@ -109,7 +93,7 @@ Optional:
 - `interval` (Number) Interval between reminder notifications in minutes. Possible values are `5`, `10`, `15`, and `30`. (Default `5`).
 
 
-<a id="nestedblock--alert_settings--run_based_escalation"></a>
+<a id="nestedatt--alert_settings--run_based_escalation"></a>
 ### Nested Schema for `alert_settings.run_based_escalation`
 
 Optional:
@@ -117,22 +101,28 @@ Optional:
 - `failed_run_threshold` (Number) Send an alert notification after the given number of consecutive monitor runs have failed. Possible values are between `1` and `5`. (Default `1`).
 
 
-<a id="nestedblock--alert_settings--ssl_certificates"></a>
-### Nested Schema for `alert_settings.ssl_certificates`
-
-Optional:
-
-- `alert_threshold` (Number) No longer available.
-- `enabled` (Boolean) No longer available.
-
-
-<a id="nestedblock--alert_settings--time_based_escalation"></a>
+<a id="nestedatt--alert_settings--time_based_escalation"></a>
 ### Nested Schema for `alert_settings.time_based_escalation`
 
 Optional:
 
 - `minutes_failing_threshold` (Number) Send an alert notification after the monitor has been failing for the given amount of time (in minutes). Possible values are `5`, `10`, `15`, and `30`. (Default `5`).
 
+
+
+<a id="nestedblock--heartbeat"></a>
+### Nested Schema for `heartbeat`
+
+Required:
+
+- `grace` (Number) How long Checkly should wait before triggering any alerts when a ping does not arrive within the set period. The combination of `grace` and `grace_unit` must be at most 365 days.
+- `grace_unit` (String) Possible values `seconds`, `minutes`, `hours` and `days`.
+- `period` (Number) How often you expect a ping to the ping URL. The combination of `period` and `period_unit` must be between 30 seconds and 365 days.
+- `period_unit` (String) Possible values `seconds`, `minutes`, `hours` and `days`.
+
+Optional:
+
+- `ping_token` (String) Custom token to generate your ping URL. Checkly will expect a ping to `https://ping.checklyhq.com/[PING_TOKEN]`.
 
 
 <a id="nestedblock--trigger_incident"></a>

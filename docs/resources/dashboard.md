@@ -3,12 +3,12 @@
 page_title: "checkly_dashboard Resource - terraform-provider-checkly"
 subcategory: ""
 description: |-
-  
+  Dashboards are public status pages that display selected checks and their statuses.
 ---
 
 # checkly_dashboard (Resource)
 
-
+Dashboards are public status pages that display selected checks and their statuses.
 
 ## Example Usage
 
@@ -63,5 +63,5 @@ resource "checkly_dashboard" "dashboard_1" {
 
 ### Read-Only
 
-- `id` (String) The ID of this resource.
+- `id` (String) The ID of the dashboard.
 - `key` (String, Sensitive) The access key when the dashboard is private.

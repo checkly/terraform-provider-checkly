@@ -177,23 +177,23 @@ resource "checkly_check" "example_check" {
 
 ### Optional
 
-- `call` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--call))
-- `email` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--email))
-- `opsgenie` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--opsgenie))
-- `pagerduty` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--pagerduty))
+- `call` (Block Set) (see [below for nested schema](#nestedblock--call))
+- `email` (Block Set) (see [below for nested schema](#nestedblock--email))
+- `opsgenie` (Block Set) (see [below for nested schema](#nestedblock--opsgenie))
+- `pagerduty` (Block Set) (see [below for nested schema](#nestedblock--pagerduty))
 - `send_degraded` (Boolean) (Default `false`)
 - `send_failure` (Boolean) (Default `true`)
 - `send_recovery` (Boolean) (Default `true`)
-- `slack` (Block Set, Max: 1, Deprecated) (see [below for nested schema](#nestedblock--slack))
-- `slack_app` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--slack_app))
-- `sms` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--sms))
+- `slack` (Block Set, Deprecated) (see [below for nested schema](#nestedblock--slack))
+- `slack_app` (Block Set) (see [below for nested schema](#nestedblock--slack_app))
+- `sms` (Block Set) (see [below for nested schema](#nestedblock--sms))
 - `ssl_expiry` (Boolean) (Default `false`)
 - `ssl_expiry_threshold` (Number) Value must be between 1 and 30 (Default `30`)
-- `webhook` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--webhook))
+- `webhook` (Block Set) (see [below for nested schema](#nestedblock--webhook))
 
 ### Read-Only
 
-- `id` (String) The ID of this resource.
+- `id` (String) The ID of the alert channel.
 
 <a id="nestedblock--call"></a>
 ### Nested Schema for `call`

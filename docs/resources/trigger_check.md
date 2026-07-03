@@ -3,12 +3,12 @@
 page_title: "checkly_trigger_check Resource - terraform-provider-checkly"
 subcategory: ""
 description: |-
-  
+  Triggers allow you to run checks from your CI/CD pipeline or from an external system using a webhook URL.
 ---
 
 # checkly_trigger_check (Resource)
 
-
+Triggers allow you to run checks from your CI/CD pipeline or from an external system using a webhook URL.
 
 ## Example Usage
 
@@ -18,8 +18,7 @@ resource "checkly_trigger_check" "test_trigger_check" {
 }
 
 output "test_trigger_check_url" {
-  value     = checkly_trigger_check.test_trigger_check.url
-  sensitive = true
+  value = checkly_trigger_check.test_trigger_check.url
 }
 ```
 
@@ -30,11 +29,8 @@ output "test_trigger_check_url" {
 
 - `check_id` (String) The id of the check that you want to attach the trigger to.
 
-### Optional
-
-- `token` (String, Sensitive) The token value created to trigger the check
-- `url` (String, Sensitive) The request URL to trigger the check run.
-
 ### Read-Only
 
-- `id` (String) The ID of this resource.
+- `id` (String) The ID of the trigger.
+- `token` (String) The token value created to trigger the check
+- `url` (String) The request URL to trigger the check run.
