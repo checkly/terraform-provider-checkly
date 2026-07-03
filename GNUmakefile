@@ -33,11 +33,11 @@ dev:
 	cd local && TF_LOG=TRACE terraform init -upgrade
 
 fmt:
-	go fmt ./checkly
+	go fmt ./internal/...
 	terraform fmt
 
 doc:
-	./tools/tfplugindocs
+	go generate ./...
 
 generate:
 	go generate ./...
