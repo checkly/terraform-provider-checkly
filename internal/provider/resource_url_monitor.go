@@ -28,6 +28,7 @@ var (
 	_ resource.ResourceWithConfigure        = (*URLMonitorResource)(nil)
 	_ resource.ResourceWithConfigValidators = (*URLMonitorResource)(nil)
 	_ resource.ResourceWithImportState      = (*URLMonitorResource)(nil)
+	_ resource.ResourceWithModifyPlan       = (*URLMonitorResource)(nil)
 )
 
 // NewURLMonitorResource returns a new checkly_url_monitor resource.
@@ -221,6 +222,14 @@ func (r *URLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 					setvalidator.SizeAtMost(1),
 				},
 				NestedObject: schema.NestedBlockObject{
+					// Attributes nested in this set block must not use schema
+					// defaults. The framework looks up configuration values
+					// for set elements by full element value; once computed
+					// attributes resolve, the lookup misses, the configuration
+					// is treated as null, and defaults would override values
+					// the practitioner actually configured, producing a
+					// perpetual diff. Default values are instead applied in
+					// ModifyPlan.
 					Attributes: map[string]schema.Attribute{
 						"url": schema.StringAttribute{
 							Required:    true,
@@ -229,19 +238,16 @@ func (r *URLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 						"follow_redirects": schema.BoolAttribute{
 							Optional:    true,
 							Computed:    true,
-							Default:     booldefault.StaticBool(true),
 							Description: "Whether to follow HTTP redirects automatically. (Default `true`).",
 						},
 						"skip_ssl": schema.BoolAttribute{
 							Optional:    true,
 							Computed:    true,
-							Default:     booldefault.StaticBool(false),
 							Description: "Whether to skip SSL certificate verification. (Default `false`).",
 						},
 						"ip_family": schema.StringAttribute{
 							Optional:    true,
 							Computed:    true,
-							Default:     stringdefault.StaticString("IPv4"),
 							Description: "IP family version to use for the connection. The value can be either `IPv4` or `IPv6`. (Default `IPv4`).",
 							Validators: []validator.String{
 								stringvalidator.OneOf("IPv4", "IPv6"),
@@ -263,7 +269,6 @@ func (r *URLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 									"property": schema.StringAttribute{
 										Optional: true,
 										Computed: true,
-										Default:  stringdefault.StaticString(""),
 									},
 									"comparison": schema.StringAttribute{
 										Required:    true,
@@ -295,6 +300,96 @@ func (r *URLMonitorResource) ConfigValidators(ctx context.Context) []resource.Co
 
 func (r *URLMonitorResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	r.client = clientFromProviderData(req.ProviderData, &resp.Diagnostics)
+}
+
+// ModifyPlan applies default values to the optional+computed attributes
+// nested in the request set block. Schema defaults cannot be used for these
+// attributes (see the schema for details), so the plan is adjusted here
+// instead. Substituting static values keeps every set element fully known
+// and stable across plans, which set element correlation requires.
+func (r *URLMonitorResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	// A destroy plan has no planned state to default values in.
+	if req.Plan.Raw.IsNull() {
+		return
+	}
+
+	var configRequest types.Set
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("request"), &configRequest)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// When the configuration contains unknown values (references to
+	// attributes of resources that have not been created yet), null values
+	// cannot be distinguished from values that will resolve at apply time.
+	// Leave the plan untouched; the apply-time re-plan applies the defaults
+	// once the configuration values are known.
+	if valueContainsUnknown(configRequest) {
+		return
+	}
+
+	var request types.Set
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("request"), &request)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	request = urlMonitorRequestWithDefaults(ctx, request, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("request"), request)...)
+}
+
+// urlMonitorRequestWithDefaults returns the request block value with default
+// values substituted for null and unknown optional+computed attributes.
+func urlMonitorRequestWithDefaults(ctx context.Context, set types.Set, diags *diag.Diagnostics) types.Set {
+	if set.IsNull() || set.IsUnknown() {
+		return set
+	}
+
+	var models []URLMonitorRequestModel
+	diags.Append(set.ElementsAs(ctx, &models, false)...)
+	if diags.HasError() {
+		return set
+	}
+
+	for i, model := range models {
+		models[i].FollowRedirects = boolOrDefault(model.FollowRedirects, true)
+		models[i].SkipSSL = boolOrDefault(model.SkipSSL, false)
+		models[i].IPFamily = stringOrDefault(model.IPFamily, "IPv4")
+		models[i].Assertions = urlMonitorAssertionsWithDefaults(ctx, model.Assertions, diags)
+	}
+
+	result, d := types.SetValueFrom(ctx, types.ObjectType{AttrTypes: urlMonitorRequestAttrTypes}, models)
+	diags.Append(d...)
+
+	return result
+}
+
+// urlMonitorAssertionsWithDefaults returns the request.assertion block value
+// with default values substituted for null and unknown optional+computed
+// attributes.
+func urlMonitorAssertionsWithDefaults(ctx context.Context, set types.Set, diags *diag.Diagnostics) types.Set {
+	if set.IsNull() || set.IsUnknown() {
+		return set
+	}
+
+	var models []URLMonitorAssertionModel
+	diags.Append(set.ElementsAs(ctx, &models, false)...)
+	if diags.HasError() {
+		return set
+	}
+
+	for i, model := range models {
+		models[i].Property = stringOrDefault(model.Property, "")
+	}
+
+	result, d := types.SetValueFrom(ctx, types.ObjectType{AttrTypes: urlMonitorAssertionAttrTypes}, models)
+	diags.Append(d...)
+
+	return result
 }
 
 func (r *URLMonitorResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {

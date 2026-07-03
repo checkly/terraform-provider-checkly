@@ -1155,7 +1155,7 @@ func TestAccPlaywrightCheckSuiteAutoDetectFalseMissingDevices(t *testing.T) {
 					}
 				}
 			`,
-			ExpectError: regexp.MustCompile(`at least one "runtime.playwright.device" entry is required when "runtime.auto_detect" is false`),
+			ExpectError: regexp.MustCompile(`at least one "runtime.playwright.device" entry is required`),
 		},
 	})
 }

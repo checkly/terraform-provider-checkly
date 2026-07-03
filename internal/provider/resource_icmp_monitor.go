@@ -28,6 +28,7 @@ var (
 	_ resource.ResourceWithConfigure        = (*ICMPMonitorResource)(nil)
 	_ resource.ResourceWithConfigValidators = (*ICMPMonitorResource)(nil)
 	_ resource.ResourceWithImportState      = (*ICMPMonitorResource)(nil)
+	_ resource.ResourceWithModifyPlan       = (*ICMPMonitorResource)(nil)
 )
 
 // NewICMPMonitorResource returns a new checkly_icmp_monitor resource.
@@ -232,6 +233,16 @@ func (r *ICMPMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 						"assertion": schema.SetNestedBlock{
 							Description: "Assertions to validate the ICMP response.",
 							NestedObject: schema.NestedBlockObject{
+								// Attributes nested in this set block must not
+								// use schema defaults. The framework looks up
+								// configuration values for set elements by full
+								// element value; once computed attributes
+								// resolve, the lookup misses, the configuration
+								// is treated as null, and defaults would
+								// override values the practitioner actually
+								// configured, producing a perpetual diff.
+								// Default values are instead applied in
+								// ModifyPlan.
 								Attributes: map[string]schema.Attribute{
 									"source": schema.StringAttribute{
 										Required:    true,
@@ -243,7 +254,6 @@ func (r *ICMPMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 									"property": schema.StringAttribute{
 										Optional:    true,
 										Computed:    true,
-										Default:     stringdefault.StaticString(""),
 										Description: "The property of the source to assert. For `LATENCY` source, possible values are `avg`, `min`, `max` and `stdDev`.",
 									},
 									"comparison": schema.StringAttribute{
@@ -276,6 +286,96 @@ func (r *ICMPMonitorResource) ConfigValidators(ctx context.Context) []resource.C
 
 func (r *ICMPMonitorResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	r.client = clientFromProviderData(req.ProviderData, &resp.Diagnostics)
+}
+
+// ModifyPlan applies default values to the optional+computed attributes
+// nested in the request.assertion set block. Schema defaults cannot be used
+// for these attributes (see the schema for details), so the plan is adjusted
+// here instead. Substituting static values keeps every set element fully
+// known and stable across plans, which set element correlation requires. The
+// request block itself is a list, so its own attributes can keep using schema
+// defaults.
+func (r *ICMPMonitorResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	// A destroy plan has no planned state to default values in.
+	if req.Plan.Raw.IsNull() {
+		return
+	}
+
+	var configRequest types.List
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("request"), &configRequest)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// When the configuration contains unknown values (references to
+	// attributes of resources that have not been created yet), null values
+	// cannot be distinguished from values that will resolve at apply time.
+	// Leave the plan untouched; the apply-time re-plan applies the defaults
+	// once the configuration values are known.
+	if valueContainsUnknown(configRequest) {
+		return
+	}
+
+	var request types.List
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("request"), &request)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	request = icmpMonitorRequestWithDefaults(ctx, request, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("request"), request)...)
+}
+
+// icmpMonitorRequestWithDefaults returns the request block value with default
+// values substituted for null and unknown optional+computed attributes nested
+// in the assertion set block.
+func icmpMonitorRequestWithDefaults(ctx context.Context, list types.List, diags *diag.Diagnostics) types.List {
+	if list.IsNull() || list.IsUnknown() {
+		return list
+	}
+
+	var models []ICMPMonitorRequestModel
+	diags.Append(list.ElementsAs(ctx, &models, false)...)
+	if diags.HasError() {
+		return list
+	}
+
+	for i, model := range models {
+		models[i].Assertions = icmpMonitorAssertionsWithDefaults(ctx, model.Assertions, diags)
+	}
+
+	result, d := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: icmpMonitorRequestAttrTypes}, models)
+	diags.Append(d...)
+
+	return result
+}
+
+// icmpMonitorAssertionsWithDefaults returns the request.assertion block value
+// with default values substituted for null and unknown optional+computed
+// attributes.
+func icmpMonitorAssertionsWithDefaults(ctx context.Context, set types.Set, diags *diag.Diagnostics) types.Set {
+	if set.IsNull() || set.IsUnknown() {
+		return set
+	}
+
+	var models []ICMPMonitorAssertionModel
+	diags.Append(set.ElementsAs(ctx, &models, false)...)
+	if diags.HasError() {
+		return set
+	}
+
+	for i, model := range models {
+		models[i].Property = stringOrDefault(model.Property, "")
+	}
+
+	result, d := types.SetValueFrom(ctx, types.ObjectType{AttrTypes: icmpMonitorAssertionAttrTypes}, models)
+	diags.Append(d...)
+
+	return result
 }
 
 func (r *ICMPMonitorResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {

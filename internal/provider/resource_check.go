@@ -31,6 +31,7 @@ var (
 	_ resource.ResourceWithImportState      = (*CheckResource)(nil)
 	_ resource.ResourceWithConfigValidators = (*CheckResource)(nil)
 	_ resource.ResourceWithValidateConfig   = (*CheckResource)(nil)
+	_ resource.ResourceWithModifyPlan       = (*CheckResource)(nil)
 )
 
 // NewCheckResource returns a new checkly_check resource.
@@ -302,11 +303,18 @@ func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 					setvalidator.SizeAtMost(1),
 				},
 				NestedObject: schema.NestedBlockObject{
+					// Attributes nested in this set block must not use schema
+					// defaults. The framework looks up configuration values
+					// for set elements by full element value; once computed
+					// attributes resolve, the lookup misses, the configuration
+					// is treated as null, and defaults would override values
+					// the practitioner actually configured, producing a
+					// perpetual diff. Default values are instead applied in
+					// ModifyPlan.
 					Attributes: map[string]schema.Attribute{
 						"method": schema.StringAttribute{
 							Optional:    true,
 							Computed:    true,
-							Default:     stringdefault.StaticString("GET"),
 							Description: "The HTTP method to use for this API check. Possible values are `GET`, `POST`, `PUT`, `HEAD`, `DELETE`, `PATCH`. (Default `GET`).",
 						},
 						"url": schema.StringAttribute{
@@ -315,12 +323,10 @@ func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 						"follow_redirects": schema.BoolAttribute{
 							Optional: true,
 							Computed: true,
-							Default:  booldefault.StaticBool(false),
 						},
 						"skip_ssl": schema.BoolAttribute{
 							Optional: true,
 							Computed: true,
-							Default:  booldefault.StaticBool(false),
 						},
 						"headers": schema.MapAttribute{
 							Optional:    true,
@@ -333,14 +339,12 @@ func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 						"body": schema.StringAttribute{
 							Optional:    true,
 							Computed:    true,
-							Default:     stringdefault.StaticString(""),
 							Description: "The body of the request.",
 						},
 						"body_type": schema.StringAttribute{
 							Optional:    true,
 							Computed:    true,
-							Default:     stringdefault.StaticString("NONE"),
-							Description: "The `Content-Type` header of the request. Possible values `NONE`, `JSON`, `FORM`, `RAW`, and `GRAPHQL`.",
+							Description: "The `Content-Type` header of the request. Possible values `NONE`, `JSON`, `FORM`, `RAW`, and `GRAPHQL`. (Default `NONE`).",
 							Validators: []validator.String{
 								stringvalidator.OneOf("NONE", "JSON", "FORM", "RAW", "GRAPHQL"),
 							},
@@ -360,8 +364,7 @@ func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 						"ip_family": schema.StringAttribute{
 							Optional:    true,
 							Computed:    true,
-							Default:     stringdefault.StaticString("IPv4"),
-							Description: "IP Family to be used when executing the api check. The value can be either IPv4 or IPv6.",
+							Description: "IP Family to be used when executing the api check. The value can be either IPv4 or IPv6. (Default `IPv4`).",
 							Validators: []validator.String{
 								stringvalidator.OneOf("IPv4", "IPv6"),
 							},
@@ -379,7 +382,6 @@ func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 									"property": schema.StringAttribute{
 										Optional: true,
 										Computed: true,
-										Default:  stringdefault.StaticString(""),
 									},
 									"comparison": schema.StringAttribute{
 										Required:    true,
@@ -388,7 +390,6 @@ func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 									"target": schema.StringAttribute{
 										Optional: true,
 										Computed: true,
-										Default:  stringdefault.StaticString(""),
 									},
 								},
 							},
@@ -449,6 +450,46 @@ func (r *CheckResource) ValidateConfig(ctx context.Context, req resource.Validat
 
 func (r *CheckResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	r.client = clientFromProviderData(req.ProviderData, &resp.Diagnostics)
+}
+
+// ModifyPlan applies default values to the optional+computed attributes
+// nested in the request set block. Schema defaults cannot be used for these
+// attributes (see the schema for details), so the plan is adjusted here
+// instead. Substituting static values keeps every set element fully known
+// and stable across plans, which set element correlation requires.
+func (r *CheckResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	// A destroy plan has no planned state to default values in.
+	if req.Plan.Raw.IsNull() {
+		return
+	}
+
+	var configRequest types.Set
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("request"), &configRequest)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// When the configuration contains unknown values (references to
+	// attributes of resources that have not been created yet), null values
+	// cannot be distinguished from values that will resolve at apply time.
+	// Leave the plan untouched; the apply-time re-plan applies the defaults
+	// once the configuration values are known.
+	if valueContainsUnknown(configRequest) {
+		return
+	}
+
+	var request types.Set
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("request"), &request)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	request = checkRequestWithDefaults(ctx, request, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("request"), request)...)
 }
 
 func (r *CheckResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -675,8 +716,9 @@ func checkFromModel(ctx context.Context, model *CheckResourceModel, diags *diag.
 
 // checkResolveComputedValues finalizes a planned model after a successful
 // create or update API call. All practitioner-configurable values are already
-// known at plan time (defaults included) and must be kept as planned; only
-// the values that may still be unknown in the plan (the ID and the
+// known at plan time (defaults included; the attributes nested in the request
+// block are defaulted in ModifyPlan) and must be kept as planned; only the
+// values that may still be unknown in the plan (the ID and the
 // optional+computed alert_settings and retry_strategy objects) are resolved
 // from the API response.
 func checkResolveComputedValues(ctx context.Context, c *checkly.Check, model *CheckResourceModel, diags *diag.Diagnostics) {
@@ -761,6 +803,82 @@ func checkStringSetFromAPI(ctx context.Context, values []string, prior types.Set
 	}
 
 	return setFromStrings(ctx, values, diags)
+}
+
+// stringOrDefault returns the given value, or the given default value when
+// the value is null or unknown. It is used to apply default values during
+// plan modification to attributes nested in set blocks, where schema
+// defaults cannot be used.
+func stringOrDefault(value types.String, defaultValue string) types.String {
+	if value.IsNull() || value.IsUnknown() {
+		return types.StringValue(defaultValue)
+	}
+	return value
+}
+
+// boolOrDefault returns the given value, or the given default value when the
+// value is null or unknown. It is used to apply default values during plan
+// modification to attributes nested in set blocks, where schema defaults
+// cannot be used.
+func boolOrDefault(value types.Bool, defaultValue bool) types.Bool {
+	if value.IsNull() || value.IsUnknown() {
+		return types.BoolValue(defaultValue)
+	}
+	return value
+}
+
+// checkRequestWithDefaults returns the request block value with default
+// values substituted for null and unknown optional+computed attributes.
+func checkRequestWithDefaults(ctx context.Context, set types.Set, diags *diag.Diagnostics) types.Set {
+	if set.IsNull() || set.IsUnknown() {
+		return set
+	}
+
+	var models []CheckRequestModel
+	diags.Append(set.ElementsAs(ctx, &models, false)...)
+	if diags.HasError() {
+		return set
+	}
+
+	for i, model := range models {
+		models[i].Method = stringOrDefault(model.Method, "GET")
+		models[i].FollowRedirects = boolOrDefault(model.FollowRedirects, false)
+		models[i].SkipSSL = boolOrDefault(model.SkipSSL, false)
+		models[i].Body = stringOrDefault(model.Body, "")
+		models[i].BodyType = stringOrDefault(model.BodyType, "NONE")
+		models[i].IPFamily = stringOrDefault(model.IPFamily, "IPv4")
+		models[i].Assertion = checkAssertionsWithDefaults(ctx, model.Assertion, diags)
+	}
+
+	result, d := types.SetValueFrom(ctx, types.ObjectType{AttrTypes: checkRequestAttrTypes}, models)
+	diags.Append(d...)
+
+	return result
+}
+
+// checkAssertionsWithDefaults returns the request.assertion block value with
+// default values substituted for null and unknown optional+computed
+// attributes.
+func checkAssertionsWithDefaults(ctx context.Context, set types.Set, diags *diag.Diagnostics) types.Set {
+	if set.IsNull() || set.IsUnknown() {
+		return set
+	}
+
+	var models []CheckAssertionModel
+	diags.Append(set.ElementsAs(ctx, &models, false)...)
+	if diags.HasError() {
+		return set
+	}
+
+	for i, model := range models {
+		models[i].Property = stringOrDefault(model.Property, "")
+		models[i].Target = stringOrDefault(model.Target, "")
+	}
+
+	result, d := types.SetValueFrom(ctx, types.ObjectType{AttrTypes: checkAssertionAttrTypes}, models)
+	diags.Append(d...)
+
+	return result
 }
 
 // checkRequestFromSet converts the request block value to its API

@@ -21,7 +21,14 @@ func TestAccStatusPageCheckRequiredFields(t *testing.T) {
 			ExpectError: regexp.MustCompile(`The argument "url" is required`),
 		},
 		{
-			Config:      config,
+			// name and url must be present for validation to proceed far
+			// enough to surface the missing-card error.
+			Config: `
+				resource "checkly_status_page" "test" {
+					name = "foo"
+					url  = "foo"
+				}
+			`,
 			ExpectError: regexp.MustCompile(`Block card must have a configuration value`),
 		},
 	})

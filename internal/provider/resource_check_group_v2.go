@@ -27,6 +27,7 @@ var (
 	_ resource.Resource                = (*CheckGroupV2Resource)(nil)
 	_ resource.ResourceWithConfigure   = (*CheckGroupV2Resource)(nil)
 	_ resource.ResourceWithImportState = (*CheckGroupV2Resource)(nil)
+	_ resource.ResourceWithModifyPlan  = (*CheckGroupV2Resource)(nil)
 )
 
 // NewCheckGroupV2Resource returns a new checkly_check_group_v2 resource.
@@ -350,6 +351,47 @@ func (r *CheckGroupV2Resource) Schema(ctx context.Context, req resource.SchemaRe
 
 func (r *CheckGroupV2Resource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	r.client = clientFromProviderData(req.ProviderData, &resp.Diagnostics)
+}
+
+// ModifyPlan applies default values to the optional+computed attributes
+// nested in the api_check_defaults.assertion set. Schema defaults cannot be
+// used for these attributes (see the attribute schema for details), so the
+// plan is adjusted here instead. Substituting static values keeps every set
+// element fully known and stable across plans, which set element correlation
+// requires.
+func (r *CheckGroupV2Resource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	// A destroy plan has no planned state to default values in.
+	if req.Plan.Raw.IsNull() {
+		return
+	}
+
+	var configDefaults types.Object
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(apiCheckDefaultsAttributeName), &configDefaults)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// When the configuration contains unknown values (references to
+	// attributes of resources that have not been created yet), null values
+	// cannot be distinguished from values that will resolve at apply time.
+	// Leave the plan untouched; the apply-time re-plan applies the defaults
+	// once the configuration values are known.
+	if valueContainsUnknown(configDefaults) {
+		return
+	}
+
+	var defaults types.Object
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root(apiCheckDefaultsAttributeName), &defaults)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	defaults = apiCheckDefaultsWithDefaults(ctx, defaults, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root(apiCheckDefaultsAttributeName), defaults)...)
 }
 
 func (r *CheckGroupV2Resource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {

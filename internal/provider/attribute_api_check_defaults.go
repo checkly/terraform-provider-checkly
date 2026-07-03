@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 
@@ -114,6 +113,15 @@ func makeAPICheckDefaultsAttributeSchema() schema.SingleNestedAttribute {
 				Default:     setdefault.StaticValue(types.SetValueMust(types.ObjectType{AttrTypes: apiCheckDefaultsAssertionAttrTypes}, []attr.Value{})),
 				Description: "Default assertions for API checks in this group.",
 				NestedObject: schema.NestedAttributeObject{
+					// Attributes nested in this set attribute must not use
+					// schema defaults. The framework looks up configuration
+					// values for set elements by full element value; once
+					// computed attributes resolve, the lookup misses, the
+					// configuration is treated as null, and defaults would
+					// override values the practitioner actually configured,
+					// producing a perpetual diff. Default values are instead
+					// applied in ModifyPlan of the resources using this
+					// attribute.
 					Attributes: map[string]schema.Attribute{
 						"source": schema.StringAttribute{
 							Required:    true,
@@ -122,7 +130,6 @@ func makeAPICheckDefaultsAttributeSchema() schema.SingleNestedAttribute {
 						"property": schema.StringAttribute{
 							Optional:    true,
 							Computed:    true,
-							Default:     stringdefault.StaticString(""),
 							Description: "The property of the asserted value, for example a JSON path or header name.",
 						},
 						"comparison": schema.StringAttribute{
@@ -152,6 +159,54 @@ func makeAPICheckDefaultsAttributeSchema() schema.SingleNestedAttribute {
 			},
 		},
 	}
+}
+
+// apiCheckDefaultsWithDefaults returns the api_check_defaults attribute value
+// with default values substituted for null and unknown optional+computed
+// attributes nested in the assertion set. It is called from ModifyPlan of the
+// resources using this attribute, because schema defaults cannot be used for
+// attributes nested in set elements (see the schema for details).
+func apiCheckDefaultsWithDefaults(ctx context.Context, obj types.Object, diags *diag.Diagnostics) types.Object {
+	if obj.IsNull() || obj.IsUnknown() {
+		return obj
+	}
+
+	var model apiCheckDefaultsModel
+	diags.Append(obj.As(ctx, &model, basetypes.ObjectAsOptions{})...)
+	if diags.HasError() {
+		return obj
+	}
+
+	model.Assertion = apiCheckDefaultsAssertionsWithDefaults(ctx, model.Assertion, diags)
+
+	result, d := types.ObjectValueFrom(ctx, apiCheckDefaultsAttrTypes, model)
+	diags.Append(d...)
+
+	return result
+}
+
+// apiCheckDefaultsAssertionsWithDefaults returns the
+// api_check_defaults.assertion attribute value with default values
+// substituted for null and unknown optional+computed attributes.
+func apiCheckDefaultsAssertionsWithDefaults(ctx context.Context, set types.Set, diags *diag.Diagnostics) types.Set {
+	if set.IsNull() || set.IsUnknown() {
+		return set
+	}
+
+	var models []apiCheckDefaultsAssertionModel
+	diags.Append(set.ElementsAs(ctx, &models, false)...)
+	if diags.HasError() {
+		return set
+	}
+
+	for i, model := range models {
+		models[i].Property = stringOrDefault(model.Property, "")
+	}
+
+	result, d := types.SetValueFrom(ctx, types.ObjectType{AttrTypes: apiCheckDefaultsAssertionAttrTypes}, models)
+	diags.Append(d...)
+
+	return result
 }
 
 // apiCheckDefaultsKeyValuesFromMap converts a map of strings to its API

@@ -18,9 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -33,6 +31,7 @@ var (
 	_ resource.ResourceWithConfigure        = (*AlertChannelResource)(nil)
 	_ resource.ResourceWithConfigValidators = (*AlertChannelResource)(nil)
 	_ resource.ResourceWithImportState      = (*AlertChannelResource)(nil)
+	_ resource.ResourceWithModifyPlan       = (*AlertChannelResource)(nil)
 )
 
 // NewAlertChannelResource returns a new checkly_alert_channel resource.
@@ -321,6 +320,14 @@ func (r *AlertChannelResource) Schema(ctx context.Context, req resource.SchemaRe
 					setvalidator.SizeAtMost(1),
 				},
 				NestedObject: schema.NestedBlockObject{
+					// Attributes nested in this set block must not use schema
+					// defaults. The framework looks up configuration values
+					// for set elements by full element value; once computed
+					// attributes resolve, the lookup misses, the configuration
+					// is treated as null, and defaults would override values
+					// the practitioner actually configured, producing a
+					// perpetual diff. Default values are instead applied in
+					// ModifyPlan.
 					Attributes: map[string]schema.Attribute{
 						"name": schema.StringAttribute{
 							Required: true,
@@ -328,20 +335,17 @@ func (r *AlertChannelResource) Schema(ctx context.Context, req resource.SchemaRe
 						"method": schema.StringAttribute{
 							Optional:    true,
 							Computed:    true,
-							Default:     stringdefault.StaticString("POST"),
 							Description: "(Default `POST`)",
 						},
 						"headers": schema.MapAttribute{
 							Optional:    true,
 							Computed:    true,
 							ElementType: types.StringType,
-							Default:     mapdefault.StaticValue(types.MapValueMust(types.StringType, map[string]attr.Value{})),
 						},
 						"query_parameters": schema.MapAttribute{
 							Optional:    true,
 							Computed:    true,
 							ElementType: types.StringType,
-							Default:     mapdefault.StaticValue(types.MapValueMust(types.StringType, map[string]attr.Value{})),
 						},
 						"template": schema.StringAttribute{
 							Optional: true,
@@ -466,6 +470,82 @@ func (r *AlertChannelResource) Configure(ctx context.Context, req resource.Confi
 	r.client = clientFromProviderData(req.ProviderData, &resp.Diagnostics)
 }
 
+// ModifyPlan applies default values to the optional+computed attributes
+// nested in the webhook set block. Schema defaults cannot be used for these
+// attributes (see the schema for details), so the plan is adjusted here
+// instead. Substituting static values keeps every set element fully known
+// and stable across plans, which set element correlation requires.
+func (r *AlertChannelResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	// A destroy plan has no planned state to default values in.
+	if req.Plan.Raw.IsNull() {
+		return
+	}
+
+	var configWebhook types.Set
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("webhook"), &configWebhook)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// When the configuration contains unknown values (references to
+	// attributes of resources that have not been created yet), null values
+	// cannot be distinguished from values that will resolve at apply time.
+	// Leave the plan untouched; the apply-time re-plan applies the defaults
+	// once the configuration values are known.
+	if valueContainsUnknown(configWebhook) {
+		return
+	}
+
+	var webhook types.Set
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("webhook"), &webhook)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	webhook = alertChannelWebhookWithDefaults(ctx, webhook, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("webhook"), webhook)...)
+}
+
+// alertChannelWebhookWithDefaults returns the webhook block value with
+// default values substituted for null and unknown optional+computed
+// attributes.
+func alertChannelWebhookWithDefaults(ctx context.Context, set types.Set, diags *diag.Diagnostics) types.Set {
+	if set.IsNull() || set.IsUnknown() {
+		return set
+	}
+
+	var models []alertChannelWebhookModel
+	diags.Append(set.ElementsAs(ctx, &models, false)...)
+	if diags.HasError() {
+		return set
+	}
+
+	for i, model := range models {
+		models[i].Method = stringOrDefault(model.Method, "POST")
+		models[i].Headers = mapOrEmpty(model.Headers, types.StringType)
+		models[i].QueryParameters = mapOrEmpty(model.QueryParameters, types.StringType)
+	}
+
+	result, d := types.SetValueFrom(ctx, types.ObjectType{AttrTypes: alertChannelWebhookAttrTypes}, models)
+	diags.Append(d...)
+
+	return result
+}
+
+// mapOrEmpty returns the given value, or an empty map when the value is null
+// or unknown. It is used to apply default values during plan modification to
+// attributes nested in set blocks, where schema defaults cannot be used.
+func mapOrEmpty(value types.Map, elementType attr.Type) types.Map {
+	if value.IsNull() || value.IsUnknown() {
+		return types.MapValueMust(elementType, map[string]attr.Value{})
+	}
+	return value
+}
+
 func (r *AlertChannelResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan AlertChannelResourceModel
 
@@ -491,9 +571,9 @@ func (r *AlertChannelResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	// Every other attribute is known in the plan (all optional attributes
-	// have static defaults), so only the ID needs to be filled in from the
-	// API response.
+	// Every other attribute is known in the plan (optional+computed
+	// attributes are defaulted by the schema or in ModifyPlan), so only the
+	// ID needs to be filled in from the API response.
 	plan.ID = types.StringValue(encodeNumericID(result.ID))
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)

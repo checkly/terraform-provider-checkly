@@ -512,7 +512,7 @@ func TestAccDashboardInvalidRefreshRate(t *testing.T) {
 					refresh_rate = 120
 				}
 			`, rInt),
-			ExpectError: regexp.MustCompile(`value must be one of: \[60 300 600\]`),
+			ExpectError: regexp.MustCompile(`value must be one of: \["60" "300" "600"\]`),
 		},
 	})
 }
@@ -528,7 +528,7 @@ func TestAccDashboardInvalidPaginationRate(t *testing.T) {
 					pagination_rate = 90
 				}
 			`, rInt),
-			ExpectError: regexp.MustCompile(`value must be one of: \[30 60 300\]`),
+			ExpectError: regexp.MustCompile(`value must be one of: \["30" "60" "300"\]`),
 		},
 	})
 }

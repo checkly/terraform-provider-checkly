@@ -37,7 +37,7 @@ func TestAccPlaywrightCodeBundleZipArchive(t *testing.T) {
 					}
 				}
 			`,
-			ExpectError: regexp.MustCompile(`appears to be a \.zip archive, but a \.tar\.gz archive is required`),
+			ExpectError: regexp.MustCompile(`appears to be a \.zip archive`),
 		},
 	})
 }

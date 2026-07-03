@@ -186,6 +186,49 @@ func TestAccBrowserCheckBasic(t *testing.T) {
 	})
 }
 
+// TestAccApiCheckRequestUnknownValues exercises a request whose values are
+// unknown at plan time because they reference an attribute of a resource
+// that has not been created yet. Plan-time request defaulting must leave
+// unknown configurations untouched so that the apply-time plan can resolve
+// them without producing an inconsistent final plan.
+func TestAccApiCheckRequestUnknownValues(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_snippet" "test" {
+					name   = "request-unknown-values"
+					script = "console.log('hi')"
+				}
+
+				resource "checkly_check" "test" {
+					name      = "API Check With Unknown Request Values"
+					type      = "API"
+					activated = false
+					frequency = 60
+
+					locations = ["eu-central-1"]
+
+					request {
+						url = "https://api.checklyhq.com/public-stats?marker=${checkly_snippet.test.id}"
+						assertion {
+							source     = "STATUS_CODE"
+							comparison = "EQUALS"
+							target     = checkly_snippet.test.id
+						}
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				testCheckResourceAttrExpr(
+					"checkly_check.test",
+					"request.*.method",
+					"GET",
+				),
+			),
+		},
+	})
+}
+
 func TestAccApiCheckBasic(t *testing.T) {
 	accTestCase(t, []resource.TestStep{
 		{

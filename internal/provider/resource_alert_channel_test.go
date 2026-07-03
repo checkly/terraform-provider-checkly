@@ -121,7 +121,7 @@ func TestAccSMS(t *testing.T) {
 			Config: `resource "checkly_alert_channel" "sms_ac" {
 				sms {
 					name   = "smsalerts"
-					number = "4917512345678"
+					number = "+4917512345678"
 				}
 			}`,
 		},
@@ -265,7 +265,7 @@ func TestAccFail(t *testing.T) {
 				}
 				sms {
 					name   = "smsalerts"
-					number = "4917512345678"
+					number = "+4917512345678"
 				}
 			}`,
 			Error: `cannot contain more than one channel type`,

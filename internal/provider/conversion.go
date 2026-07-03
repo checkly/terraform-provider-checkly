@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
@@ -107,4 +108,52 @@ func stringOrNullWhenUnknown(value types.String) types.String {
 	}
 
 	return value
+}
+
+// valueContainsUnknown reports whether the value, or any value nested within
+// it, is unknown. Configuration values are unknown when they reference
+// attributes of resources that have not been created yet.
+func valueContainsUnknown(value attr.Value) bool {
+	if value.IsUnknown() {
+		return true
+	}
+
+	if value.IsNull() {
+		return false
+	}
+
+	switch v := value.(type) {
+	case types.Object:
+		for _, nested := range v.Attributes() {
+			if valueContainsUnknown(nested) {
+				return true
+			}
+		}
+	case types.List:
+		for _, nested := range v.Elements() {
+			if valueContainsUnknown(nested) {
+				return true
+			}
+		}
+	case types.Set:
+		for _, nested := range v.Elements() {
+			if valueContainsUnknown(nested) {
+				return true
+			}
+		}
+	case types.Map:
+		for _, nested := range v.Elements() {
+			if valueContainsUnknown(nested) {
+				return true
+			}
+		}
+	case types.Tuple:
+		for _, nested := range v.Elements() {
+			if valueContainsUnknown(nested) {
+				return true
+			}
+		}
+	}
+
+	return false
 }

@@ -30,6 +30,7 @@ var (
 	_ resource.ResourceWithConfigValidators = (*TCPMonitorResource)(nil)
 	_ resource.ResourceWithImportState      = (*TCPMonitorResource)(nil)
 	_ resource.ResourceWithMoveState        = (*TCPMonitorResource)(nil)
+	_ resource.ResourceWithModifyPlan       = (*TCPMonitorResource)(nil)
 )
 
 // NewTCPMonitorResource returns a new checkly_tcp_monitor resource.
@@ -229,6 +230,14 @@ func (r *TCPMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 					setvalidator.SizeAtMost(1),
 				},
 				NestedObject: schema.NestedBlockObject{
+					// Attributes nested in this set block must not use schema
+					// defaults. The framework looks up configuration values
+					// for set elements by full element value; once computed
+					// attributes resolve, the lookup misses, the configuration
+					// is treated as null, and defaults would override values
+					// the practitioner actually configured, producing a
+					// perpetual diff. Default values are instead applied in
+					// ModifyPlan.
 					Attributes: map[string]schema.Attribute{
 						"hostname": schema.StringAttribute{
 							Required:    true,
@@ -241,14 +250,12 @@ func (r *TCPMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 						"data": schema.StringAttribute{
 							Optional:    true,
 							Computed:    true,
-							Default:     stringdefault.StaticString(""),
 							Description: "The data to send to the target host.",
 						},
 						"ip_family": schema.StringAttribute{
 							Optional:    true,
 							Computed:    true,
-							Default:     stringdefault.StaticString("IPv4"),
-							Description: "The IP family to use when executing the TCP check. The value can be either `IPv4` or `IPv6`.",
+							Description: "The IP family to use when executing the TCP check. The value can be either `IPv4` or `IPv6`. (Default `IPv4`).",
 							Validators: []validator.String{
 								stringvalidator.OneOf("IPv4", "IPv6"),
 							},
@@ -266,7 +273,6 @@ func (r *TCPMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 									"property": schema.StringAttribute{
 										Optional: true,
 										Computed: true,
-										Default:  stringdefault.StaticString(""),
 									},
 									"comparison": schema.StringAttribute{
 										Required:    true,
@@ -275,7 +281,6 @@ func (r *TCPMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 									"target": schema.StringAttribute{
 										Optional: true,
 										Computed: true,
-										Default:  stringdefault.StaticString(""),
 									},
 								},
 							},
@@ -299,6 +304,96 @@ func (r *TCPMonitorResource) ConfigValidators(ctx context.Context) []resource.Co
 
 func (r *TCPMonitorResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	r.client = clientFromProviderData(req.ProviderData, &resp.Diagnostics)
+}
+
+// ModifyPlan applies default values to the optional+computed attributes
+// nested in the request set block. Schema defaults cannot be used for these
+// attributes (see the schema for details), so the plan is adjusted here
+// instead. Substituting static values keeps every set element fully known
+// and stable across plans, which set element correlation requires.
+func (r *TCPMonitorResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	// A destroy plan has no planned state to default values in.
+	if req.Plan.Raw.IsNull() {
+		return
+	}
+
+	var configRequest types.Set
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("request"), &configRequest)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// When the configuration contains unknown values (references to
+	// attributes of resources that have not been created yet), null values
+	// cannot be distinguished from values that will resolve at apply time.
+	// Leave the plan untouched; the apply-time re-plan applies the defaults
+	// once the configuration values are known.
+	if valueContainsUnknown(configRequest) {
+		return
+	}
+
+	var request types.Set
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("request"), &request)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	request = tcpMonitorRequestWithDefaults(ctx, request, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("request"), request)...)
+}
+
+// tcpMonitorRequestWithDefaults returns the request block value with default
+// values substituted for null and unknown optional+computed attributes.
+func tcpMonitorRequestWithDefaults(ctx context.Context, set types.Set, diags *diag.Diagnostics) types.Set {
+	if set.IsNull() || set.IsUnknown() {
+		return set
+	}
+
+	var models []TCPMonitorRequestModel
+	diags.Append(set.ElementsAs(ctx, &models, false)...)
+	if diags.HasError() {
+		return set
+	}
+
+	for i, model := range models {
+		models[i].Data = stringOrDefault(model.Data, "")
+		models[i].IPFamily = stringOrDefault(model.IPFamily, "IPv4")
+		models[i].Assertion = tcpMonitorAssertionsWithDefaults(ctx, model.Assertion, diags)
+	}
+
+	result, d := types.SetValueFrom(ctx, types.ObjectType{AttrTypes: tcpMonitorRequestAttrTypes}, models)
+	diags.Append(d...)
+
+	return result
+}
+
+// tcpMonitorAssertionsWithDefaults returns the request.assertion block value
+// with default values substituted for null and unknown optional+computed
+// attributes.
+func tcpMonitorAssertionsWithDefaults(ctx context.Context, set types.Set, diags *diag.Diagnostics) types.Set {
+	if set.IsNull() || set.IsUnknown() {
+		return set
+	}
+
+	var models []TCPMonitorAssertionModel
+	diags.Append(set.ElementsAs(ctx, &models, false)...)
+	if diags.HasError() {
+		return set
+	}
+
+	for i, model := range models {
+		models[i].Property = stringOrDefault(model.Property, "")
+		models[i].Target = stringOrDefault(model.Target, "")
+	}
+
+	result, d := types.SetValueFrom(ctx, types.ObjectType{AttrTypes: tcpMonitorAssertionAttrTypes}, models)
+	diags.Append(d...)
+
+	return result
 }
 
 func (r *TCPMonitorResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
