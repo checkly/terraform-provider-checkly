@@ -1697,3 +1697,356 @@ func TestAccURLMonitorAlertChannelSubscriptions(t *testing.T) {
 		},
 	})
 }
+
+// TestAccURLMonitorUnsetSweepBasics sets every plain optional attribute to a
+// non-default value and then removes them all, verifying the server actually
+// clears (or resets to the default) each value. The Checkly PUT endpoint is
+// PATCH-style, so a key omitted from the update payload keeps its server-side
+// value; the implicit post-apply refresh would surface that as a non-empty
+// plan and fail the test.
+func TestAccURLMonitorUnsetSweepBasics(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_url_monitor" "test" {
+					name                      = "url-unset-sweep-basics"
+					activated                 = true
+					frequency                 = 60
+					locations                 = ["eu-central-1"]
+					muted                     = true
+					should_fail               = true
+					run_parallel              = true
+					use_global_alert_settings = false
+					degraded_response_time    = 2500
+					max_response_time         = 9000
+					tags                      = ["sweep-a", "sweep-b"]
+					request {
+						url = "https://api.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_url_monitor.test", "muted", "true"),
+				resource.TestCheckResourceAttr("checkly_url_monitor.test", "should_fail", "true"),
+				resource.TestCheckResourceAttr("checkly_url_monitor.test", "run_parallel", "true"),
+				resource.TestCheckResourceAttr("checkly_url_monitor.test", "use_global_alert_settings", "false"),
+				resource.TestCheckResourceAttr("checkly_url_monitor.test", "degraded_response_time", "2500"),
+				resource.TestCheckResourceAttr("checkly_url_monitor.test", "max_response_time", "9000"),
+				resource.TestCheckResourceAttr("checkly_url_monitor.test", "tags.#", "2"),
+			),
+		},
+		{
+			Config: `
+				resource "checkly_url_monitor" "test" {
+					name      = "url-unset-sweep-basics"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						url = "https://api.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_url_monitor.test", "muted", "false"),
+				resource.TestCheckResourceAttr("checkly_url_monitor.test", "should_fail", "false"),
+				resource.TestCheckResourceAttr("checkly_url_monitor.test", "run_parallel", "false"),
+				resource.TestCheckResourceAttr("checkly_url_monitor.test", "use_global_alert_settings", "true"),
+				resource.TestCheckResourceAttr("checkly_url_monitor.test", "degraded_response_time", "3000"),
+				resource.TestCheckResourceAttr("checkly_url_monitor.test", "max_response_time", "5000"),
+				resource.TestCheckNoResourceAttr("checkly_url_monitor.test", "tags.#"),
+			),
+		},
+	})
+}
+
+// TestAccURLMonitorUnsetSweepResponseTimeZero verifies that the response time
+// limits accept an explicit 0 (a schema-valid value that omitempty-style
+// serialization would drop) and reset to their documented defaults when
+// removed from the configuration.
+func TestAccURLMonitorUnsetSweepResponseTimeZero(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_url_monitor" "test" {
+					name                   = "url-unset-sweep-response-time-zero"
+					activated              = true
+					frequency              = 60
+					locations              = ["eu-central-1"]
+					degraded_response_time = 0
+					max_response_time      = 0
+					request {
+						url = "https://api.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_url_monitor.test", "degraded_response_time", "0"),
+				resource.TestCheckResourceAttr("checkly_url_monitor.test", "max_response_time", "0"),
+			),
+		},
+		{
+			Config: `
+				resource "checkly_url_monitor" "test" {
+					name      = "url-unset-sweep-response-time-zero"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						url = "https://api.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_url_monitor.test", "degraded_response_time", "3000"),
+				resource.TestCheckResourceAttr("checkly_url_monitor.test", "max_response_time", "5000"),
+			),
+		},
+	})
+}
+
+// TestAccURLMonitorUnsetSweepLocations verifies that removing the locations
+// attribute entirely clears the locations on the server.
+func TestAccURLMonitorUnsetSweepLocations(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_url_monitor" "test" {
+					name      = "url-unset-sweep-locations"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1", "us-east-1"]
+					request {
+						url = "https://api.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_url_monitor.test", "locations.#", "2"),
+			),
+		},
+		{
+			Config: `
+				resource "checkly_url_monitor" "test" {
+					name      = "url-unset-sweep-locations"
+					activated = true
+					frequency = 60
+					request {
+						url = "https://api.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckNoResourceAttr("checkly_url_monitor.test", "locations.#"),
+			),
+		},
+	})
+}
+
+// TestAccURLMonitorUnsetSweepPrivateLocations verifies that removing the
+// private_locations attribute clears the private locations on the server.
+func TestAccURLMonitorUnsetSweepPrivateLocations(t *testing.T) {
+	privateLocation := `
+		resource "checkly_private_location" "url_sweep" {
+			name      = "URL Monitor Unset Sweep"
+			slug_name = "tf-url-monitor-unset-sweep"
+		}
+	`
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: privateLocation + `
+				resource "checkly_url_monitor" "test" {
+					name              = "url-unset-sweep-private-locations"
+					activated         = true
+					frequency         = 60
+					locations         = ["eu-central-1"]
+					private_locations = [checkly_private_location.url_sweep.slug_name]
+					request {
+						url = "https://api.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_url_monitor.test", "private_locations.#", "1"),
+			),
+		},
+		{
+			Config: privateLocation + `
+				resource "checkly_url_monitor" "test" {
+					name      = "url-unset-sweep-private-locations"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						url = "https://api.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckNoResourceAttr("checkly_url_monitor.test", "private_locations.#"),
+			),
+		},
+	})
+}
+
+// TestAccURLMonitorUnsetSweepRequest sets the optional request attributes to
+// non-default values plus an assertion, then removes them, verifying the
+// attributes reset to their defaults and the assertions are cleared on the
+// server.
+func TestAccURLMonitorUnsetSweepRequest(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_url_monitor" "test" {
+					name      = "url-unset-sweep-request"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						url              = "https://api.checklyhq.com"
+						follow_redirects = false
+						skip_ssl         = true
+						ip_family        = "IPv6"
+						assertion {
+							source     = "STATUS_CODE"
+							comparison = "EQUALS"
+							target     = "200"
+						}
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				testCheckResourceAttrExpr("checkly_url_monitor.test", `follow_redirects":"false"`, "false"),
+				testCheckResourceAttrExpr("checkly_url_monitor.test", `skip_ssl":"true"`, "true"),
+				testCheckResourceAttrExpr("checkly_url_monitor.test", `ip_family":"IPv6"`, "IPv6"),
+				testCheckResourceAttrExpr("checkly_url_monitor.test", `assertion.#":"1"`, "1"),
+			),
+		},
+		{
+			Config: `
+				resource "checkly_url_monitor" "test" {
+					name      = "url-unset-sweep-request"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						url = "https://api.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				testCheckResourceAttrExpr("checkly_url_monitor.test", `follow_redirects":"true"`, "true"),
+				testCheckResourceAttrExpr("checkly_url_monitor.test", `skip_ssl":"false"`, "false"),
+				testCheckResourceAttrExpr("checkly_url_monitor.test", `ip_family":"IPv4"`, "IPv4"),
+				testCheckResourceAttrExpr("checkly_url_monitor.test", `assertion.#":"0"`, "0"),
+			),
+		},
+	})
+}
+
+// TestAccURLMonitorUnsetSweepTriggerIncident verifies that removing the
+// trigger_incident block clears the incident trigger on the server.
+func TestAccURLMonitorUnsetSweepTriggerIncident(t *testing.T) {
+	service := `
+		resource "checkly_status_page_service" "url_sweep" {
+			name = "URL Monitor Unset Sweep Service"
+		}
+	`
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: service + `
+				resource "checkly_url_monitor" "test" {
+					name      = "url-unset-sweep-trigger-incident"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						url = "https://api.checklyhq.com"
+					}
+					trigger_incident {
+						service_id         = checkly_status_page_service.url_sweep.id
+						severity           = "MEDIUM"
+						name               = "URL sweep incident"
+						description        = "Incident created by the unset sweep test"
+						notify_subscribers = false
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_url_monitor.test", "trigger_incident.#", "1"),
+			),
+		},
+		{
+			Config: service + `
+				resource "checkly_url_monitor" "test" {
+					name      = "url-unset-sweep-trigger-incident"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						url = "https://api.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_url_monitor.test", "trigger_incident.#", "0"),
+			),
+		},
+	})
+}
+
+// TestAccURLMonitorUnsetSweepGroup verifies that removing group_id and
+// group_order detaches the monitor from the group and resets the order.
+func TestAccURLMonitorUnsetSweepGroup(t *testing.T) {
+	group := `
+		resource "checkly_check_group" "url_sweep" {
+			name        = "url-unset-sweep-group"
+			activated   = true
+			concurrency = 1
+			locations   = ["eu-central-1"]
+		}
+	`
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: group + `
+				resource "checkly_url_monitor" "test" {
+					name        = "url-unset-sweep-group"
+					activated   = true
+					frequency   = 60
+					locations   = ["eu-central-1"]
+					group_id    = checkly_check_group.url_sweep.id
+					group_order = 2
+					request {
+						url = "https://api.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttrPair(
+					"checkly_url_monitor.test",
+					"group_id",
+					"checkly_check_group.url_sweep",
+					"id",
+				),
+				resource.TestCheckResourceAttr("checkly_url_monitor.test", "group_order", "2"),
+			),
+		},
+		{
+			Config: group + `
+				resource "checkly_url_monitor" "test" {
+					name      = "url-unset-sweep-group"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						url = "https://api.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_url_monitor.test", "group_id", "0"),
+				resource.TestCheckResourceAttr("checkly_url_monitor.test", "group_order", "0"),
+			),
+		},
+	})
+}

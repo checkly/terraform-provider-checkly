@@ -1061,3 +1061,380 @@ func TestAccICMPMonitorAlertChannelSubscriptions(t *testing.T) {
 		},
 	})
 }
+
+// TestAccICMPMonitorUnsetSweepBasics sets every plain optional attribute to a
+// non-default value and then removes them all, verifying the server actually
+// clears (or resets to the default) each value. The Checkly PUT endpoint is
+// PATCH-style, so a key omitted from the update payload keeps its server-side
+// value; the implicit post-apply refresh would surface that as a non-empty
+// plan and fail the test.
+func TestAccICMPMonitorUnsetSweepBasics(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_icmp_monitor" "test" {
+					name                           = "icmp-unset-sweep-basics"
+					activated                      = true
+					frequency                      = 60
+					locations                      = ["eu-central-1"]
+					muted                          = true
+					run_parallel                   = true
+					use_global_alert_settings      = false
+					degraded_packet_loss_threshold = 35
+					max_packet_loss_threshold      = 70
+					tags                           = ["sweep-a", "sweep-b"]
+					request {
+						hostname = "api.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "muted", "true"),
+				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "run_parallel", "true"),
+				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "use_global_alert_settings", "false"),
+				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "degraded_packet_loss_threshold", "35"),
+				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "max_packet_loss_threshold", "70"),
+				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "tags.#", "2"),
+			),
+		},
+		{
+			Config: `
+				resource "checkly_icmp_monitor" "test" {
+					name      = "icmp-unset-sweep-basics"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						hostname = "api.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "muted", "false"),
+				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "run_parallel", "false"),
+				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "use_global_alert_settings", "true"),
+				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "degraded_packet_loss_threshold", "10"),
+				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "max_packet_loss_threshold", "20"),
+				resource.TestCheckNoResourceAttr("checkly_icmp_monitor.test", "tags.#"),
+			),
+		},
+	})
+}
+
+// TestAccICMPMonitorUnsetSweepThresholdZero documents that even though the
+// schema validators accept 0 for the packet loss thresholds, the Checkly API
+// rejects an explicit 0 with a 400 ("must be greater than 0") for both
+// degraded_packet_loss_threshold and max_packet_loss_threshold. This is a
+// server-side limitation; the schema minimum should arguably be 1.
+func TestAccICMPMonitorUnsetSweepThresholdZero(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_icmp_monitor" "test" {
+					name                           = "icmp-unset-sweep-threshold-zero"
+					activated                      = true
+					frequency                      = 60
+					locations                      = ["eu-central-1"]
+					degraded_packet_loss_threshold = 0
+					max_packet_loss_threshold      = 0
+					request {
+						hostname = "api.checklyhq.com"
+					}
+				}
+			`,
+			ExpectError: regexp.MustCompile(`degradedPacketLossThreshold[\s\S]+must be greater[\s\S]+than[\s\S]+0`),
+		},
+	})
+}
+
+// TestAccICMPMonitorUnsetSweepThresholdReset verifies that the packet loss
+// thresholds reset to their documented defaults when removed from the
+// configuration.
+func TestAccICMPMonitorUnsetSweepThresholdReset(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_icmp_monitor" "test" {
+					name                           = "icmp-unset-sweep-threshold-reset"
+					activated                      = true
+					frequency                      = 60
+					locations                      = ["eu-central-1"]
+					degraded_packet_loss_threshold = 5
+					max_packet_loss_threshold      = 15
+					request {
+						hostname = "api.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "degraded_packet_loss_threshold", "5"),
+				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "max_packet_loss_threshold", "15"),
+			),
+		},
+		{
+			Config: `
+				resource "checkly_icmp_monitor" "test" {
+					name      = "icmp-unset-sweep-threshold-reset"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						hostname = "api.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "degraded_packet_loss_threshold", "10"),
+				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "max_packet_loss_threshold", "20"),
+			),
+		},
+	})
+}
+
+// TestAccICMPMonitorUnsetSweepLocations verifies that removing the locations
+// attribute entirely clears the locations on the server.
+func TestAccICMPMonitorUnsetSweepLocations(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_icmp_monitor" "test" {
+					name      = "icmp-unset-sweep-locations"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1", "us-east-1"]
+					request {
+						hostname = "api.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "locations.#", "2"),
+			),
+		},
+		{
+			Config: `
+				resource "checkly_icmp_monitor" "test" {
+					name      = "icmp-unset-sweep-locations"
+					activated = true
+					frequency = 60
+					request {
+						hostname = "api.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckNoResourceAttr("checkly_icmp_monitor.test", "locations.#"),
+			),
+		},
+	})
+}
+
+// TestAccICMPMonitorUnsetSweepRequest sets the optional request attributes to
+// non-default values plus an assertion, then removes them, verifying the
+// attributes reset to their defaults and the assertions are cleared on the
+// server.
+func TestAccICMPMonitorUnsetSweepRequest(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_icmp_monitor" "test" {
+					name      = "icmp-unset-sweep-request"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						hostname   = "api.checklyhq.com"
+						ip_family  = "IPv6"
+						ping_count = 5
+						assertion {
+							source     = "LATENCY"
+							property   = "avg"
+							comparison = "LESS_THAN"
+							target     = "250"
+						}
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "request.0.ip_family", "IPv6"),
+				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "request.0.ping_count", "5"),
+				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "request.0.assertion.#", "1"),
+			),
+		},
+		{
+			Config: `
+				resource "checkly_icmp_monitor" "test" {
+					name      = "icmp-unset-sweep-request"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						hostname = "api.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "request.0.ip_family", "IPv4"),
+				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "request.0.ping_count", "10"),
+				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "request.0.assertion.#", "0"),
+			),
+		},
+	})
+}
+
+// TestAccICMPMonitorUnsetSweepTriggerIncident verifies that removing the
+// trigger_incident block clears the incident trigger on the server.
+func TestAccICMPMonitorUnsetSweepTriggerIncident(t *testing.T) {
+	service := `
+		resource "checkly_status_page_service" "icmp_sweep" {
+			name = "ICMP Monitor Unset Sweep Service"
+		}
+	`
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: service + `
+				resource "checkly_icmp_monitor" "test" {
+					name      = "icmp-unset-sweep-trigger-incident"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						hostname = "api.checklyhq.com"
+					}
+					trigger_incident {
+						service_id         = checkly_status_page_service.icmp_sweep.id
+						severity           = "MEDIUM"
+						name               = "ICMP sweep incident"
+						description        = "Incident created by the unset sweep test"
+						notify_subscribers = false
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "trigger_incident.#", "1"),
+			),
+		},
+		{
+			Config: service + `
+				resource "checkly_icmp_monitor" "test" {
+					name      = "icmp-unset-sweep-trigger-incident"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						hostname = "api.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "trigger_incident.#", "0"),
+			),
+		},
+	})
+}
+
+// TestAccICMPMonitorUnsetSweepGroup verifies that removing group_id and
+// group_order detaches the monitor from the group and resets the order.
+func TestAccICMPMonitorUnsetSweepGroup(t *testing.T) {
+	group := `
+		resource "checkly_check_group" "icmp_sweep" {
+			name        = "icmp-unset-sweep-group"
+			activated   = true
+			concurrency = 1
+			locations   = ["eu-central-1"]
+		}
+	`
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: group + `
+				resource "checkly_icmp_monitor" "test" {
+					name        = "icmp-unset-sweep-group"
+					activated   = true
+					frequency   = 60
+					locations   = ["eu-central-1"]
+					group_id    = checkly_check_group.icmp_sweep.id
+					group_order = 2
+					request {
+						hostname = "api.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttrPair(
+					"checkly_icmp_monitor.test",
+					"group_id",
+					"checkly_check_group.icmp_sweep",
+					"id",
+				),
+				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "group_order", "2"),
+			),
+		},
+		{
+			Config: group + `
+				resource "checkly_icmp_monitor" "test" {
+					name      = "icmp-unset-sweep-group"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						hostname = "api.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "group_id", "0"),
+				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "group_order", "0"),
+			),
+		},
+	})
+}
+
+// TestAccICMPMonitorRetryStrategyRemoval verifies that removing the
+// retry_strategy attribute resets the strategy to NO_RETRIES on the server.
+func TestAccICMPMonitorRetryStrategyRemoval(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_icmp_monitor" "test" {
+					name      = "icmp-retry-strategy-removal"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						hostname = "api.checklyhq.com"
+					}
+					retry_strategy = {
+						type = "LINEAR"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_icmp_monitor.test",
+					"retry_strategy.type",
+					"LINEAR",
+				),
+			),
+		},
+		{
+			Config: `
+				resource "checkly_icmp_monitor" "test" {
+					name      = "icmp-retry-strategy-removal"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						hostname = "api.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_icmp_monitor.test",
+					"retry_strategy.type",
+					"NO_RETRIES",
+				),
+			),
+		},
+	})
+}

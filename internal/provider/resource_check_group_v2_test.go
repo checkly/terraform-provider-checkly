@@ -1514,3 +1514,340 @@ func TestAccCheckGroupV2ApiCheckDefaults(t *testing.T) {
 		},
 	})
 }
+
+func TestAccCheckGroupV2UnsetSweepAlertChannelSubscriptions(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		// Step 1: enforce alert settings with a real alert channel
+		// subscription.
+		{
+			Config: `
+				resource "checkly_alert_channel" "email" {
+					email {
+						address = "group-v2-sweep-acs@example.com"
+					}
+				}
+
+				resource "checkly_check_group_v2" "test" {
+					name = "group-v2-sweep-acs"
+
+					enforce_alert_settings = {
+						enabled = true
+
+						alert_settings = {
+							escalation_type = "RUN_BASED"
+
+							run_based_escalation = {
+								failed_run_threshold = 1
+							}
+
+							reminders = {
+								amount   = 0
+								interval = 5
+							}
+						}
+
+						alert_channel_subscription = [
+							{
+								channel_id = checkly_alert_channel.email.id
+								activated  = true
+							},
+						]
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					checkGroupV2Resource,
+					"enforce_alert_settings.enabled",
+					"true",
+				),
+				resource.TestCheckResourceAttr(
+					checkGroupV2Resource,
+					"enforce_alert_settings.alert_channel_subscription.#",
+					"1",
+				),
+				checkGroupTestCheckAlertChannelSubscription(
+					checkGroupV2Resource,
+					"enforce_alert_settings.alert_channel_subscription",
+					"checkly_alert_channel.email",
+					"true",
+				),
+			),
+		},
+		// Step 2: remove all subscriptions but keep the enforcement enabled.
+		// The post-apply refresh verifies the server actually cleared them.
+		{
+			Config: `
+				resource "checkly_alert_channel" "email" {
+					email {
+						address = "group-v2-sweep-acs@example.com"
+					}
+				}
+
+				resource "checkly_check_group_v2" "test" {
+					name = "group-v2-sweep-acs"
+
+					enforce_alert_settings = {
+						enabled = true
+
+						alert_settings = {
+							escalation_type = "RUN_BASED"
+
+							run_based_escalation = {
+								failed_run_threshold = 1
+							}
+
+							reminders = {
+								amount   = 0
+								interval = 5
+							}
+						}
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					checkGroupV2Resource,
+					"enforce_alert_settings.enabled",
+					"true",
+				),
+				resource.TestCheckNoResourceAttr(
+					checkGroupV2Resource,
+					"enforce_alert_settings.alert_channel_subscription.#",
+				),
+			),
+		},
+		// Step 3: remove the whole enforcement; it must plan back to the
+		// disabled default and the server must disable it.
+		{
+			Config: `
+				resource "checkly_alert_channel" "email" {
+					email {
+						address = "group-v2-sweep-acs@example.com"
+					}
+				}
+
+				resource "checkly_check_group_v2" "test" {
+					name = "group-v2-sweep-acs"
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					checkGroupV2Resource,
+					"enforce_alert_settings.enabled",
+					"false",
+				),
+				resource.TestCheckNoResourceAttr(
+					checkGroupV2Resource,
+					"enforce_alert_settings.alert_channel_subscription.#",
+				),
+			),
+		},
+	})
+}
+
+func TestAccCheckGroupV2UnsetSweepSnippetScripts(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		// Step 1: reference setup and teardown snippets.
+		{
+			Config: `
+				resource "checkly_snippet" "setup" {
+					name   = "group-v2-sweep-setup"
+					script = "console.log('setup')"
+				}
+
+				resource "checkly_snippet" "teardown" {
+					name   = "group-v2-sweep-teardown"
+					script = "console.log('teardown')"
+				}
+
+				resource "checkly_check_group_v2" "test" {
+					name = "group-v2-sweep-snippets"
+
+					setup_script {
+						snippet_id = checkly_snippet.setup.id
+					}
+
+					teardown_script {
+						snippet_id = checkly_snippet.teardown.id
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttrPair(
+					checkGroupV2Resource, "setup_script.0.snippet_id",
+					"checkly_snippet.setup", "id",
+				),
+				resource.TestCheckResourceAttrPair(
+					checkGroupV2Resource, "teardown_script.0.snippet_id",
+					"checkly_snippet.teardown", "id",
+				),
+			),
+		},
+		// Step 2: remove the script blocks; the snippet references must clear
+		// server-side.
+		{
+			Config: `
+				resource "checkly_snippet" "setup" {
+					name   = "group-v2-sweep-setup"
+					script = "console.log('setup')"
+				}
+
+				resource "checkly_snippet" "teardown" {
+					name   = "group-v2-sweep-teardown"
+					script = "console.log('teardown')"
+				}
+
+				resource "checkly_check_group_v2" "test" {
+					name = "group-v2-sweep-snippets"
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckNoResourceAttr(
+					checkGroupV2Resource,
+					"setup_script.#",
+				),
+				resource.TestCheckNoResourceAttr(
+					checkGroupV2Resource,
+					"teardown_script.#",
+				),
+			),
+		},
+	})
+}
+
+func TestAccCheckGroupV2UnsetSweepEnforceLocationsChange(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		// Step 1: enforce two public locations.
+		{
+			Config: `
+				resource "checkly_check_group_v2" "test" {
+					name = "group-v2-sweep-locations"
+
+					enforce_locations = {
+						enabled   = true
+						locations = ["us-east-1", "eu-west-1"]
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					checkGroupV2Resource,
+					"enforce_locations.enabled",
+					"true",
+				),
+				resource.TestCheckResourceAttr(
+					checkGroupV2Resource,
+					"enforce_locations.locations.#",
+					"2",
+				),
+			),
+		},
+		// Step 2: change the enforced locations to a different single one.
+		{
+			Config: `
+				resource "checkly_check_group_v2" "test" {
+					name = "group-v2-sweep-locations"
+
+					enforce_locations = {
+						enabled   = true
+						locations = ["eu-central-1"]
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					checkGroupV2Resource,
+					"enforce_locations.locations.#",
+					"1",
+				),
+				testCheckResourceAttrExpr(
+					checkGroupV2Resource,
+					"enforce_locations.locations.*",
+					"eu-central-1",
+				),
+			),
+		},
+		// Step 3: remove the enforcement; it must plan back to the disabled
+		// default and the server must disable it.
+		{
+			Config: `
+				resource "checkly_check_group_v2" "test" {
+					name = "group-v2-sweep-locations"
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					checkGroupV2Resource,
+					"enforce_locations.enabled",
+					"false",
+				),
+			),
+		},
+	})
+}
+
+func TestAccCheckGroupV2UnsetSweepAPICheckDefaults(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		// Step 1: set every api_check_defaults sub-property.
+		{
+			Config: `
+				resource "checkly_check_group_v2" "test" {
+					name = "group-v2-sweep-api-defaults"
+
+					api_check_defaults = {
+						url = "http://sweep1.example.com/"
+
+						headers = {
+							X-Sweep = "one"
+						}
+
+						query_parameters = {
+							sweep = "one"
+						}
+
+						assertion = [
+							{
+								source     = "STATUS_CODE"
+								comparison = "EQUALS"
+								target     = "200"
+							}
+						]
+
+						basic_auth = {
+							username = "user"
+							password = "pass"
+						}
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(checkGroupV2Resource, "api_check_defaults.url", "http://sweep1.example.com/"),
+				resource.TestCheckResourceAttr(checkGroupV2Resource, "api_check_defaults.headers.X-Sweep", "one"),
+				resource.TestCheckResourceAttr(checkGroupV2Resource, "api_check_defaults.query_parameters.sweep", "one"),
+				resource.TestCheckResourceAttr(checkGroupV2Resource, "api_check_defaults.assertion.#", "1"),
+				resource.TestCheckResourceAttr(checkGroupV2Resource, "api_check_defaults.basic_auth.username", "user"),
+			),
+		},
+		// Step 2: keep the object but remove every sub-property and change the
+		// url; the sub-properties must clear server-side.
+		{
+			Config: `
+				resource "checkly_check_group_v2" "test" {
+					name = "group-v2-sweep-api-defaults"
+
+					api_check_defaults = {
+						url = "http://sweep2.example.com/"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(checkGroupV2Resource, "api_check_defaults.url", "http://sweep2.example.com/"),
+				resource.TestCheckResourceAttr(checkGroupV2Resource, "api_check_defaults.headers.%", "0"),
+				resource.TestCheckResourceAttr(checkGroupV2Resource, "api_check_defaults.query_parameters.%", "0"),
+				resource.TestCheckResourceAttr(checkGroupV2Resource, "api_check_defaults.assertion.#", "0"),
+				resource.TestCheckNoResourceAttr(checkGroupV2Resource, "api_check_defaults.basic_auth.%"),
+			),
+		},
+	})
+}

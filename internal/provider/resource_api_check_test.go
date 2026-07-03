@@ -782,6 +782,558 @@ func TestAccApiCheckResourceMovedFromCheck(t *testing.T) {
 	})
 }
 
+// TestAccApiCheckUnsetSweepScalars sets every optional scalar toggle to a
+// non-default value and then removes them all, verifying the update endpoint
+// resets them to their defaults (the endpoint is PATCH-style, so explicit
+// values must be sent for the reset to take effect).
+func TestAccApiCheckUnsetSweepScalars(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_api_check" "test" {
+					name                      = "api-check-unset-sweep-scalars"
+					frequency                 = 60
+					activated                 = false
+					muted                     = true
+					should_fail               = true
+					run_parallel              = true
+					use_global_alert_settings = true
+					runtime_id                = "2023.09"
+					locations                 = ["eu-central-1"]
+					request {
+						url = "https://api.checklyhq.com/public-stats"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_api_check.test",
+					"activated",
+					"false",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_api_check.test",
+					"muted",
+					"true",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_api_check.test",
+					"should_fail",
+					"true",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_api_check.test",
+					"run_parallel",
+					"true",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_api_check.test",
+					"use_global_alert_settings",
+					"true",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_api_check.test",
+					"runtime_id",
+					"2023.09",
+				),
+			),
+		},
+		{
+			Config: `
+				resource "checkly_api_check" "test" {
+					name      = "api-check-unset-sweep-scalars"
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						url = "https://api.checklyhq.com/public-stats"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_api_check.test",
+					"activated",
+					"true",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_api_check.test",
+					"muted",
+					"false",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_api_check.test",
+					"should_fail",
+					"false",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_api_check.test",
+					"run_parallel",
+					"false",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_api_check.test",
+					"use_global_alert_settings",
+					"false",
+				),
+				resource.TestCheckNoResourceAttr(
+					"checkly_api_check.test",
+					"runtime_id",
+				),
+			),
+		},
+	})
+}
+
+// TestAccApiCheckUnsetSweepCollections sets the tags, locations and
+// private_locations collections and then removes them, verifying that removal
+// clears the values remotely (the post-apply refresh would report remote
+// leftovers as drift and fail the step).
+func TestAccApiCheckUnsetSweepCollections(t *testing.T) {
+	privateLocation := `
+		resource "checkly_private_location" "sweep" {
+			name      = "api-check-unset-sweep-pl"
+			slug_name = "api-check-unset-sweep-pl"
+			icon      = "bell-fill"
+		}
+	`
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: privateLocation + `
+				resource "checkly_api_check" "test" {
+					name              = "api-check-unset-sweep-collections"
+					activated         = false
+					frequency         = 60
+					locations         = ["eu-central-1", "eu-west-1"]
+					private_locations = [checkly_private_location.sweep.slug_name]
+					tags              = ["sweep-a", "sweep-b"]
+					request {
+						url = "https://api.checklyhq.com/public-stats"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_api_check.test",
+					"locations.#",
+					"2",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_api_check.test",
+					"private_locations.#",
+					"1",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_api_check.test",
+					"tags.#",
+					"2",
+				),
+			),
+		},
+		// Removing tags and locations must clear them remotely. The check
+		// keeps running from the private location.
+		{
+			Config: privateLocation + `
+				resource "checkly_api_check" "test" {
+					name              = "api-check-unset-sweep-collections"
+					activated         = false
+					frequency         = 60
+					private_locations = [checkly_private_location.sweep.slug_name]
+					request {
+						url = "https://api.checklyhq.com/public-stats"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckNoResourceAttr(
+					"checkly_api_check.test",
+					"locations.#",
+				),
+				resource.TestCheckNoResourceAttr(
+					"checkly_api_check.test",
+					"tags.#",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_api_check.test",
+					"private_locations.#",
+					"1",
+				),
+			),
+		},
+		// Removing private_locations resets it to its empty default. The
+		// check needs a public location again to remain valid.
+		{
+			Config: privateLocation + `
+				resource "checkly_api_check" "test" {
+					name      = "api-check-unset-sweep-collections"
+					activated = false
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						url = "https://api.checklyhq.com/public-stats"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_api_check.test",
+					"private_locations.#",
+					"0",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_api_check.test",
+					"locations.#",
+					"1",
+				),
+			),
+		},
+	})
+}
+
+const apiCheckUnsetSweepDeps = `
+	resource "checkly_check_group" "sweep" {
+		name        = "api-check-unset-sweep-group"
+		activated   = true
+		concurrency = 1
+		locations   = ["eu-central-1"]
+	}
+
+	resource "checkly_alert_channel" "sweep" {
+		email {
+			address = "api-check-unset-sweep@example.com"
+		}
+	}
+
+	resource "checkly_status_page_service" "sweep" {
+		name = "api-check-unset-sweep-service"
+	}
+`
+
+// TestAccApiCheckUnsetSweepGroupAndAlerts assigns the check to a group (with
+// an explicit group order), subscribes it to an alert channel and attaches an
+// incident trigger, then removes them one by one, verifying the removals
+// clear the values remotely.
+func TestAccApiCheckUnsetSweepGroupAndAlerts(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: apiCheckUnsetSweepDeps + `
+				resource "checkly_api_check" "test" {
+					name        = "api-check-unset-sweep-group-alerts"
+					activated   = false
+					frequency   = 60
+					locations   = ["eu-central-1"]
+					group_id    = checkly_check_group.sweep.id
+					group_order = 2
+
+					alert_channel_subscription {
+						channel_id = checkly_alert_channel.sweep.id
+						activated  = true
+					}
+
+					trigger_incident {
+						service_id         = checkly_status_page_service.sweep.id
+						severity           = "MAJOR"
+						name               = "API check down"
+						description        = "The API check has detected a failure"
+						notify_subscribers = false
+					}
+
+					request {
+						url = "https://api.checklyhq.com/public-stats"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttrPair(
+					"checkly_api_check.test",
+					"group_id",
+					"checkly_check_group.sweep",
+					"id",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_api_check.test",
+					"group_order",
+					"2",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_api_check.test",
+					"alert_channel_subscription.#",
+					"1",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_api_check.test",
+					"trigger_incident.#",
+					"1",
+				),
+			),
+		},
+		// Removing group_order alone must reset it to 0 remotely while the
+		// check stays in the group.
+		{
+			Config: apiCheckUnsetSweepDeps + `
+				resource "checkly_api_check" "test" {
+					name      = "api-check-unset-sweep-group-alerts"
+					activated = false
+					frequency = 60
+					locations = ["eu-central-1"]
+					group_id  = checkly_check_group.sweep.id
+
+					alert_channel_subscription {
+						channel_id = checkly_alert_channel.sweep.id
+						activated  = true
+					}
+
+					trigger_incident {
+						service_id         = checkly_status_page_service.sweep.id
+						severity           = "MAJOR"
+						name               = "API check down"
+						description        = "The API check has detected a failure"
+						notify_subscribers = false
+					}
+
+					request {
+						url = "https://api.checklyhq.com/public-stats"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttrPair(
+					"checkly_api_check.test",
+					"group_id",
+					"checkly_check_group.sweep",
+					"id",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_api_check.test",
+					"group_order",
+					"0",
+				),
+			),
+		},
+		// Removing the group assignment, the alert channel subscription and
+		// the incident trigger must clear them all remotely.
+		{
+			Config: apiCheckUnsetSweepDeps + `
+				resource "checkly_api_check" "test" {
+					name      = "api-check-unset-sweep-group-alerts"
+					activated = false
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						url = "https://api.checklyhq.com/public-stats"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_api_check.test",
+					"group_id",
+					"0",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_api_check.test",
+					"group_order",
+					"0",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_api_check.test",
+					"alert_channel_subscription.#",
+					"0",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_api_check.test",
+					"trigger_incident.#",
+					"0",
+				),
+			),
+		},
+	})
+}
+
+// TestAccApiCheckUnsetSweepRequest sets the optional request sub-properties
+// (method, headers, query parameters, body, basic auth, extra assertions) and
+// then removes them, verifying the update clears them remotely inside the
+// nested request object.
+func TestAccApiCheckUnsetSweepRequest(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_api_check" "test" {
+					name      = "api-check-unset-sweep-request"
+					activated = false
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						method = "POST"
+						url    = "https://api.checklyhq.com/public-stats"
+						headers = {
+							X-Sweep-1 = "one"
+							X-Sweep-2 = "two"
+						}
+						query_parameters = {
+							p1 = "1"
+							p2 = "2"
+						}
+						body      = "{\"hello\":\"world\"}"
+						body_type = "JSON"
+						basic_auth = {
+							username = "user"
+							password = "pass"
+						}
+						assertion {
+							source     = "STATUS_CODE"
+							comparison = "EQUALS"
+							target     = "200"
+						}
+						assertion {
+							source     = "RESPONSE_TIME"
+							comparison = "LESS_THAN"
+							target     = "5000"
+						}
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				testCheckResourceAttrExpr(
+					"checkly_api_check.test",
+					`request\.\d+\.method":"POST"`,
+					"POST",
+				),
+				testCheckResourceAttrExpr(
+					"checkly_api_check.test",
+					`request\.\d+\.headers\.%":"2"`,
+					"2",
+				),
+				testCheckResourceAttrExpr(
+					"checkly_api_check.test",
+					`request\.\d+\.query_parameters\.%":"2"`,
+					"2",
+				),
+				testCheckResourceAttrExpr(
+					"checkly_api_check.test",
+					`request\.\d+\.basic_auth\.username":"user"`,
+					"user",
+				),
+				testCheckResourceAttrExpr(
+					"checkly_api_check.test",
+					`request\.\d+\.assertion\.#":"2"`,
+					"2",
+				),
+			),
+		},
+		{
+			Config: `
+				resource "checkly_api_check" "test" {
+					name      = "api-check-unset-sweep-request"
+					activated = false
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						url = "https://api.checklyhq.com/public-stats"
+						assertion {
+							source     = "STATUS_CODE"
+							comparison = "EQUALS"
+							target     = "200"
+						}
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				testCheckResourceAttrExpr(
+					"checkly_api_check.test",
+					`request\.\d+\.method":"GET"`,
+					"GET",
+				),
+				testCheckResourceAttrExpr(
+					"checkly_api_check.test",
+					`request\.\d+\.body":""`,
+					"",
+				),
+				testCheckResourceAttrExpr(
+					"checkly_api_check.test",
+					`request\.\d+\.body_type":"NONE"`,
+					"NONE",
+				),
+				testCheckResourceAttrExpr(
+					"checkly_api_check.test",
+					`request\.\d+\.assertion\.#":"1"`,
+					"1",
+				),
+			),
+		},
+	})
+}
+
+// TestAccApiCheckUnsetSweepAlertSettingsReset verifies that an explicit
+// change of the alert settings escalation type back to RUN_BASED is honored
+// by the server. Removal of alert_settings deliberately keeps the prior state
+// (UseStateForUnknown), so removal cannot be used to test clearing.
+func TestAccApiCheckUnsetSweepAlertSettingsReset(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_api_check" "test" {
+					name      = "api-check-unset-sweep-alert-settings"
+					activated = false
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						url = "https://api.checklyhq.com/public-stats"
+					}
+					alert_settings = {
+						escalation_type = "TIME_BASED"
+						time_based_escalation = {
+							minutes_failing_threshold = 10
+						}
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_api_check.test",
+					"alert_settings.escalation_type",
+					"TIME_BASED",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_api_check.test",
+					"alert_settings.time_based_escalation.minutes_failing_threshold",
+					"10",
+				),
+			),
+		},
+		{
+			Config: `
+				resource "checkly_api_check" "test" {
+					name      = "api-check-unset-sweep-alert-settings"
+					activated = false
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						url = "https://api.checklyhq.com/public-stats"
+					}
+					alert_settings = {
+						escalation_type = "RUN_BASED"
+						run_based_escalation = {
+							failed_run_threshold = 2
+						}
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_api_check.test",
+					"alert_settings.escalation_type",
+					"RUN_BASED",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_api_check.test",
+					"alert_settings.run_based_escalation.failed_run_threshold",
+					"2",
+				),
+			),
+		},
+	})
+}
+
 const apiCheckResource_basic = `
 	resource "checkly_api_check" "test" {
 	  name                      = "API Check Resource 1"

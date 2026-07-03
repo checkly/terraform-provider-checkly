@@ -1163,6 +1163,530 @@ func TestAccTCPMonitorFrequencyUpdates(t *testing.T) {
 	})
 }
 
+// The Checkly PUT endpoints are PATCH-style and have a history of silently
+// keeping properties that are omitted from update payloads. The unset sweep
+// tests below set every feasibly testable optional property to a non-default
+// value and then remove it from the configuration, verifying that the server
+// actually clears (or resets) the value. The framework's implicit post-apply
+// refresh and empty-plan checks detect any value the server kept.
+
+func TestAccTCPMonitorUnsetSweepBooleansAndTags(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_tcp_monitor" "test" {
+					name                      = "tcp-unset-sweep-basics"
+					activated                 = true
+					frequency                 = 60
+					locations                 = ["eu-central-1"]
+					muted                     = true
+					should_fail               = true
+					run_parallel              = true
+					use_global_alert_settings = true
+					tags                      = ["sweep-a", "sweep-b"]
+					request {
+						hostname = "api.checklyhq.com"
+						port     = 443
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"muted",
+					"true",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"should_fail",
+					"true",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"run_parallel",
+					"true",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"use_global_alert_settings",
+					"true",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"tags.#",
+					"2",
+				),
+			),
+		},
+		{
+			Config: `
+				resource "checkly_tcp_monitor" "test" {
+					name      = "tcp-unset-sweep-basics"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						hostname = "api.checklyhq.com"
+						port     = 443
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"muted",
+					"false",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"should_fail",
+					"false",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"run_parallel",
+					"false",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"use_global_alert_settings",
+					"false",
+				),
+				resource.TestCheckNoResourceAttr(
+					"checkly_tcp_monitor.test",
+					"tags.#",
+				),
+			),
+		},
+	})
+}
+
+func TestAccTCPMonitorUnsetSweepResponseTimes(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_tcp_monitor" "test" {
+					name                   = "tcp-unset-sweep-response-times"
+					activated              = true
+					frequency              = 60
+					locations              = ["eu-central-1"]
+					degraded_response_time = 1000
+					max_response_time      = 2000
+					request {
+						hostname = "api.checklyhq.com"
+						port     = 443
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"degraded_response_time",
+					"1000",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"max_response_time",
+					"2000",
+				),
+			),
+		},
+		// An explicit 0 is schema-valid and must actually be persisted; it is
+		// omitted from the payload when the SDK serializes it with omitempty.
+		{
+			Config: `
+				resource "checkly_tcp_monitor" "test" {
+					name                   = "tcp-unset-sweep-response-times"
+					activated              = true
+					frequency              = 60
+					locations              = ["eu-central-1"]
+					degraded_response_time = 0
+					max_response_time      = 0
+					request {
+						hostname = "api.checklyhq.com"
+						port     = 443
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"degraded_response_time",
+					"0",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"max_response_time",
+					"0",
+				),
+			),
+		},
+		{
+			Config: `
+				resource "checkly_tcp_monitor" "test" {
+					name      = "tcp-unset-sweep-response-times"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						hostname = "api.checklyhq.com"
+						port     = 443
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"degraded_response_time",
+					"4000",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"max_response_time",
+					"5000",
+				),
+			),
+		},
+	})
+}
+
+func TestAccTCPMonitorUnsetSweepLocations(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_private_location" "test" {
+					name      = "tcp-unset-sweep-pl"
+					slug_name = "tf-acc-tcp-unset-sweep-pl"
+				}
+
+				resource "checkly_tcp_monitor" "test" {
+					name              = "tcp-unset-sweep-locations"
+					activated         = true
+					frequency         = 60
+					locations         = ["eu-central-1", "eu-west-1"]
+					private_locations = [checkly_private_location.test.slug_name]
+					request {
+						hostname = "api.checklyhq.com"
+						port     = 443
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"locations.#",
+					"2",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"private_locations.#",
+					"1",
+				),
+			),
+		},
+		// Removing locations while the monitor still runs on a private
+		// location must clear the public locations server-side.
+		{
+			Config: `
+				resource "checkly_private_location" "test" {
+					name      = "tcp-unset-sweep-pl"
+					slug_name = "tf-acc-tcp-unset-sweep-pl"
+				}
+
+				resource "checkly_tcp_monitor" "test" {
+					name              = "tcp-unset-sweep-locations"
+					activated         = true
+					frequency         = 60
+					private_locations = [checkly_private_location.test.slug_name]
+					request {
+						hostname = "api.checklyhq.com"
+						port     = 443
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckNoResourceAttr(
+					"checkly_tcp_monitor.test",
+					"locations.#",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"private_locations.#",
+					"1",
+				),
+			),
+		},
+		// Removing private locations while public locations are configured
+		// must clear the private locations server-side.
+		{
+			Config: `
+				resource "checkly_private_location" "test" {
+					name      = "tcp-unset-sweep-pl"
+					slug_name = "tf-acc-tcp-unset-sweep-pl"
+				}
+
+				resource "checkly_tcp_monitor" "test" {
+					name      = "tcp-unset-sweep-locations"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						hostname = "api.checklyhq.com"
+						port     = 443
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_tcp_monitor.test",
+					"locations.#",
+					"1",
+				),
+				resource.TestCheckNoResourceAttr(
+					"checkly_tcp_monitor.test",
+					"private_locations.#",
+				),
+			),
+		},
+	})
+}
+
+func TestAccTCPMonitorUnsetSweepRequest(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_tcp_monitor" "test" {
+					name      = "tcp-unset-sweep-request"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						hostname  = "api.checklyhq.com"
+						port      = 443
+						data      = "PING"
+						ip_family = "IPv6"
+						assertion {
+							source     = "RESPONSE_TIME"
+							comparison = "LESS_THAN"
+							target     = "2000"
+						}
+						assertion {
+							source     = "RESPONSE_DATA"
+							comparison = "CONTAINS"
+							target     = "PONG"
+						}
+					}
+				}
+			`,
+			Check: resource.TestCheckTypeSetElemNestedAttrs(
+				"checkly_tcp_monitor.test",
+				"request.*",
+				map[string]string{
+					"data":        "PING",
+					"ip_family":   "IPv6",
+					"assertion.#": "2",
+				},
+			),
+		},
+		// Removing ip_family must reset it to the IPv4 default, and removing
+		// all assertion blocks must clear the assertions server-side.
+		//
+		// data is NOT removed here: the backend cannot clear it. It rejects
+		// an empty string ("request.data is not allowed to be empty") and
+		// silently keeps the previous value when the key is null or omitted,
+		// so removing data from the configuration fails the apply with an
+		// inconsistent result error. A set data value can only be changed to
+		// another non-empty value, which this step also verifies.
+		{
+			Config: `
+				resource "checkly_tcp_monitor" "test" {
+					name      = "tcp-unset-sweep-request"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						hostname = "api.checklyhq.com"
+						port     = 443
+						data     = "PONG"
+					}
+				}
+			`,
+			Check: resource.TestCheckTypeSetElemNestedAttrs(
+				"checkly_tcp_monitor.test",
+				"request.*",
+				map[string]string{
+					"data":        "PONG",
+					"ip_family":   "IPv4",
+					"assertion.#": "0",
+				},
+			),
+		},
+	})
+}
+
+func TestAccTCPMonitorUnsetSweepTriggerIncident(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_status_page_service" "test" {
+					name = "tcp-unset-sweep-service"
+				}
+
+				resource "checkly_tcp_monitor" "test" {
+					name      = "tcp-unset-sweep-trigger-incident"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						hostname = "api.checklyhq.com"
+						port     = 443
+					}
+					trigger_incident {
+						service_id         = checkly_status_page_service.test.id
+						severity           = "MINOR"
+						name               = "TCP sweep incident"
+						description        = "Incident trigger for the unset sweep"
+						notify_subscribers = false
+					}
+				}
+			`,
+			Check: resource.TestCheckResourceAttr(
+				"checkly_tcp_monitor.test",
+				"trigger_incident.#",
+				"1",
+			),
+		},
+		{
+			Config: `
+				resource "checkly_status_page_service" "test" {
+					name = "tcp-unset-sweep-service"
+				}
+
+				resource "checkly_tcp_monitor" "test" {
+					name      = "tcp-unset-sweep-trigger-incident"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						hostname = "api.checklyhq.com"
+						port     = 443
+					}
+				}
+			`,
+			Check: resource.TestCheckResourceAttr(
+				"checkly_tcp_monitor.test",
+				"trigger_incident.#",
+				"0",
+			),
+		},
+	})
+}
+
+func TestAccTCPMonitorUnsetSweepGroupOrder(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_check_group" "test" {
+					name        = "tcp-unset-sweep-group"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+				}
+
+				resource "checkly_tcp_monitor" "test" {
+					name        = "tcp-unset-sweep-group-order"
+					activated   = true
+					frequency   = 60
+					locations   = ["eu-central-1"]
+					group_id    = checkly_check_group.test.id
+					group_order = 2
+					request {
+						hostname = "api.checklyhq.com"
+						port     = 443
+					}
+				}
+			`,
+			Check: resource.TestCheckResourceAttr(
+				"checkly_tcp_monitor.test",
+				"group_order",
+				"2",
+			),
+		},
+		// Removing group_order while staying in the group must reset it to
+		// the default 0.
+		{
+			Config: `
+				resource "checkly_check_group" "test" {
+					name        = "tcp-unset-sweep-group"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+				}
+
+				resource "checkly_tcp_monitor" "test" {
+					name      = "tcp-unset-sweep-group-order"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					group_id  = checkly_check_group.test.id
+					request {
+						hostname = "api.checklyhq.com"
+						port     = 443
+					}
+				}
+			`,
+			Check: resource.TestCheckResourceAttr(
+				"checkly_tcp_monitor.test",
+				"group_order",
+				"0",
+			),
+		},
+	})
+}
+
+func TestAccTCPMonitorUnsetSweepRuntimeID(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_tcp_monitor" "test" {
+					name       = "tcp-unset-sweep-runtime"
+					activated  = true
+					frequency  = 60
+					locations  = ["eu-central-1"]
+					runtime_id = "2025.04"
+					request {
+						hostname = "api.checklyhq.com"
+						port     = 443
+					}
+				}
+			`,
+			Check: resource.TestCheckResourceAttr(
+				"checkly_tcp_monitor.test",
+				"runtime_id",
+				"2025.04",
+			),
+		},
+		{
+			Config: `
+				resource "checkly_tcp_monitor" "test" {
+					name      = "tcp-unset-sweep-runtime"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						hostname = "api.checklyhq.com"
+						port     = 443
+					}
+				}
+			`,
+			Check: resource.TestCheckNoResourceAttr(
+				"checkly_tcp_monitor.test",
+				"runtime_id",
+			),
+		},
+	})
+}
+
 func TestAccTCPMonitorAlertChannelSubscriptions(t *testing.T) {
 	accTestCase(t, []resource.TestStep{
 		// Step 1: Add two alert channel subscriptions.

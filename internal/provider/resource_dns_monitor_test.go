@@ -1622,3 +1622,314 @@ func TestAccDNSMonitorAlertChannelSubscriptions(t *testing.T) {
 		},
 	})
 }
+
+// TestAccDNSMonitorUnsetSweepBasics sets every plain optional attribute to a
+// non-default value and then removes them all, verifying the server actually
+// clears (or resets to the default) each value. The Checkly PUT endpoint is
+// PATCH-style, so a key omitted from the update payload keeps its server-side
+// value; the implicit post-apply refresh would surface that as a non-empty
+// plan and fail the test.
+func TestAccDNSMonitorUnsetSweepBasics(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_dns_monitor" "test" {
+					name                      = "dns-unset-sweep-basics"
+					activated                 = true
+					frequency                 = 60
+					locations                 = ["eu-central-1"]
+					muted                     = true
+					run_parallel              = true
+					use_global_alert_settings = false
+					degraded_response_time    = 400
+					max_response_time         = 900
+					tags                      = ["sweep-a", "sweep-b"]
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_dns_monitor.test", "muted", "true"),
+				resource.TestCheckResourceAttr("checkly_dns_monitor.test", "run_parallel", "true"),
+				resource.TestCheckResourceAttr("checkly_dns_monitor.test", "use_global_alert_settings", "false"),
+				resource.TestCheckResourceAttr("checkly_dns_monitor.test", "degraded_response_time", "400"),
+				resource.TestCheckResourceAttr("checkly_dns_monitor.test", "max_response_time", "900"),
+				resource.TestCheckResourceAttr("checkly_dns_monitor.test", "tags.#", "2"),
+			),
+		},
+		{
+			Config: `
+				resource "checkly_dns_monitor" "test" {
+					name      = "dns-unset-sweep-basics"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_dns_monitor.test", "muted", "false"),
+				resource.TestCheckResourceAttr("checkly_dns_monitor.test", "run_parallel", "false"),
+				resource.TestCheckResourceAttr("checkly_dns_monitor.test", "use_global_alert_settings", "true"),
+				resource.TestCheckResourceAttr("checkly_dns_monitor.test", "degraded_response_time", "500"),
+				resource.TestCheckResourceAttr("checkly_dns_monitor.test", "max_response_time", "1000"),
+				resource.TestCheckNoResourceAttr("checkly_dns_monitor.test", "tags.#"),
+			),
+		},
+	})
+}
+
+// TestAccDNSMonitorUnsetSweepResponseTimeZero verifies that the response time
+// limits accept an explicit 0 (a schema-valid value that omitempty-style
+// serialization would drop) and reset to their documented defaults when
+// removed from the configuration.
+func TestAccDNSMonitorUnsetSweepResponseTimeZero(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_dns_monitor" "test" {
+					name                   = "dns-unset-sweep-response-time-zero"
+					activated              = true
+					frequency              = 60
+					locations              = ["eu-central-1"]
+					degraded_response_time = 0
+					max_response_time      = 0
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_dns_monitor.test", "degraded_response_time", "0"),
+				resource.TestCheckResourceAttr("checkly_dns_monitor.test", "max_response_time", "0"),
+			),
+		},
+		{
+			Config: `
+				resource "checkly_dns_monitor" "test" {
+					name      = "dns-unset-sweep-response-time-zero"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_dns_monitor.test", "degraded_response_time", "500"),
+				resource.TestCheckResourceAttr("checkly_dns_monitor.test", "max_response_time", "1000"),
+			),
+		},
+	})
+}
+
+// TestAccDNSMonitorUnsetSweepLocations verifies that removing the locations
+// attribute entirely clears the locations on the server.
+func TestAccDNSMonitorUnsetSweepLocations(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_dns_monitor" "test" {
+					name      = "dns-unset-sweep-locations"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1", "us-east-1"]
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_dns_monitor.test", "locations.#", "2"),
+			),
+		},
+		{
+			Config: `
+				resource "checkly_dns_monitor" "test" {
+					name      = "dns-unset-sweep-locations"
+					activated = true
+					frequency = 60
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckNoResourceAttr("checkly_dns_monitor.test", "locations.#"),
+			),
+		},
+	})
+}
+
+// TestAccDNSMonitorUnsetSweepRequest sets the optional request attributes to
+// non-default values plus an assertion, then removes them, verifying the
+// attributes reset to their defaults and the assertions are cleared on the
+// server. The name_server block removal is covered separately by
+// TestAccDNSMonitorNameServerRemoval.
+func TestAccDNSMonitorUnsetSweepRequest(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_dns_monitor" "test" {
+					name      = "dns-unset-sweep-request"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+						protocol    = "TCP"
+						assertion {
+							source     = "RESPONSE_CODE"
+							comparison = "EQUALS"
+							target     = "NOERROR"
+						}
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_dns_monitor.test", "request.0.protocol", "TCP"),
+				resource.TestCheckResourceAttr("checkly_dns_monitor.test", "request.0.assertion.#", "1"),
+			),
+		},
+		{
+			Config: `
+				resource "checkly_dns_monitor" "test" {
+					name      = "dns-unset-sweep-request"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_dns_monitor.test", "request.0.protocol", "UDP"),
+				resource.TestCheckResourceAttr("checkly_dns_monitor.test", "request.0.assertion.#", "0"),
+			),
+		},
+	})
+}
+
+// TestAccDNSMonitorUnsetSweepTriggerIncident verifies that removing the
+// trigger_incident block clears the incident trigger on the server.
+func TestAccDNSMonitorUnsetSweepTriggerIncident(t *testing.T) {
+	service := `
+		resource "checkly_status_page_service" "dns_sweep" {
+			name = "DNS Monitor Unset Sweep Service"
+		}
+	`
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: service + `
+				resource "checkly_dns_monitor" "test" {
+					name      = "dns-unset-sweep-trigger-incident"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+					}
+					trigger_incident {
+						service_id         = checkly_status_page_service.dns_sweep.id
+						severity           = "MEDIUM"
+						name               = "DNS sweep incident"
+						description        = "Incident created by the unset sweep test"
+						notify_subscribers = false
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_dns_monitor.test", "trigger_incident.#", "1"),
+			),
+		},
+		{
+			Config: service + `
+				resource "checkly_dns_monitor" "test" {
+					name      = "dns-unset-sweep-trigger-incident"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_dns_monitor.test", "trigger_incident.#", "0"),
+			),
+		},
+	})
+}
+
+// TestAccDNSMonitorUnsetSweepGroup verifies that removing group_id and
+// group_order detaches the monitor from the group and resets the order.
+func TestAccDNSMonitorUnsetSweepGroup(t *testing.T) {
+	group := `
+		resource "checkly_check_group" "dns_sweep" {
+			name        = "dns-unset-sweep-group"
+			activated   = true
+			concurrency = 1
+			locations   = ["eu-central-1"]
+		}
+	`
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: group + `
+				resource "checkly_dns_monitor" "test" {
+					name        = "dns-unset-sweep-group"
+					activated   = true
+					frequency   = 60
+					locations   = ["eu-central-1"]
+					group_id    = checkly_check_group.dns_sweep.id
+					group_order = 2
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttrPair(
+					"checkly_dns_monitor.test",
+					"group_id",
+					"checkly_check_group.dns_sweep",
+					"id",
+				),
+				resource.TestCheckResourceAttr("checkly_dns_monitor.test", "group_order", "2"),
+			),
+		},
+		{
+			Config: group + `
+				resource "checkly_dns_monitor" "test" {
+					name      = "dns-unset-sweep-group"
+					activated = true
+					frequency = 60
+					locations = ["eu-central-1"]
+					request {
+						record_type = "A"
+						query       = "welcome.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_dns_monitor.test", "group_id", "0"),
+				resource.TestCheckResourceAttr("checkly_dns_monitor.test", "group_order", "0"),
+			),
+		},
+	})
+}

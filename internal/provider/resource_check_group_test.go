@@ -1032,6 +1032,261 @@ func TestAccCheckGroupRetryStrategyRemoval(t *testing.T) {
 	})
 }
 
+func TestAccCheckGroupUnsetSweepScalars(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		// Step 1: set every scalar/collection property to a non-default value.
+		{
+			Config: `
+				resource "checkly_check_group" "test" {
+					name         = "group-sweep-scalars"
+					activated    = true
+					concurrency  = 2
+					muted        = true
+					run_parallel = true
+					locations    = ["eu-central-1", "eu-west-1"]
+					tags         = ["sweep", "group"]
+					runtime_id   = "2023.02"
+
+					local_setup_script    = "console.log('setup')"
+					local_teardown_script = "console.log('teardown')"
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_check_group.test", "concurrency", "2"),
+				resource.TestCheckResourceAttr("checkly_check_group.test", "muted", "true"),
+				resource.TestCheckResourceAttr("checkly_check_group.test", "run_parallel", "true"),
+				resource.TestCheckResourceAttr("checkly_check_group.test", "locations.#", "2"),
+				resource.TestCheckResourceAttr("checkly_check_group.test", "tags.#", "2"),
+				resource.TestCheckResourceAttr("checkly_check_group.test", "runtime_id", "2023.02"),
+				resource.TestCheckResourceAttr("checkly_check_group.test", "local_setup_script", "console.log('setup')"),
+				resource.TestCheckResourceAttr("checkly_check_group.test", "local_teardown_script", "console.log('teardown')"),
+			),
+		},
+		// Step 2: remove all optional properties and change concurrency. The
+		// post-apply refresh verifies the server actually cleared them.
+		{
+			Config: `
+				resource "checkly_check_group" "test" {
+					name        = "group-sweep-scalars"
+					activated   = true
+					concurrency = 5
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_check_group.test", "concurrency", "5"),
+				resource.TestCheckResourceAttr("checkly_check_group.test", "muted", "false"),
+				resource.TestCheckResourceAttr("checkly_check_group.test", "run_parallel", "false"),
+				resource.TestCheckResourceAttr("checkly_check_group.test", "locations.#", "0"),
+				resource.TestCheckResourceAttr("checkly_check_group.test", "tags.#", "0"),
+				resource.TestCheckNoResourceAttr("checkly_check_group.test", "runtime_id"),
+				resource.TestCheckResourceAttr("checkly_check_group.test", "local_setup_script", ""),
+				resource.TestCheckResourceAttr("checkly_check_group.test", "local_teardown_script", ""),
+			),
+		},
+	})
+}
+
+func TestAccCheckGroupUnsetSweepSnippets(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		// Step 1: reference setup and teardown snippets.
+		{
+			Config: `
+				resource "checkly_snippet" "setup" {
+					name   = "group-sweep-setup"
+					script = "console.log('setup')"
+				}
+
+				resource "checkly_snippet" "teardown" {
+					name   = "group-sweep-teardown"
+					script = "console.log('teardown')"
+				}
+
+				resource "checkly_check_group" "test" {
+					name        = "group-sweep-snippets"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+
+					setup_snippet_id    = checkly_snippet.setup.id
+					teardown_snippet_id = checkly_snippet.teardown.id
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttrPair(
+					"checkly_check_group.test", "setup_snippet_id",
+					"checkly_snippet.setup", "id",
+				),
+				resource.TestCheckResourceAttrPair(
+					"checkly_check_group.test", "teardown_snippet_id",
+					"checkly_snippet.teardown", "id",
+				),
+			),
+		},
+		// Step 2: remove the snippet references; they must reset to 0.
+		{
+			Config: `
+				resource "checkly_snippet" "setup" {
+					name   = "group-sweep-setup"
+					script = "console.log('setup')"
+				}
+
+				resource "checkly_snippet" "teardown" {
+					name   = "group-sweep-teardown"
+					script = "console.log('teardown')"
+				}
+
+				resource "checkly_check_group" "test" {
+					name        = "group-sweep-snippets"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_check_group.test", "setup_snippet_id", "0"),
+				resource.TestCheckResourceAttr("checkly_check_group.test", "teardown_snippet_id", "0"),
+			),
+		},
+	})
+}
+
+func TestAccCheckGroupUnsetSweepPrivateLocations(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		// Step 1: assign a private location.
+		{
+			Config: `
+				resource "checkly_private_location" "test" {
+					name      = "group-v1-sweep-pl"
+					slug_name = "group-v1-sweep-pl"
+					icon      = "bell-fill"
+				}
+
+				resource "checkly_check_group" "test" {
+					name        = "group-sweep-private-locations"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+
+					private_locations = [checkly_private_location.test.slug_name]
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_check_group.test", "private_locations.#", "1"),
+				testCheckResourceAttrExpr("checkly_check_group.test", "private_locations.*", "group-v1-sweep-pl"),
+			),
+		},
+		// Step 2: remove the private location assignment.
+		{
+			Config: `
+				resource "checkly_private_location" "test" {
+					name      = "group-v1-sweep-pl"
+					slug_name = "group-v1-sweep-pl"
+					icon      = "bell-fill"
+				}
+
+				resource "checkly_check_group" "test" {
+					name        = "group-sweep-private-locations"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_check_group.test", "private_locations.#", "0"),
+			),
+		},
+	})
+}
+
+func TestAccCheckGroupUnsetSweepAPICheckDefaults(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		// Step 1: set every api_check_defaults sub-property.
+		{
+			Config: `
+				resource "checkly_check_group" "test" {
+					name        = "group-sweep-api-defaults"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+
+					api_check_defaults = {
+						url = "http://sweep1.example.com/"
+
+						headers = {
+							X-Sweep = "one"
+						}
+
+						query_parameters = {
+							sweep = "one"
+						}
+
+						assertion = [
+							{
+								source     = "STATUS_CODE"
+								comparison = "EQUALS"
+								target     = "200"
+							}
+						]
+
+						basic_auth = {
+							username = "user"
+							password = "pass"
+						}
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_check_group.test", "api_check_defaults.url", "http://sweep1.example.com/"),
+				resource.TestCheckResourceAttr("checkly_check_group.test", "api_check_defaults.headers.X-Sweep", "one"),
+				resource.TestCheckResourceAttr("checkly_check_group.test", "api_check_defaults.query_parameters.sweep", "one"),
+				resource.TestCheckResourceAttr("checkly_check_group.test", "api_check_defaults.assertion.#", "1"),
+				resource.TestCheckResourceAttr("checkly_check_group.test", "api_check_defaults.basic_auth.username", "user"),
+			),
+		},
+		// Step 2: keep the object but remove every sub-property and change the
+		// url; the sub-properties must clear server-side.
+		{
+			Config: `
+				resource "checkly_check_group" "test" {
+					name        = "group-sweep-api-defaults"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+
+					api_check_defaults = {
+						url = "http://sweep2.example.com/"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_check_group.test", "api_check_defaults.url", "http://sweep2.example.com/"),
+				resource.TestCheckResourceAttr("checkly_check_group.test", "api_check_defaults.headers.%", "0"),
+				resource.TestCheckResourceAttr("checkly_check_group.test", "api_check_defaults.query_parameters.%", "0"),
+				resource.TestCheckResourceAttr("checkly_check_group.test", "api_check_defaults.assertion.#", "0"),
+				resource.TestCheckNoResourceAttr("checkly_check_group.test", "api_check_defaults.basic_auth.%"),
+			),
+		},
+		// Step 3: remove the whole object; it must reset to the empty default.
+		{
+			Config: `
+				resource "checkly_check_group" "test" {
+					name        = "group-sweep-api-defaults"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_check_group.test", "api_check_defaults.url", ""),
+				resource.TestCheckResourceAttr("checkly_check_group.test", "api_check_defaults.headers.%", "0"),
+				resource.TestCheckResourceAttr("checkly_check_group.test", "api_check_defaults.query_parameters.%", "0"),
+				resource.TestCheckResourceAttr("checkly_check_group.test", "api_check_defaults.assertion.#", "0"),
+				resource.TestCheckNoResourceAttr("checkly_check_group.test", "api_check_defaults.basic_auth.%"),
+			),
+		},
+	})
+}
+
 func TestAccCheckGroupAlertChannelSubscriptions(t *testing.T) {
 	accTestCase(t, []resource.TestStep{
 		// Step 1: Add two alert channel subscriptions.
