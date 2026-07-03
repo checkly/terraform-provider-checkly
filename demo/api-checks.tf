@@ -1,7 +1,6 @@
 # Simple API check
-resource "checkly_check" "api-check-1" {
+resource "checkly_api_check" "api-check-1" {
   name              = "API check 1"
-  type              = "API"
   frequency         = 60
   activated         = true
   muted             = true
@@ -29,7 +28,7 @@ resource "checkly_check" "api-check-1" {
 
 # Add a command line trigger for the check and create an output for the trigger URL
 resource "checkly_trigger_check" "trigger-api-check-1" {
-  check_id = checkly_check.api-check-1.id
+  check_id = checkly_api_check.api-check-1.id
 }
 
 output "trigger_api_check-1-url" {
@@ -38,9 +37,8 @@ output "trigger_api_check-1-url" {
 }
 
 # Fully fledged API check
-resource "checkly_check" "api-check-2" {
+resource "checkly_api_check" "api-check-2" {
   name                   = "API check 2"
-  type                   = "API"
   frequency              = 120
   activated              = true
   muted                  = true
@@ -118,9 +116,8 @@ resource "checkly_check" "api-check-2" {
 }
 
 #  POST API Check with json body
-resource "checkly_check" "api-check-3" {
+resource "checkly_api_check" "api-check-3" {
   name      = "Canonical API check 3"
-  type      = "API"
   activated = true
   frequency = 720
   locations = [
@@ -170,9 +167,8 @@ resource "checkly_check" "api-check-3" {
 }
 
 # API check with empty basic_auth
-resource "checkly_check" "api-check-4" {
+resource "checkly_api_check" "api-check-4" {
   name                   = "api check with empty basic_auth"
-  type                   = "API"
   activated              = true
   should_fail            = false
   frequency              = 1
@@ -207,9 +203,8 @@ resource "checkly_check" "api-check-4" {
 }
 
 # Adding checks to a check group (check groups.tf for the groups code)
-resource "checkly_check" "api-check-group-1_1" {
+resource "checkly_api_check" "api-check-group-1_1" {
   name      = "API check 1 belonging to group 1"
-  type      = "API"
   activated = true
   muted     = true
   frequency = 720
@@ -228,9 +223,8 @@ resource "checkly_check" "api-check-group-1_1" {
   group_order = 1 #The `group_order` attribute specifies in which order the checks will be executed: 1, 2, 3, etc.
 }
 
-resource "checkly_check" "api-check-group-1_2" {
+resource "checkly_api_check" "api-check-group-1_2" {
   name      = "API check 2 belonging to group 1"
-  type      = "API"
   activated = true
   muted     = true
   frequency = 720
@@ -250,9 +244,8 @@ resource "checkly_check" "api-check-group-1_2" {
 }
 
 # Adding alert channels to a check (check alert-channels.tf for the alert channels code)
-resource "checkly_check" "check-with-alert-channels" {
+resource "checkly_api_check" "check-with-alert-channels" {
   name              = "check-with-alertc-1"
-  type              = "API"
   frequency         = 60
   activated         = true
   muted             = true

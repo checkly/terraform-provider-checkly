@@ -1,7 +1,6 @@
 # Simple Browser Check with EOT script
-resource "checkly_check" "browser-check-1" {
+resource "checkly_browser_check" "browser-check-1" {
   name                      = "A simple browser check"
-  type                      = "BROWSER"
   activated                 = true
   should_fail               = false
   frequency                 = 2
@@ -25,9 +24,8 @@ EOT
 }
 
 # Simple Browser Check with string script
-resource "checkly_check" "browser-check-2" {
+resource "checkly_browser_check" "browser-check-2" {
   name                      = "Example check"
-  type                      = "BROWSER"
   activated                 = true
   should_fail               = false
   frequency                 = 15

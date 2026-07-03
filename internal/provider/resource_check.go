@@ -141,6 +141,13 @@ func (r *CheckResource) Metadata(ctx context.Context, req resource.MetadataReque
 func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: "Checks allows you to monitor key webapp flows, backend API's and set up alerting, so you get a notification when things break or slow down.",
+		DeprecationMessage: "The `checkly_check` resource is deprecated in favor of dedicated resource types for each check type: " +
+			"`checkly_api_check`, `checkly_browser_check`, and `checkly_multistep_check`. " +
+			"These expose only the properties relevant to their check type. " +
+			"Use a `moved` block to migrate existing resources without recreating them. " +
+			"When migrating an API check, note that the default `degraded_response_time` and `max_response_time` " +
+			"changed from 15000/30000 to 5000/20000 — set them explicitly to keep the previous thresholds. " +
+			"API checks no longer accept `environment_variable` entries (they only applied to browser checks).",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
