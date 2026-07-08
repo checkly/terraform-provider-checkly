@@ -38,7 +38,7 @@ resource "checkly_alert_channel" "slack_ac" {
 resource "checkly_alert_channel" "sms_ac" {
   sms {
     name   = "smsalerts"
-    number = "4917512345678"
+    number = "+4917512345678"
   }
 }
 
