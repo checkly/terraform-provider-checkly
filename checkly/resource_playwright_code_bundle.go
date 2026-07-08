@@ -426,15 +426,22 @@ type packageJSONEntry struct {
 	raw  []byte
 }
 
+type npmrcEntry struct {
+	path string
+	raw  []byte
+}
+
 // InspectLockfile opens the tar.gz archive and searches for a lockfile
 // (package-lock.json, pnpm-lock.yaml, yarn.lock, or bun.lock) at the root
 // of the archive. If found, it returns the detected package manager and
 // the resolved version of the given package.
 //
-// ChecksumSha256 covers both the lockfile contents and every package.json
-// outside node_modules (at any depth). Each package.json is canonicalized
-// as JSON with opts.PackageJSONExcludedFields removed from the top level,
-// so cosmetic changes and excluded fields don't influence the checksum.
+// ChecksumSha256 covers the lockfile contents, every package.json outside
+// node_modules (at any depth), and every .npmrc outside node_modules. Each
+// package.json is canonicalized as JSON with opts.PackageJSONExcludedFields
+// removed from the top level, so cosmetic changes and excluded fields don't
+// influence the checksum. .npmrc files contribute the raw SHA-256 of their
+// bytes, so any change to registry configuration invalidates the checksum.
 func (a *PlaywrightCodeBundlePrebuiltArchiveAttribute) InspectLockfile(
 	packageName string,
 	opts InspectLockfileOptions,
@@ -460,6 +467,7 @@ func (a *PlaywrightCodeBundlePrebuiltArchiveAttribute) InspectLockfile(
 		packageManager string
 		packageVersion string
 		packageJSONs   []packageJSONEntry
+		npmrcs         []npmrcEntry
 		engineFiles    = make(map[string][]byte)
 	)
 
@@ -484,6 +492,15 @@ func (a *PlaywrightCodeBundlePrebuiltArchiveAttribute) InspectLockfile(
 				return nil, fmt.Errorf("failed to read %q from archive %q: %w", header.Name, a.File, err)
 			}
 			packageJSONs = append(packageJSONs, packageJSONEntry{path: name, raw: raw})
+			continue
+		}
+
+		if path.Base(name) == ".npmrc" && !hasNodeModulesSegment(name) {
+			raw, err := io.ReadAll(tr)
+			if err != nil {
+				return nil, fmt.Errorf("failed to read %q from archive %q: %w", header.Name, a.File, err)
+			}
+			npmrcs = append(npmrcs, npmrcEntry{path: name, raw: raw})
 			continue
 		}
 
@@ -545,7 +562,7 @@ func (a *PlaywrightCodeBundlePrebuiltArchiveAttribute) InspectLockfile(
 		return nil, nil
 	}
 
-	checksum, err := composeBundleChecksum(lockfileName, lockfileHash, packageJSONs, opts.PackageJSONExcludedFields)
+	checksum, err := composeBundleChecksum(lockfileName, lockfileHash, packageJSONs, npmrcs, opts.PackageJSONExcludedFields)
 	if err != nil {
 		return nil, fmt.Errorf("failed to compute archive checksum: %w", err)
 	}
@@ -593,17 +610,29 @@ func canonicalizePackageJSON(raw []byte, excludedFields []string) ([]byte, error
 	return json.Marshal(obj)
 }
 
-// composeBundleChecksum combines the lockfile hash and every canonicalized
-// package.json (sorted by path) into a single SHA-256. Records are
-// length-prefixed to prevent collisions from ambiguous concatenation.
+// composeBundleChecksum combines the lockfile hash, every canonicalized
+// package.json, and every .npmrc (each set sorted by path) into a single
+// SHA-256. Records are length-prefixed to prevent collisions from ambiguous
+// concatenation.
+//
+// This must stay byte-for-byte compatible with the Checkly CLI's
+// composeCacheHash (packages/cli/src/services/check-parser/cache-hash.ts):
+// same record framing, same label prefixes, and the same record order —
+// lockfile, then package.json records (sorted), then npmrc records (sorted).
+// An .npmrc record's content is the raw SHA-256 digest of the file bytes
+// (not canonicalized, unlike package.json), matching the CLI.
 func composeBundleChecksum(
 	lockfileName string,
 	lockfileHash []byte,
 	packageJSONs []packageJSONEntry,
+	npmrcs []npmrcEntry,
 	excludedFields []string,
 ) (string, error) {
 	sort.Slice(packageJSONs, func(i, j int) bool {
 		return packageJSONs[i].path < packageJSONs[j].path
+	})
+	sort.Slice(npmrcs, func(i, j int) bool {
+		return npmrcs[i].path < npmrcs[j].path
 	})
 
 	h := sha256.New()
@@ -625,6 +654,11 @@ func composeBundleChecksum(
 			return "", fmt.Errorf("failed to canonicalize %q: %w", entry.path, err)
 		}
 		writeRecord("package.json:"+entry.path, canonical)
+	}
+
+	for _, entry := range npmrcs {
+		sum := sha256.Sum256(entry.raw)
+		writeRecord("npmrc:"+entry.path, sum[:])
 	}
 
 	return hex.EncodeToString(h.Sum(nil)), nil
