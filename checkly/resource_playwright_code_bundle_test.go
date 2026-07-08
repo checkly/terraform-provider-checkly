@@ -3,6 +3,7 @@ package checkly
 import (
 	"archive/tar"
 	"compress/gzip"
+	"crypto/sha256"
 	"errors"
 	"os"
 	"path/filepath"
@@ -505,6 +506,154 @@ func TestInspectLockfileChecksumIncludesPackageJSON(t *testing.T) {
 		b := buildTarGz(t, []tarEntry{
 			{"packages/e2e/package.json", nestedPkg},
 			{"package.json", rootPkg},
+			{"package-lock.json", []byte(syntheticPackageLock)},
+		})
+
+		if inspectWithExcludedVersion(t, a).ChecksumSha256 != inspectWithExcludedVersion(t, b).ChecksumSha256 {
+			t.Error("checksum should be stable regardless of tar entry order")
+		}
+	})
+}
+
+// TestComposeBundleChecksumNpmrcCrossLanguageParity pins the checksum against
+// digests produced by the Checkly CLI's composeCacheHash
+// (packages/cli/src/services/check-parser/cache-hash.ts) for the exact same
+// records. The CLI and this provider must compute identical bundle checksums so
+// the backend reuses one cached dependency-install layer regardless of which
+// tool deployed the Playwright Check Suite. If either constant below changes,
+// the two implementations have diverged — reconcile them, do not just update
+// the constant.
+func TestComposeBundleChecksumNpmrcCrossLanguageParity(t *testing.T) {
+	t.Parallel()
+
+	lockHash := sha256.Sum256([]byte("lock-bytes"))
+	pkgs := []packageJSONEntry{{path: "package.json", raw: []byte(`{"name":"root"}`)}}
+	npmrcs := []npmrcEntry{
+		{path: ".npmrc", raw: []byte("registry=https://example.com/\n")},
+		{path: "packages/app/.npmrc", raw: []byte("@scope:registry=https://npm.example.com/\n")},
+	}
+
+	const (
+		wantWithNpmrc = "59c13ea869c6b9730ed183aeb880959bd98de1f17fc44ca426cd7c53a6afa148"
+		wantNoNpmrc   = "dd362bae9c06091691f72b3a73e4f5f4d4861518629e85ed9fd08221d655f204"
+	)
+
+	got, err := composeBundleChecksum("package-lock.json", lockHash[:], pkgs, npmrcs, []string{"version"})
+	if err != nil {
+		t.Fatalf("composeBundleChecksum: %v", err)
+	}
+	if got != wantWithNpmrc {
+		t.Errorf("checksum with .npmrc = %q, want %q (diverged from Checkly CLI)", got, wantWithNpmrc)
+	}
+
+	// Omitting .npmrc must be a no-op relative to a bundle that never had one,
+	// matching the CLI (which writes zero npmrc records when there are none).
+	gotNoNpmrc, err := composeBundleChecksum("package-lock.json", lockHash[:], pkgs, nil, []string{"version"})
+	if err != nil {
+		t.Fatalf("composeBundleChecksum: %v", err)
+	}
+	if gotNoNpmrc != wantNoNpmrc {
+		t.Errorf("checksum without .npmrc = %q, want %q (diverged from Checkly CLI)", gotNoNpmrc, wantNoNpmrc)
+	}
+	if got == gotNoNpmrc {
+		t.Error("adding .npmrc records should change the checksum")
+	}
+}
+
+func TestInspectLockfileChecksumIncludesNpmrc(t *testing.T) {
+	t.Parallel()
+
+	t.Run("adding an .npmrc changes the checksum", func(t *testing.T) {
+		t.Parallel()
+
+		a := buildTarGz(t, []tarEntry{
+			{"package-lock.json", []byte(syntheticPackageLock)},
+			{"package.json", []byte(`{"name":"root"}`)},
+		})
+		b := buildTarGz(t, []tarEntry{
+			{"package-lock.json", []byte(syntheticPackageLock)},
+			{"package.json", []byte(`{"name":"root"}`)},
+			{".npmrc", []byte("registry=https://example.com/\n")},
+		})
+
+		if inspectWithExcludedVersion(t, a).ChecksumSha256 == inspectWithExcludedVersion(t, b).ChecksumSha256 {
+			t.Error("adding an .npmrc should change the checksum")
+		}
+	})
+
+	t.Run("editing an .npmrc changes the checksum", func(t *testing.T) {
+		t.Parallel()
+
+		a := buildTarGz(t, []tarEntry{
+			{"package-lock.json", []byte(syntheticPackageLock)},
+			{"package.json", []byte(`{"name":"root"}`)},
+			{".npmrc", []byte("registry=https://a.example.com/\n")},
+		})
+		b := buildTarGz(t, []tarEntry{
+			{"package-lock.json", []byte(syntheticPackageLock)},
+			{"package.json", []byte(`{"name":"root"}`)},
+			{".npmrc", []byte("registry=https://b.example.com/\n")},
+		})
+
+		if inspectWithExcludedVersion(t, a).ChecksumSha256 == inspectWithExcludedVersion(t, b).ChecksumSha256 {
+			t.Error("changing .npmrc content should change the checksum")
+		}
+	})
+
+	t.Run("a nested .npmrc outside node_modules is included", func(t *testing.T) {
+		t.Parallel()
+
+		a := buildTarGz(t, []tarEntry{
+			{"package-lock.json", []byte(syntheticPackageLock)},
+			{"package.json", []byte(`{"name":"root"}`)},
+			{".npmrc", []byte("registry=https://example.com/\n")},
+		})
+		b := buildTarGz(t, []tarEntry{
+			{"package-lock.json", []byte(syntheticPackageLock)},
+			{"package.json", []byte(`{"name":"root"}`)},
+			{".npmrc", []byte("registry=https://example.com/\n")},
+			{"packages/app/.npmrc", []byte("@scope:registry=https://npm.example.com/\n")},
+		})
+
+		if inspectWithExcludedVersion(t, a).ChecksumSha256 == inspectWithExcludedVersion(t, b).ChecksumSha256 {
+			t.Error("a nested .npmrc should change the checksum")
+		}
+	})
+
+	t.Run("an .npmrc inside node_modules is ignored", func(t *testing.T) {
+		t.Parallel()
+
+		a := buildTarGz(t, []tarEntry{
+			{"package-lock.json", []byte(syntheticPackageLock)},
+			{"package.json", []byte(`{"name":"root"}`)},
+		})
+		b := buildTarGz(t, []tarEntry{
+			{"package-lock.json", []byte(syntheticPackageLock)},
+			{"package.json", []byte(`{"name":"root"}`)},
+			{"node_modules/some-pkg/.npmrc", []byte("registry=https://example.com/\n")},
+		})
+
+		if inspectWithExcludedVersion(t, a).ChecksumSha256 != inspectWithExcludedVersion(t, b).ChecksumSha256 {
+			t.Error("an .npmrc inside node_modules should not contribute to the checksum")
+		}
+	})
+
+	t.Run("tar entry order does not affect the checksum", func(t *testing.T) {
+		t.Parallel()
+
+		rootNpmrc := []byte("registry=https://example.com/\n")
+		nestedNpmrc := []byte("@scope:registry=https://npm.example.com/\n")
+
+		a := buildTarGz(t, []tarEntry{
+			{"package-lock.json", []byte(syntheticPackageLock)},
+			{"package.json", []byte(`{"name":"root"}`)},
+			{".npmrc", rootNpmrc},
+			{"packages/app/.npmrc", nestedNpmrc},
+		})
+		b := buildTarGz(t, []tarEntry{
+			{"packages/app/.npmrc", nestedNpmrc},
+			{".npmrc", rootNpmrc},
+			{"package.json", []byte(`{"name":"root"}`)},
 			{"package-lock.json", []byte(syntheticPackageLock)},
 		})
 
