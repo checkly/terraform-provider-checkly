@@ -282,7 +282,7 @@ func (t *PlaywrightCodeBundleMetadata) EncodeToString() string {
 	err := enc.Encode(t)
 	if err != nil {
 		// This should not be possible, so let's panic.
-		panic(fmt.Errorf("failed to encode code bundle data %q: %w", t, err))
+		panic(fmt.Errorf("failed to encode code bundle data %+v: %w", t, err))
 	}
 
 	return base64.StdEncoding.EncodeToString(buf.Bytes())
