@@ -49,7 +49,7 @@ The development branch is `main`. This is the branch that all pull requests shou
 
 ### Pre-requirements
 - [Terraform](https://learn.hashicorp.com/tutorials/terraform/install-cli) >= v1.2.2
-- [Go](https://go.dev/doc/install) >= 1.18.2
+- [Go](https://go.dev/doc/install) >= 1.26
 
 After you have installed Terraform and Go, you can clone the repository and start working on the `main` branch.
 
