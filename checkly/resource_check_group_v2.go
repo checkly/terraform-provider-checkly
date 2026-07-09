@@ -451,7 +451,7 @@ func resourceCheckGroupV2Delete(d *schema.ResourceData, client interface{}) erro
 	defer cancel()
 
 	if err := client.(checkly.Client).DeleteGroupV2(ctx, id); err != nil {
-		return fmt.Errorf("failed to delete check group (v2) %q: %w", id, err)
+		return fmt.Errorf("failed to delete check group (v2) %d: %w", id, err)
 	}
 
 	return nil
