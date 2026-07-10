@@ -88,6 +88,21 @@ func TestAccPlaywrightCodeBundleNoPlaywrightInLockfile(t *testing.T) {
 	})
 }
 
+func TestAccPlaywrightCodeBundleBrokenSymlink(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_playwright_code_bundle" "test" {
+					prebuilt_archive {
+						file = "../fixtures/playwright-project-broken-symlink.tar.gz"
+					}
+				}
+			`,
+			ExpectError: regexp.MustCompile(`the target escapes the archive root`),
+		},
+	})
+}
+
 func TestIsPlaywrightConfig(t *testing.T) {
 	t.Parallel()
 
@@ -336,6 +351,13 @@ func TestInspectLockfile(t *testing.T) {
 type tarEntry struct {
 	name    string
 	content []byte
+
+	// typeflag defaults to tar.TypeReg when left zero. Note that a zero byte
+	// is tar.TypeRegA, not tar.TypeReg.
+	typeflag byte
+
+	// linkname is the target of a symbolic or hard link entry.
+	linkname string
 }
 
 func buildTarGz(t *testing.T, entries []tarEntry) string {
@@ -350,17 +372,27 @@ func buildTarGz(t *testing.T, entries []tarEntry) string {
 	tw := tar.NewWriter(gz)
 
 	for _, e := range entries {
+		typeflag := e.typeflag
+		if typeflag == 0 {
+			typeflag = tar.TypeReg
+		}
+
 		hdr := &tar.Header{
 			Name:     e.name,
 			Mode:     0644,
-			Size:     int64(len(e.content)),
-			Typeflag: tar.TypeReg,
+			Typeflag: typeflag,
+			Linkname: e.linkname,
+		}
+		if typeflag == tar.TypeReg {
+			hdr.Size = int64(len(e.content))
 		}
 		if err := tw.WriteHeader(hdr); err != nil {
 			t.Fatalf("write header %q: %v", e.name, err)
 		}
-		if _, err := tw.Write(e.content); err != nil {
-			t.Fatalf("write body %q: %v", e.name, err)
+		if typeflag == tar.TypeReg {
+			if _, err := tw.Write(e.content); err != nil {
+				t.Fatalf("write body %q: %v", e.name, err)
+			}
 		}
 	}
 
@@ -408,12 +440,12 @@ func TestInspectLockfileChecksumIncludesPackageJSON(t *testing.T) {
 		t.Parallel()
 
 		a := buildTarGz(t, []tarEntry{
-			{"package-lock.json", []byte(syntheticPackageLock)},
-			{"package.json", []byte(`{"name":"example","version":"1.0.0"}`)},
+			{name: "package-lock.json", content: []byte(syntheticPackageLock)},
+			{name: "package.json", content: []byte(`{"name":"example","version":"1.0.0"}`)},
 		})
 		b := buildTarGz(t, []tarEntry{
-			{"package-lock.json", []byte(syntheticPackageLock)},
-			{"package.json", []byte(`{"name":"example","version":"2.0.0"}`)},
+			{name: "package-lock.json", content: []byte(syntheticPackageLock)},
+			{name: "package.json", content: []byte(`{"name":"example","version":"2.0.0"}`)},
 		})
 
 		if inspectWithExcludedVersion(t, a).ChecksumSha256 != inspectWithExcludedVersion(t, b).ChecksumSha256 {
@@ -425,12 +457,12 @@ func TestInspectLockfileChecksumIncludesPackageJSON(t *testing.T) {
 		t.Parallel()
 
 		a := buildTarGz(t, []tarEntry{
-			{"package-lock.json", []byte(syntheticPackageLock)},
-			{"package.json", []byte(`{"name":"example","version":"1.0.0"}`)},
+			{name: "package-lock.json", content: []byte(syntheticPackageLock)},
+			{name: "package.json", content: []byte(`{"name":"example","version":"1.0.0"}`)},
 		})
 		b := buildTarGz(t, []tarEntry{
-			{"package-lock.json", []byte(syntheticPackageLock)},
-			{"package.json", []byte(`{"name":"renamed","version":"1.0.0"}`)},
+			{name: "package-lock.json", content: []byte(syntheticPackageLock)},
+			{name: "package.json", content: []byte(`{"name":"renamed","version":"1.0.0"}`)},
 		})
 
 		if inspectWithExcludedVersion(t, a).ChecksumSha256 == inspectWithExcludedVersion(t, b).ChecksumSha256 {
@@ -442,14 +474,14 @@ func TestInspectLockfileChecksumIncludesPackageJSON(t *testing.T) {
 		t.Parallel()
 
 		a := buildTarGz(t, []tarEntry{
-			{"package-lock.json", []byte(syntheticPackageLock)},
-			{"package.json", []byte(`{"name":"example","version":"1.0.0"}`)},
-			{"node_modules/@playwright/test/package.json", []byte(`{"name":"@playwright/test","main":"index.js"}`)},
+			{name: "package-lock.json", content: []byte(syntheticPackageLock)},
+			{name: "package.json", content: []byte(`{"name":"example","version":"1.0.0"}`)},
+			{name: "node_modules/@playwright/test/package.json", content: []byte(`{"name":"@playwright/test","main":"index.js"}`)},
 		})
 		b := buildTarGz(t, []tarEntry{
-			{"package-lock.json", []byte(syntheticPackageLock)},
-			{"package.json", []byte(`{"name":"example","version":"1.0.0"}`)},
-			{"node_modules/@playwright/test/package.json", []byte(`{"name":"different","main":"other.js"}`)},
+			{name: "package-lock.json", content: []byte(syntheticPackageLock)},
+			{name: "package.json", content: []byte(`{"name":"example","version":"1.0.0"}`)},
+			{name: "node_modules/@playwright/test/package.json", content: []byte(`{"name":"different","main":"other.js"}`)},
 		})
 
 		if inspectWithExcludedVersion(t, a).ChecksumSha256 != inspectWithExcludedVersion(t, b).ChecksumSha256 {
@@ -461,13 +493,13 @@ func TestInspectLockfileChecksumIncludesPackageJSON(t *testing.T) {
 		t.Parallel()
 
 		a := buildTarGz(t, []tarEntry{
-			{"package-lock.json", []byte(syntheticPackageLock)},
-			{"package.json", []byte(`{"name":"root"}`)},
+			{name: "package-lock.json", content: []byte(syntheticPackageLock)},
+			{name: "package.json", content: []byte(`{"name":"root"}`)},
 		})
 		b := buildTarGz(t, []tarEntry{
-			{"package-lock.json", []byte(syntheticPackageLock)},
-			{"package.json", []byte(`{"name":"root"}`)},
-			{"packages/e2e/package.json", []byte(`{"name":"e2e"}`)},
+			{name: "package-lock.json", content: []byte(syntheticPackageLock)},
+			{name: "package.json", content: []byte(`{"name":"root"}`)},
+			{name: "packages/e2e/package.json", content: []byte(`{"name":"e2e"}`)},
 		})
 
 		if inspectWithExcludedVersion(t, a).ChecksumSha256 == inspectWithExcludedVersion(t, b).ChecksumSha256 {
@@ -479,12 +511,12 @@ func TestInspectLockfileChecksumIncludesPackageJSON(t *testing.T) {
 		t.Parallel()
 
 		a := buildTarGz(t, []tarEntry{
-			{"package-lock.json", []byte(syntheticPackageLock)},
-			{"package.json", []byte(`{"name":"example","scripts":{"test":"playwright test"}}`)},
+			{name: "package-lock.json", content: []byte(syntheticPackageLock)},
+			{name: "package.json", content: []byte(`{"name":"example","scripts":{"test":"playwright test"}}`)},
 		})
 		b := buildTarGz(t, []tarEntry{
-			{"package-lock.json", []byte(syntheticPackageLock)},
-			{"package.json", []byte("{\n  \"scripts\": { \"test\": \"playwright test\" },\n  \"name\": \"example\"\n}\n")},
+			{name: "package-lock.json", content: []byte(syntheticPackageLock)},
+			{name: "package.json", content: []byte("{\n  \"scripts\": { \"test\": \"playwright test\" },\n  \"name\": \"example\"\n}\n")},
 		})
 
 		if inspectWithExcludedVersion(t, a).ChecksumSha256 != inspectWithExcludedVersion(t, b).ChecksumSha256 {
@@ -499,14 +531,14 @@ func TestInspectLockfileChecksumIncludesPackageJSON(t *testing.T) {
 		nestedPkg := []byte(`{"name":"nested"}`)
 
 		a := buildTarGz(t, []tarEntry{
-			{"package-lock.json", []byte(syntheticPackageLock)},
-			{"package.json", rootPkg},
-			{"packages/e2e/package.json", nestedPkg},
+			{name: "package-lock.json", content: []byte(syntheticPackageLock)},
+			{name: "package.json", content: rootPkg},
+			{name: "packages/e2e/package.json", content: nestedPkg},
 		})
 		b := buildTarGz(t, []tarEntry{
-			{"packages/e2e/package.json", nestedPkg},
-			{"package.json", rootPkg},
-			{"package-lock.json", []byte(syntheticPackageLock)},
+			{name: "packages/e2e/package.json", content: nestedPkg},
+			{name: "package.json", content: rootPkg},
+			{name: "package-lock.json", content: []byte(syntheticPackageLock)},
 		})
 
 		if inspectWithExcludedVersion(t, a).ChecksumSha256 != inspectWithExcludedVersion(t, b).ChecksumSha256 {
@@ -567,13 +599,13 @@ func TestInspectLockfileChecksumIncludesNpmrc(t *testing.T) {
 		t.Parallel()
 
 		a := buildTarGz(t, []tarEntry{
-			{"package-lock.json", []byte(syntheticPackageLock)},
-			{"package.json", []byte(`{"name":"root"}`)},
+			{name: "package-lock.json", content: []byte(syntheticPackageLock)},
+			{name: "package.json", content: []byte(`{"name":"root"}`)},
 		})
 		b := buildTarGz(t, []tarEntry{
-			{"package-lock.json", []byte(syntheticPackageLock)},
-			{"package.json", []byte(`{"name":"root"}`)},
-			{".npmrc", []byte("registry=https://example.com/\n")},
+			{name: "package-lock.json", content: []byte(syntheticPackageLock)},
+			{name: "package.json", content: []byte(`{"name":"root"}`)},
+			{name: ".npmrc", content: []byte("registry=https://example.com/\n")},
 		})
 
 		if inspectWithExcludedVersion(t, a).ChecksumSha256 == inspectWithExcludedVersion(t, b).ChecksumSha256 {
@@ -585,14 +617,14 @@ func TestInspectLockfileChecksumIncludesNpmrc(t *testing.T) {
 		t.Parallel()
 
 		a := buildTarGz(t, []tarEntry{
-			{"package-lock.json", []byte(syntheticPackageLock)},
-			{"package.json", []byte(`{"name":"root"}`)},
-			{".npmrc", []byte("registry=https://a.example.com/\n")},
+			{name: "package-lock.json", content: []byte(syntheticPackageLock)},
+			{name: "package.json", content: []byte(`{"name":"root"}`)},
+			{name: ".npmrc", content: []byte("registry=https://a.example.com/\n")},
 		})
 		b := buildTarGz(t, []tarEntry{
-			{"package-lock.json", []byte(syntheticPackageLock)},
-			{"package.json", []byte(`{"name":"root"}`)},
-			{".npmrc", []byte("registry=https://b.example.com/\n")},
+			{name: "package-lock.json", content: []byte(syntheticPackageLock)},
+			{name: "package.json", content: []byte(`{"name":"root"}`)},
+			{name: ".npmrc", content: []byte("registry=https://b.example.com/\n")},
 		})
 
 		if inspectWithExcludedVersion(t, a).ChecksumSha256 == inspectWithExcludedVersion(t, b).ChecksumSha256 {
@@ -604,15 +636,15 @@ func TestInspectLockfileChecksumIncludesNpmrc(t *testing.T) {
 		t.Parallel()
 
 		a := buildTarGz(t, []tarEntry{
-			{"package-lock.json", []byte(syntheticPackageLock)},
-			{"package.json", []byte(`{"name":"root"}`)},
-			{".npmrc", []byte("registry=https://example.com/\n")},
+			{name: "package-lock.json", content: []byte(syntheticPackageLock)},
+			{name: "package.json", content: []byte(`{"name":"root"}`)},
+			{name: ".npmrc", content: []byte("registry=https://example.com/\n")},
 		})
 		b := buildTarGz(t, []tarEntry{
-			{"package-lock.json", []byte(syntheticPackageLock)},
-			{"package.json", []byte(`{"name":"root"}`)},
-			{".npmrc", []byte("registry=https://example.com/\n")},
-			{"packages/app/.npmrc", []byte("@scope:registry=https://npm.example.com/\n")},
+			{name: "package-lock.json", content: []byte(syntheticPackageLock)},
+			{name: "package.json", content: []byte(`{"name":"root"}`)},
+			{name: ".npmrc", content: []byte("registry=https://example.com/\n")},
+			{name: "packages/app/.npmrc", content: []byte("@scope:registry=https://npm.example.com/\n")},
 		})
 
 		if inspectWithExcludedVersion(t, a).ChecksumSha256 == inspectWithExcludedVersion(t, b).ChecksumSha256 {
@@ -624,13 +656,13 @@ func TestInspectLockfileChecksumIncludesNpmrc(t *testing.T) {
 		t.Parallel()
 
 		a := buildTarGz(t, []tarEntry{
-			{"package-lock.json", []byte(syntheticPackageLock)},
-			{"package.json", []byte(`{"name":"root"}`)},
+			{name: "package-lock.json", content: []byte(syntheticPackageLock)},
+			{name: "package.json", content: []byte(`{"name":"root"}`)},
 		})
 		b := buildTarGz(t, []tarEntry{
-			{"package-lock.json", []byte(syntheticPackageLock)},
-			{"package.json", []byte(`{"name":"root"}`)},
-			{"node_modules/some-pkg/.npmrc", []byte("registry=https://example.com/\n")},
+			{name: "package-lock.json", content: []byte(syntheticPackageLock)},
+			{name: "package.json", content: []byte(`{"name":"root"}`)},
+			{name: "node_modules/some-pkg/.npmrc", content: []byte("registry=https://example.com/\n")},
 		})
 
 		if inspectWithExcludedVersion(t, a).ChecksumSha256 != inspectWithExcludedVersion(t, b).ChecksumSha256 {
@@ -645,16 +677,16 @@ func TestInspectLockfileChecksumIncludesNpmrc(t *testing.T) {
 		nestedNpmrc := []byte("@scope:registry=https://npm.example.com/\n")
 
 		a := buildTarGz(t, []tarEntry{
-			{"package-lock.json", []byte(syntheticPackageLock)},
-			{"package.json", []byte(`{"name":"root"}`)},
-			{".npmrc", rootNpmrc},
-			{"packages/app/.npmrc", nestedNpmrc},
+			{name: "package-lock.json", content: []byte(syntheticPackageLock)},
+			{name: "package.json", content: []byte(`{"name":"root"}`)},
+			{name: ".npmrc", content: rootNpmrc},
+			{name: "packages/app/.npmrc", content: nestedNpmrc},
 		})
 		b := buildTarGz(t, []tarEntry{
-			{"packages/app/.npmrc", nestedNpmrc},
-			{".npmrc", rootNpmrc},
-			{"package.json", []byte(`{"name":"root"}`)},
-			{"package-lock.json", []byte(syntheticPackageLock)},
+			{name: "packages/app/.npmrc", content: nestedNpmrc},
+			{name: ".npmrc", content: rootNpmrc},
+			{name: "package.json", content: []byte(`{"name":"root"}`)},
+			{name: "package-lock.json", content: []byte(syntheticPackageLock)},
 		})
 
 		if inspectWithExcludedVersion(t, a).ChecksumSha256 != inspectWithExcludedVersion(t, b).ChecksumSha256 {

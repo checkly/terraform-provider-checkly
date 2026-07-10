@@ -37,11 +37,13 @@ func resourcePlaywrightCodeBundle() *schema.Resource {
 		Description:   "A managed code bundle which can be used in Playwright Check Suite resources.",
 		Schema: map[string]*schema.Schema{
 			prebuiltArchiveAttributeName: {
-				Description: "A prebuilt archive containing the code bundle.",
-				Type:        schema.TypeList,
-				Required:    true,
-				ForceNew:    true,
-				MaxItems:    1,
+				Description: "A prebuilt archive containing the code bundle. Any " +
+					"symbolic or hard links in the archive must point to files " +
+					"that are also included in the archive.",
+				Type:     schema.TypeList,
+				Required: true,
+				ForceNew: true,
+				MaxItems: 1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"file": {
@@ -72,6 +74,13 @@ func resourcePlaywrightCodeBundle() *schema.Resource {
 
 				switch {
 				case bundle.PrebuiltArchive != nil:
+					// Run before the checksum comparison below, so that an
+					// archive which is already in state gets validated too,
+					// not just one that changed.
+					if err := bundle.PrebuiltArchive.InspectLinks(); err != nil {
+						return err
+					}
+
 					checksum, err := bundle.PrebuiltArchive.ChecksumSha256()
 					if err != nil {
 						return fmt.Errorf("failed to calculate source archive checksum: %v", err)
