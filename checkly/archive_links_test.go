@@ -7,14 +7,20 @@ import (
 	"testing"
 )
 
-// archivePathSet builds the same names set that InspectLinks derives from an
-// archive: every entry plus every ancestor directory, plus the root.
+// archivePathSet builds the same names set that InspectArchivePaths derives
+// from an archive: every entry plus every ancestor directory, plus the root.
 func archivePathSet(entries ...string) map[string]bool {
 	names := newArchivePathSet()
 	for _, entry := range entries {
 		addArchivePath(names, normalizeArchivePath(entry))
 	}
 	return names
+}
+
+// linkError runs the link half of the archive validation and renders its
+// problems the same way InspectArchivePaths does.
+func linkError(names map[string]bool, links []archiveLink) error {
+	return formatArchiveProblems(collectLinkProblems(names, links))
 }
 
 func TestNormalizeArchivePath(t *testing.T) {
@@ -122,17 +128,17 @@ func TestValidateArchiveLinks(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			err := validateArchiveLinks(names, []archiveLink{tt.link})
+			err := linkError(names, []archiveLink{tt.link})
 
 			if tt.want == "" {
 				if err != nil {
-					t.Fatalf("validateArchiveLinks(%+v) = %v, want nil", tt.link, err)
+					t.Fatalf("linkError(%+v) = %v, want nil", tt.link, err)
 				}
 				return
 			}
 
 			if err == nil {
-				t.Fatalf("validateArchiveLinks(%+v) = nil, want error containing %q", tt.link, tt.want)
+				t.Fatalf("linkError(%+v) = nil, want error containing %q", tt.link, tt.want)
 			}
 			if !strings.Contains(err.Error(), tt.want) {
 				t.Errorf("error %q does not contain %q", err.Error(), tt.want)
@@ -151,12 +157,12 @@ func TestValidateArchiveLinksChain(t *testing.T) {
 	// "second" is at fault; each link is judged on its own target.
 	names := archivePathSet("first", "second")
 
-	err := validateArchiveLinks(names, []archiveLink{
+	err := linkError(names, []archiveLink{
 		{name: "first", linkname: "second"},
 		{name: "second", linkname: "../../outside"},
 	})
 	if err == nil {
-		t.Fatal("validateArchiveLinks() = nil, want error")
+		t.Fatal("linkError() = nil, want error")
 	}
 
 	if strings.Count(err.Error(), " -> ") != 1 {
@@ -173,11 +179,11 @@ func TestValidateArchiveLinksOrderIndependent(t *testing.T) {
 	// A hard link may precede the member it targets in the archive.
 	names := archivePathSet("a.js", "later.js")
 
-	err := validateArchiveLinks(names, []archiveLink{
+	err := linkError(names, []archiveLink{
 		{name: "a.js", linkname: "later.js", hard: true},
 	})
 	if err != nil {
-		t.Fatalf("validateArchiveLinks() = %v, want nil", err)
+		t.Fatalf("linkError() = %v, want nil", err)
 	}
 }
 
@@ -187,30 +193,70 @@ func TestValidateArchiveLinksTruncatesReport(t *testing.T) {
 	names := archivePathSet("root.js")
 
 	var links []archiveLink
-	for i := range maxReportedArchiveLinks + 2 {
+	for i := range maxReportedArchiveProblems + 2 {
 		links = append(links, archiveLink{
 			name:     fmt.Sprintf("link-%d", i),
 			linkname: "../outside",
 		})
 	}
 
-	err := validateArchiveLinks(names, links)
+	err := linkError(names, links)
 	if err == nil {
-		t.Fatal("validateArchiveLinks() = nil, want error")
+		t.Fatal("linkError() = nil, want error")
 	}
 
-	if got, want := strings.Count(err.Error(), " -> "), maxReportedArchiveLinks; got != want {
+	if got, want := strings.Count(err.Error(), " -> "), maxReportedArchiveProblems; got != want {
 		t.Errorf("listed %d links, want %d", got, want)
 	}
 	if !strings.Contains(err.Error(), "... and 2 more") {
 		t.Errorf("error does not mention the omitted links: %v", err)
 	}
-	if !strings.Contains(err.Error(), fmt.Sprintf("contains %d links", len(links))) {
+	if !strings.Contains(err.Error(), fmt.Sprintf("contains %d entries", len(links))) {
 		t.Errorf("error does not report the total count: %v", err)
 	}
 }
 
-func TestInspectLinks(t *testing.T) {
+func TestCheckEntryPath(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		// name is the raw tar entry name, normalized before checking, exactly
+		// as InspectArchivePaths does it.
+		name string
+		want string // substring of the expected reason, empty means safe
+	}{
+		{name: "package.json"},
+		{name: "packages/e2e/spec.ts"},
+		{name: "./tests/a.ts"},
+		{name: "."},
+		{name: "a/../b.ts"}, // stays within the root after cleaning
+		{name: "/etc/passwd", want: "absolute path"},
+		{name: "/", want: "absolute path"},
+		{name: "../secrets.env", want: "escapes the archive root"},
+		{name: "..", want: "escapes the archive root"},
+		{name: "a/../../evil.sh", want: "escapes the archive root"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := checkEntryPath(normalizeArchivePath(tt.name))
+
+			if tt.want == "" {
+				if got != "" {
+					t.Errorf("checkEntryPath(%q) = %q, want safe", tt.name, got)
+				}
+				return
+			}
+			if !strings.Contains(got, tt.want) {
+				t.Errorf("checkEntryPath(%q) = %q, want a reason containing %q", tt.name, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestInspectArchivePaths(t *testing.T) {
 	t.Parallel()
 
 	t.Run("archive without links", func(t *testing.T) {
@@ -222,8 +268,8 @@ func TestInspectLinks(t *testing.T) {
 		})
 
 		attr := PlaywrightCodeBundlePrebuiltArchiveAttribute{File: file}
-		if err := attr.InspectLinks(); err != nil {
-			t.Fatalf("InspectLinks() = %v, want nil", err)
+		if err := attr.InspectArchivePaths(); err != nil {
+			t.Fatalf("InspectArchivePaths() = %v, want nil", err)
 		}
 	})
 
@@ -239,8 +285,8 @@ func TestInspectLinks(t *testing.T) {
 		})
 
 		attr := PlaywrightCodeBundlePrebuiltArchiveAttribute{File: file}
-		if err := attr.InspectLinks(); err != nil {
-			t.Fatalf("InspectLinks() = %v, want nil", err)
+		if err := attr.InspectArchivePaths(); err != nil {
+			t.Fatalf("InspectArchivePaths() = %v, want nil", err)
 		}
 	})
 
@@ -257,9 +303,9 @@ func TestInspectLinks(t *testing.T) {
 		})
 
 		attr := PlaywrightCodeBundlePrebuiltArchiveAttribute{File: file}
-		err := attr.InspectLinks()
+		err := attr.InspectArchivePaths()
 		if err == nil {
-			t.Fatal("InspectLinks() = nil, want error")
+			t.Fatal("InspectArchivePaths() = nil, want error")
 		}
 
 		for _, want := range []string{
@@ -282,12 +328,76 @@ func TestInspectLinks(t *testing.T) {
 		})
 
 		attr := PlaywrightCodeBundlePrebuiltArchiveAttribute{File: file}
-		err := attr.InspectLinks()
+		err := attr.InspectArchivePaths()
 		if err == nil {
-			t.Fatal("InspectLinks() = nil, want error")
+			t.Fatal("InspectArchivePaths() = nil, want error")
 		}
 		if !strings.Contains(err.Error(), "not present in the archive") {
 			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("archive with absolute entry path", func(t *testing.T) {
+		t.Parallel()
+
+		file := buildTarGz(t, []tarEntry{
+			{name: "package.json", content: []byte(`{"name":"example"}`)},
+			{name: "/etc/cron.d/evil", content: []byte("x")},
+		})
+
+		attr := PlaywrightCodeBundlePrebuiltArchiveAttribute{File: file}
+		err := attr.InspectArchivePaths()
+		if err == nil {
+			t.Fatal("InspectArchivePaths() = nil, want error")
+		}
+		for _, want := range []string{"/etc/cron.d/evil", "absolute path"} {
+			if !strings.Contains(err.Error(), want) {
+				t.Errorf("error %q does not contain %q", err.Error(), want)
+			}
+		}
+	})
+
+	t.Run("archive with parent-escaping entry path", func(t *testing.T) {
+		t.Parallel()
+
+		file := buildTarGz(t, []tarEntry{
+			{name: "package.json", content: []byte(`{"name":"example"}`)},
+			{name: "../../outside/evil.sh", content: []byte("x")},
+		})
+
+		attr := PlaywrightCodeBundlePrebuiltArchiveAttribute{File: file}
+		err := attr.InspectArchivePaths()
+		if err == nil {
+			t.Fatal("InspectArchivePaths() = nil, want error")
+		}
+		for _, want := range []string{"../../outside/evil.sh", "escapes the archive root"} {
+			if !strings.Contains(err.Error(), want) {
+				t.Errorf("error %q does not contain %q", err.Error(), want)
+			}
+		}
+	})
+
+	t.Run("archive with both a bad entry path and a bad link", func(t *testing.T) {
+		t.Parallel()
+
+		file := buildTarGz(t, []tarEntry{
+			{name: "package.json", content: []byte(`{"name":"example"}`)},
+			{name: "../escape.txt", content: []byte("x")},
+			{name: "link.ts", typeflag: tar.TypeSymlink, linkname: "gone.ts"},
+		})
+
+		attr := PlaywrightCodeBundlePrebuiltArchiveAttribute{File: file}
+		err := attr.InspectArchivePaths()
+		if err == nil {
+			t.Fatal("InspectArchivePaths() = nil, want error")
+		}
+		if !strings.Contains(err.Error(), "contains 2 entries") {
+			t.Errorf("error should report both problems: %v", err)
+		}
+		for _, want := range []string{"../escape.txt", "link.ts -> gone.ts"} {
+			if !strings.Contains(err.Error(), want) {
+				t.Errorf("error %q does not contain %q", err.Error(), want)
+			}
 		}
 	})
 }

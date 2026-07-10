@@ -43,7 +43,7 @@ resource "checkly_playwright_code_bundle" "example-2" {
 
 ### Required
 
-- `prebuilt_archive` (Block List, Min: 1, Max: 1) A prebuilt archive containing the code bundle. Any symbolic or hard links in the archive must point to files that are also included in the archive. (see [below for nested schema](#nestedblock--prebuilt_archive))
+- `prebuilt_archive` (Block List, Min: 1, Max: 1) A prebuilt archive containing the code bundle. (see [below for nested schema](#nestedblock--prebuilt_archive))
 
 ### Read-Only
 
