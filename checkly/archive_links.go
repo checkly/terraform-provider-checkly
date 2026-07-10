@@ -158,10 +158,10 @@ func validateArchiveLinks(names map[string]bool, links []archiveLink) error {
 	}
 
 	b.WriteString(
-		"every symbolic and hard link must point to a file or directory that is " +
-			"also included in the archive; exclude node_modules from the archive " +
-			"(Checkly installs dependencies from the lockfile), or rebuild the " +
-			"archive with symbolic links dereferenced",
+		"every symbolic and hard link must resolve to a file or directory that " +
+			"is also included in the archive; rebuild the archive with its " +
+			"symbolic links dereferenced, or without the entries that link " +
+			"outside it",
 	)
 
 	return fmt.Errorf("%s", b.String())
