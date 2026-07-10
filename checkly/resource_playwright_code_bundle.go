@@ -72,6 +72,13 @@ func resourcePlaywrightCodeBundle() *schema.Resource {
 
 				switch {
 				case bundle.PrebuiltArchive != nil:
+					// Run before the checksum comparison below, so that an
+					// archive which is already in state gets validated too,
+					// not just one that changed.
+					if err := bundle.PrebuiltArchive.InspectArchivePaths(); err != nil {
+						return err
+					}
+
 					checksum, err := bundle.PrebuiltArchive.ChecksumSha256()
 					if err != nil {
 						return fmt.Errorf("failed to calculate source archive checksum: %v", err)
