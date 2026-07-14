@@ -207,18 +207,21 @@ func resourceSSLMonitor() *schema.Resource {
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"source": {
-										Type:        schema.TypeString,
-										Required:    true,
-										Description: "The source of the asserted value. Possible values are `CERT_EXPIRES_IN_DAYS`, `CERT_NOT_EXPIRED`, `HOSTNAME_VERIFIED`, `CHAIN_TRUSTED`, `TLS_VERSION`, `CIPHER_SUITE`, `ISSUER_CN`, `CERT_FINGERPRINT_SHA256`, `ISSUER_FINGERPRINT_SHA256`, `KEY_SIZE_BITS`, and `SIGNATURE_ALGORITHM`.",
+										Type:         schema.TypeString,
+										Required:     true,
+										ValidateFunc: validateOneOf([]string{"CERTIFICATE", "CONNECTION", "RESPONSE_TIME", "JSON_RESPONSE", "TEXT_RESPONSE"}),
+										Description:  "The source of the asserted value. Possible values are `CERTIFICATE`, `CONNECTION`, `RESPONSE_TIME`, `JSON_RESPONSE`, and `TEXT_RESPONSE`. For `CERTIFICATE` and `CONNECTION`, `property` selects the field to assert on. `RESPONSE_TIME` takes no `property` and asserts on the handshake time in milliseconds. `JSON_RESPONSE` uses `property` as a JSONPath expression, and `TEXT_RESPONSE` uses `property` as a regular expression.",
 									},
 									"property": {
-										Type:     schema.TypeString,
-										Optional: true,
+										Type:        schema.TypeString,
+										Optional:    true,
+										Description: "The property to assert on. For `CERTIFICATE`, a certificate field selector: one of `daysUntilExpiry`, `subjectCN`, `issuerCN`, `serialNumber`, `fingerprintSha256`, `issuerFingerprintSha256`, `keySizeBits`, `keyAlgorithm`, `signatureAlgorithm`, `sans`, `selfSigned`, or `isCA`. For `CONNECTION`, a connection field selector: one of `tlsVersion`, `cipherSuite`, `hostnameVerified`, `chainTrusted`, `ocspStapled`, `ocspStatus`, or `resolvedIp`. For `JSON_RESPONSE`, a JSONPath expression. For `TEXT_RESPONSE`, a regular expression. Not used for `RESPONSE_TIME`.",
 									},
 									"comparison": {
-										Type:        schema.TypeString,
-										Required:    true,
-										Description: "The type of comparison to be executed between expected and actual value of the assertion. Possible values are `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL`, and `NOT_NULL`.",
+										Type:         schema.TypeString,
+										Required:     true,
+										ValidateFunc: validateOneOf([]string{"EQUALS", "NOT_EQUALS", "CONTAINS", "NOT_CONTAINS", "GREATER_THAN", "LESS_THAN", "IS_EMPTY", "NOT_EMPTY", "IS_NULL", "NOT_NULL"}),
+										Description:  "The type of comparison to be executed between expected and actual value of the assertion. Possible values are `EQUALS`, `NOT_EQUALS`, `CONTAINS`, `NOT_CONTAINS`, `GREATER_THAN`, `LESS_THAN`, `IS_EMPTY`, `NOT_EMPTY`, `IS_NULL`, and `NOT_NULL`.",
 									},
 									"target": {
 										Type:     schema.TypeString,

@@ -112,7 +112,7 @@ func TestAccSSLMonitorFull(t *testing.T) {
 				testCheckResourceAttrExpr(
 					"checkly_ssl_monitor.test",
 					"request.*.assertion.*.source",
-					"CERT_EXPIRES_IN_DAYS",
+					"CERTIFICATE",
 				),
 			),
 		},
@@ -216,15 +216,15 @@ const sslMonitor_full = `
 		}
 
 		assertion {
-		  source     = "CERT_EXPIRES_IN_DAYS"
-		  property   = ""
+		  source     = "CERTIFICATE"
+		  property   = "daysUntilExpiry"
 		  comparison = "GREATER_THAN"
 		  target     = "14"
 		}
 
 		assertion {
-		  source     = "HOSTNAME_VERIFIED"
-		  property   = ""
+		  source     = "CONNECTION"
+		  property   = "hostnameVerified"
 		  comparison = "EQUALS"
 		  target     = "true"
 		}

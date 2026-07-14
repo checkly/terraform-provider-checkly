@@ -78,17 +78,24 @@ resource "checkly_ssl_monitor" "example-ssl-monitor-2" {
     }
 
     assertion {
-      source     = "CERT_EXPIRES_IN_DAYS"
-      property   = ""
+      source     = "CERTIFICATE"
+      property   = "daysUntilExpiry"
       comparison = "GREATER_THAN"
       target     = "14"
     }
 
     assertion {
-      source     = "HOSTNAME_VERIFIED"
-      property   = ""
+      source     = "CONNECTION"
+      property   = "tlsVersion"
       comparison = "EQUALS"
-      target     = "true"
+      target     = "TLS1.3"
+    }
+
+    assertion {
+      source     = "JSON_RESPONSE"
+      property   = "$.certificate.keySizeBits"
+      comparison = "GREATER_THAN"
+      target     = "2048"
     }
   }
 }
@@ -153,12 +160,12 @@ Optional:
 
 Required:
 
-- `comparison` (String) The type of comparison to be executed between expected and actual value of the assertion. Possible values are `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL`, and `NOT_NULL`.
-- `source` (String) The source of the asserted value. Possible values are `CERT_EXPIRES_IN_DAYS`, `CERT_NOT_EXPIRED`, `HOSTNAME_VERIFIED`, `CHAIN_TRUSTED`, `TLS_VERSION`, `CIPHER_SUITE`, `ISSUER_CN`, `CERT_FINGERPRINT_SHA256`, `ISSUER_FINGERPRINT_SHA256`, `KEY_SIZE_BITS`, and `SIGNATURE_ALGORITHM`.
+- `comparison` (String) The type of comparison to be executed between expected and actual value of the assertion. Possible values are `EQUALS`, `NOT_EQUALS`, `CONTAINS`, `NOT_CONTAINS`, `GREATER_THAN`, `LESS_THAN`, `IS_EMPTY`, `NOT_EMPTY`, `IS_NULL`, and `NOT_NULL`.
+- `source` (String) The source of the asserted value. Possible values are `CERTIFICATE`, `CONNECTION`, `RESPONSE_TIME`, `JSON_RESPONSE`, and `TEXT_RESPONSE`. For `CERTIFICATE` and `CONNECTION`, `property` selects the field to assert on. `RESPONSE_TIME` takes no `property` and asserts on the handshake time in milliseconds. `JSON_RESPONSE` uses `property` as a JSONPath expression, and `TEXT_RESPONSE` uses `property` as a regular expression.
 
 Optional:
 
-- `property` (String)
+- `property` (String) The property to assert on. For `CERTIFICATE`, a certificate field selector: one of `daysUntilExpiry`, `subjectCN`, `issuerCN`, `serialNumber`, `fingerprintSha256`, `issuerFingerprintSha256`, `keySizeBits`, `keyAlgorithm`, `signatureAlgorithm`, `sans`, `selfSigned`, or `isCA`. For `CONNECTION`, a connection field selector: one of `tlsVersion`, `cipherSuite`, `hostnameVerified`, `chainTrusted`, `ocspStapled`, `ocspStatus`, or `resolvedIp`. For `JSON_RESPONSE`, a JSONPath expression. For `TEXT_RESPONSE`, a regular expression. Not used for `RESPONSE_TIME`.
 - `target` (String)
 
 
