@@ -76,8 +76,8 @@ resource "checkly_ssl_monitor" "ssl-monitor-1" {
     alert_days_before_expiry = 30
 
     assertion {
-      source     = "CERT_EXPIRES_IN_DAYS"
-      property   = ""
+      source     = "CERTIFICATE"
+      property   = "daysUntilExpiry"
       comparison = "GREATER_THAN"
       target     = "14"
     }
