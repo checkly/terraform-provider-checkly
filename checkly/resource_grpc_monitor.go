@@ -167,12 +167,6 @@ func resourceGRPCMonitor() *schema.Resource {
 							ValidateFunc: validateBetween(1, 180),
 							Description:  "The number of seconds to wait for the gRPC call to complete before timing out. Possible values are between 1 and 180. (Default `60`).",
 						},
-						"store_response_body": {
-							Type:        schema.TypeBool,
-							Optional:    true,
-							Default:     true,
-							Description: "Whether to store the gRPC response body with the check result. (Default `true`).",
-						},
 						"service": {
 							Type:        schema.TypeString,
 							Optional:    true,
@@ -388,7 +382,6 @@ func setFromGRPCRequest(r checkly.GRPCRequest) []tfMap {
 	s["assertion"] = setFromAssertions(r.Assertions)
 	s["grpc_mode"] = r.GRPCConfig.Mode
 	s["tls"] = r.GRPCConfig.TLS
-	s["store_response_body"] = r.GRPCConfig.StoreResponseBody
 	s["service"] = r.GRPCConfig.Service
 	s["service_definition"] = r.GRPCConfig.ServiceDefinition
 	s["proto_content"] = r.GRPCConfig.ProtoContent
@@ -455,7 +448,6 @@ func grpcRequestFromList(s []any) checkly.GRPCRequest {
 		GRPCConfig: checkly.GRPCConfig{
 			Mode:              res["grpc_mode"].(string),
 			TLS:               res["tls"].(bool),
-			StoreResponseBody: res["store_response_body"].(bool),
 			Service:           res["service"].(string),
 			ServiceDefinition: res["service_definition"].(string),
 			ProtoContent:      res["proto_content"].(string),

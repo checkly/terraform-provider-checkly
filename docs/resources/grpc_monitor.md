@@ -153,7 +153,6 @@ Optional:
 - `service` (String) The service name to query in `HEALTH` mode. An empty value queries overall server health. Forbidden in `BEHAVIOR` mode.
 - `service_definition` (String) How the service definition is resolved in `BEHAVIOR` mode: `REFLECTION` uses server reflection; `PROTO_FILE` uses the inline `proto_content`. (Default `REFLECTION`).
 - `skip_ssl` (Boolean) Whether to skip SSL certificate validation when `tls` is enabled. (Default `false`).
-- `store_response_body` (Boolean) Whether to store the gRPC response body with the check result. (Default `true`).
 - `timeout` (Number) The number of seconds to wait for the gRPC call to complete before timing out. Possible values are between 1 and 180. (Default `60`).
 - `tls` (Boolean) Whether to use a TLS-encrypted connection to the gRPC server. (Default `true`).
 
