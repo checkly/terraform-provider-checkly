@@ -71,16 +71,16 @@ func resourceGRPCMonitor() *schema.Resource {
 			"degraded_response_time": {
 				Type:         schema.TypeInt,
 				Optional:     true,
-				Default:      4000,
+				Default:      10000,
 				ValidateFunc: validateBetween(0, 180000),
-				Description:  "The response time in milliseconds starting from which a monitor should be considered degraded. Possible values are between 0 and 180000. (Default `4000`).",
+				Description:  "The response time in milliseconds starting from which a monitor should be considered degraded. Possible values are between 0 and 180000. (Default `10000`).",
 			},
 			"max_response_time": {
 				Type:         schema.TypeInt,
 				Optional:     true,
-				Default:      5000,
+				Default:      20000,
 				ValidateFunc: validateBetween(0, 180000),
-				Description:  "The response time in milliseconds starting from which a monitor should be considered failing. Possible values are between 0 and 180000. (Default `5000`).",
+				Description:  "The response time in milliseconds starting from which a monitor should be considered failing. Possible values are between 0 and 180000. (Default `20000`).",
 			},
 			"tags": {
 				Type:     schema.TypeSet,
@@ -167,12 +167,6 @@ func resourceGRPCMonitor() *schema.Resource {
 							ValidateFunc: validateBetween(1, 180),
 							Description:  "The number of seconds to wait for the gRPC call to complete before timing out. Possible values are between 1 and 180. (Default `60`).",
 						},
-						"store_response_body": {
-							Type:        schema.TypeBool,
-							Optional:    true,
-							Default:     true,
-							Description: "Whether to store the gRPC response body with the check result. (Default `true`).",
-						},
 						"service": {
 							Type:        schema.TypeString,
 							Optional:    true,
@@ -227,20 +221,22 @@ func resourceGRPCMonitor() *schema.Resource {
 									"source": {
 										Type:        schema.TypeString,
 										Required:    true,
-										Description: "The source of the asserted value. Possible values are `RESPONSE_TIME`, `GRPC_RESPONSE`, `GRPC_METADATA`, `GRPC_HEALTHCHECK_STATUS`, and `GRPC_STATUS_CODE`.",
+										Description: "The source of the asserted value. Possible values are `RESPONSE_TIME`, `GRPC_RESPONSE`, `TEXT_BODY`, `GRPC_METADATA`, `GRPC_HEALTHCHECK_STATUS`, and `GRPC_STATUS_CODE`.",
 									},
 									"property": {
-										Type:     schema.TypeString,
-										Optional: true,
+										Type:        schema.TypeString,
+										Optional:    true,
+										Description: "The property selecting the asserted value within the source, e.g. a JSONPath expression for `GRPC_RESPONSE` or a metadata key for `GRPC_METADATA`.",
 									},
 									"comparison": {
 										Type:        schema.TypeString,
 										Required:    true,
-										Description: "The type of comparison to be executed between expected and actual value of the assertion. Possible values are `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL`, and `NOT_NULL`.",
+										Description: "The type of comparison to be executed between expected and actual value of the assertion. For `GRPC_RESPONSE`, `TEXT_BODY` and `GRPC_METADATA`, possible values are `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL`, and `NOT_NULL`. For `RESPONSE_TIME` and `GRPC_STATUS_CODE`, possible values are `EQUALS`, `NOT_EQUALS`, `GREATER_THAN`, and `LESS_THAN`. For `GRPC_HEALTHCHECK_STATUS`, possible values are `EQUALS` and `NOT_EQUALS`.",
 									},
 									"target": {
-										Type:     schema.TypeString,
-										Optional: true,
+										Type:        schema.TypeString,
+										Optional:    true,
+										Description: "The value to compare against. Must be numeric for `RESPONSE_TIME` (milliseconds), `GRPC_STATUS_CODE` (0-16), and `GRPC_HEALTHCHECK_STATUS` (0-3, where 0=UNKNOWN, 1=SERVING, 2=NOT_SERVING, 3=SERVICE_UNKNOWN).",
 									},
 								},
 							},
@@ -388,7 +384,6 @@ func setFromGRPCRequest(r checkly.GRPCRequest) []tfMap {
 	s["assertion"] = setFromAssertions(r.Assertions)
 	s["grpc_mode"] = r.GRPCConfig.Mode
 	s["tls"] = r.GRPCConfig.TLS
-	s["store_response_body"] = r.GRPCConfig.StoreResponseBody
 	s["service"] = r.GRPCConfig.Service
 	s["service_definition"] = r.GRPCConfig.ServiceDefinition
 	s["proto_content"] = r.GRPCConfig.ProtoContent
@@ -455,7 +450,6 @@ func grpcRequestFromList(s []any) checkly.GRPCRequest {
 		GRPCConfig: checkly.GRPCConfig{
 			Mode:              res["grpc_mode"].(string),
 			TLS:               res["tls"].(bool),
-			StoreResponseBody: res["store_response_body"].(bool),
 			Service:           res["service"].(string),
 			ServiceDefinition: res["service_definition"].(string),
 			ProtoContent:      res["proto_content"].(string),
