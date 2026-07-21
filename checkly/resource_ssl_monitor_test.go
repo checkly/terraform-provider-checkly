@@ -2,10 +2,40 @@ package checkly
 
 import (
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
+
+// TestSSLRequestSecurityBaselineUnknownKeyRejected is a unit test (no TF_ACC)
+// asserting that an unknown security_baseline rule key produces an error.
+// Silently dropping it — as plain json.Unmarshal would — means a misspelled
+// SSL security control is never sent to the API and thus never enforced.
+func TestSSLRequestSecurityBaselineUnknownKeyRejected(t *testing.T) {
+	request := func(baseline string) []any {
+		return []any{tfMap{
+			"hostname":                 "example.com",
+			"port":                     443,
+			"ip_family":                "IPv4",
+			"skip_chain_validation":    false,
+			"handshake_timeout_ms":     10000,
+			"alert_days_before_expiry": 20,
+			"security_baseline":        baseline,
+			"assertion":                schema.NewSet(func(any) int { return 0 }, nil),
+		}}
+	}
+
+	_, err := sslRequestFromList(request(`{"minKeySizeBts":{"value":2048,"severity":"fail"}}`))
+	if err == nil || !strings.Contains(err.Error(), "security_baseline") {
+		t.Fatalf("expected a security_baseline decode error for an unknown rule key, got: %v", err)
+	}
+
+	if _, err := sslRequestFromList(request(`{"minKeySizeBits":{"value":2048,"severity":"fail"}}`)); err != nil {
+		t.Fatalf("expected a valid baseline to decode, got: %v", err)
+	}
+}
 
 func TestAccSSLMonitorRequiredFields(t *testing.T) {
 	config := `resource "checkly_ssl_monitor" "test" {}`
@@ -104,15 +134,30 @@ func TestAccSSLMonitorFull(t *testing.T) {
 					"request.*.client_certificate.*.mode",
 					"account_default",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_ssl_monitor.test",
-					"request.*.assertion.#",
+					"request.0.assertion.#",
 					"2",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_ssl_monitor.test",
-					"request.*.assertion.*.source",
-					"CERT_EXPIRES_IN_DAYS",
+					"request.0.assertion.*",
+					map[string]string{
+						"source":     "CERTIFICATE",
+						"property":   "daysUntilExpiry",
+						"comparison": "GREATER_THAN",
+						"target":     "14",
+					},
+				),
+				resource.TestCheckTypeSetElemNestedAttrs(
+					"checkly_ssl_monitor.test",
+					"request.0.assertion.*",
+					map[string]string{
+						"source":     "CONNECTION",
+						"property":   "hostnameVerified",
+						"comparison": "EQUALS",
+						"target":     "true",
+					},
 				),
 			),
 		},
@@ -216,15 +261,15 @@ const sslMonitor_full = `
 		}
 
 		assertion {
-		  source     = "CERT_EXPIRES_IN_DAYS"
-		  property   = ""
+		  source     = "CERTIFICATE"
+		  property   = "daysUntilExpiry"
 		  comparison = "GREATER_THAN"
 		  target     = "14"
 		}
 
 		assertion {
-		  source     = "HOSTNAME_VERIFIED"
-		  property   = ""
+		  source     = "CONNECTION"
+		  property   = "hostnameVerified"
 		  comparison = "EQUALS"
 		  target     = "true"
 		}

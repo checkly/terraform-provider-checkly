@@ -68,9 +68,19 @@ resource "checkly_ssl_monitor" "example-ssl-monitor-2" {
     handshake_timeout_ms     = 10000
     alert_days_before_expiry = 20
 
+    # The server fills in any baseline rule that is not listed, so enumerate
+    # every rule: a partial baseline would re-plan with a diff on every run.
     security_baseline = jsonencode({
-      minTlsVersion = "TLS1.2"
-      minKeySize    = 2048
+      enabled                 = true
+      minTLSVersion           = { value = "TLS1.2", severity = "fail" }
+      minKeySizeBits          = { value = 2048, severity = "fail" }
+      weakSignatureAlgorithm  = { severity = "fail" }
+      weakCipherSuite         = { severity = "fail" }
+      knownBadCA              = { severity = "fail" }
+      recommendedTLSVersion   = { value = "TLS1.3", severity = "ignore" }
+      recommendedKeySizeBits  = { value = 3072, severity = "ignore" }
+      ocspMustStapleRespected = { severity = "ignore" }
+      sctPresent              = { severity = "ignore" }
     })
 
     client_certificate {
@@ -78,15 +88,15 @@ resource "checkly_ssl_monitor" "example-ssl-monitor-2" {
     }
 
     assertion {
-      source     = "CERT_EXPIRES_IN_DAYS"
-      property   = ""
+      source     = "CERTIFICATE"
+      property   = "daysUntilExpiry"
       comparison = "GREATER_THAN"
       target     = "14"
     }
 
     assertion {
-      source     = "HOSTNAME_VERIFIED"
-      property   = ""
+      source     = "CONNECTION"
+      property   = "hostnameVerified"
       comparison = "EQUALS"
       target     = "true"
     }
@@ -108,13 +118,13 @@ resource "checkly_ssl_monitor" "example-ssl-monitor-2" {
 
 - `alert_channel_subscription` (Block Set) An array of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your monitor, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedblock--alert_channel_subscription))
 - `alert_settings` (Block List, Max: 1) Determines the alert escalation policy for the monitor. (see [below for nested schema](#nestedblock--alert_settings))
-- `degraded_response_time` (Number) The handshake time in milliseconds above which the monitor is considered degraded. Possible values are between 0 and 30000. (Default `3000`).
+- `degraded_response_time` (Number) The handshake time in milliseconds above which the monitor is considered degraded. Possible values are between 0 and 30000. (Default `10000`).
 - `description` (String) A description of the monitor.
 - `frequency_offset` (Number) When `frequency` is `0` (high frequency), `frequency_offset` is required and it alone controls how often the monitor should run. Defined in seconds. The allowed values are `0` (disabled - use `frequency` to define the actual frequency), `10` (10 seconds), `20` (20 seconds) and `30` (30 seconds).
 - `group_id` (Number) The id of the check group this monitor is part of.
 - `group_order` (Number) The position of this monitor in a check group. It determines in what order checks and monitors are run when a group is triggered from the API or from CI/CD.
 - `locations` (Set of String) An array of one or more data center locations where to run this monitor. (Default ["us-east-1"])
-- `max_response_time` (Number) The handshake time in milliseconds above which the monitor is considered failing. Must be greater than or equal to `degraded_response_time`. Possible values are between 0 and 30000. (Default `10000`).
+- `max_response_time` (Number) The handshake time in milliseconds above which the monitor is considered failing. Must be greater than or equal to `degraded_response_time`. Possible values are between 0 and 30000. (Default `20000`).
 - `muted` (Boolean) Determines if any notifications will be sent out when a monitor fails/degrades/recovers.
 - `private_locations` (Set of String) An array of one or more private locations slugs.
 - `retry_strategy` (Block List, Max: 1) A strategy for retrying failed check/monitor runs. (see [below for nested schema](#nestedblock--retry_strategy))
@@ -144,7 +154,7 @@ Optional:
 - `handshake_timeout_ms` (Number) The number of milliseconds to wait for the TLS handshake to complete before timing out. Possible values are between 1000 and 30000. (Default `10000`).
 - `ip_family` (String) The IP family to use when executing the check. The value can be either `IPv4` or `IPv6`. (Default `IPv4`).
 - `port` (Number) The port number to connect to. Possible values are between 1 and 65535. (Default `443`).
-- `security_baseline` (String) The SSL security baseline as a `jsonencode`d object of enforceable/advisory rules. Omit to inherit the account default baseline.
+- `security_baseline` (String) The SSL security baseline as a `jsonencode`d object of enforceable/advisory rules. Omit to inherit the account default baseline. When set, enumerate every rule: the server fills in any rule that is not listed, so a partial baseline re-plans with a diff on every run.
 - `server_name` (String) An optional SNI server name to send in the TLS handshake. Defaults to `hostname` when unset.
 - `skip_chain_validation` (Boolean) When true, the certificate chain is not validated against trusted roots (the certificate is still inspected for expiry and the security baseline). (Default `false`).
 
@@ -153,12 +163,12 @@ Optional:
 
 Required:
 
-- `comparison` (String) The type of comparison to be executed between expected and actual value of the assertion. Possible values are `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL`, and `NOT_NULL`.
-- `source` (String) The source of the asserted value. Possible values are `CERT_EXPIRES_IN_DAYS`, `CERT_NOT_EXPIRED`, `HOSTNAME_VERIFIED`, `CHAIN_TRUSTED`, `TLS_VERSION`, `CIPHER_SUITE`, `ISSUER_CN`, `CERT_FINGERPRINT_SHA256`, `ISSUER_FINGERPRINT_SHA256`, `KEY_SIZE_BITS`, and `SIGNATURE_ALGORITHM`.
+- `comparison` (String) The type of comparison to be executed between expected and actual value of the assertion. Possible values are `EQUALS`, `NOT_EQUALS`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL`, and `NOT_NULL`. The allowed set depends on the asserted `source` and `property`; for example, boolean properties such as `chainTrusted` only allow `EQUALS`.
+- `source` (String) The source of the asserted value. Possible values are `CERTIFICATE`, `CONNECTION`, `RESPONSE_TIME`, `JSON_RESPONSE`, and `TEXT_RESPONSE`.
 
 Optional:
 
-- `property` (String)
+- `property` (String) The property selecting the asserted value within the source. For `CERTIFICATE`: `daysUntilExpiry`, `keySizeBits`, `subjectCN`, `issuerCN`, `serialNumber`, `fingerprintSha256`, `issuerFingerprintSha256`, `keyAlgorithm`, `signatureAlgorithm`, `sans`, `selfSigned`, or `isCA`. For `CONNECTION`: `tlsVersion`, `cipherSuite`, `hostnameVerified`, `chainTrusted`, `ocspStapled`, `ocspStatus`, or `resolvedIp`. For `JSON_RESPONSE`: a JSONPath expression. For `TEXT_RESPONSE`: a regular expression applied to the serialized response.
 - `target` (String)
 
 

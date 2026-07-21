@@ -73,16 +73,16 @@ func resourceSSLMonitor() *schema.Resource {
 			"degraded_response_time": {
 				Type:         schema.TypeInt,
 				Optional:     true,
-				Default:      3000,
+				Default:      10000,
 				ValidateFunc: validateBetween(0, 30000),
-				Description:  "The handshake time in milliseconds above which the monitor is considered degraded. Possible values are between 0 and 30000. (Default `3000`).",
+				Description:  "The handshake time in milliseconds above which the monitor is considered degraded. Possible values are between 0 and 30000. (Default `10000`).",
 			},
 			"max_response_time": {
 				Type:         schema.TypeInt,
 				Optional:     true,
-				Default:      10000,
+				Default:      20000,
 				ValidateFunc: validateBetween(0, 30000),
-				Description:  "The handshake time in milliseconds above which the monitor is considered failing. Must be greater than or equal to `degraded_response_time`. Possible values are between 0 and 30000. (Default `10000`).",
+				Description:  "The handshake time in milliseconds above which the monitor is considered failing. Must be greater than or equal to `degraded_response_time`. Possible values are between 0 and 30000. (Default `20000`).",
 			},
 			"tags": {
 				Type:     schema.TypeSet,
@@ -176,7 +176,7 @@ func resourceSSLMonitor() *schema.Resource {
 							Computed:         true,
 							ValidateFunc:     validation.StringIsJSON,
 							DiffSuppressFunc: suppressEquivalentJSON,
-							Description:      "The SSL security baseline as a `jsonencode`d object of enforceable/advisory rules. Omit to inherit the account default baseline.",
+							Description:      "The SSL security baseline as a `jsonencode`d object of enforceable/advisory rules. Omit to inherit the account default baseline. When set, enumerate every rule: the server fills in any rule that is not listed, so a partial baseline re-plans with a diff on every run.",
 						},
 						"client_certificate": {
 							Type:     schema.TypeSet,
@@ -209,16 +209,17 @@ func resourceSSLMonitor() *schema.Resource {
 									"source": {
 										Type:        schema.TypeString,
 										Required:    true,
-										Description: "The source of the asserted value. Possible values are `CERT_EXPIRES_IN_DAYS`, `CERT_NOT_EXPIRED`, `HOSTNAME_VERIFIED`, `CHAIN_TRUSTED`, `TLS_VERSION`, `CIPHER_SUITE`, `ISSUER_CN`, `CERT_FINGERPRINT_SHA256`, `ISSUER_FINGERPRINT_SHA256`, `KEY_SIZE_BITS`, and `SIGNATURE_ALGORITHM`.",
+										Description: "The source of the asserted value. Possible values are `CERTIFICATE`, `CONNECTION`, `RESPONSE_TIME`, `JSON_RESPONSE`, and `TEXT_RESPONSE`.",
 									},
 									"property": {
-										Type:     schema.TypeString,
-										Optional: true,
+										Type:        schema.TypeString,
+										Optional:    true,
+										Description: "The property selecting the asserted value within the source. For `CERTIFICATE`: `daysUntilExpiry`, `keySizeBits`, `subjectCN`, `issuerCN`, `serialNumber`, `fingerprintSha256`, `issuerFingerprintSha256`, `keyAlgorithm`, `signatureAlgorithm`, `sans`, `selfSigned`, or `isCA`. For `CONNECTION`: `tlsVersion`, `cipherSuite`, `hostnameVerified`, `chainTrusted`, `ocspStapled`, `ocspStatus`, or `resolvedIp`. For `JSON_RESPONSE`: a JSONPath expression. For `TEXT_RESPONSE`: a regular expression applied to the serialized response.",
 									},
 									"comparison": {
 										Type:        schema.TypeString,
 										Required:    true,
-										Description: "The type of comparison to be executed between expected and actual value of the assertion. Possible values are `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL`, and `NOT_NULL`.",
+										Description: "The type of comparison to be executed between expected and actual value of the assertion. Possible values are `EQUALS`, `NOT_EQUALS`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL`, and `NOT_NULL`. The allowed set depends on the asserted `source` and `property`; for example, boolean properties such as `chainTrusted` only allow `EQUALS`.",
 									},
 									"target": {
 										Type:     schema.TypeString,
@@ -481,9 +482,14 @@ func sslRequestFromList(s []any) (checkly.SSLRequest, error) {
 
 	// security_baseline is an optional jsonencode'd object. Decode it into a
 	// *SecurityBaseline; leave nil when empty so the server applies its default.
+	// Unknown keys must be rejected here: plain json.Unmarshal would silently
+	// drop a misspelled rule, meaning the intended security control is never
+	// sent to the API and the user gets no error.
 	if baseline, ok := res["security_baseline"].(string); ok && strings.TrimSpace(baseline) != "" {
 		var parsed checkly.SecurityBaseline
-		if err := json.Unmarshal([]byte(baseline), &parsed); err != nil {
+		decoder := json.NewDecoder(strings.NewReader(baseline))
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&parsed); err != nil {
 			return checkly.SSLRequest{}, fmt.Errorf("decoding security_baseline JSON: %w", err)
 		}
 		cfg.SecurityBaseline = &parsed

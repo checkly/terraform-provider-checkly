@@ -53,9 +53,19 @@ resource "checkly_ssl_monitor" "example-ssl-monitor-2" {
     handshake_timeout_ms     = 10000
     alert_days_before_expiry = 20
 
+    # The server fills in any baseline rule that is not listed, so enumerate
+    # every rule: a partial baseline would re-plan with a diff on every run.
     security_baseline = jsonencode({
-      minTlsVersion = "TLS1.2"
-      minKeySize    = 2048
+      enabled                 = true
+      minTLSVersion           = { value = "TLS1.2", severity = "fail" }
+      minKeySizeBits          = { value = 2048, severity = "fail" }
+      weakSignatureAlgorithm  = { severity = "fail" }
+      weakCipherSuite         = { severity = "fail" }
+      knownBadCA              = { severity = "fail" }
+      recommendedTLSVersion   = { value = "TLS1.3", severity = "ignore" }
+      recommendedKeySizeBits  = { value = 3072, severity = "ignore" }
+      ocspMustStapleRespected = { severity = "ignore" }
+      sctPresent              = { severity = "ignore" }
     })
 
     client_certificate {
@@ -63,15 +73,15 @@ resource "checkly_ssl_monitor" "example-ssl-monitor-2" {
     }
 
     assertion {
-      source     = "CERT_EXPIRES_IN_DAYS"
-      property   = ""
+      source     = "CERTIFICATE"
+      property   = "daysUntilExpiry"
       comparison = "GREATER_THAN"
       target     = "14"
     }
 
     assertion {
-      source     = "HOSTNAME_VERIFIED"
-      property   = ""
+      source     = "CONNECTION"
+      property   = "hostnameVerified"
       comparison = "EQUALS"
       target     = "true"
     }
