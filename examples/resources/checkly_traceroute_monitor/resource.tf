@@ -40,9 +40,11 @@ resource "checkly_traceroute_monitor" "example-traceroute-monitor-2" {
   }
 
   request {
-    url              = "api.checklyhq.com"
-    protocol         = "ICMP"
-    port             = 443
+    url      = "api.checklyhq.com"
+    protocol = "ICMP"
+    # ICMP probes have no port; the API also derives the default port for the
+    # other protocols (443 for TCP, 33434 for UDP/SCTP), so leave it unset
+    # unless a specific port is needed.
     ip_family        = "IPv4"
     max_hops         = 30
     max_unknown_hops = 15
@@ -58,7 +60,7 @@ resource "checkly_traceroute_monitor" "example-traceroute-monitor-2" {
 
     assertion {
       source     = "RESPONSE_TIME"
-      property   = ""
+      property   = "avg"
       comparison = "LESS_THAN"
       target     = "2000"
     }

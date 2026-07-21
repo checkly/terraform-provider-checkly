@@ -128,9 +128,9 @@ func resourceTracerouteMonitor() *schema.Resource {
 						"port": {
 							Type:         schema.TypeInt,
 							Optional:     true,
-							Default:      443,
+							Computed:     true,
 							ValidateFunc: validateBetween(1, 65535),
-							Description:  "The destination port for TCP/UDP/SCTP probes. Possible values are between 1 and 65535. Ignored (and not sent) when `protocol = \"ICMP\"`. (Default `443`).",
+							Description:  "The destination port for TCP/UDP/SCTP probes. Possible values are between 1 and 65535. Ignored (and not sent) when `protocol = \"ICMP\"`. The default depends on the protocol: `443` for `TCP`, `33434` for `UDP` and `SCTP`.",
 						},
 						"ip_family": {
 							Type:         schema.TypeString,
@@ -149,9 +149,9 @@ func resourceTracerouteMonitor() *schema.Resource {
 						"max_unknown_hops": {
 							Type:         schema.TypeInt,
 							Optional:     true,
-							Default:      15,
+							Computed:     true,
 							ValidateFunc: validateBetween(1, 30),
-							Description:  "The maximum number of consecutive unresponsive hops to tolerate before stopping the trace. Possible values are between 1 and 30. (Default `15`).",
+							Description:  "The maximum number of consecutive unresponsive hops to tolerate before stopping the trace. Possible values are between 1 and 30, and the value must not exceed `max_hops`. (Default `min(15, max_hops)`).",
 						},
 						"ptr_lookup": {
 							Type:        schema.TypeBool,
@@ -177,17 +177,19 @@ func resourceTracerouteMonitor() *schema.Resource {
 										Description: "The source of the asserted value. Possible values are `RESPONSE_TIME`, `HOP_COUNT`, and `PACKET_LOSS`.",
 									},
 									"property": {
-										Type:     schema.TypeString,
-										Optional: true,
+										Type:        schema.TypeString,
+										Optional:    true,
+										Description: "The statistic to assert on. Required for `RESPONSE_TIME`, where possible values are `avg`, `min`, `max`, and `stdDev`. Must be empty for `HOP_COUNT` and `PACKET_LOSS`.",
 									},
 									"comparison": {
 										Type:        schema.TypeString,
 										Required:    true,
-										Description: "The type of comparison to be executed between expected and actual value of the assertion. Possible values are `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL`, and `NOT_NULL`.",
+										Description: "The type of comparison to be executed between expected and actual value of the assertion. For `RESPONSE_TIME`, possible values are `EQUALS`, `NOT_EQUALS`, `GREATER_THAN`, and `LESS_THAN`. For `HOP_COUNT` and `PACKET_LOSS`, possible values are `EQUALS`, `GREATER_THAN`, and `LESS_THAN`.",
 									},
 									"target": {
-										Type:     schema.TypeString,
-										Optional: true,
+										Type:        schema.TypeString,
+										Optional:    true,
+										Description: "The value to compare against. Must be numeric: a non-negative number of milliseconds for `RESPONSE_TIME`, a non-negative integer for `HOP_COUNT`, or a number between 0 and 100 for `PACKET_LOSS`.",
 									},
 								},
 							},
@@ -381,6 +383,43 @@ func tracerouteCheckFromResourceData(d *schema.ResourceData) (checkly.Traceroute
 	// marks `privateLocations` forbidden, so the field is omitted entirely.
 
 	monitor.Request = tracerouteRequestFromList(d.Get("request").([]any))
+
+	// port and max_unknown_hops are server-derived when the config does not
+	// set them: the API derives port from protocol (443 for TCP, 33434 for
+	// UDP/SCTP, no port for ICMP) and max_unknown_hops from max_hops
+	// (min(15, max_hops)). Both attributes are Optional+Computed, so on update
+	// d.Get returns the value the server derived for the *previous*
+	// configuration. Re-sending it after a protocol or max_hops change would
+	// probe a port that does not match the new protocol, or violate the API's
+	// `max_unknown_hops <= max_hops` rule. The update endpoint is PATCH-style
+	// (omitted fields keep their stored value), so omitting the stale value is
+	// not enough — instead, when the field is absent from the config, mirror
+	// the server's derivation rules here so every write carries the value the
+	// server would have chosen for the *current* configuration.
+	rawConfig := d.GetRawConfig()
+	if !rawConfig.IsNull() {
+		if requestIt := rawConfig.GetAttr("request").ElementIterator(); requestIt.Next() {
+			_, requestAttr := requestIt.Element()
+			if requestAttr.GetAttr("port").IsNull() {
+				switch monitor.Request.Protocol {
+				case "UDP", "SCTP":
+					monitor.Request.Port = 33434
+				case "ICMP":
+					// ICMP probes have no port; the zero value is dropped
+					// from the marshaled payload.
+					monitor.Request.Port = 0
+				default:
+					monitor.Request.Port = 443
+				}
+			}
+			if requestAttr.GetAttr("max_unknown_hops").IsNull() {
+				monitor.Request.MaxUnknownHops = 15
+				if monitor.Request.MaxHops < 15 {
+					monitor.Request.MaxUnknownHops = monitor.Request.MaxHops
+				}
+			}
+		}
+	}
 
 	monitor.FrequencyOffset = d.Get(frequencyOffsetAttributeName).(int)
 

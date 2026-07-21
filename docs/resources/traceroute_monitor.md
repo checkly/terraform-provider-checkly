@@ -55,9 +55,11 @@ resource "checkly_traceroute_monitor" "example-traceroute-monitor-2" {
   }
 
   request {
-    url              = "api.checklyhq.com"
-    protocol         = "ICMP"
-    port             = 443
+    url      = "api.checklyhq.com"
+    protocol = "ICMP"
+    # ICMP probes have no port; the API also derives the default port for the
+    # other protocols (443 for TCP, 33434 for UDP/SCTP), so leave it unset
+    # unless a specific port is needed.
     ip_family        = "IPv4"
     max_hops         = 30
     max_unknown_hops = 15
@@ -73,7 +75,7 @@ resource "checkly_traceroute_monitor" "example-traceroute-monitor-2" {
 
     assertion {
       source     = "RESPONSE_TIME"
-      property   = ""
+      property   = "avg"
       comparison = "LESS_THAN"
       target     = "2000"
     }
@@ -127,8 +129,8 @@ Optional:
 - `assertion` (Block Set) A request can have multiple assertions. (see [below for nested schema](#nestedblock--request--assertion))
 - `ip_family` (String) The IP family to use when executing the traceroute. The value can be either `IPv4` or `IPv6`. (Default `IPv4`).
 - `max_hops` (Number) The maximum number of network hops to probe before stopping. Possible values are between 1 and 64. (Default `30`).
-- `max_unknown_hops` (Number) The maximum number of consecutive unresponsive hops to tolerate before stopping the trace. Possible values are between 1 and 30. (Default `15`).
-- `port` (Number) The destination port for TCP/UDP/SCTP probes. Possible values are between 1 and 65535. Ignored (and not sent) when `protocol = "ICMP"`. (Default `443`).
+- `max_unknown_hops` (Number) The maximum number of consecutive unresponsive hops to tolerate before stopping the trace. Possible values are between 1 and 30, and the value must not exceed `max_hops`. (Default `min(15, max_hops)`).
+- `port` (Number) The destination port for TCP/UDP/SCTP probes. Possible values are between 1 and 65535. Ignored (and not sent) when `protocol = "ICMP"`. The default depends on the protocol: `443` for `TCP`, `33434` for `UDP` and `SCTP`.
 - `protocol` (String) The probe protocol. `TCP` sends SYN probes (default), `UDP` sends datagrams to a high port, `ICMP` sends Echo Requests, `SCTP` sends INIT chunks. (Default `TCP`).
 - `ptr_lookup` (Boolean) Whether to perform reverse-DNS (PTR) lookups on each hop's IP address. (Default `true`).
 - `timeout` (Number) The number of seconds to wait for the traceroute to complete before timing out. Possible values are between 1 and 30. (Default `10`).
@@ -138,13 +140,13 @@ Optional:
 
 Required:
 
-- `comparison` (String) The type of comparison to be executed between expected and actual value of the assertion. Possible values are `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL`, and `NOT_NULL`.
+- `comparison` (String) The type of comparison to be executed between expected and actual value of the assertion. For `RESPONSE_TIME`, possible values are `EQUALS`, `NOT_EQUALS`, `GREATER_THAN`, and `LESS_THAN`. For `HOP_COUNT` and `PACKET_LOSS`, possible values are `EQUALS`, `GREATER_THAN`, and `LESS_THAN`.
 - `source` (String) The source of the asserted value. Possible values are `RESPONSE_TIME`, `HOP_COUNT`, and `PACKET_LOSS`.
 
 Optional:
 
-- `property` (String)
-- `target` (String)
+- `property` (String) The statistic to assert on. Required for `RESPONSE_TIME`, where possible values are `avg`, `min`, `max`, and `stdDev`. Must be empty for `HOP_COUNT` and `PACKET_LOSS`.
+- `target` (String) The value to compare against. Must be numeric: a non-negative number of milliseconds for `RESPONSE_TIME`, a non-negative integer for `HOP_COUNT`, or a number between 0 and 100 for `PACKET_LOSS`.
 
 
 

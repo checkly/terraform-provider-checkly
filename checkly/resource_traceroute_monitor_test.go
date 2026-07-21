@@ -114,6 +114,61 @@ func TestAccTracerouteMonitorFull(t *testing.T) {
 	})
 }
 
+// TestAccTracerouteMonitorServerComputedDefaults asserts that the
+// server-derived request fields follow their determining inputs instead of
+// going stale: the API derives port from protocol (443 TCP, 33434 UDP/SCTP,
+// none for ICMP) and max_unknown_hops from max_hops (min(15, max_hops)). When
+// protocol or max_hops changes while the config leaves the derived field
+// unset, the provider must re-request the server default rather than re-send
+// the value computed for the previous configuration.
+func TestAccTracerouteMonitorServerComputedDefaults(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: tracerouteMonitor_serverComputedTCP,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_traceroute_monitor.test",
+					"request.0.port",
+					"443",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_traceroute_monitor.test",
+					"request.0.max_unknown_hops",
+					"15",
+				),
+			),
+		},
+		{
+			Config: tracerouteMonitor_serverComputedUDP,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_traceroute_monitor.test",
+					"request.0.port",
+					"33434",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_traceroute_monitor.test",
+					"request.0.max_unknown_hops",
+					"10",
+				),
+			),
+		},
+		{
+			Config:             tracerouteMonitor_serverComputedUDP,
+			PlanOnly:           true,
+			ExpectNonEmptyPlan: false,
+		},
+		{
+			Config: tracerouteMonitor_serverComputedICMP,
+		},
+		{
+			Config:             tracerouteMonitor_serverComputedICMP,
+			PlanOnly:           true,
+			ExpectNonEmptyPlan: false,
+		},
+	})
+}
+
 // TestAccTracerouteMonitorMinimalCleanReplan asserts anti-pattern B is avoided:
 // a config omitting every optional field applies, then re-plans with no diff.
 func TestAccTracerouteMonitorMinimalCleanReplan(t *testing.T) {
@@ -128,6 +183,47 @@ func TestAccTracerouteMonitorMinimalCleanReplan(t *testing.T) {
 		},
 	})
 }
+
+const tracerouteMonitor_serverComputedTCP = `
+	resource "checkly_traceroute_monitor" "test" {
+	  name      = "tracerouteMonitor_serverComputed"
+	  activated = true
+	  frequency = 5
+	  locations = ["us-east-1"]
+	  request {
+		url      = "api.checklyhq.com"
+		max_hops = 30
+	  }
+	}
+`
+
+const tracerouteMonitor_serverComputedUDP = `
+	resource "checkly_traceroute_monitor" "test" {
+	  name      = "tracerouteMonitor_serverComputed"
+	  activated = true
+	  frequency = 5
+	  locations = ["us-east-1"]
+	  request {
+		url      = "api.checklyhq.com"
+		protocol = "UDP"
+		max_hops = 10
+	  }
+	}
+`
+
+const tracerouteMonitor_serverComputedICMP = `
+	resource "checkly_traceroute_monitor" "test" {
+	  name      = "tracerouteMonitor_serverComputed"
+	  activated = true
+	  frequency = 5
+	  locations = ["us-east-1"]
+	  request {
+		url      = "api.checklyhq.com"
+		protocol = "ICMP"
+		max_hops = 10
+	  }
+	}
+`
 
 const tracerouteMonitor_basic = `
 	resource "checkly_traceroute_monitor" "test" {
