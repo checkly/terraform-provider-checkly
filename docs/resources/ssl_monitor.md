@@ -147,7 +147,7 @@ Required:
 Optional:
 
 - `alert_days_before_expiry` (Number) Raise an alert when the certificate is within this many days of expiry. Possible values are between 1 and 365. (Default `20`).
-- `assertion` (Block Set) A request can have multiple assertions. (see [below for nested schema](#nestedblock--request--assertion))
+- `assertion` (Block Set) A request can have multiple assertions. The allowed comparisons, properties, and target formats depend on the assertion source — see the [Assertion Reference](#assertion-reference) below. (see [below for nested schema](#nestedblock--request--assertion))
 - `client_certificate` (Block Set, Max: 1) The mutual-TLS client certificate configuration. (see [below for nested schema](#nestedblock--request--client_certificate))
 - `handshake_timeout_ms` (Number) The number of milliseconds to wait for the TLS handshake to complete before timing out. Possible values are between 1000 and 30000. (Default `10000`).
 - `ip_family` (String) The IP family to use when executing the check. The value can be either `IPv4` or `IPv6`. (Default `IPv4`).

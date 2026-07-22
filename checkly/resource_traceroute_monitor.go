@@ -201,7 +201,7 @@ func resourceTracerouteMonitor() *schema.Resource {
 									},
 								},
 							},
-							Description: "A request can have multiple assertions.",
+							Description: "A request can have multiple assertions. The allowed comparisons, properties, and target formats depend on the assertion source — see the [Assertion Reference](#assertion-reference) below.",
 						},
 					},
 				},
