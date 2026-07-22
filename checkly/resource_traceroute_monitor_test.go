@@ -29,6 +29,32 @@ func TestAccTracerouteMonitorRequiredFields(t *testing.T) {
 	})
 }
 
+// TestAccTracerouteMonitorInvalidAssertionSource asserts a mistyped assertion
+// source fails at plan time instead of surfacing as an API error at apply time.
+func TestAccTracerouteMonitorInvalidAssertionSource(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_traceroute_monitor" "test" {
+				  name      = "traceroute-invalid-assertion-source"
+				  activated = true
+				  frequency = 5
+				  locations = ["us-east-1"]
+				  request {
+					url = "api.checklyhq.com"
+					assertion {
+					  source     = "PACKETLOSS"
+					  comparison = "LESS_THAN"
+					  target     = "10"
+					}
+				  }
+				}
+			`,
+			ExpectError: regexp.MustCompile(`"request\.0\.assertion\.\d+\.source" must be one of`),
+		},
+	})
+}
+
 func TestAccTracerouteMonitorBasic(t *testing.T) {
 	accTestCase(t, []resource.TestStep{
 		{

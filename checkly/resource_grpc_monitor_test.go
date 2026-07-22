@@ -29,6 +29,33 @@ func TestAccGRPCMonitorRequiredFields(t *testing.T) {
 	})
 }
 
+// TestAccGRPCMonitorInvalidAssertionSource asserts a mistyped assertion source
+// fails at plan time instead of surfacing as an API error at apply time.
+func TestAccGRPCMonitorInvalidAssertionSource(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_grpc_monitor" "test" {
+				  name      = "grpc-invalid-assertion-source"
+				  activated = true
+				  frequency = 5
+				  locations = ["us-east-1"]
+				  request {
+					host = "grpc.example.com"
+					port = 443
+					assertion {
+					  source     = "GRPC_STATUSCODE"
+					  comparison = "EQUALS"
+					  target     = "0"
+					}
+				  }
+				}
+			`,
+			ExpectError: regexp.MustCompile(`"request\.0\.assertion\.\d+\.source" must be one of`),
+		},
+	})
+}
+
 func TestAccGRPCMonitorBasic(t *testing.T) {
 	accTestCase(t, []resource.TestStep{
 		{

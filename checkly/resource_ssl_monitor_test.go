@@ -99,6 +99,33 @@ func TestAccSSLMonitorRequiredFields(t *testing.T) {
 	})
 }
 
+// TestAccSSLMonitorInvalidAssertionSource asserts a removed-grammar (or
+// mistyped) assertion source fails at plan time instead of surfacing as an
+// API error at apply time.
+func TestAccSSLMonitorInvalidAssertionSource(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_ssl_monitor" "test" {
+				  name      = "ssl-invalid-assertion-source"
+				  activated = true
+				  frequency = 60
+				  locations = ["us-east-1"]
+				  request {
+					hostname = "api.checklyhq.com"
+					assertion {
+					  source     = "CERT_EXPIRES_IN_DAYS"
+					  comparison = "GREATER_THAN"
+					  target     = "14"
+					}
+				  }
+				}
+			`,
+			ExpectError: regexp.MustCompile(`"request\.0\.assertion\.\d+\.source" must be one of`),
+		},
+	})
+}
+
 func TestAccSSLMonitorBasic(t *testing.T) {
 	accTestCase(t, []resource.TestStep{
 		{

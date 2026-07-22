@@ -179,9 +179,10 @@ func resourceTracerouteMonitor() *schema.Resource {
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"source": {
-										Type:        schema.TypeString,
-										Required:    true,
-										Description: "The source of the asserted value. Possible values are `RESPONSE_TIME`, `HOP_COUNT`, and `PACKET_LOSS`.",
+										Type:         schema.TypeString,
+										Required:     true,
+										ValidateFunc: validateOneOf([]string{"RESPONSE_TIME", "HOP_COUNT", "PACKET_LOSS"}),
+										Description:  "The source of the asserted value. Possible values are `RESPONSE_TIME`, `HOP_COUNT`, and `PACKET_LOSS`.",
 									},
 									"property": {
 										Type:        schema.TypeString,

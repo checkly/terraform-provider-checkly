@@ -301,9 +301,10 @@ func resourceSSLMonitor() *schema.Resource {
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"source": {
-										Type:        schema.TypeString,
-										Required:    true,
-										Description: "The source of the asserted value. Possible values are `CERTIFICATE`, `CONNECTION`, `RESPONSE_TIME`, `JSON_RESPONSE`, and `TEXT_RESPONSE`.",
+										Type:         schema.TypeString,
+										Required:     true,
+										ValidateFunc: validateOneOf([]string{"CERTIFICATE", "CONNECTION", "RESPONSE_TIME", "JSON_RESPONSE", "TEXT_RESPONSE"}),
+										Description:  "The source of the asserted value. Possible values are `CERTIFICATE`, `CONNECTION`, `RESPONSE_TIME`, `JSON_RESPONSE`, and `TEXT_RESPONSE`.",
 									},
 									"property": {
 										Type:        schema.TypeString,

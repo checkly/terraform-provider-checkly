@@ -226,9 +226,10 @@ func resourceGRPCMonitor() *schema.Resource {
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
 									"source": {
-										Type:        schema.TypeString,
-										Required:    true,
-										Description: "The source of the asserted value. Possible values are `RESPONSE_TIME`, `GRPC_RESPONSE`, `TEXT_BODY`, `GRPC_METADATA`, `GRPC_HEALTHCHECK_STATUS`, and `GRPC_STATUS_CODE`.",
+										Type:         schema.TypeString,
+										Required:     true,
+										ValidateFunc: validateOneOf([]string{"RESPONSE_TIME", "GRPC_RESPONSE", "TEXT_BODY", "GRPC_METADATA", "GRPC_HEALTHCHECK_STATUS", "GRPC_STATUS_CODE"}),
+										Description:  "The source of the asserted value. Possible values are `RESPONSE_TIME`, `GRPC_RESPONSE`, `TEXT_BODY`, `GRPC_METADATA`, `GRPC_HEALTHCHECK_STATUS`, and `GRPC_STATUS_CODE`.",
 									},
 									"property": {
 										Type:        schema.TypeString,
