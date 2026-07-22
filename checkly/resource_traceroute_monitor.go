@@ -166,6 +166,13 @@ func resourceTracerouteMonitor() *schema.Resource {
 							ValidateFunc: validateBetween(1, 30),
 							Description:  "The number of seconds to wait for the traceroute to complete before timing out. Possible values are between 1 and 30. (Default `10`).",
 						},
+						// The full per-source assertion rules (allowed
+						// comparisons, property usage, target formats) are
+						// documented in the "Assertion Reference" section of
+						// templates/resources/traceroute_monitor.md.tmpl.
+						// When assertion sources or their rules change here
+						// or in the API, update that template too — it is
+						// not generated from this schema.
 						"assertion": {
 							Type:     schema.TypeSet,
 							Optional: true,

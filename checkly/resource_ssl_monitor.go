@@ -288,6 +288,13 @@ func resourceSSLMonitor() *schema.Resource {
 							},
 							Description: "The mutual-TLS client certificate configuration.",
 						},
+						// The full assertion grammar (per-source property
+						// lists and the property-dependent comparison sets)
+						// is documented in the "Assertion Reference" section
+						// of templates/resources/ssl_monitor.md.tmpl. When
+						// assertion sources, properties, or their rules
+						// change here or in the API, update that template
+						// too — it is not generated from this schema.
 						"assertion": {
 							Type:     schema.TypeSet,
 							Optional: true,

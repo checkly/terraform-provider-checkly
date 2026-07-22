@@ -213,6 +213,13 @@ func resourceGRPCMonitor() *schema.Resource {
 							},
 							Description: "gRPC metadata (request headers) sent with the call.",
 						},
+						// The full per-source assertion rules (allowed
+						// comparisons, property usage, target formats) are
+						// documented in the "Assertion Reference" section of
+						// templates/resources/grpc_monitor.md.tmpl. When
+						// assertion sources or their rules change here or in
+						// the API, update that template too — it is not
+						// generated from this schema.
 						"assertion": {
 							Type:     schema.TypeSet,
 							Optional: true,
