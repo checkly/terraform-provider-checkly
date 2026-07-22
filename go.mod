@@ -3,7 +3,7 @@ module github.com/checkly/terraform-provider-checkly
 go 1.26.0
 
 require (
-	github.com/checkly/checkly-go-sdk v1.21.0
+	github.com/checkly/checkly-go-sdk v1.21.1-0.20260717102641-5c7fda5a0c7b
 	github.com/google/go-cmp v0.7.0
 	github.com/hashicorp/terraform-plugin-docs v0.25.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.40.1
@@ -88,5 +88,3 @@ require (
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
-
-replace github.com/checkly/checkly-go-sdk => ../checkly-go-sdk
