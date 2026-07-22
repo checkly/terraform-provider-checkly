@@ -53,20 +53,18 @@ resource "checkly_ssl_monitor" "example-ssl-monitor-2" {
     handshake_timeout_ms     = 10000
     alert_days_before_expiry = 20
 
-    # The server fills in any baseline rule that is not listed, so enumerate
-    # every rule: a partial baseline would re-plan with a diff on every run.
-    security_baseline = jsonencode({
-      enabled                 = true
-      minTLSVersion           = { value = "TLS1.2", severity = "fail" }
-      minKeySizeBits          = { value = 2048, severity = "fail" }
-      weakSignatureAlgorithm  = { severity = "fail" }
-      weakCipherSuite         = { severity = "fail" }
-      knownBadCA              = { severity = "fail" }
-      recommendedTLSVersion   = { value = "TLS1.3", severity = "ignore" }
-      recommendedKeySizeBits  = { value = 3072, severity = "ignore" }
-      ocspMustStapleRespected = { severity = "ignore" }
-      sctPresent              = { severity = "ignore" }
-    })
+    # Override individual security-baseline rules; rules that are not listed
+    # keep their server defaults.
+    security_baseline {
+      min_tls_version {
+        value    = "TLS1.2"
+        severity = "fail"
+      }
+      min_key_size_bits {
+        value    = 2048
+        severity = "fail"
+      }
+    }
 
     client_certificate {
       mode = "account_default"

@@ -10,9 +10,79 @@ import (
 	checkly "github.com/checkly/checkly-go-sdk"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/customdiff"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/structure"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
+
+// sslBaselineSeveritySchema returns the severity attribute for a security
+// baseline rule. The default mirrors the server's: enforceable rules default
+// to "fail", advisory rules to "ignore". Because every leaf carries a default,
+// a rule block that is present in the config always produces a fully-populated
+// payload, and removing a leaf from the config falls back to the default with
+// a visible plan diff.
+func sslBaselineSeveritySchema(defaultSeverity string) *schema.Schema {
+	return &schema.Schema{
+		Type:         schema.TypeString,
+		Optional:     true,
+		Default:      defaultSeverity,
+		ValidateFunc: validateOneOf([]string{"fail", "degrade", "ignore"}),
+		Description:  fmt.Sprintf("What happens when the rule is violated: `fail` fails the monitor, `degrade` marks it degraded, `ignore` disables the rule. (Default `%s`).", defaultSeverity),
+	}
+}
+
+func sslBaselineTLSRuleSchema(defaultValue, defaultSeverity, description string) *schema.Schema {
+	return &schema.Schema{
+		Type:        schema.TypeList,
+		Optional:    true,
+		MaxItems:    1,
+		Description: description,
+		Elem: &schema.Resource{
+			Schema: map[string]*schema.Schema{
+				"value": {
+					Type:         schema.TypeString,
+					Optional:     true,
+					Default:      defaultValue,
+					ValidateFunc: validateOneOf([]string{"TLS1.2", "TLS1.3"}),
+					Description:  fmt.Sprintf("The TLS version. Possible values are `TLS1.2` and `TLS1.3`. (Default `%s`).", defaultValue),
+				},
+				"severity": sslBaselineSeveritySchema(defaultSeverity),
+			},
+		},
+	}
+}
+
+func sslBaselineKeySizeRuleSchema(defaultValue int, defaultSeverity, description string) *schema.Schema {
+	return &schema.Schema{
+		Type:        schema.TypeList,
+		Optional:    true,
+		MaxItems:    1,
+		Description: description,
+		Elem: &schema.Resource{
+			Schema: map[string]*schema.Schema{
+				"value": {
+					Type:         schema.TypeInt,
+					Optional:     true,
+					Default:      defaultValue,
+					ValidateFunc: validateBetween(1024, 16384),
+					Description:  fmt.Sprintf("The key size in bits. Possible values are between 1024 and 16384. (Default `%d`).", defaultValue),
+				},
+				"severity": sslBaselineSeveritySchema(defaultSeverity),
+			},
+		},
+	}
+}
+
+func sslBaselineSeverityRuleSchema(defaultSeverity, description string) *schema.Schema {
+	return &schema.Schema{
+		Type:        schema.TypeList,
+		Optional:    true,
+		MaxItems:    1,
+		Description: description,
+		Elem: &schema.Resource{
+			Schema: map[string]*schema.Schema{
+				"severity": sslBaselineSeveritySchema(defaultSeverity),
+			},
+		},
+	}
+}
 
 func resourceSSLMonitor() *schema.Resource {
 	return &schema.Resource{
@@ -171,12 +241,29 @@ func resourceSSLMonitor() *schema.Resource {
 							Description:  "Raise an alert when the certificate is within this many days of expiry. Possible values are between 1 and 365. (Default `20`).",
 						},
 						"security_baseline": {
-							Type:             schema.TypeString,
-							Optional:         true,
-							Computed:         true,
-							ValidateFunc:     validation.StringIsJSON,
-							DiffSuppressFunc: suppressEquivalentJSON,
-							Description:      "The SSL security baseline as a `jsonencode`d object of enforceable/advisory rules. Omit to inherit the account default baseline. When set, enumerate every rule: the server fills in any rule that is not listed, so a partial baseline re-plans with a diff on every run.",
+							Type:        schema.TypeList,
+							Optional:    true,
+							MaxItems:    1,
+							Description: "The SSL security baseline — a set of enforceable and advisory rules. Omit the block to inherit the account default baseline. Rules that are not listed keep their server defaults; removing a rule (or the whole block) resets it to its default on the next apply. Only listed rules are drift-checked: an external change to an unlisted rule is not shown by `terraform plan` and is reset on the next apply.",
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"enabled": {
+										Type:        schema.TypeBool,
+										Optional:    true,
+										Default:     true,
+										Description: "Whether the security baseline is enforced. (Default `true`).",
+									},
+									"min_tls_version":            sslBaselineTLSRuleSchema("TLS1.2", "fail", "Enforceable rule: the minimum TLS version the server must accept."),
+									"min_key_size_bits":          sslBaselineKeySizeRuleSchema(2048, "fail", "Enforceable rule: the minimum public key size in bits."),
+									"weak_signature_algorithm":   sslBaselineSeverityRuleSchema("fail", "Enforceable rule: the certificate must not use a weak signature algorithm."),
+									"weak_cipher_suite":          sslBaselineSeverityRuleSchema("fail", "Enforceable rule: the connection must not negotiate a weak cipher suite."),
+									"known_bad_ca":               sslBaselineSeverityRuleSchema("fail", "Enforceable rule: the certificate chain must not include a known-bad CA."),
+									"recommended_tls_version":    sslBaselineTLSRuleSchema("TLS1.3", "ignore", "Advisory rule: the recommended TLS version."),
+									"recommended_key_size_bits":  sslBaselineKeySizeRuleSchema(3072, "ignore", "Advisory rule: the recommended public key size in bits."),
+									"ocsp_must_staple_respected": sslBaselineSeverityRuleSchema("ignore", "Advisory rule: an OCSP Must-Staple extension, when present, must be respected."),
+									"sct_present":                sslBaselineSeverityRuleSchema("ignore", "Advisory rule: the certificate should carry a Signed Certificate Timestamp."),
+								},
+							},
 						},
 						"client_certificate": {
 							Type:     schema.TypeSet,
@@ -347,7 +434,11 @@ func resourceDataFromSSLMonitor(c *checkly.SSLMonitor, d *schema.ResourceData) e
 	}
 	d.Set("use_global_alert_settings", c.UseGlobalAlertSettings)
 
-	request, err := setFromSSLRequest(c.Request)
+	var priorRequest tfMap
+	if priorList, ok := d.Get("request").([]any); ok && len(priorList) > 0 && priorList[0] != nil {
+		priorRequest = priorList[0].(tfMap)
+	}
+	request, err := setFromSSLRequest(c.Request, priorRequest)
 	if err != nil {
 		return fmt.Errorf("error encoding request for resource %s: %w", d.Id(), err)
 	}
@@ -364,7 +455,11 @@ func resourceDataFromSSLMonitor(c *checkly.SSLMonitor, d *schema.ResourceData) e
 	return nil
 }
 
-func setFromSSLRequest(r checkly.SSLRequest) ([]tfMap, error) {
+// setFromSSLRequest flattens an API-returned SSL request into resource data.
+// priorRequest is the request map from the state prior to this read (nil when
+// there is none, e.g. on import); it drives the security-baseline projection —
+// see setFromSecurityBaseline.
+func setFromSSLRequest(r checkly.SSLRequest, priorRequest tfMap) ([]tfMap, error) {
 	cfg := r.SSLConfig
 	s := tfMap{}
 	s["hostname"] = cfg.Hostname
@@ -379,20 +474,7 @@ func setFromSSLRequest(r checkly.SSLRequest) ([]tfMap, error) {
 	s["handshake_timeout_ms"] = cfg.HandshakeTimeoutMs
 	s["alert_days_before_expiry"] = cfg.AlertDaysBeforeExpiry
 
-	// SecurityBaseline round-trips as a jsonencode'd string. A nil baseline
-	// (server inheriting its default) flattens to an empty string; the schema's
-	// Computed flag then absorbs the server-applied default without a perpetual
-	// diff. json.Marshal emits keys in struct-declaration order, and the
-	// DiffSuppressFunc normalises key order on both sides.
-	if cfg.SecurityBaseline != nil {
-		baselineJSON, err := json.Marshal(cfg.SecurityBaseline)
-		if err != nil {
-			return nil, fmt.Errorf("marshalling security_baseline: %w", err)
-		}
-		s["security_baseline"] = string(baselineJSON)
-	} else {
-		s["security_baseline"] = ""
-	}
+	s["security_baseline"] = setFromSecurityBaseline(cfg.SecurityBaseline, priorRequest)
 
 	// client_certificate is always emitted so applying exported HCL (which writes
 	// `mode = "account_default"`) re-plans clean. An empty API mode maps back to
@@ -480,19 +562,13 @@ func sslRequestFromList(s []any) (checkly.SSLRequest, error) {
 		cfg.ServerName = &serverName
 	}
 
-	// security_baseline is an optional jsonencode'd object. Decode it into a
-	// *SecurityBaseline; leave nil when empty so the server applies its default.
-	// Unknown keys must be rejected here: plain json.Unmarshal would silently
-	// drop a misspelled rule, meaning the intended security control is never
-	// sent to the API and the user gets no error.
-	if baseline, ok := res["security_baseline"].(string); ok && strings.TrimSpace(baseline) != "" {
-		var parsed checkly.SecurityBaseline
-		decoder := json.NewDecoder(strings.NewReader(baseline))
-		decoder.DisallowUnknownFields()
-		if err := decoder.Decode(&parsed); err != nil {
-			return checkly.SSLRequest{}, fmt.Errorf("decoding security_baseline JSON: %w", err)
-		}
-		cfg.SecurityBaseline = &parsed
+	// A nil baseline (block omitted) makes the server apply its default
+	// baseline. The API replaces the stored baseline wholesale on every write
+	// (rules missing from the payload are reset to their defaults), so the
+	// payload carries exactly the rules present in the config — no state
+	// values are mixed in.
+	if baselineList, ok := res["security_baseline"].([]any); ok {
+		cfg.SecurityBaseline = securityBaselineFromList(baselineList)
 	}
 
 	request := checkly.SSLRequest{
@@ -518,17 +594,132 @@ func sslRequestFromList(s []any) (checkly.SSLRequest, error) {
 	return request, nil
 }
 
-// suppressEquivalentJSON treats two JSON strings as equal when they are
-// semantically identical, ignoring key order and whitespace differences (the
-// jsonencode round-trip anti-pattern).
-func suppressEquivalentJSON(_, old, new string, _ *schema.ResourceData) bool {
-	oldNorm, err := structure.NormalizeJsonString(old)
-	if err != nil {
-		return false
+// securityBaselineFromList expands the security_baseline block into the API
+// payload. A missing block returns nil, which omits securityBaseline from the
+// payload so the server applies (or resets to) its default baseline. Rules
+// present in the config always carry both leaves — the schema defaults fill
+// whatever the user left out — so the payload never depends on state.
+func securityBaselineFromList(s []any) *checkly.SecurityBaseline {
+	if len(s) == 0 {
+		return nil
 	}
-	newNorm, err := structure.NormalizeJsonString(new)
-	if err != nil {
-		return false
+	enabled := true
+	baseline := &checkly.SecurityBaseline{}
+	if s[0] != nil {
+		res := s[0].(tfMap)
+		enabled = res["enabled"].(bool)
+		baseline.MinTLSVersion = sslTLSRuleFromList(res["min_tls_version"])
+		baseline.MinKeySizeBits = sslKeySizeRuleFromList(res["min_key_size_bits"])
+		baseline.WeakSignatureAlgorithm = sslSeverityRuleFromList(res["weak_signature_algorithm"])
+		baseline.WeakCipherSuite = sslSeverityRuleFromList(res["weak_cipher_suite"])
+		baseline.KnownBadCA = sslSeverityRuleFromList(res["known_bad_ca"])
+		baseline.RecommendedTLSVersion = sslTLSRuleFromList(res["recommended_tls_version"])
+		baseline.RecommendedKeySizeBits = sslKeySizeRuleFromList(res["recommended_key_size_bits"])
+		baseline.OCSPMustStapleRespected = sslSeverityRuleFromList(res["ocsp_must_staple_respected"])
+		baseline.SCTPresent = sslSeverityRuleFromList(res["sct_present"])
 	}
-	return oldNorm == newNorm
+	baseline.Enabled = &enabled
+	return baseline
+}
+
+func sslTLSRuleFromList(v any) *checkly.SSLBaselineTLSRule {
+	l, ok := v.([]any)
+	if !ok || len(l) == 0 {
+		return nil
+	}
+	if l[0] == nil {
+		return &checkly.SSLBaselineTLSRule{}
+	}
+	m := l[0].(tfMap)
+	return &checkly.SSLBaselineTLSRule{
+		Value:    m["value"].(string),
+		Severity: m["severity"].(string),
+	}
+}
+
+func sslKeySizeRuleFromList(v any) *checkly.SSLBaselineKeySizeRule {
+	l, ok := v.([]any)
+	if !ok || len(l) == 0 {
+		return nil
+	}
+	if l[0] == nil {
+		return &checkly.SSLBaselineKeySizeRule{}
+	}
+	m := l[0].(tfMap)
+	return &checkly.SSLBaselineKeySizeRule{
+		Value:    m["value"].(int),
+		Severity: m["severity"].(string),
+	}
+}
+
+func sslSeverityRuleFromList(v any) *checkly.SSLBaselineSeverityRule {
+	l, ok := v.([]any)
+	if !ok || len(l) == 0 {
+		return nil
+	}
+	if l[0] == nil {
+		return &checkly.SSLBaselineSeverityRule{}
+	}
+	m := l[0].(tfMap)
+	return &checkly.SSLBaselineSeverityRule{
+		Severity: m["severity"].(string),
+	}
+}
+
+// setFromSecurityBaseline projects the server-returned security baseline onto
+// the shape held in prior state (which mirrors the config as of the last
+// apply). The server normalizes every baseline to the full rule set, so
+// writing the raw response into state would make any config that omits a rule
+// diff forever. Instead, only rules present in prior state are written back,
+// with the server's values — drift on configured rules stays visible, while
+// server-filled defaults for unconfigured rules stay out of state. When prior
+// state has no baseline (never configured, or a fresh import), nothing is
+// written; after an import the first plan therefore shows the configured
+// baseline as an addition.
+func setFromSecurityBaseline(remote *checkly.SecurityBaseline, priorRequest tfMap) []tfMap {
+	var prior tfMap
+	if priorRequest != nil {
+		if priorList, ok := priorRequest["security_baseline"].([]any); ok && len(priorList) > 0 && priorList[0] != nil {
+			prior = priorList[0].(tfMap)
+		}
+	}
+	if prior == nil || remote == nil {
+		return nil
+	}
+
+	priorHasRule := func(key string) bool {
+		l, ok := prior[key].([]any)
+		return ok && len(l) > 0
+	}
+
+	s := tfMap{}
+	s["enabled"] = remote.Enabled == nil || *remote.Enabled
+	if priorHasRule("min_tls_version") && remote.MinTLSVersion != nil {
+		s["min_tls_version"] = []tfMap{{"value": remote.MinTLSVersion.Value, "severity": remote.MinTLSVersion.Severity}}
+	}
+	if priorHasRule("min_key_size_bits") && remote.MinKeySizeBits != nil {
+		s["min_key_size_bits"] = []tfMap{{"value": remote.MinKeySizeBits.Value, "severity": remote.MinKeySizeBits.Severity}}
+	}
+	if priorHasRule("weak_signature_algorithm") && remote.WeakSignatureAlgorithm != nil {
+		s["weak_signature_algorithm"] = []tfMap{{"severity": remote.WeakSignatureAlgorithm.Severity}}
+	}
+	if priorHasRule("weak_cipher_suite") && remote.WeakCipherSuite != nil {
+		s["weak_cipher_suite"] = []tfMap{{"severity": remote.WeakCipherSuite.Severity}}
+	}
+	if priorHasRule("known_bad_ca") && remote.KnownBadCA != nil {
+		s["known_bad_ca"] = []tfMap{{"severity": remote.KnownBadCA.Severity}}
+	}
+	if priorHasRule("recommended_tls_version") && remote.RecommendedTLSVersion != nil {
+		s["recommended_tls_version"] = []tfMap{{"value": remote.RecommendedTLSVersion.Value, "severity": remote.RecommendedTLSVersion.Severity}}
+	}
+	if priorHasRule("recommended_key_size_bits") && remote.RecommendedKeySizeBits != nil {
+		s["recommended_key_size_bits"] = []tfMap{{"value": remote.RecommendedKeySizeBits.Value, "severity": remote.RecommendedKeySizeBits.Severity}}
+	}
+	if priorHasRule("ocsp_must_staple_respected") && remote.OCSPMustStapleRespected != nil {
+		s["ocsp_must_staple_respected"] = []tfMap{{"severity": remote.OCSPMustStapleRespected.Severity}}
+	}
+	if priorHasRule("sct_present") && remote.SCTPresent != nil {
+		s["sct_present"] = []tfMap{{"severity": remote.SCTPresent.Severity}}
+	}
+	return []tfMap{s}
 }

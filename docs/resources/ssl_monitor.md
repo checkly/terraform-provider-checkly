@@ -68,20 +68,18 @@ resource "checkly_ssl_monitor" "example-ssl-monitor-2" {
     handshake_timeout_ms     = 10000
     alert_days_before_expiry = 20
 
-    # The server fills in any baseline rule that is not listed, so enumerate
-    # every rule: a partial baseline would re-plan with a diff on every run.
-    security_baseline = jsonencode({
-      enabled                 = true
-      minTLSVersion           = { value = "TLS1.2", severity = "fail" }
-      minKeySizeBits          = { value = 2048, severity = "fail" }
-      weakSignatureAlgorithm  = { severity = "fail" }
-      weakCipherSuite         = { severity = "fail" }
-      knownBadCA              = { severity = "fail" }
-      recommendedTLSVersion   = { value = "TLS1.3", severity = "ignore" }
-      recommendedKeySizeBits  = { value = 3072, severity = "ignore" }
-      ocspMustStapleRespected = { severity = "ignore" }
-      sctPresent              = { severity = "ignore" }
-    })
+    # Override individual security-baseline rules; rules that are not listed
+    # keep their server defaults.
+    security_baseline {
+      min_tls_version {
+        value    = "TLS1.2"
+        severity = "fail"
+      }
+      min_key_size_bits {
+        value    = 2048
+        severity = "fail"
+      }
+    }
 
     client_certificate {
       mode = "account_default"
@@ -154,7 +152,7 @@ Optional:
 - `handshake_timeout_ms` (Number) The number of milliseconds to wait for the TLS handshake to complete before timing out. Possible values are between 1000 and 30000. (Default `10000`).
 - `ip_family` (String) The IP family to use when executing the check. The value can be either `IPv4` or `IPv6`. (Default `IPv4`).
 - `port` (Number) The port number to connect to. Possible values are between 1 and 65535. (Default `443`).
-- `security_baseline` (String) The SSL security baseline as a `jsonencode`d object of enforceable/advisory rules. Omit to inherit the account default baseline. When set, enumerate every rule: the server fills in any rule that is not listed, so a partial baseline re-plans with a diff on every run.
+- `security_baseline` (Block List, Max: 1) The SSL security baseline — a set of enforceable and advisory rules. Omit the block to inherit the account default baseline. Rules that are not listed keep their server defaults; removing a rule (or the whole block) resets it to its default on the next apply. Only listed rules are drift-checked: an external change to an unlisted rule is not shown by `terraform plan` and is reset on the next apply. (see [below for nested schema](#nestedblock--request--security_baseline))
 - `server_name` (String) An optional SNI server name to send in the TLS handshake. Defaults to `hostname` when unset.
 - `skip_chain_validation` (Boolean) When true, the certificate chain is not validated against trusted roots (the certificate is still inspected for expiry and the security baseline). (Default `false`).
 
@@ -179,6 +177,99 @@ Optional:
 
 - `client_certificate_id` (String) The ID of the stored client certificate to present. Required when `mode = "explicit"`.
 - `mode` (String) The mutual-TLS client-certificate mode. `account_default` inherits the account setting (no certificate sent), `auto` lets Checkly select a stored certificate, `explicit` uses the certificate referenced by `client_certificate_id`. (Default `account_default`).
+
+
+<a id="nestedblock--request--security_baseline"></a>
+### Nested Schema for `request.security_baseline`
+
+Optional:
+
+- `enabled` (Boolean) Whether the security baseline is enforced. (Default `true`).
+- `known_bad_ca` (Block List, Max: 1) Enforceable rule: the certificate chain must not include a known-bad CA. (see [below for nested schema](#nestedblock--request--security_baseline--known_bad_ca))
+- `min_key_size_bits` (Block List, Max: 1) Enforceable rule: the minimum public key size in bits. (see [below for nested schema](#nestedblock--request--security_baseline--min_key_size_bits))
+- `min_tls_version` (Block List, Max: 1) Enforceable rule: the minimum TLS version the server must accept. (see [below for nested schema](#nestedblock--request--security_baseline--min_tls_version))
+- `ocsp_must_staple_respected` (Block List, Max: 1) Advisory rule: an OCSP Must-Staple extension, when present, must be respected. (see [below for nested schema](#nestedblock--request--security_baseline--ocsp_must_staple_respected))
+- `recommended_key_size_bits` (Block List, Max: 1) Advisory rule: the recommended public key size in bits. (see [below for nested schema](#nestedblock--request--security_baseline--recommended_key_size_bits))
+- `recommended_tls_version` (Block List, Max: 1) Advisory rule: the recommended TLS version. (see [below for nested schema](#nestedblock--request--security_baseline--recommended_tls_version))
+- `sct_present` (Block List, Max: 1) Advisory rule: the certificate should carry a Signed Certificate Timestamp. (see [below for nested schema](#nestedblock--request--security_baseline--sct_present))
+- `weak_cipher_suite` (Block List, Max: 1) Enforceable rule: the connection must not negotiate a weak cipher suite. (see [below for nested schema](#nestedblock--request--security_baseline--weak_cipher_suite))
+- `weak_signature_algorithm` (Block List, Max: 1) Enforceable rule: the certificate must not use a weak signature algorithm. (see [below for nested schema](#nestedblock--request--security_baseline--weak_signature_algorithm))
+
+<a id="nestedblock--request--security_baseline--known_bad_ca"></a>
+### Nested Schema for `request.security_baseline.known_bad_ca`
+
+Optional:
+
+- `severity` (String) What happens when the rule is violated: `fail` fails the monitor, `degrade` marks it degraded, `ignore` disables the rule. (Default `fail`).
+
+
+<a id="nestedblock--request--security_baseline--min_key_size_bits"></a>
+### Nested Schema for `request.security_baseline.min_key_size_bits`
+
+Optional:
+
+- `severity` (String) What happens when the rule is violated: `fail` fails the monitor, `degrade` marks it degraded, `ignore` disables the rule. (Default `fail`).
+- `value` (Number) The key size in bits. Possible values are between 1024 and 16384. (Default `2048`).
+
+
+<a id="nestedblock--request--security_baseline--min_tls_version"></a>
+### Nested Schema for `request.security_baseline.min_tls_version`
+
+Optional:
+
+- `severity` (String) What happens when the rule is violated: `fail` fails the monitor, `degrade` marks it degraded, `ignore` disables the rule. (Default `fail`).
+- `value` (String) The TLS version. Possible values are `TLS1.2` and `TLS1.3`. (Default `TLS1.2`).
+
+
+<a id="nestedblock--request--security_baseline--ocsp_must_staple_respected"></a>
+### Nested Schema for `request.security_baseline.ocsp_must_staple_respected`
+
+Optional:
+
+- `severity` (String) What happens when the rule is violated: `fail` fails the monitor, `degrade` marks it degraded, `ignore` disables the rule. (Default `ignore`).
+
+
+<a id="nestedblock--request--security_baseline--recommended_key_size_bits"></a>
+### Nested Schema for `request.security_baseline.recommended_key_size_bits`
+
+Optional:
+
+- `severity` (String) What happens when the rule is violated: `fail` fails the monitor, `degrade` marks it degraded, `ignore` disables the rule. (Default `ignore`).
+- `value` (Number) The key size in bits. Possible values are between 1024 and 16384. (Default `3072`).
+
+
+<a id="nestedblock--request--security_baseline--recommended_tls_version"></a>
+### Nested Schema for `request.security_baseline.recommended_tls_version`
+
+Optional:
+
+- `severity` (String) What happens when the rule is violated: `fail` fails the monitor, `degrade` marks it degraded, `ignore` disables the rule. (Default `ignore`).
+- `value` (String) The TLS version. Possible values are `TLS1.2` and `TLS1.3`. (Default `TLS1.3`).
+
+
+<a id="nestedblock--request--security_baseline--sct_present"></a>
+### Nested Schema for `request.security_baseline.sct_present`
+
+Optional:
+
+- `severity` (String) What happens when the rule is violated: `fail` fails the monitor, `degrade` marks it degraded, `ignore` disables the rule. (Default `ignore`).
+
+
+<a id="nestedblock--request--security_baseline--weak_cipher_suite"></a>
+### Nested Schema for `request.security_baseline.weak_cipher_suite`
+
+Optional:
+
+- `severity` (String) What happens when the rule is violated: `fail` fails the monitor, `degrade` marks it degraded, `ignore` disables the rule. (Default `fail`).
+
+
+<a id="nestedblock--request--security_baseline--weak_signature_algorithm"></a>
+### Nested Schema for `request.security_baseline.weak_signature_algorithm`
+
+Optional:
+
+- `severity` (String) What happens when the rule is violated: `fail` fails the monitor, `degrade` marks it degraded, `ignore` disables the rule. (Default `fail`).
+
 
 
 
