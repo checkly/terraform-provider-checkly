@@ -235,3 +235,39 @@ Required:
 - `notify_subscribers` (Boolean) Whether to notify subscribers when the incident is triggered.
 - `service_id` (String) The status page service that this incident will be associated with.
 - `severity` (String) The severity level of the incident. Possible values are `MINOR`, `MEDIUM`, `MAJOR`, and `CRITICAL`.
+
+## Assertion Reference
+
+Each `assertion` block has the shape `{ source, property, comparison, target }`. Which comparisons are allowed, and what `target` must contain, depend on `source`. The `comparison`, `target`, and `RESPONSE_TIME` `property` rules are enforced by the Checkly API at apply time; where `property` is marked as ignored, the API accepts any value but does not use it. All traceroute assertion targets are numeric.
+
+| `source` | `property` | Allowed `comparison` values | `target` |
+|---|---|---|---|
+| `RESPONSE_TIME` | Required. The per-hop round-trip-time statistic to assert on: `avg`, `min`, `max`, or `stdDev`. | `EQUALS`, `NOT_EQUALS`, `GREATER_THAN`, `LESS_THAN` | Milliseconds, ≥ 0. |
+| `HOP_COUNT` | Leave empty (ignored for this source). | `EQUALS`, `GREATER_THAN`, `LESS_THAN` (`NOT_EQUALS` is not supported) | Integer, ≥ 0. |
+| `PACKET_LOSS` | Leave empty (ignored for this source). | `EQUALS`, `GREATER_THAN`, `LESS_THAN` (`NOT_EQUALS` is not supported) | Number 0–100 (percent). |
+
+### Examples
+
+```terraform
+# Average round-trip time must stay under 2 seconds.
+assertion {
+  source     = "RESPONSE_TIME"
+  property   = "avg"
+  comparison = "LESS_THAN"
+  target     = "2000"
+}
+
+# The route must resolve in fewer than 20 hops.
+assertion {
+  source     = "HOP_COUNT"
+  comparison = "LESS_THAN"
+  target     = "20"
+}
+
+# Packet loss must stay under 10%.
+assertion {
+  source     = "PACKET_LOSS"
+  comparison = "LESS_THAN"
+  target     = "10"
+}
+```
