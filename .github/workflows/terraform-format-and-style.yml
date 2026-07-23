@@ -12,15 +12,15 @@ jobs:
     permissions:
       pull-requests: write
     steps:
-    - uses: actions/checkout@v6
-    - uses: hashicorp/setup-terraform@v4
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
 
     - name: terraform fmt
       id: fmt
       run: terraform fmt -check -recursive -diff
       continue-on-error: true
 
-    - uses: actions/github-script@v9
+    - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
       if: github.event_name == 'pull_request'
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
