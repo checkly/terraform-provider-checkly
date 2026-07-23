@@ -12,3 +12,8 @@ dist/*
 __debug_bin
 local/*
 .idea
+tools/tfplugindocs
+
+# Local Go workspace wiring the sibling checkly-go-sdk checkout; must never be committed.
+go.work
+go.work.sum
