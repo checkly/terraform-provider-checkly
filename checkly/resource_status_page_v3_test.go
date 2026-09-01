@@ -118,6 +118,43 @@ func TestAccStatusPageV3HappyPath(t *testing.T) {
 			),
 		},
 		{
+			// Back to the minimal config: every removed optional must be
+			// cleared remotely, or this step fails its post-apply plan.
+			Config: fmt.Sprintf(`
+				resource "checkly_status_page_v3" "test" {
+					name = "bar"
+					url  = "status-page-v3-%d"
+				}
+			`, rInt),
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					statusPageV3Resource,
+					"description",
+					"",
+				),
+				resource.TestCheckResourceAttr(
+					statusPageV3Resource,
+					"footer_text",
+					"",
+				),
+				resource.TestCheckResourceAttr(
+					statusPageV3Resource,
+					"logo",
+					"",
+				),
+				resource.TestCheckResourceAttr(
+					statusPageV3Resource,
+					"google_analytics_tag",
+					"",
+				),
+				resource.TestCheckResourceAttr(
+					statusPageV3Resource,
+					"allow_indexing",
+					"true",
+				),
+			),
+		},
+		{
 			ResourceName:      statusPageV3Resource,
 			ImportState:       true,
 			ImportStateVerify: true,

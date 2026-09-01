@@ -35,6 +35,8 @@ github.com/checkly/checkly-go-sdk v1.22.0 h1:Hl3xa5zc7QtxFCSFtfJJ/Uq7GDzUDKbTWtC
 github.com/checkly/checkly-go-sdk v1.22.0/go.mod h1:pndYEiaO8wC5Ztyn1PMeNtFVKFQUqZGzwcUmbgIG3Do=
 github.com/checkly/checkly-go-sdk v1.22.1-0.20260901131331-dbb4714a11df h1:KwZpK06nqF9y+IGkUWgDhe1tiukWEfA9r6eHcL6rA1k=
 github.com/checkly/checkly-go-sdk v1.22.1-0.20260901131331-dbb4714a11df/go.mod h1:pndYEiaO8wC5Ztyn1PMeNtFVKFQUqZGzwcUmbgIG3Do=
+github.com/checkly/checkly-go-sdk v1.22.1-0.20260901132945-463d57b1072f h1:JZEMAVNRTtmbYbCBj2fF26WOJ2Tr4B2lp90KTAd0B3g=
+github.com/checkly/checkly-go-sdk v1.22.1-0.20260901132945-463d57b1072f/go.mod h1:pndYEiaO8wC5Ztyn1PMeNtFVKFQUqZGzwcUmbgIG3Do=
 github.com/clipperhouse/uax29/v2 v2.7.0 h1:+gs4oBZ2gPfVrKPthwbMzWZDaAFPGYK72F0NJv2v7Vk=
 github.com/clipperhouse/uax29/v2 v2.7.0/go.mod h1:EFJ2TJMRUaplDxHKj1qAEhCtQPW2tJSwu5BF98AuoVM=
 github.com/cloudflare/circl v1.6.4 h1:pOXuDTCEYyzydgUpQ0CQz3LsinKjiSk6nNP5Lt5K64U=
