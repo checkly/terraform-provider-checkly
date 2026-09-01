@@ -20,7 +20,9 @@ func resourceStatusPageService() *schema.Resource {
 			StateContext: schema.ImportStatePassthroughContext,
 		},
 		Description: "Status page services represent functional pieces of " +
-			"your application or website, such as landing page, API, support portal etc.",
+			"your application or website, such as landing page, API, support portal etc. " +
+			"Services belong to legacy v2 status pages: on new v3 pages, use " +
+			"`checkly_status_page_v3_component` instead.",
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
