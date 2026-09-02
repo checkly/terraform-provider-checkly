@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
@@ -79,6 +80,46 @@ func resourceMaintenanceWindow() *schema.Resource {
 				},
 				Description: "The names of the checks and groups maintenance window should apply to.",
 			},
+			"timezone": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The named IANA time zone used for recurring maintenance scheduling, e.g. `America/New_York`. UTC offset identifiers such as `+05:00` are not accepted. Defaults to UTC.",
+				ValidateFunc: func(value interface{}, key string) (warns []string, errs []error) {
+					v := value.(string)
+					if v == "" {
+						return warns, errs
+					}
+					// Mirror the backend's IANA validation so an invalid zone
+					// fails at plan time rather than as an opaque API error.
+					if _, err := time.LoadLocation(v); err != nil {
+						errs = append(errs, fmt.Errorf("%q must be a valid IANA time zone, got %s", key, v))
+					}
+					return warns, errs
+				},
+			},
+			"pause_all_checks": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "When true, checks are paused for every check in the account, regardless of `tags`.",
+			},
+			"silence_alerts_tags": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				DefaultFunc: func() (interface{}, error) {
+					return []tfMap{}, nil
+				},
+				Description: "The tags that determine which checks have their alerts silenced. Ignored when `silence_all_alerts` is true.",
+			},
+			"silence_all_alerts": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "When true, alerts are silenced for every check in the account, overriding `silence_alerts_tags`.",
+			},
 		},
 	}
 }
@@ -91,15 +132,23 @@ func maintenanceWindowsFromResourceData(d *schema.ResourceData) (checkly.Mainten
 		}
 		ID = 0
 	}
+	// Taken by address so an explicit false is sent rather than omitted.
+	pauseAllChecks := d.Get("pause_all_checks").(bool)
+	silenceAllAlerts := d.Get("silence_all_alerts").(bool)
+
 	a := checkly.MaintenanceWindow{
-		ID:             ID,
-		Name:           d.Get("name").(string),
-		StartsAt:       d.Get("starts_at").(string),
-		EndsAt:         d.Get("ends_at").(string),
-		RepeatUnit:     d.Get("repeat_unit").(string),
-		RepeatEndsAt:   d.Get("repeat_ends_at").(string),
-		RepeatInterval: d.Get("repeat_interval").(int),
-		Tags:           stringsFromSet(d.Get("tags").(*schema.Set)),
+		ID:                ID,
+		Name:              d.Get("name").(string),
+		StartsAt:          d.Get("starts_at").(string),
+		EndsAt:            d.Get("ends_at").(string),
+		RepeatUnit:        d.Get("repeat_unit").(string),
+		RepeatEndsAt:      d.Get("repeat_ends_at").(string),
+		RepeatInterval:    d.Get("repeat_interval").(int),
+		Tags:              stringsFromSet(d.Get("tags").(*schema.Set)),
+		Timezone:          d.Get("timezone").(string),
+		PauseAllChecks:    &pauseAllChecks,
+		SilenceAlertsTags: stringsFromSet(d.Get("silence_alerts_tags").(*schema.Set)),
+		SilenceAllAlerts:  &silenceAllAlerts,
 	}
 
 	fmt.Printf("%v", a)
@@ -115,6 +164,11 @@ func resourceDataFromMaintenanceWindows(s *checkly.MaintenanceWindow, d *schema.
 	d.Set("repeat_ends_at", s.RepeatEndsAt)
 	d.Set("repeat_interval", s.RepeatInterval)
 	d.Set("tags", s.Tags)
+	d.Set("timezone", s.Timezone)
+	// Both are *bool, so guard the dereference: a nil pointer would panic.
+	d.Set("pause_all_checks", s.PauseAllChecks != nil && *s.PauseAllChecks)
+	d.Set("silence_alerts_tags", s.SilenceAlertsTags)
+	d.Set("silence_all_alerts", s.SilenceAllAlerts != nil && *s.SilenceAllAlerts)
 	return nil
 }
 

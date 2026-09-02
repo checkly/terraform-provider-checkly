@@ -20,9 +20,26 @@ resource "checkly_maintenance_windows" "maintenance-1" {
   repeat_unit     = "MONTH"
   repeat_ends_at  = "2014-08-24T00:00:00.000Z"
   repeat_interval = 1
+  timezone        = "America/New_York"
   tags = [
     "production"
   ]
+
+  # Silence alerts for a wider set of checks than the ones being paused.
+  silence_alerts_tags = [
+    "production",
+    "staging"
+  ]
+}
+
+# Pause and silence every check in the account, ignoring tags entirely.
+resource "checkly_maintenance_windows" "maintenance-account-wide" {
+  name               = "Account-wide maintenance"
+  starts_at          = "2014-08-24T00:00:00.000Z"
+  ends_at            = "2014-08-25T00:00:00.000Z"
+  timezone           = "Europe/Berlin"
+  pause_all_checks   = true
+  silence_all_alerts = true
 }
 ```
 
@@ -37,10 +54,14 @@ resource "checkly_maintenance_windows" "maintenance-1" {
 
 ### Optional
 
+- `pause_all_checks` (Boolean) When true, checks are paused for every check in the account, regardless of `tags`.
 - `repeat_ends_at` (String) The date on which the maintenance window should stop repeating.
 - `repeat_interval` (Number) The repeat interval of the maintenance window from the first occurrence.
 - `repeat_unit` (String) The repeat cadence for the maintenance window. Possible values `DAY`, `WEEK` and `MONTH`.
+- `silence_alerts_tags` (Set of String) The tags that determine which checks have their alerts silenced. Ignored when `silence_all_alerts` is true.
+- `silence_all_alerts` (Boolean) When true, alerts are silenced for every check in the account, overriding `silence_alerts_tags`.
 - `tags` (Set of String) The names of the checks and groups maintenance window should apply to.
+- `timezone` (String) The named IANA time zone used for recurring maintenance scheduling, e.g. `America/New_York`. UTC offset identifiers such as `+05:00` are not accepted. Defaults to UTC.
 
 ### Read-Only
 
