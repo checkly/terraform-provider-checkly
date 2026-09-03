@@ -4,7 +4,7 @@ page_title: "checkly_client_certificate Resource - terraform-provider-checkly"
 subcategory: ""
 description: |-
   Use client certificates to authenticate your API checks to APIs that require mutual TLS (mTLS) authentication, or any other authentication scheme where the requester needs to provide a certificate.
-  Each client certificate is specific to a domain name, e.g. acme.com and will be used automatically by any API checks targeting that domain.
+  Each client certificate is specific to a host name, e.g. acme.com or a wildcard such as *.acme.com, and will be used automatically by any API checks targeting that host. Set path to limit the certificate to requests under a URL path prefix.
   Changing the value of any attribute forces a new resource to be created.
 ---
 
@@ -12,7 +12,7 @@ description: |-
 
 Use client certificates to authenticate your API checks to APIs that require mutual TLS (mTLS) authentication, or any other authentication scheme where the requester needs to provide a certificate.
 
-Each client certificate is specific to a domain name, e.g. `acme.com` and will be used automatically by any API checks targeting that domain.
+Each client certificate is specific to a host name, e.g. `acme.com` or a wildcard such as `*.acme.com`, and will be used automatically by any API checks targeting that host. Set `path` to limit the certificate to requests under a URL path prefix.
 
 Changing the value of any attribute forces a new resource to be created.
 
@@ -26,6 +26,7 @@ variable "acme_client_certificate_passphrase" {
 
 resource "checkly_client_certificate" "test" {
   host        = "*.acme.com"
+  path        = "/partner/api" # optional: only requests under this path use the certificate
   certificate = file("${path.module}/cert.pem")
   private_key = file("${path.module}/key.pem")
   trusted_ca  = file("${path.module}/ca.pem")
@@ -39,12 +40,13 @@ resource "checkly_client_certificate" "test" {
 ### Required
 
 - `certificate` (String) The client certificate in PEM format.
-- `host` (String) The host domain that the certificate should be used for.
+- `host` (String) The host domain that the certificate should be used for. Wildcards are supported, e.g. `*.acme.com`.
 - `private_key` (String) The private key for the certificate in PEM format.
 
 ### Optional
 
 - `passphrase` (String, Sensitive) Passphrase for the private key.
+- `path` (String) Optional URL path prefix that limits the certificate to requests under that path, e.g. `/partner/api`. Matching is on whole path segments: `/partner` applies to `/partner` and `/partner/orders` but not to `/partnership`. Must start with `/` and must not be a bare `/`; a trailing `/` is ignored. Only API check requests are matched on path. Omit it to use the certificate for every path on the host.
 - `trusted_ca` (String) PEM formatted bundle of CA certificates that the client should trust. The bundle may contain many CA certificates.
 
 ### Read-Only
