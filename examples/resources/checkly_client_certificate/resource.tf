@@ -5,6 +5,7 @@ variable "acme_client_certificate_passphrase" {
 
 resource "checkly_client_certificate" "test" {
   host        = "*.acme.com"
+  path        = "/partner/api" # optional: only requests under this path use the certificate
   certificate = file("${path.module}/cert.pem")
   private_key = file("${path.module}/key.pem")
   trusted_ca  = file("${path.module}/ca.pem")

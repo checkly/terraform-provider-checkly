@@ -23,9 +23,10 @@ func resourceClientCertificate() *schema.Resource {
 			"or any other authentication scheme where the requester needs to " +
 			"provide a certificate." +
 			"\n\n" +
-			"Each client certificate is specific to a domain name, e.g. " +
-			"`acme.com` and will be used automatically by any API checks " +
-			"targeting that domain." +
+			"Each client certificate is specific to a host name, e.g. " +
+			"`acme.com` or a wildcard such as `*.acme.com`, and will be used " +
+			"automatically by any API checks targeting that host. Set `path` " +
+			"to limit the certificate to requests under a URL path prefix." +
 			"\n\n" +
 			"Changing the value of any attribute forces a new resource to " +
 			"be created.",
@@ -34,7 +35,41 @@ func resourceClientCertificate() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
-				Description: "The host domain that the certificate should be used for.",
+				Description: "The host domain that the certificate should be used for. Wildcards are supported, e.g. `*.acme.com`.",
+			},
+			"path": {
+				Type:     schema.TypeString,
+				Optional: true,
+				ForceNew: true,
+				// The API stores the path without a trailing slash. Normalizing
+				// the planned value the same way keeps config and state equal,
+				// otherwise "/partner/api/" would force a replacement on every
+				// apply.
+				StateFunc: func(v interface{}) string {
+					return strings.TrimSuffix(v.(string), "/")
+				},
+				// The API refuses these too; failing at plan time is clearer
+				// than an apply error, and a bare "/" would otherwise be
+				// trimmed to an empty path and silently sent as "no path".
+				ValidateFunc: func(v interface{}, key string) ([]string, []error) {
+					p := v.(string)
+					if p == "" {
+						return nil, nil
+					}
+					if !strings.HasPrefix(p, "/") {
+						return nil, []error{fmt.Errorf("%q must start with \"/\"", key)}
+					}
+					if strings.TrimSuffix(p, "/") == "" {
+						return nil, []error{fmt.Errorf("%q must name a path below \"/\"; omit it to match every path", key)}
+					}
+					return nil, nil
+				},
+				Description: "Optional URL path prefix that limits the certificate to requests under that path, " +
+					"e.g. `/partner/api`. Matching is on whole path segments: `/partner` applies to `/partner` and " +
+					"`/partner/orders` but not to `/partnership`. Must start with `/` and must not be a bare `/`; a " +
+					"trailing `/` is ignored. API checks and Multistep checks match on path; gRPC, SSL and TCP " +
+					"monitors only use certificates without a path. Omit it to use the " +
+					"certificate for every path on the host.",
 			},
 			"certificate": {
 				Type:        schema.TypeString,
@@ -84,6 +119,7 @@ func clientCertificateFromResourceData(d *schema.ResourceData) (checkly.ClientCe
 	return checkly.ClientCertificate{
 		ID:          d.Id(),
 		Host:        d.Get("host").(string),
+		Path:        d.Get("path").(string),
 		Certificate: d.Get("certificate").(string),
 		PrivateKey:  d.Get("private_key").(string),
 		Passphrase:  d.Get("passphrase").(string),
@@ -93,6 +129,7 @@ func clientCertificateFromResourceData(d *schema.ResourceData) (checkly.ClientCe
 
 func resourceDataFromClientCertificate(c *checkly.ClientCertificate, d *schema.ResourceData) error {
 	d.Set("host", c.Host)
+	d.Set("path", c.Path)
 	d.Set("certificate", c.Certificate)
 	// The backend does not return a value for PrivateKey anymore, though it
 	// used to. The value should not change by itself, so we can simply keep
