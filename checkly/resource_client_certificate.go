@@ -67,7 +67,8 @@ func resourceClientCertificate() *schema.Resource {
 				Description: "Optional URL path prefix that limits the certificate to requests under that path, " +
 					"e.g. `/partner/api`. Matching is on whole path segments: `/partner` applies to `/partner` and " +
 					"`/partner/orders` but not to `/partnership`. Must start with `/` and must not be a bare `/`; a " +
-					"trailing `/` is ignored. Only API check requests are matched on path. Omit it to use the " +
+					"trailing `/` is ignored. API checks and Multistep checks match on path; gRPC, SSL and TCP " +
+					"monitors only use certificates without a path. Omit it to use the " +
 					"certificate for every path on the host.",
 			},
 			"certificate": {
