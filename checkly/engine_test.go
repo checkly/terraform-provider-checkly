@@ -54,10 +54,10 @@ func TestParseNvmrcFile(t *testing.T) {
 
 func TestParseToolVersionsFile(t *testing.T) {
 	tests := []struct {
-		name       string
-		content    string
-		wantNode   string
-		wantBun    string
+		name     string
+		content  string
+		wantNode string
+		wantBun  string
 	}{
 		{"nodejs entry", "nodejs 22.14.0", "22.14.0", ""},
 		{"bun entry", "bun 1.3.11", "", "1.3.11"},
@@ -121,6 +121,30 @@ func TestParsePackageJSONEngines(t *testing.T) {
 			if gotNode != tt.wantNode || gotBun != tt.wantBun {
 				t.Errorf("parsePackageJSONEngines(%q) = (%q, %q), want (%q, %q)",
 					tt.content, gotNode, gotBun, tt.wantNode, tt.wantBun)
+			}
+		})
+	}
+}
+
+func TestParsePackageJSONVoltaNode(t *testing.T) {
+	tests := []struct {
+		name    string
+		content string
+		want    string
+	}{
+		{"pin present", `{"volta":{"node":"24.17.0"}}`, "24.17.0"},
+		{"v prefix stripped", `{"volta":{"node":"v24.17.0"}}`, "24.17.0"},
+		{"whitespace trimmed", `{"volta":{"node":" 24.17.0 "}}`, "24.17.0"},
+		{"range value kept", `{"volta":{"node":"^22"}}`, "^22"},
+		{"pnpm pin ignored", `{"volta":{"pnpm":"10.30.0"}}`, ""},
+		{"no volta key", `{"engines":{"node":">=22"}}`, ""},
+		{"non-string node value", `{"volta":{"node":24}}`, ""},
+		{"malformed json", `{"volta":`, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := parsePackageJSONVoltaNode([]byte(tt.content)); got != tt.want {
+				t.Errorf("parsePackageJSONVoltaNode(%q) = %q, want %q", tt.content, got, tt.want)
 			}
 		})
 	}
@@ -221,6 +245,8 @@ func TestDetectEngine(t *testing.T) {
 		wantNil        bool
 		wantName       string
 		wantVersion    string
+		wantRawVersion string
+		wantSource     string
 	}{
 		{
 			name:           "node-version file",
@@ -356,6 +382,70 @@ func TestDetectEngine(t *testing.T) {
 			wantVersion:    "24",
 		},
 		{
+			name:           "volta pin selects node",
+			files:          map[string][]byte{"package.json": []byte(`{"volta":{"node":"24.17.0"}}`)},
+			packageManager: "npm",
+			wantName:       "node",
+			wantVersion:    "24",
+			wantRawVersion: "24.17.0",
+			wantSource:     "package.json volta.node",
+		},
+		{
+			name:           "volta range resolves through constraint",
+			files:          map[string][]byte{"package.json": []byte(`{"volta":{"node":"^22"}}`)},
+			packageManager: "npm",
+			wantName:       "node",
+			wantVersion:    "22",
+			wantSource:     "package.json volta.node",
+		},
+		{
+			name: "nvmrc beats volta pin",
+			files: map[string][]byte{
+				".nvmrc":       []byte("22"),
+				"package.json": []byte(`{"volta":{"node":"24.17.0"}}`),
+			},
+			packageManager: "npm",
+			wantName:       "node",
+			wantVersion:    "22",
+			wantSource:     ".nvmrc",
+		},
+		{
+			name: "tool-versions beats volta pin",
+			files: map[string][]byte{
+				".tool-versions": []byte("nodejs 22.0.0"),
+				"package.json":   []byte(`{"volta":{"node":"24.17.0"}}`),
+			},
+			packageManager: "npm",
+			wantName:       "node",
+			wantVersion:    "22",
+			wantSource:     ".tool-versions",
+		},
+		{
+			name:           "volta pin beats engines.node range",
+			files:          map[string][]byte{"package.json": []byte(`{"volta":{"node":"24.17.0"},"engines":{"node":">=22"}}`)},
+			packageManager: "npm",
+			wantName:       "node",
+			wantVersion:    "24",
+			wantSource:     "package.json volta.node",
+		},
+		{
+			name:           "volta pin with bun package manager still yields node",
+			files:          map[string][]byte{"package.json": []byte(`{"volta":{"node":"24.17.0"}}`)},
+			packageManager: "bun",
+			wantName:       "node",
+			wantVersion:    "24",
+			wantSource:     "package.json volta.node",
+		},
+		{
+			name:           "unresolvable volta pin claims node with empty version",
+			files:          map[string][]byte{"package.json": []byte(`{"volta":{"node":"lts"},"engines":{"node":">=22"}}`)},
+			packageManager: "npm",
+			wantName:       "node",
+			wantVersion:    "",
+			wantRawVersion: "lts",
+			wantSource:     "package.json volta.node",
+		},
+		{
 			name:           "empty node-version file returns nil",
 			files:          map[string][]byte{".node-version": []byte("")},
 			packageManager: "npm",
@@ -392,6 +482,12 @@ func TestDetectEngine(t *testing.T) {
 			}
 			if got.Engine.Version != tt.wantVersion {
 				t.Errorf("detectEngine().Engine.Version = %q, want %q", got.Engine.Version, tt.wantVersion)
+			}
+			if tt.wantRawVersion != "" && got.RawVersion != tt.wantRawVersion {
+				t.Errorf("detectEngine().RawVersion = %q, want %q", got.RawVersion, tt.wantRawVersion)
+			}
+			if tt.wantSource != "" && got.Source != tt.wantSource {
+				t.Errorf("detectEngine().Source = %q, want %q", got.Source, tt.wantSource)
 			}
 		})
 	}

@@ -230,7 +230,7 @@ Optional:
 Optional:
 
 - `auto_detect` (Boolean) Whether to automatically detect appropriate runtime environment configuration from the bundle. (Default `true`).
-- `engine` (Block List, Max: 1) The JavaScript engine used to run the Playwright tests. (see [below for nested schema](#nestedblock--runtime--engine))
+- `engine` (Block List, Max: 1) The JavaScript engine used to run the Playwright tests. When `auto_detect` is enabled, no engine is set, and the code bundle has a lockfile at its root, the engine is detected from files at the bundle root. Node is taken from the first of `.node-version`, `.nvmrc`, `.tool-versions`, the `volta.node` pin in `package.json`, then `engines.node` in `package.json`; Bun from the first of `.tool-versions`, `.bun-version`, then `engines.bun`. When both are found, the engine matching the lockfile's package manager wins. `volta.extends` is not followed. (see [below for nested schema](#nestedblock--runtime--engine))
 - `playwright` (Block List, Max: 1) Configure the Playwright capabilities that should be made available to the runtime environment. (see [below for nested schema](#nestedblock--runtime--playwright))
 - `steps` (Block List, Max: 1) Customize the actions taken during test execution. (see [below for nested schema](#nestedblock--runtime--steps))
 - `working_dir` (String) The working directory in which runtime commands are executed. This is useful for monorepos or workspaces where the Playwright project is in a subdirectory. Use "." to explicitly specify the root.

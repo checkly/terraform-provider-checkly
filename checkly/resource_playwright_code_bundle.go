@@ -244,7 +244,7 @@ func resourcePlaywrightCodeBundleDelete(
 	return diags
 }
 
-const PlaywrightCodeBundleMetadataCurrentVersion = 6
+const PlaywrightCodeBundleMetadataCurrentVersion = 7
 
 type PlaywrightCodeBundleMetadata struct {
 	Version           int    `json:"v"`
@@ -574,7 +574,8 @@ func (a *PlaywrightCodeBundlePrebuiltArchiveAttribute) InspectLockfile(
 		return nil, fmt.Errorf("failed to compute archive checksum: %w", err)
 	}
 
-	// Add root package.json to engine files for engines field detection
+	// Add root package.json to engine files so the detector can read the
+	// Volta pin (volta.node) and the engines field.
 	for _, entry := range packageJSONs {
 		if entry.path == "package.json" {
 			engineFiles["package.json"] = entry.raw
