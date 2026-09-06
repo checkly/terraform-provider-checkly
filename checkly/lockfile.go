@@ -48,38 +48,47 @@ func extractPackageVersionFromPackageLock(r io.Reader, packageName string) (stri
 
 // extractPackageVersionFromPnpmLock extracts the version of the given package
 // from a pnpm-lock.yaml file. Checks both the packages section (all versions)
-// and the importers section (workspace-specific dependencies).
+// and the importers section (workspace-specific dependencies). Reads successive
+// YAML documents because pnpm 12 can prepend an environment lockfile document.
 func extractPackageVersionFromPnpmLock(r io.Reader, packageName string) (string, error) {
-	var lockfile struct {
-		Packages  map[string]any `yaml:"packages"`
-		Importers map[string]struct {
-			Dependencies    map[string]pnpmImporterDep `yaml:"dependencies"`
-			DevDependencies map[string]pnpmImporterDep `yaml:"devDependencies"`
-		} `yaml:"importers"`
-	}
+	decoder := yaml.NewDecoder(r)
+	decodedAny := false
 
-	if err := yaml.NewDecoder(r).Decode(&lockfile); err != nil {
-		return "", fmt.Errorf("failed to parse pnpm-lock.yaml: %w", err)
-	}
+	for {
+		var lockfile struct {
+			Packages  map[string]any `yaml:"packages"`
+			Importers map[string]struct {
+				Dependencies    map[string]pnpmImporterDep `yaml:"dependencies"`
+				DevDependencies map[string]pnpmImporterDep `yaml:"devDependencies"`
+			} `yaml:"importers"`
+		}
 
-	// Check packages section first — version is encoded in the key.
-	for key := range lockfile.Packages {
-		if version := extractVersionFromPnpmPackageKey(key, packageName); version != "" {
-			return version, nil
+		err := decoder.Decode(&lockfile)
+		if err == io.EOF && decodedAny {
+			return "", nil
+		}
+		if err != nil {
+			return "", fmt.Errorf("failed to parse pnpm-lock.yaml: %w", err)
+		}
+		decodedAny = true
+
+		// Check packages section first — version is encoded in the key.
+		for key := range lockfile.Packages {
+			if version := extractVersionFromPnpmPackageKey(key, packageName); version != "" {
+				return version, nil
+			}
+		}
+
+		// Fallback: check importers (workspace packages) for the dependency.
+		for _, importer := range lockfile.Importers {
+			if dep, ok := importer.Dependencies[packageName]; ok && dep.Version != "" {
+				return dep.Version, nil
+			}
+			if dep, ok := importer.DevDependencies[packageName]; ok && dep.Version != "" {
+				return dep.Version, nil
+			}
 		}
 	}
-
-	// Fallback: check importers (workspace packages) for the dependency.
-	for _, importer := range lockfile.Importers {
-		if dep, ok := importer.Dependencies[packageName]; ok && dep.Version != "" {
-			return dep.Version, nil
-		}
-		if dep, ok := importer.DevDependencies[packageName]; ok && dep.Version != "" {
-			return dep.Version, nil
-		}
-	}
-
-	return "", nil
 }
 
 type pnpmImporterDep struct {
