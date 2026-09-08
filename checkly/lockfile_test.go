@@ -174,6 +174,128 @@ packages: {}
 			want: "1.48.0",
 		},
 		{
+			name:        "pnpm 12 multi-document lockfile",
+			packageName: "@playwright/test",
+			input: `---
+lockfileVersion: '9.0'
+importers:
+  .:
+    configDependencies: {}
+    packageManagerDependencies:
+      pnpm:
+        specifier: 12.3.4
+        version: 12.3.4
+packages:
+  pnpm@12.3.4: {}
+---
+lockfileVersion: '9.0'
+packages:
+  '@playwright/test@1.62.1':
+    resolution: {integrity: sha512-xxx}
+`,
+			want: "1.62.1",
+		},
+		{
+			name:        "importers fallback in later document",
+			packageName: "@playwright/test",
+			input: `lockfileVersion: '9.0'
+settings:
+  autoInstallPeers: true
+---
+lockfileVersion: '9.0'
+importers:
+  .:
+    devDependencies:
+      '@playwright/test':
+        specifier: ^1.62.1
+        version: 1.62.1
+`,
+			want: "1.62.1",
+		},
+		{
+			name:        "empty documents are skipped",
+			packageName: "@playwright/test",
+			input: `---
+---
+lockfileVersion: '9.0'
+packages:
+  '@playwright/test@1.62.1': {}
+`,
+			want: "1.62.1",
+		},
+		{
+			name:        "package not found across documents",
+			packageName: "@playwright/test",
+			input: `lockfileVersion: '9.0'
+packages:
+  typescript@5.9.2: {}
+---
+lockfileVersion: '9.0'
+importers:
+  .:
+    devDependencies:
+      typescript:
+        specifier: ^5.9.2
+        version: 5.9.2
+`,
+			want: "",
+		},
+		{
+			name:        "malformed later document",
+			packageName: "@playwright/test",
+			input: `lockfileVersion: '9.0'
+packages: {}
+---
+{not yaml
+`,
+			wantErr: true,
+		},
+		{
+			name:        "first match returns before malformed later document",
+			packageName: "@playwright/test",
+			input: `lockfileVersion: '9.0'
+packages:
+  '@playwright/test@1.62.1': {}
+---
+{not yaml
+`,
+			want: "1.62.1",
+		},
+		{
+			name:        "first matching document wins",
+			packageName: "@playwright/test",
+			input: `lockfileVersion: '9.0'
+packages:
+  '@playwright/test@1.61.0': {}
+---
+lockfileVersion: '9.0'
+packages:
+  '@playwright/test@1.62.1': {}
+`,
+			want: "1.61.0",
+		},
+		{
+			name:        "packages take precedence over importers",
+			packageName: "@playwright/test",
+			input: `lockfileVersion: '9.0'
+packages:
+  '@playwright/test@1.62.1': {}
+importers:
+  .:
+    devDependencies:
+      '@playwright/test':
+        specifier: ^1.60.0
+        version: 1.60.0
+`,
+			want: "1.62.1",
+		},
+		{
+			name:        "empty input remains an error",
+			packageName: "@playwright/test",
+			input:       "",
+			wantErr:     true,
+		},
+		{
 			name:        "different package",
 			packageName: "typescript",
 			input: `lockfileVersion: '9.0'

@@ -218,6 +218,52 @@ func TestInspectLockfile(t *testing.T) {
 		})
 	}
 
+	t.Run("pnpm with environment and dependency documents", func(t *testing.T) {
+		t.Parallel()
+
+		archive := buildTarGz(t, []tarEntry{
+			{name: "pnpm-lock.yaml", content: []byte(`---
+lockfileVersion: '9.0'
+importers:
+  .:
+    packageManagerDependencies:
+      pnpm:
+        specifier: 12.3.4
+        version: 12.3.4
+packages:
+  pnpm@12.3.4: {}
+---
+lockfileVersion: '9.0'
+importers:
+  .:
+    devDependencies:
+      '@playwright/test':
+        specifier: ^1.58.2
+        version: 1.58.2
+packages:
+  '@playwright/test@1.58.2': {}
+`)},
+		})
+		attr := PlaywrightCodeBundlePrebuiltArchiveAttribute{File: archive}
+
+		info, err := attr.InspectLockfile("@playwright/test", InspectLockfileOptions{})
+		if err != nil {
+			t.Fatalf("InspectLockfile failed: %v", err)
+		}
+		if info == nil {
+			t.Fatal("InspectLockfile returned nil")
+		}
+		if info.PackageManager != "pnpm" {
+			t.Errorf("PackageManager = %q, want %q", info.PackageManager, "pnpm")
+		}
+		if info.PackageVersion != "1.58.2" {
+			t.Errorf("PackageVersion = %q, want %q", info.PackageVersion, "1.58.2")
+		}
+		if info.ChecksumSha256 == "" {
+			t.Error("ChecksumSha256 is empty")
+		}
+	})
+
 	t.Run("lockfile without @playwright/test", func(t *testing.T) {
 		t.Parallel()
 
