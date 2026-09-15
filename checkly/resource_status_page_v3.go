@@ -103,6 +103,11 @@ func resourceStatusPageV3() *schema.Resource {
 				Optional:    true,
 				Description: "A link to your terms of service, shown in the page footer.",
 			},
+			"support_link": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "A support contact link (http, https or mailto), shown in the page footer.",
+			},
 			"footer_text": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -137,6 +142,7 @@ func statusPageV3FromResourceData(d *schema.ResourceData) checkly.StatusPageV3 {
 		DefaultTheme:       checkly.StatusPageTheme(d.Get("default_theme").(string)),
 		PrivacyPolicyLink:  d.Get("privacy_policy_link").(string),
 		TermsOfServiceLink: d.Get("terms_of_service_link").(string),
+		SupportLink:        d.Get("support_link").(string),
 		FooterText:         d.Get("footer_text").(string),
 		GoogleAnalyticsTag: d.Get("google_analytics_tag").(string),
 		AllowIndexing:      d.Get("allow_indexing").(bool),
@@ -159,6 +165,7 @@ func resourceDataFromStatusPageV3(p *checkly.StatusPageV3, d *schema.ResourceDat
 		{"default_theme", string(p.DefaultTheme)},
 		{"privacy_policy_link", p.PrivacyPolicyLink},
 		{"terms_of_service_link", p.TermsOfServiceLink},
+		{"support_link", p.SupportLink},
 		{"footer_text", p.FooterText},
 		{"google_analytics_tag", p.GoogleAnalyticsTag},
 		{"allow_indexing", p.AllowIndexing},
@@ -215,6 +222,10 @@ func resourceStatusPageV3Delete(d *schema.ResourceData, client interface{}) erro
 	defer cancel()
 	err := client.(checkly.Client).DeleteStatusPageV3(ctx, d.Id())
 	if err != nil {
+		// Already gone (deleted out-of-band): nothing left to do.
+		if strings.Contains(err.Error(), "404") {
+			return nil
+		}
 		return fmt.Errorf("resourceStatusPageV3Delete: API error: %w", err)
 	}
 	return nil

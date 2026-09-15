@@ -2,6 +2,7 @@ resource "checkly_status_page_v3" "example" {
   name          = "Example Application"
   url           = "my-example-status-page"
   default_theme = "DARK"
+  support_link  = "mailto:support@example.com"
 }
 
 # The page structure is declared with components: GROUPs contain SERVICEs.

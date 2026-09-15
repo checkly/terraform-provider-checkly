@@ -47,17 +47,26 @@ func TestAccStatusPageV3ComponentHappyPath(t *testing.T) {
 			name = "foo"
 			url  = "status-page-v3-comp-%d"
 		}
-
-		resource "checkly_status_page_v3_component" "group" {
-			status_page_id = checkly_status_page_v3.test.id
-			type           = "GROUP"
-			name           = "Foo group"
-			display_order  = 0
-		}
 	`, rInt)
+	group := page + `
+		resource "checkly_status_page_v3_component" "group" {
+			status_page_id      = checkly_status_page_v3.test.id
+			type                = "GROUP"
+			name                = "Foo group"
+			display_order       = 0
+			expanded_by_default = true
+		}
+
+		resource "checkly_status_page_v3_component" "database" {
+			status_page_id = checkly_status_page_v3.test.id
+			name           = "Database"
+			display_order  = 2
+			parent_id      = checkly_status_page_v3_component.group.id
+		}
+	`
 	accTestCase(t, []resource.TestStep{
 		{
-			Config: page + `
+			Config: group + `
 				resource "checkly_status_page_v3_component" "api" {
 					status_page_id = checkly_status_page_v3.test.id
 					name           = "Foo API"
@@ -73,6 +82,11 @@ func TestAccStatusPageV3ComponentHappyPath(t *testing.T) {
 					"GROUP",
 				),
 				resource.TestCheckResourceAttr(
+					"checkly_status_page_v3_component.group",
+					"expanded_by_default",
+					"true",
+				),
+				resource.TestCheckResourceAttr(
 					"checkly_status_page_v3_component.api",
 					"type",
 					"SERVICE",
@@ -81,6 +95,11 @@ func TestAccStatusPageV3ComponentHappyPath(t *testing.T) {
 					"checkly_status_page_v3_component.api",
 					"hidden",
 					"false",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_status_page_v3_component.api",
+					"show_historical_data",
+					"true",
 				),
 				resource.TestCheckResourceAttrPair(
 					"checkly_status_page_v3_component.api",
@@ -97,12 +116,15 @@ func TestAccStatusPageV3ComponentHappyPath(t *testing.T) {
 			),
 		},
 		{
-			Config: page + `
+			// Detaching the api component is only allowed because the
+			// database component stays behind in the group.
+			Config: group + `
 				resource "checkly_status_page_v3_component" "api" {
-					status_page_id = checkly_status_page_v3.test.id
-					name           = "Bar API"
-					display_order  = 2
-					hidden         = true
+					status_page_id       = checkly_status_page_v3.test.id
+					name                 = "Bar API"
+					display_order        = 3
+					hidden               = true
+					show_historical_data = false
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
@@ -114,7 +136,7 @@ func TestAccStatusPageV3ComponentHappyPath(t *testing.T) {
 				resource.TestCheckResourceAttr(
 					"checkly_status_page_v3_component.api",
 					"display_order",
-					"2",
+					"3",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_status_page_v3_component.api",
@@ -123,8 +145,34 @@ func TestAccStatusPageV3ComponentHappyPath(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_status_page_v3_component.api",
+					"show_historical_data",
+					"false",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_status_page_v3_component.api",
 					"parent_id",
 					"",
+				),
+			),
+		},
+		{
+			// Destroys the group and its last member in one apply. Terraform
+			// deletes the member first, which the API refuses — this
+			// exercises the provider's delete-the-group-first fallback.
+			Config: page + `
+				resource "checkly_status_page_v3_component" "api" {
+					status_page_id       = checkly_status_page_v3.test.id
+					name                 = "Bar API"
+					display_order        = 3
+					hidden               = true
+					show_historical_data = false
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_status_page_v3_component.api",
+					"name",
+					"Bar API",
 				),
 			),
 		},

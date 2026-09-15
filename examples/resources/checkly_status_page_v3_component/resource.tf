@@ -4,10 +4,11 @@ resource "checkly_status_page_v3" "example" {
 }
 
 resource "checkly_status_page_v3_component" "services" {
-  status_page_id = checkly_status_page_v3.example.id
-  type           = "GROUP"
-  name           = "Services"
-  display_order  = 0
+  status_page_id      = checkly_status_page_v3.example.id
+  type                = "GROUP"
+  name                = "Services"
+  display_order       = 0
+  expanded_by_default = true
 }
 
 resource "checkly_status_page_v3_component" "api" {

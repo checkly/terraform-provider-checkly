@@ -217,6 +217,10 @@ func resourceStatusPageV3AutomationRuleDelete(d *schema.ResourceData, client int
 	defer cancel()
 	err := client.(checkly.Client).DeleteStatusPageAutomationRuleV3(ctx, statusPageID, d.Id())
 	if err != nil {
+		// Already gone (deleted along with its page): nothing left to do.
+		if strings.Contains(err.Error(), "404") {
+			return nil
+		}
 		return fmt.Errorf("resourceStatusPageV3AutomationRuleDelete: API error: %w", err)
 	}
 	return nil

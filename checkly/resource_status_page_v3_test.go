@@ -84,6 +84,7 @@ func TestAccStatusPageV3HappyPath(t *testing.T) {
 					default_theme         = "DARK"
 					privacy_policy_link   = "https://example.org/privacy"
 					terms_of_service_link = "https://example.org/terms"
+					support_link          = "mailto:support@example.org"
 					footer_text           = "Example Inc."
 					google_analytics_tag  = "G-XXXXXXXXXX"
 					allow_indexing        = false
@@ -112,6 +113,11 @@ func TestAccStatusPageV3HappyPath(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					statusPageV3Resource,
+					"support_link",
+					"mailto:support@example.org",
+				),
+				resource.TestCheckResourceAttr(
+					statusPageV3Resource,
 					"allow_indexing",
 					"false",
 				),
@@ -135,6 +141,11 @@ func TestAccStatusPageV3HappyPath(t *testing.T) {
 				resource.TestCheckResourceAttr(
 					statusPageV3Resource,
 					"footer_text",
+					"",
+				),
+				resource.TestCheckResourceAttr(
+					statusPageV3Resource,
+					"support_link",
 					"",
 				),
 				resource.TestCheckResourceAttr(

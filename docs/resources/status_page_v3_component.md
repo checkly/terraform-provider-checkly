@@ -3,12 +3,12 @@
 page_title: "checkly_status_page_v3_component Resource - terraform-provider-checkly"
 subcategory: ""
 description: |-
-  A component of a v3 status page: either a SERVICE (a monitored thing with its own status) or a GROUP (a container for other components). Import uses the composite ID <status_page_id>/<component_id>.
+  A component of a v3 status page: either a SERVICE (a monitored thing with its own status) or a GROUP (a container for other components). Import uses the composite ID <status_page_id>/<component_id>. A group can never be empty: when the last member of a group is destroyed, the provider deletes the group first (which detaches its members) — destroy a group's last member together with its group, not on its own.
 ---
 
 # checkly_status_page_v3_component (Resource)
 
-A component of a v3 status page: either a SERVICE (a monitored thing with its own status) or a GROUP (a container for other components). Import uses the composite ID `<status_page_id>/<component_id>`.
+A component of a v3 status page: either a SERVICE (a monitored thing with its own status) or a GROUP (a container for other components). Import uses the composite ID `<status_page_id>/<component_id>`. A group can never be empty: when the last member of a group is destroyed, the provider deletes the group first (which detaches its members) — destroy a group's last member together with its group, not on its own.
 
 ## Example Usage
 
@@ -19,10 +19,11 @@ resource "checkly_status_page_v3" "example" {
 }
 
 resource "checkly_status_page_v3_component" "services" {
-  status_page_id = checkly_status_page_v3.example.id
-  type           = "GROUP"
-  name           = "Services"
-  display_order  = 0
+  status_page_id      = checkly_status_page_v3.example.id
+  type                = "GROUP"
+  name                = "Services"
+  display_order       = 0
+  expanded_by_default = true
 }
 
 resource "checkly_status_page_v3_component" "api" {
@@ -46,8 +47,10 @@ resource "checkly_status_page_v3_component" "api" {
 ### Optional
 
 - `description` (String) An optional description shown next to the name.
+- `expanded_by_default` (Boolean) Render the group expanded when the status page loads. Only available on a `GROUP` component. (Default `false`).
 - `hidden` (Boolean) Hide the component from the public page while keeping it available for incidents and automation. (Default `false`).
 - `parent_id` (String) The ID of the GROUP component to nest this component under. Must be on the same status page.
+- `show_historical_data` (Boolean) Show the historical status (the uptime bar) of the component on the status page. (Default `true`).
 - `type` (String) The type of the component. The allowed values are `SERVICE` (a monitored thing with its own status) and `GROUP` (a container for other components). (Default `SERVICE`).
 
 ### Read-Only

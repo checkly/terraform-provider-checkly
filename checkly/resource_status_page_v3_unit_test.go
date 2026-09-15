@@ -22,6 +22,7 @@ func TestEncodeDecodeStatusPageV3Resource(t *testing.T) {
 		DefaultTheme:       checkly.StatusPageThemeDark,
 		PrivacyPolicyLink:  "https://example.org/privacy",
 		TermsOfServiceLink: "https://example.org/terms",
+		SupportLink:        "mailto:support@example.org",
 		FooterText:         "Foo Inc.",
 		GoogleAnalyticsTag: "G-XXXXXXXXXX",
 		AllowIndexing:      true,
@@ -37,6 +38,7 @@ func TestEncodeDecodeStatusPageV3Resource(t *testing.T) {
 }
 
 func TestEncodeDecodeStatusPageV3ComponentResource(t *testing.T) {
+	showHistoricalData := false
 	want := checkly.StatusPageComponentV3{
 		StatusPageID: "e35f7e14-91b2-4d24-b7b6-e0f9e2f8e51c",
 		Type:         checkly.StatusPageComponentV3TypeService,
@@ -44,18 +46,67 @@ func TestEncodeDecodeStatusPageV3ComponentResource(t *testing.T) {
 		Description:  "The Foo public API",
 		DisplayOrder: 3,
 		Hidden:       true,
-		ParentID:     "0a2f26fb-47cc-42b7-91c6-40de3ec91a52",
+		Configuration: &checkly.StatusPageComponentV3Configuration{
+			ShowHistoricalData: &showHistoricalData,
+		},
+		ParentID: "0a2f26fb-47cc-42b7-91c6-40de3ec91a52",
 	}
 	data := resourceStatusPageV3Component().TestResourceData()
 	if err := resourceDataFromStatusPageV3Component(&want, data); err != nil {
 		t.Fatal(err)
 	}
-	got := statusPageV3ComponentFromResourceData(data)
+	got, err := statusPageV3ComponentFromResourceData(data)
+	if err != nil {
+		t.Fatal(err)
+	}
 	// StatusPageID travels through the "status_page_id" attribute, not the
 	// component payload.
 	got.StatusPageID = data.Get("status_page_id").(string)
 	if !cmp.Equal(want, got) {
 		t.Error(cmp.Diff(want, got))
+	}
+}
+
+func TestEncodeDecodeStatusPageV3GroupComponentResource(t *testing.T) {
+	showHistoricalData := true
+	expandedByDefault := true
+	want := checkly.StatusPageComponentV3{
+		StatusPageID: "e35f7e14-91b2-4d24-b7b6-e0f9e2f8e51c",
+		Type:         checkly.StatusPageComponentV3TypeGroup,
+		Name:         "Foo group",
+		DisplayOrder: 0,
+		Configuration: &checkly.StatusPageComponentV3Configuration{
+			ShowHistoricalData: &showHistoricalData,
+			ExpandedByDefault:  &expandedByDefault,
+		},
+	}
+	data := resourceStatusPageV3Component().TestResourceData()
+	if err := resourceDataFromStatusPageV3Component(&want, data); err != nil {
+		t.Fatal(err)
+	}
+	got, err := statusPageV3ComponentFromResourceData(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got.StatusPageID = data.Get("status_page_id").(string)
+	if !cmp.Equal(want, got) {
+		t.Error(cmp.Diff(want, got))
+	}
+}
+
+func TestStatusPageV3ServiceComponentRejectsExpandedByDefault(t *testing.T) {
+	data := resourceStatusPageV3Component().TestResourceData()
+	if err := data.Set("type", "SERVICE"); err != nil {
+		t.Fatal(err)
+	}
+	if err := data.Set("name", "Foo API"); err != nil {
+		t.Fatal(err)
+	}
+	if err := data.Set("expanded_by_default", true); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := statusPageV3ComponentFromResourceData(data); err == nil {
+		t.Error("expected an error for expanded_by_default on a SERVICE component")
 	}
 }
 

@@ -17,6 +17,7 @@ resource "checkly_status_page_v3" "example" {
   name          = "Example Application"
   url           = "my-example-status-page"
   default_theme = "DARK"
+  support_link  = "mailto:support@example.com"
 }
 
 # The page structure is declared with components: GROUPs contain SERVICEs.
@@ -63,6 +64,7 @@ resource "checkly_status_page_v3_component" "database" {
 - `logo_dark` (String) A URL to an image file to use as the logo in dark mode.
 - `privacy_policy_link` (String) A link to your privacy policy, shown in the page footer.
 - `redirect_to` (String) The URL the user should be redirected to when clicking the logo.
+- `support_link` (String) A support contact link (http, https or mailto), shown in the page footer.
 - `terms_of_service_link` (String) A link to your terms of service, shown in the page footer.
 
 ### Read-Only
