@@ -37,6 +37,91 @@ func TestEncodeDecodeStatusPageV3Resource(t *testing.T) {
 	}
 }
 
+func TestEncodeDecodeStatusPageV3ThemeColors(t *testing.T) {
+	want := checkly.StatusPageV3{
+		Name: "Foo v3 status page",
+		URL:  "foo-v3-status-page",
+		ThemeColors: &checkly.StatusPageV3ThemeColors{
+			Light: checkly.StatusPageV3ThemeColorGroup{
+				BodyBackgroundColor:          "#F9FAFB",
+				HeaderBackgroundColor:        "#FFFFFF",
+				HeaderFontColor:              "#151A1E",
+				TitleFontColor:               "#212930",
+				BodyFontColor:                "#475766",
+				BodyFontColorMuted:           "#60758A",
+				NavigationFontColor:          "#151A1E",
+				LinkFontColor:                "#FF0000",
+				CardBackgroundColor:          "#FFFFFF",
+				BorderColor:                  "#E0E5EB",
+				PrimaryButtonBackgroundColor: "#151A1E",
+				PrimaryButtonFontColor:       "#FFFFFF",
+			},
+			Dark: checkly.StatusPageV3ThemeColorGroup{
+				BodyBackgroundColor:          "#14171C",
+				HeaderBackgroundColor:        "#171B21",
+				HeaderFontColor:              "#FFFFFF",
+				TitleFontColor:               "#ECEEF2",
+				BodyFontColor:                "#C6CDD7",
+				BodyFontColorMuted:           "#A3B3C2",
+				NavigationFontColor:          "#FFFFFF",
+				LinkFontColor:                "#248AFF",
+				CardBackgroundColor:          "#171B21",
+				BorderColor:                  "#242B34",
+				PrimaryButtonBackgroundColor: "#242B34",
+				PrimaryButtonFontColor:       "#FFFFFF",
+			},
+		},
+	}
+	data := resourceStatusPageV3().TestResourceData()
+	// Configured: the palette is tracked.
+	if err := data.Set("theme_colors", statusPageV3ThemeColorsToList(want.ThemeColors)); err != nil {
+		t.Fatal(err)
+	}
+	if err := resourceDataFromStatusPageV3(&want, data); err != nil {
+		t.Fatal(err)
+	}
+	got := statusPageV3FromResourceData(data)
+	if !cmp.Equal(want, got) {
+		t.Error(cmp.Diff(want, got))
+	}
+	if got.ThemeColors.Light.LinkFontColor != "#FF0000" || got.ThemeColors.Dark.LinkFontColor != "#248AFF" {
+		t.Errorf("expected the link colors to round-trip, got %+v", got.ThemeColors)
+	}
+}
+
+func TestStatusPageV3ThemeColorsNotTrackedUnlessConfigured(t *testing.T) {
+	// The API always reports a palette (the defaults when none is set);
+	// without a theme_colors block it must not land in state.
+	remote := checkly.StatusPageV3{
+		Name: "Foo v3 status page",
+		URL:  "foo-v3-status-page",
+		ThemeColors: &checkly.StatusPageV3ThemeColors{
+			Light: checkly.StatusPageV3ThemeColorGroup{LinkFontColor: "#005AC2"},
+			Dark:  checkly.StatusPageV3ThemeColorGroup{LinkFontColor: "#248AFF"},
+		},
+	}
+	data := resourceStatusPageV3().TestResourceData()
+	if err := resourceDataFromStatusPageV3(&remote, data); err != nil {
+		t.Fatal(err)
+	}
+	if got := statusPageV3FromResourceData(data); got.ThemeColors != nil {
+		t.Errorf("expected no theme colors in state, got %+v", got.ThemeColors)
+	}
+}
+
+func TestStatusPageV3HexColorValidation(t *testing.T) {
+	for _, valid := range []string{"#FFF", "#ff0000", "#005AC2"} {
+		if _, errs := validateStatusPageV3HexColor(valid, "link_font_color"); len(errs) > 0 {
+			t.Errorf("expected %q to be valid, got %v", valid, errs)
+		}
+	}
+	for _, invalid := range []string{"red", "FF0000", "#12345", "#GGGGGG", ""} {
+		if _, errs := validateStatusPageV3HexColor(invalid, "link_font_color"); len(errs) == 0 {
+			t.Errorf("expected %q to be rejected", invalid)
+		}
+	}
+}
+
 func TestEncodeDecodeStatusPageV3ComponentResource(t *testing.T) {
 	showHistoricalData := false
 	want := checkly.StatusPageComponentV3{

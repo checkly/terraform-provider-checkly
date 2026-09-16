@@ -21,6 +21,73 @@ var statusPageV3ThemeValues = allowedValues[string]{
 // here would create a permanent diff between config and state.
 var statusPageV3URLRegex = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$`)
 
+// Same format the API accepts: #RGB or #RRGGBB, case-insensitive.
+var statusPageV3HexColorRegex = regexp.MustCompile(`^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$`)
+
+// The twelve colors of one theme, in the order the API documents them.
+// `field` points into a group so the same table drives the schema, the
+// expand and the flatten.
+var statusPageV3ThemeColorAttributes = []struct {
+	key         string
+	description string
+	field       func(group *checkly.StatusPageV3ThemeColorGroup) *string
+}{
+	{"body_background_color", "The background of the page.",
+		func(g *checkly.StatusPageV3ThemeColorGroup) *string { return &g.BodyBackgroundColor }},
+	{"header_background_color", "The background of the page header.",
+		func(g *checkly.StatusPageV3ThemeColorGroup) *string { return &g.HeaderBackgroundColor }},
+	{"header_font_color", "The color of text in the page header.",
+		func(g *checkly.StatusPageV3ThemeColorGroup) *string { return &g.HeaderFontColor }},
+	{"title_font_color", "The color of titles and headings.",
+		func(g *checkly.StatusPageV3ThemeColorGroup) *string { return &g.TitleFontColor }},
+	{"body_font_color", "The color of regular body text.",
+		func(g *checkly.StatusPageV3ThemeColorGroup) *string { return &g.BodyFontColor }},
+	{"body_font_color_muted", "The color of de-emphasized body text, such as timestamps.",
+		func(g *checkly.StatusPageV3ThemeColorGroup) *string { return &g.BodyFontColorMuted }},
+	{"navigation_font_color", "The color of navigation links.",
+		func(g *checkly.StatusPageV3ThemeColorGroup) *string { return &g.NavigationFontColor }},
+	{"link_font_color", "The color of links in the page content.",
+		func(g *checkly.StatusPageV3ThemeColorGroup) *string { return &g.LinkFontColor }},
+	{"card_background_color", "The background of component and incident cards.",
+		func(g *checkly.StatusPageV3ThemeColorGroup) *string { return &g.CardBackgroundColor }},
+	{"border_color", "The color of borders and dividers.",
+		func(g *checkly.StatusPageV3ThemeColorGroup) *string { return &g.BorderColor }},
+	{"primary_button_background_color", "The background of primary buttons, such as \"Subscribe\".",
+		func(g *checkly.StatusPageV3ThemeColorGroup) *string { return &g.PrimaryButtonBackgroundColor }},
+	{"primary_button_font_color", "The color of text on primary buttons.",
+		func(g *checkly.StatusPageV3ThemeColorGroup) *string { return &g.PrimaryButtonFontColor }},
+}
+
+func validateStatusPageV3HexColor(value interface{}, key string) (warns []string, errs []error) {
+	v := value.(string)
+	if !statusPageV3HexColorRegex.MatchString(v) {
+		errs = append(errs, fmt.Errorf("%q must be a hex color such as \"#FF0000\" or \"#F00\", got: %s", key, v))
+	}
+	return warns, errs
+}
+
+// The API requires the complete palette when custom colors are given, so
+// every color is required rather than defaulted here: the defaults belong
+// to the backend and may change.
+func statusPageV3ThemeColorGroupSchema(theme string) *schema.Schema {
+	colors := make(map[string]*schema.Schema, len(statusPageV3ThemeColorAttributes))
+	for _, attr := range statusPageV3ThemeColorAttributes {
+		colors[attr.key] = &schema.Schema{
+			Type:         schema.TypeString,
+			Required:     true,
+			Description:  attr.description + " A hex color such as \"#FF0000\" or \"#F00\".",
+			ValidateFunc: validateStatusPageV3HexColor,
+		}
+	}
+	return &schema.Schema{
+		Type:        schema.TypeList,
+		Required:    true,
+		MaxItems:    1,
+		Description: "The colors used when the page renders in " + theme + " mode.",
+		Elem:        &schema.Resource{Schema: colors},
+	}
+}
+
 func resourceStatusPageV3() *schema.Resource {
 	return &schema.Resource{
 		Create: resourceStatusPageV3Create,
@@ -124,8 +191,69 @@ func resourceStatusPageV3() *schema.Resource {
 				Default:     true,
 				Description: "Whether search engines may index the public page. (Default `true`).",
 			},
+			"theme_colors": {
+				Type:     schema.TypeList,
+				Optional: true,
+				MaxItems: 1,
+				Description: "Custom colors for the light and dark theme of the page. Requires custom " +
+					"theme colors to be part of your plan. The complete palette must be given: both " +
+					"`light` and `dark`, each with every color. Leave the block out to use Checkly's " +
+					"default colors; the default palette the API then reports is not tracked, and the " +
+					"block is not populated when importing a page.",
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"light": statusPageV3ThemeColorGroupSchema("light"),
+						"dark":  statusPageV3ThemeColorGroupSchema("dark"),
+					},
+				},
+			},
 		},
 	}
+}
+
+func statusPageV3ThemeColorGroupFromList(value interface{}) checkly.StatusPageV3ThemeColorGroup {
+	var group checkly.StatusPageV3ThemeColorGroup
+	list, ok := value.([]interface{})
+	if !ok || len(list) == 0 || list[0] == nil {
+		return group
+	}
+	colors := list[0].(map[string]interface{})
+	for _, attr := range statusPageV3ThemeColorAttributes {
+		if color, ok := colors[attr.key].(string); ok {
+			*attr.field(&group) = color
+		}
+	}
+	return group
+}
+
+func statusPageV3ThemeColorsFromResourceData(d *schema.ResourceData) *checkly.StatusPageV3ThemeColors {
+	blocks, ok := d.Get("theme_colors").([]interface{})
+	if !ok || len(blocks) == 0 || blocks[0] == nil {
+		return nil
+	}
+	block := blocks[0].(map[string]interface{})
+	return &checkly.StatusPageV3ThemeColors{
+		Light: statusPageV3ThemeColorGroupFromList(block["light"]),
+		Dark:  statusPageV3ThemeColorGroupFromList(block["dark"]),
+	}
+}
+
+func statusPageV3ThemeColorGroupToList(group *checkly.StatusPageV3ThemeColorGroup) []interface{} {
+	colors := make(map[string]interface{}, len(statusPageV3ThemeColorAttributes))
+	for _, attr := range statusPageV3ThemeColorAttributes {
+		colors[attr.key] = *attr.field(group)
+	}
+	return []interface{}{colors}
+}
+
+func statusPageV3ThemeColorsToList(themeColors *checkly.StatusPageV3ThemeColors) []interface{} {
+	if themeColors == nil {
+		return nil
+	}
+	return []interface{}{map[string]interface{}{
+		"light": statusPageV3ThemeColorGroupToList(&themeColors.Light),
+		"dark":  statusPageV3ThemeColorGroupToList(&themeColors.Dark),
+	}}
 }
 
 func statusPageV3FromResourceData(d *schema.ResourceData) checkly.StatusPageV3 {
@@ -146,6 +274,7 @@ func statusPageV3FromResourceData(d *schema.ResourceData) checkly.StatusPageV3 {
 		FooterText:         d.Get("footer_text").(string),
 		GoogleAnalyticsTag: d.Get("google_analytics_tag").(string),
 		AllowIndexing:      d.Get("allow_indexing").(bool),
+		ThemeColors:        statusPageV3ThemeColorsFromResourceData(d),
 	}
 }
 
@@ -173,6 +302,14 @@ func resourceDataFromStatusPageV3(p *checkly.StatusPageV3, d *schema.ResourceDat
 	for _, pair := range pairs {
 		if err := d.Set(pair.key, pair.value); err != nil {
 			return fmt.Errorf("failed to set %q: %w", pair.key, err)
+		}
+	}
+	// The API always reports a palette, the defaults when none is set, so
+	// the colors are only tracked when configured. Tracking them regardless
+	// would make every plan of an unconfigured page try to remove them.
+	if _, configured := d.GetOk("theme_colors"); configured {
+		if err := d.Set("theme_colors", statusPageV3ThemeColorsToList(p.ThemeColors)); err != nil {
+			return fmt.Errorf("failed to set %q: %w", "theme_colors", err)
 		}
 	}
 	return nil

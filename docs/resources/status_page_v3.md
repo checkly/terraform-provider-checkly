@@ -18,6 +18,39 @@ resource "checkly_status_page_v3" "example" {
   url           = "my-example-status-page"
   default_theme = "DARK"
   support_link  = "mailto:support@example.com"
+
+  # Optional custom colors (requires custom theme colors on your plan). The
+  # complete palette must be given; leave the block out for the defaults.
+  theme_colors {
+    light {
+      body_background_color           = "#F9FAFB"
+      header_background_color         = "#FFFFFF"
+      header_font_color               = "#151A1E"
+      title_font_color                = "#212930"
+      body_font_color                 = "#475766"
+      body_font_color_muted           = "#60758A"
+      navigation_font_color           = "#151A1E"
+      link_font_color                 = "#FF0000"
+      card_background_color           = "#FFFFFF"
+      border_color                    = "#E0E5EB"
+      primary_button_background_color = "#151A1E"
+      primary_button_font_color       = "#FFFFFF"
+    }
+    dark {
+      body_background_color           = "#14171C"
+      header_background_color         = "#171B21"
+      header_font_color               = "#FFFFFF"
+      title_font_color                = "#ECEEF2"
+      body_font_color                 = "#C6CDD7"
+      body_font_color_muted           = "#A3B3C2"
+      navigation_font_color           = "#FFFFFF"
+      link_font_color                 = "#248AFF"
+      card_background_color           = "#171B21"
+      border_color                    = "#242B34"
+      primary_button_background_color = "#242B34"
+      primary_button_font_color       = "#FFFFFF"
+    }
+  }
 }
 
 # The page structure is declared with components: GROUPs contain SERVICEs.
@@ -66,7 +99,53 @@ resource "checkly_status_page_v3_component" "database" {
 - `redirect_to` (String) The URL the user should be redirected to when clicking the logo.
 - `support_link` (String) A support contact link (http, https or mailto), shown in the page footer.
 - `terms_of_service_link` (String) A link to your terms of service, shown in the page footer.
+- `theme_colors` (Block List, Max: 1) Custom colors for the light and dark theme of the page. Requires custom theme colors to be part of your plan. The complete palette must be given: both `light` and `dark`, each with every color. Leave the block out to use Checkly's default colors; the default palette the API then reports is not tracked, and the block is not populated when importing a page. (see [below for nested schema](#nestedblock--theme_colors))
 
 ### Read-Only
 
 - `id` (String) The ID of this resource.
+
+<a id="nestedblock--theme_colors"></a>
+### Nested Schema for `theme_colors`
+
+Required:
+
+- `dark` (Block List, Min: 1, Max: 1) The colors used when the page renders in dark mode. (see [below for nested schema](#nestedblock--theme_colors--dark))
+- `light` (Block List, Min: 1, Max: 1) The colors used when the page renders in light mode. (see [below for nested schema](#nestedblock--theme_colors--light))
+
+<a id="nestedblock--theme_colors--dark"></a>
+### Nested Schema for `theme_colors.dark`
+
+Required:
+
+- `body_background_color` (String) The background of the page. A hex color such as "#FF0000" or "#F00".
+- `body_font_color` (String) The color of regular body text. A hex color such as "#FF0000" or "#F00".
+- `body_font_color_muted` (String) The color of de-emphasized body text, such as timestamps. A hex color such as "#FF0000" or "#F00".
+- `border_color` (String) The color of borders and dividers. A hex color such as "#FF0000" or "#F00".
+- `card_background_color` (String) The background of component and incident cards. A hex color such as "#FF0000" or "#F00".
+- `header_background_color` (String) The background of the page header. A hex color such as "#FF0000" or "#F00".
+- `header_font_color` (String) The color of text in the page header. A hex color such as "#FF0000" or "#F00".
+- `link_font_color` (String) The color of links in the page content. A hex color such as "#FF0000" or "#F00".
+- `navigation_font_color` (String) The color of navigation links. A hex color such as "#FF0000" or "#F00".
+- `primary_button_background_color` (String) The background of primary buttons, such as "Subscribe". A hex color such as "#FF0000" or "#F00".
+- `primary_button_font_color` (String) The color of text on primary buttons. A hex color such as "#FF0000" or "#F00".
+- `title_font_color` (String) The color of titles and headings. A hex color such as "#FF0000" or "#F00".
+
+
+<a id="nestedblock--theme_colors--light"></a>
+### Nested Schema for `theme_colors.light`
+
+Required:
+
+- `body_background_color` (String) The background of the page. A hex color such as "#FF0000" or "#F00".
+- `body_font_color` (String) The color of regular body text. A hex color such as "#FF0000" or "#F00".
+- `body_font_color_muted` (String) The color of de-emphasized body text, such as timestamps. A hex color such as "#FF0000" or "#F00".
+- `border_color` (String) The color of borders and dividers. A hex color such as "#FF0000" or "#F00".
+- `card_background_color` (String) The background of component and incident cards. A hex color such as "#FF0000" or "#F00".
+- `header_background_color` (String) The background of the page header. A hex color such as "#FF0000" or "#F00".
+- `header_font_color` (String) The color of text in the page header. A hex color such as "#FF0000" or "#F00".
+- `link_font_color` (String) The color of links in the page content. A hex color such as "#FF0000" or "#F00".
+- `navigation_font_color` (String) The color of navigation links. A hex color such as "#FF0000" or "#F00".
+- `primary_button_background_color` (String) The background of primary buttons, such as "Subscribe". A hex color such as "#FF0000" or "#F00".
+- `primary_button_font_color` (String) The color of text on primary buttons. A hex color such as "#FF0000" or "#F00".
+- `title_font_color` (String) The color of titles and headings. A hex color such as "#FF0000" or "#F00".
