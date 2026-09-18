@@ -98,7 +98,7 @@ resource "checkly_grpc_monitor" "example-grpc-monitor-2" {
 }
 
 # A FlatBuffers unary monitor. Generate the binary schema first with:
-# flatc -b --schema schema.fbs
+# flatc -b --schema --bfbs-builtins schema.fbs
 resource "checkly_grpc_monitor" "example-flatbuffers-monitor" {
   name        = "Example FlatBuffers gRPC monitor"
   activated   = true
@@ -165,7 +165,7 @@ Required:
 Optional:
 
 - `assertion` (Block Set) A request can have multiple assertions. The allowed comparisons, properties, and target formats depend on the assertion source — see the [Assertion Reference](#assertion-reference) below. (see [below for nested schema](#nestedblock--request--assertion))
-- `bfbs_content` (String) A base64-encoded binary FlatBuffers schema (`.bfbs`). Required when `encoding = "FLATBUFFERS"` and forbidden otherwise. Generate it with `flatc -b --schema schema.fbs` and load it with Terraform's `filebase64()` function.
+- `bfbs_content` (String) A base64-encoded binary FlatBuffers schema (`.bfbs`). Required when `encoding = "FLATBUFFERS"` and forbidden otherwise. Generate it with `flatc -b --schema --bfbs-builtins schema.fbs` and load it with Terraform's `filebase64()` function.
 - `encoding` (String) The wire encoding used in `BEHAVIOR` mode. Possible values are `PROTOBUF` and `FLATBUFFERS`. (Default `PROTOBUF`).
 - `grpc_mode` (String) The gRPC monitoring mode. `BEHAVIOR` invokes a unary method (requires `method`); `HEALTH` queries the standard gRPC health-check service (allows `service`). (Default `BEHAVIOR`).
 - `ip_family` (String) The IP family to use when executing the gRPC check. The value can be either `IPv4` or `IPv6`. (Default `IPv4`).

@@ -195,7 +195,7 @@ func resourceGRPCMonitor() *schema.Resource {
 						"bfbs_content": {
 							Type:        schema.TypeString,
 							Optional:    true,
-							Description: "A base64-encoded binary FlatBuffers schema (`.bfbs`). Required when `encoding = \"FLATBUFFERS\"` and forbidden otherwise. Generate it with `flatc -b --schema schema.fbs` and load it with Terraform's `filebase64()` function.",
+							Description: "A base64-encoded binary FlatBuffers schema (`.bfbs`). Required when `encoding = \"FLATBUFFERS\"` and forbidden otherwise. Generate it with `flatc -b --schema --bfbs-builtins schema.fbs` and load it with Terraform's `filebase64()` function.",
 						},
 						"method": {
 							Type:        schema.TypeString,
