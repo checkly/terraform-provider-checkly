@@ -1,11 +1,79 @@
 package checkly
 
 import (
+	"encoding/base64"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 )
+
+func validGRPCConfigMap() tfMap {
+	return tfMap{
+		"grpc_mode":          "BEHAVIOR",
+		"encoding":           "PROTOBUF",
+		"bfbs_content":       "",
+		"service_definition": "REFLECTION",
+		"proto_content":      "",
+	}
+}
+
+func TestValidateGRPCFlatBuffersConfig(t *testing.T) {
+	t.Parallel()
+	validBFBS := base64.StdEncoding.EncodeToString([]byte("schema"))
+	tests := []struct {
+		name      string
+		mutate    func(tfMap)
+		wantError string
+	}{
+		{name: "valid FlatBuffers", mutate: func(c tfMap) {
+			c["encoding"], c["bfbs_content"], c["service_definition"] = "FLATBUFFERS", validBFBS, ""
+		}},
+		{name: "missing schema", mutate: func(c tfMap) {
+			c["encoding"], c["service_definition"] = "FLATBUFFERS", ""
+		}, wantError: "bfbs_content is required"},
+		{name: "schema on Protobuf", mutate: func(c tfMap) {
+			c["bfbs_content"] = validBFBS
+		}, wantError: "can only be used"},
+		{name: "invalid base64", mutate: func(c tfMap) {
+			c["encoding"], c["bfbs_content"], c["service_definition"] = "FLATBUFFERS", "not base64", ""
+		}, wantError: "valid base64"},
+		{name: "schema too large", mutate: func(c tfMap) {
+			c["encoding"] = "FLATBUFFERS"
+			c["bfbs_content"] = strings.Repeat("A", maxGRPCSchemaContentLength+1)
+			c["service_definition"] = ""
+		}, wantError: "must not exceed"},
+		{name: "service definition on FlatBuffers", mutate: func(c tfMap) {
+			c["encoding"], c["bfbs_content"] = "FLATBUFFERS", validBFBS
+		}, wantError: "service_definition cannot be used"},
+		{name: "proto content on FlatBuffers", mutate: func(c tfMap) {
+			c["encoding"], c["bfbs_content"], c["service_definition"] = "FLATBUFFERS", validBFBS, ""
+			c["proto_content"] = "syntax = \"proto3\";"
+		}, wantError: "proto_content cannot be used"},
+		{name: "encoding in health mode", mutate: func(c tfMap) {
+			c["grpc_mode"] = "HEALTH"
+			c["encoding"] = "FLATBUFFERS"
+		}, wantError: "cannot be used when grpc_mode is HEALTH"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			config := validGRPCConfigMap()
+			test.mutate(config)
+			err := validateGRPCConfig(config)
+			if test.wantError == "" {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				return
+			}
+			if err == nil || !strings.Contains(err.Error(), test.wantError) {
+				t.Fatalf("error = %v, want it to contain %q", err, test.wantError)
+			}
+		})
+	}
+}
 
 func TestAccGRPCMonitorRequiredFields(t *testing.T) {
 	config := `resource "checkly_grpc_monitor" "test" {}`
@@ -166,6 +234,20 @@ func TestAccGRPCMonitorFull(t *testing.T) {
 	})
 }
 
+func TestAccGRPCMonitorFlatBuffers(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: grpcMonitorFlatBuffers,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_grpc_monitor.test", "request.0.encoding", "FLATBUFFERS"),
+				resource.TestCheckResourceAttr("checkly_grpc_monitor.test", "request.0.bfbs_content", "c2NoZW1h"),
+				resource.TestCheckNoResourceAttr("checkly_grpc_monitor.test", "request.0.service_definition"),
+				resource.TestCheckNoResourceAttr("checkly_grpc_monitor.test", "request.0.proto_content"),
+			),
+		},
+	})
+}
+
 // TestAccGRPCMonitorMinimalCleanReplan asserts anti-pattern B is avoided: a
 // config omitting every optional field applies, then re-plans with no diff.
 func TestAccGRPCMonitorMinimalCleanReplan(t *testing.T) {
@@ -247,6 +329,25 @@ const grpcMonitor_full = `
 		run_based_escalation {
 		  failed_run_threshold = 1
 		}
+	  }
+	}
+`
+
+const grpcMonitorFlatBuffers = `
+	resource "checkly_grpc_monitor" "test" {
+	  name      = "grpc-flatbuffers"
+	  activated = false
+	  frequency = 5
+	  locations = ["us-east-1"]
+
+	  request {
+		host         = "grpc.example.com"
+		port         = 443
+		grpc_mode    = "BEHAVIOR"
+		encoding     = "FLATBUFFERS"
+		bfbs_content = base64encode("schema")
+		method       = "example.Greeter/Greet"
+		message      = jsonencode({ name = "Checkly" })
 	  }
 	}
 `

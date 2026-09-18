@@ -2,6 +2,7 @@ package checkly
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -172,6 +173,13 @@ func resourceGRPCMonitor() *schema.Resource {
 							Optional:    true,
 							Description: "The service name to query in `HEALTH` mode. An empty value queries overall server health. Forbidden in `BEHAVIOR` mode.",
 						},
+						"encoding": {
+							Type:         schema.TypeString,
+							Optional:     true,
+							Computed:     true,
+							ValidateFunc: validateOneOf([]string{"PROTOBUF", "FLATBUFFERS"}),
+							Description:  "The wire encoding used in `BEHAVIOR` mode. Possible values are `PROTOBUF` and `FLATBUFFERS`. (Default `PROTOBUF`).",
+						},
 						"service_definition": {
 							Type:         schema.TypeString,
 							Optional:     true,
@@ -183,6 +191,11 @@ func resourceGRPCMonitor() *schema.Resource {
 							Type:        schema.TypeString,
 							Optional:    true,
 							Description: "The inline `.proto` file source used when `service_definition = \"PROTO_FILE\"` in `BEHAVIOR` mode.",
+						},
+						"bfbs_content": {
+							Type:        schema.TypeString,
+							Optional:    true,
+							Description: "A base64-encoded binary FlatBuffers schema (`.bfbs`). Required when `encoding = \"FLATBUFFERS\"` and forbidden otherwise. Generate it with `flatc -b --schema schema.fbs` and load it with Terraform's `filebase64()` function.",
 						},
 						"method": {
 							Type:        schema.TypeString,
@@ -273,6 +286,7 @@ func resourceGRPCMonitor() *schema.Resource {
 		CustomizeDiff: customdiff.Sequence(
 			RetryStrategyCustomizeDiff,
 			FrequencyOffsetCustomizeDiff,
+			GRPCConfigCustomizeDiff,
 		),
 	}
 }
@@ -392,9 +406,11 @@ func setFromGRPCRequest(r checkly.GRPCRequest) []tfMap {
 	s["assertion"] = setFromAssertions(r.Assertions)
 	s["grpc_mode"] = r.GRPCConfig.Mode
 	s["tls"] = r.GRPCConfig.TLS
+	s["encoding"] = r.GRPCConfig.Encoding
 	s["service"] = r.GRPCConfig.Service
 	s["service_definition"] = r.GRPCConfig.ServiceDefinition
 	s["proto_content"] = r.GRPCConfig.ProtoContent
+	s["bfbs_content"] = r.GRPCConfig.BfbsContent
 	s["method"] = r.GRPCConfig.Method
 	s["message"] = r.GRPCConfig.Message
 	s["metadata"] = setFromGRPCMetadata(r.GRPCConfig.Metadata)
@@ -437,6 +453,12 @@ func grpcCheckFromResourceData(d *schema.ResourceData) (checkly.GRPCMonitor, err
 	monitor.PrivateLocations = &privateLocations
 
 	monitor.Request = grpcRequestFromList(d.Get("request").([]any))
+	request := d.Get("request").([]any)
+	if len(request) > 0 && request[0] != nil {
+		if err := validateGRPCConfig(request[0].(tfMap)); err != nil {
+			return checkly.GRPCMonitor{}, err
+		}
+	}
 
 	monitor.FrequencyOffset = d.Get(frequencyOffsetAttributeName).(int)
 
@@ -448,6 +470,11 @@ func grpcRequestFromList(s []any) checkly.GRPCRequest {
 		return checkly.GRPCRequest{}
 	}
 	res := s[0].(tfMap)
+	mode := res["grpc_mode"].(string)
+	encoding := res["encoding"].(string)
+	if mode == "HEALTH" {
+		encoding = ""
+	}
 	return checkly.GRPCRequest{
 		URL:        res["host"].(string),
 		Port:       res["port"].(int),
@@ -456,16 +483,67 @@ func grpcRequestFromList(s []any) checkly.GRPCRequest {
 		Timeout:    res["timeout"].(int),
 		Assertions: assertionsFromSet(res["assertion"].(*schema.Set)),
 		GRPCConfig: checkly.GRPCConfig{
-			Mode:              res["grpc_mode"].(string),
+			Mode:              mode,
 			TLS:               res["tls"].(bool),
+			Encoding:          encoding,
 			Service:           res["service"].(string),
 			ServiceDefinition: res["service_definition"].(string),
 			ProtoContent:      res["proto_content"].(string),
+			BfbsContent:       res["bfbs_content"].(string),
 			Method:            res["method"].(string),
 			Message:           res["message"].(string),
 			Metadata:          grpcMetadataFromSet(res["metadata"].(*schema.Set)),
 		},
 	}
+}
+
+const maxGRPCSchemaContentLength = 100 * 1024
+
+func validateGRPCConfig(res tfMap) error {
+	mode := res["grpc_mode"].(string)
+	encoding := res["encoding"].(string)
+	bfbsContent := res["bfbs_content"].(string)
+	serviceDefinition := res["service_definition"].(string)
+	protoContent := res["proto_content"].(string)
+
+	if mode == "HEALTH" {
+		if encoding == "FLATBUFFERS" || bfbsContent != "" {
+			return fmt.Errorf("FlatBuffers encoding and bfbs_content cannot be used when grpc_mode is HEALTH")
+		}
+		return nil
+	}
+
+	if encoding != "FLATBUFFERS" {
+		if bfbsContent != "" {
+			return fmt.Errorf("bfbs_content can only be used when encoding is FLATBUFFERS")
+		}
+		return nil
+	}
+
+	if bfbsContent == "" {
+		return fmt.Errorf("bfbs_content is required when encoding is FLATBUFFERS")
+	}
+	if len(bfbsContent) > maxGRPCSchemaContentLength {
+		return fmt.Errorf("bfbs_content must not exceed %d bytes", maxGRPCSchemaContentLength)
+	}
+	if _, err := base64.StdEncoding.DecodeString(bfbsContent); err != nil {
+		return fmt.Errorf("bfbs_content must be valid base64: %w", err)
+	}
+	if serviceDefinition != "" {
+		return fmt.Errorf("service_definition cannot be used when encoding is FLATBUFFERS")
+	}
+	if protoContent != "" {
+		return fmt.Errorf("proto_content cannot be used when encoding is FLATBUFFERS")
+	}
+	return nil
+}
+
+func GRPCConfigCustomizeDiff(_ context.Context, diff *schema.ResourceDiff, _ interface{}) error {
+	request := diff.Get("request").([]interface{})
+	if len(request) == 0 || request[0] == nil {
+		return nil
+	}
+	return validateGRPCConfig(request[0].(tfMap))
 }
 
 func grpcMetadataFromSet(s *schema.Set) []checkly.GRPCMetadata {
