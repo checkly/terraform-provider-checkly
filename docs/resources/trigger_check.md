@@ -18,7 +18,8 @@ resource "checkly_trigger_check" "test_trigger_check" {
 }
 
 output "test_trigger_check_url" {
-  value = checkly_trigger_check.test_trigger_check.url
+  value     = checkly_trigger_check.test_trigger_check.url
+  sensitive = true
 }
 ```
 
@@ -31,8 +32,8 @@ output "test_trigger_check_url" {
 
 ### Optional
 
-- `token` (String) The token value created to trigger the check
-- `url` (String) The request URL to trigger the check run.
+- `token` (String, Sensitive) The token value created to trigger the check
+- `url` (String, Sensitive) The request URL to trigger the check run.
 
 ### Read-Only
 

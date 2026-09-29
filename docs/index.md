@@ -78,7 +78,7 @@ resource "checkly_check" "example_check" {
 
 ### Required
 
-- `api_key` (String)
+- `api_key` (String, Sensitive)
 
 ### Optional
 

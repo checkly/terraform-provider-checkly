@@ -18,7 +18,8 @@ resource "checkly_trigger_group" "test_trigger_group" {
 }
 
 output "test_trigger_group_url" {
-  value = checkly_trigger_group.test_trigger_group.url
+  value     = checkly_trigger_group.test_trigger_group.url
+  sensitive = true
 }
 ```
 
@@ -31,8 +32,8 @@ output "test_trigger_group_url" {
 
 ### Optional
 
-- `token` (String) The token value created to trigger the group
-- `url` (String) The request URL to trigger the group run.
+- `token` (String, Sensitive) The token value created to trigger the group
+- `url` (String, Sensitive) The request URL to trigger the group run.
 
 ### Read-Only
 

@@ -41,7 +41,7 @@ resource "checkly_client_certificate" "test" {
 
 - `certificate` (String) The client certificate in PEM format.
 - `host` (String) The host domain that the certificate should be used for. Wildcards are supported, e.g. `*.acme.com`.
-- `private_key` (String) The private key for the certificate in PEM format.
+- `private_key` (String, Sensitive) The private key for the certificate in PEM format.
 
 ### Optional
 
