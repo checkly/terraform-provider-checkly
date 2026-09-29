@@ -28,12 +28,14 @@ func resourceTriggerCheck() *schema.Resource {
 			},
 			"token": {
 				Type:        schema.TypeString,
+				Sensitive:   true,
 				Optional:    true,
 				Computed:    true,
 				Description: "The token value created to trigger the check",
 			},
 			"url": {
 				Type:        schema.TypeString,
+				Sensitive:   true,
 				Optional:    true,
 				Computed:    true,
 				Description: "The request URL to trigger the check run.",

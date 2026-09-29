@@ -81,6 +81,7 @@ func resourceClientCertificate() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
+				Sensitive:   true,
 				Description: "The private key for the certificate in PEM format.",
 			},
 			"passphrase": {

@@ -16,7 +16,8 @@ resource "checkly_trigger_group" "trigger-check-group-1" {
 }
 
 output "trigger_check-group-1-url" {
-  value = checkly_trigger_group.trigger-check-group-1.url
+  value     = checkly_trigger_group.trigger-check-group-1.url
+  sensitive = true
 }
 
 #-- Check group with minimal API defaults

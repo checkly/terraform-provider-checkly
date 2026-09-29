@@ -28,12 +28,14 @@ func resourceTriggerGroup() *schema.Resource {
 			},
 			"token": {
 				Type:        schema.TypeString,
+				Sensitive:   true,
 				Optional:    true,
 				Computed:    true,
 				Description: "The token value created to trigger the group",
 			},
 			"url": {
 				Type:        schema.TypeString,
+				Sensitive:   true,
 				Optional:    true,
 				Computed:    true,
 				Description: "The request URL to trigger the group run.",

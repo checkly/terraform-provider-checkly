@@ -3,5 +3,6 @@ resource "checkly_trigger_check" "test_trigger_check" {
 }
 
 output "test_trigger_check_url" {
-  value = checkly_trigger_check.test_trigger_check.url
+  value     = checkly_trigger_check.test_trigger_check.url
+  sensitive = true
 }
