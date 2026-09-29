@@ -23,6 +23,47 @@ resource "checkly_maintenance_windows" "maintenance-1" {
   tags = [
     "production"
   ]
+  timezone    = "America/New_York"
+  description = "Monthly database maintenance"
+  silence_alerts_tags = [
+    "production"
+  ]
+}
+
+# Show a maintenance window on a status page
+resource "checkly_status_page_service" "api" {
+  name = "API"
+}
+
+resource "checkly_status_page" "example" {
+  name = "Example Application"
+  url  = "my-example-status-page"
+
+  card {
+    name = "Services"
+
+    service_attachment {
+      service_id = checkly_status_page_service.api.id
+    }
+  }
+}
+
+resource "checkly_maintenance_windows" "maintenance-2" {
+  name      = "Status page maintenance"
+  starts_at = "2028-08-24T00:00:00.000Z"
+  ends_at   = "2028-08-24T02:00:00.000Z"
+  tags = [
+    "api"
+  ]
+  description = "We're upgrading our API servers."
+
+  status_page_visibility {
+    enabled         = true
+    severity        = "MINOR"
+    notify_on_start = true
+    status_page_ids = [checkly_status_page.example.id]
+    service_ids     = [checkly_status_page_service.api.id]
+  }
 }
 ```
 
@@ -37,11 +78,35 @@ resource "checkly_maintenance_windows" "maintenance-1" {
 
 ### Optional
 
-- `repeat_ends_at` (String) The date on which the maintenance window should stop repeating.
+- `description` (String) A description of the maintenance window. When the window is visible on status pages, the description is shown there too.
+- `pause_all_checks` (Boolean) Pause every check in the account during the maintenance window, regardless of `tags`. Defaults to `false`.
+- `repeat_ends_at` (String) The date on which the maintenance window should stop repeating, interpreted as a calendar date in `timezone`.
 - `repeat_interval` (Number) The repeat interval of the maintenance window from the first occurrence.
 - `repeat_unit` (String) The repeat cadence for the maintenance window. Possible values `DAY`, `WEEK` and `MONTH`.
-- `tags` (Set of String) The names of the checks and groups maintenance window should apply to.
+- `silence_alerts_tags` (Set of String) The tags of the checks and groups whose alerts are silenced during the maintenance window. Ignored when `silence_all_alerts` is `true`.
+- `silence_all_alerts` (Boolean) Silence alerts for every check in the account during the maintenance window, regardless of `silence_alerts_tags`. Defaults to `false`.
+- `status_page_visibility` (Block List, Max: 1) Whether and how the maintenance window appears on status pages. Omitting the block hides the window and unlinks it from all status pages and services. Only service-based status page links are supported; links to status page components can't be managed here. An account without the status page maintenance windows entitlement can only change `enabled` to `false`: keep the rest of the block as it is, because removing the block also changes the other settings, which is rejected. (see [below for nested schema](#nestedblock--status_page_visibility))
+- `tags` (Set of String) The tags of the checks and groups that are paused during the maintenance window. Ignored when `pause_all_checks` is `true`.
+- `timezone` (String) The named IANA time zone used to schedule recurring occurrences, e.g. `America/New_York`. Occurrences keep the same local time across daylight-saving changes. `starts_at` and `ends_at` remain absolute instants; the time zone does not reinterpret them. Use the canonical IANA name (e.g. `America/New_York`, not `US/Eastern`): the API stores canonical names, so an alias shows as a change on every plan. UTC offsets such as `+05:00` or `Etc/GMT+5` are not accepted. Defaults to `UTC`. The time zone cannot be changed while a maintenance is active.
 
 ### Read-Only
 
 - `id` (String) The ID of this resource.
+
+<a id="nestedblock--status_page_visibility"></a>
+### Nested Schema for `status_page_visibility`
+
+Optional:
+
+- `affect_all_services` (Boolean) Mark every service on the linked status pages as affected. Can't be combined with `service_ids`. (Default `false`).
+- `auto_end` (Boolean) Complete the maintenance automatically at the scheduled end time. (Default `true`).
+- `auto_start` (Boolean) Start the maintenance automatically at the scheduled time. (Default `true`).
+- `enabled` (Boolean) Show the maintenance window on the linked status pages. All other settings in this block only take effect when this is `true`. (Default `false`).
+- `notify_on_end` (Boolean) Email status page subscribers when the maintenance ends. (Default `false`).
+- `notify_on_start` (Boolean) Email status page subscribers when the maintenance starts. (Default `false`).
+- `reminder_minutes_before` (Set of Number) Up to three reminders, in minutes before the maintenance starts (60 to 10080), sent to status page subscribers.
+- `service_ids` (Set of String) The IDs of the affected status page services (`checkly_status_page_service`). Each service must be on one of the linked status pages.
+- `severity` (String) The severity shown on the status page. Possible values are `MINOR`, `MEDIUM`, `MAJOR` and `CRITICAL`.
+- `show_affected_services` (Boolean) Show which services the maintenance affects. When `false`, downtime during the maintenance counts against the services' uptime. (Default `true`).
+- `status_page_ids` (Set of String) The IDs of the status pages (`checkly_status_page`) to show the maintenance window on. Requires `service_ids` or `affect_all_services`.
+- `suppress_auto_incidents` (Boolean) Suppress automatically created incidents for the linked services during the maintenance. (Default `false`).
