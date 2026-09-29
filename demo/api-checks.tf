@@ -34,7 +34,8 @@ resource "checkly_trigger_check" "trigger-api-check-1" {
 }
 
 output "trigger_api_check-1-url" {
-  value = checkly_trigger_check.trigger-api-check-1.url
+  value     = checkly_trigger_check.trigger-api-check-1.url
+  sensitive = true
 }
 
 # Fully fledged API check

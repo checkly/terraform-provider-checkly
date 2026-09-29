@@ -17,6 +17,7 @@ func Provider() *schema.Provider {
 			"api_key": {
 				Type:        schema.TypeString,
 				Required:    true,
+				Sensitive:   true,
 				DefaultFunc: schema.EnvDefaultFunc("CHECKLY_API_KEY", nil),
 			},
 			"api_url": {
