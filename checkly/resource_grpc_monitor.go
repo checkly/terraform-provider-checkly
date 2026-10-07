@@ -162,10 +162,14 @@ func resourceGRPCMonitor() *schema.Resource {
 							Optional:    true,
 							Description: "Whether to skip SSL certificate validation when `tls` is enabled. (Default `false`).",
 						},
+						// timeout has the API's default rather than being
+						// Computed: the update endpoint keeps the stored value
+						// of an omitted field, so removing timeout from the
+						// config must send the default explicitly.
 						"timeout": {
 							Type:         schema.TypeInt,
 							Optional:     true,
-							Computed:     true,
+							Default:      60,
 							ValidateFunc: validateBetween(1, 180),
 							Description:  "The number of seconds to wait for the gRPC call to complete before timing out. Possible values are between 1 and 180. (Default `60`).",
 						},
