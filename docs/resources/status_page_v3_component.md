@@ -3,12 +3,12 @@
 page_title: "checkly_status_page_v3_component Resource - terraform-provider-checkly"
 subcategory: ""
 description: |-
-  A component of a v3 status page: either a SERVICE (a monitored thing with its own status) or a GROUP (a container for other components). Import uses the composite ID <status_page_id>/<component_id>. A group can never be empty: when the last member of a group is destroyed, the provider deletes the group first (which detaches its members) — destroy a group's last member together with its group, not on its own.
+  A component of a v3 status page: either a SERVICE (a monitored thing with its own status) or a GROUP (a container for other components). Import uses the composite ID <status_page_id>/<component_id>.
 ---
 
 # checkly_status_page_v3_component (Resource)
 
-A component of a v3 status page: either a SERVICE (a monitored thing with its own status) or a GROUP (a container for other components). Import uses the composite ID `<status_page_id>/<component_id>`. A group can never be empty: when the last member of a group is destroyed, the provider deletes the group first (which detaches its members) — destroy a group's last member together with its group, not on its own.
+A component of a v3 status page: either a SERVICE (a monitored thing with its own status) or a GROUP (a container for other components). Import uses the composite ID `<status_page_id>/<component_id>`.
 
 ## Example Usage
 

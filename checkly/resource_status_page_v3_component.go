@@ -3,7 +3,6 @@ package checkly
 import (
 	"context"
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -56,10 +55,7 @@ func resourceStatusPageV3Component() *schema.Resource {
 		Description: "A component of a v3 status page: either a SERVICE (a " +
 			"monitored thing with its own status) or a GROUP (a container " +
 			"for other components). Import uses the composite ID " +
-			"`<status_page_id>/<component_id>`. A group can never be empty: " +
-			"when the last member of a group is destroyed, the provider " +
-			"deletes the group first (which detaches its members) — destroy " +
-			"a group's last member together with its group, not on its own.",
+			"`<status_page_id>/<component_id>`.",
 		Schema: map[string]*schema.Schema{
 			"status_page_id": {
 				Type:        schema.TypeString,
@@ -240,33 +236,15 @@ func resourceStatusPageV3ComponentUpdate(d *schema.ResourceData, client interfac
 
 func resourceStatusPageV3ComponentDelete(d *schema.ResourceData, client interface{}) error {
 	statusPageID := d.Get("status_page_id").(string)
-	deleteComponent := func(id string) error {
-		ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
-		defer cancel()
-		return client.(checkly.Client).DeleteStatusPageComponentV3(ctx, statusPageID, id)
-	}
-	err := deleteComponent(d.Id())
-	if err == nil || isStatusPageV3NotFound(err) {
-		// A 404 means the component is already gone, e.g. deleted along with
-		// its group or page.
-		return nil
-	}
-	// The API refuses to remove a group's last member, and Terraform always
-	// destroys the member before its group. A group cannot outlive its last
-	// member anyway, so delete the group — which detaches its children —
-	// and retry. The group's own destroy then finds it gone (404, treated
-	// as success above); if the group was not being destroyed, the next
-	// plan recreates it empty.
-	parentID := d.Get("parent_id").(string)
-	if parentID != "" && strings.Contains(err.Error(), "a group cannot be empty") {
-		log.Printf("[WARN] deleting component %s: it is the last member of group %s, deleting the group first", d.Id(), parentID)
-		if err := deleteComponent(parentID); err != nil && !isStatusPageV3NotFound(err) {
-			return fmt.Errorf("resourceStatusPageV3ComponentDelete: failed to delete the parent group of the group's last member: %w", err)
+	ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
+	defer cancel()
+	err := client.(checkly.Client).DeleteStatusPageComponentV3(ctx, statusPageID, d.Id())
+	if err != nil {
+		// Already gone, e.g. deleted along with its page.
+		if isStatusPageV3NotFound(err) {
+			return nil
 		}
-		if err := deleteComponent(d.Id()); err != nil {
-			return fmt.Errorf("resourceStatusPageV3ComponentDelete: API error: %w", err)
-		}
-		return nil
+		return fmt.Errorf("resourceStatusPageV3ComponentDelete: API error: %w", err)
 	}
-	return fmt.Errorf("resourceStatusPageV3ComponentDelete: API error: %w", err)
+	return nil
 }

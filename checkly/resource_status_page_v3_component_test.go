@@ -127,8 +127,7 @@ func TestAccStatusPageV3ComponentHappyPath(t *testing.T) {
 			),
 		},
 		{
-			// Detaching the api component is only allowed because the
-			// database component stays behind in the group.
+			// Detaches the api component from its group.
 			Config: group + `
 				resource "checkly_status_page_v3_component" "api" {
 					status_page_id       = checkly_status_page_v3.test.id
@@ -214,9 +213,32 @@ func TestAccStatusPageV3ComponentHappyPath(t *testing.T) {
 			),
 		},
 		{
-			// Destroys the group and its last member in one apply. Terraform
-			// deletes the member first, which the API refuses — this
-			// exercises the provider's delete-the-group-first fallback.
+			// Destroys the group's last member and keeps the group, now
+			// empty. The post-apply plan is only empty if the group survived.
+			Config: page + `
+				resource "checkly_status_page_v3_component" "group" {
+					status_page_id = checkly_status_page_v3.test.id
+					type           = "GROUP"
+					name           = "Foo group"
+					display_order  = 0
+				}
+
+				resource "checkly_status_page_v3_component" "api" {
+					status_page_id = checkly_status_page_v3.test.id
+					name           = "Bar API"
+					display_order  = 3
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_status_page_v3_component.group",
+					"type",
+					"GROUP",
+				),
+			),
+		},
+		{
+			// Destroys the empty group.
 			Config: page + `
 				resource "checkly_status_page_v3_component" "api" {
 					status_page_id       = checkly_status_page_v3.test.id

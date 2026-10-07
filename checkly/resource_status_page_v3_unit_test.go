@@ -280,10 +280,10 @@ func TestIsStatusPageV3NotFound(t *testing.T) {
 		t.Error("expected a 404 response to be reported as not found")
 	}
 	// The 400 body quotes component names, which may contain "404".
-	if isStatusPageV3NotFound(errors.New(`unexpected response status 400: "\"API 404\" is the only component in group \"G\" and a group cannot be empty."`)) {
+	if isStatusPageV3NotFound(errors.New(`unexpected response status 400: "\"API 404\" is not a GROUP component."`)) {
 		t.Error("expected a 400 response to not be reported as not found")
 	}
-	if isStatusPageV3NotFound(errors.New(`unexpected response status 400: "\"unexpected response status 404: x\" is the only component in group \"G\""`)) {
+	if isStatusPageV3NotFound(errors.New(`unexpected response status 400: "\"unexpected response status 404: x\" is not a GROUP component"`)) {
 		t.Error("expected a 400 response quoting the 404 prefix to not be reported as not found")
 	}
 }
