@@ -212,7 +212,7 @@ func resourceStatusPageV3ComponentRead(d *schema.ResourceData, client interface{
 	defer cancel()
 	component, err := client.(checkly.Client).GetStatusPageComponentV3(ctx, statusPageID, d.Id())
 	if err != nil {
-		if strings.Contains(err.Error(), "404") {
+		if isStatusPageV3NotFound(err) {
 			// Deleted remotely, either the component itself or the whole
 			// page: mark the resource as gone.
 			d.SetId("")
@@ -246,7 +246,7 @@ func resourceStatusPageV3ComponentDelete(d *schema.ResourceData, client interfac
 		return client.(checkly.Client).DeleteStatusPageComponentV3(ctx, statusPageID, id)
 	}
 	err := deleteComponent(d.Id())
-	if err == nil || strings.Contains(err.Error(), "404") {
+	if err == nil || isStatusPageV3NotFound(err) {
 		// A 404 means the component is already gone, e.g. deleted along with
 		// its group or page.
 		return nil
@@ -260,7 +260,7 @@ func resourceStatusPageV3ComponentDelete(d *schema.ResourceData, client interfac
 	parentID := d.Get("parent_id").(string)
 	if parentID != "" && strings.Contains(err.Error(), "a group cannot be empty") {
 		log.Printf("[WARN] deleting component %s: it is the last member of group %s, deleting the group first", d.Id(), parentID)
-		if err := deleteComponent(parentID); err != nil && !strings.Contains(err.Error(), "404") {
+		if err := deleteComponent(parentID); err != nil && !isStatusPageV3NotFound(err) {
 			return fmt.Errorf("resourceStatusPageV3ComponentDelete: failed to delete the parent group of the group's last member: %w", err)
 		}
 		if err := deleteComponent(d.Id()); err != nil {

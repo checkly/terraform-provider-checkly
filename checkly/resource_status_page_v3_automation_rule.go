@@ -3,7 +3,6 @@ package checkly
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
@@ -185,7 +184,7 @@ func resourceStatusPageV3AutomationRuleRead(d *schema.ResourceData, client inter
 	defer cancel()
 	rule, err := client.(checkly.Client).GetStatusPageAutomationRuleV3(ctx, statusPageID, d.Id())
 	if err != nil {
-		if strings.Contains(err.Error(), "404") {
+		if isStatusPageV3NotFound(err) {
 			// Deleted remotely, either the rule itself or the whole page:
 			// mark the resource as gone.
 			d.SetId("")
@@ -218,7 +217,7 @@ func resourceStatusPageV3AutomationRuleDelete(d *schema.ResourceData, client int
 	err := client.(checkly.Client).DeleteStatusPageAutomationRuleV3(ctx, statusPageID, d.Id())
 	if err != nil {
 		// Already gone (deleted along with its page): nothing left to do.
-		if strings.Contains(err.Error(), "404") {
+		if isStatusPageV3NotFound(err) {
 			return nil
 		}
 		return fmt.Errorf("resourceStatusPageV3AutomationRuleDelete: API error: %w", err)

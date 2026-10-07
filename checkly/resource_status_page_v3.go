@@ -21,6 +21,13 @@ var statusPageV3ThemeValues = allowedValues[string]{
 // here would create a permanent diff between config and state.
 var statusPageV3URLRegex = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$`)
 
+// isStatusPageV3NotFound reports whether a v3 status page API call failed
+// with 404. It matches the SDK's status prefix rather than any "404" in the
+// message, because the quoted response body can echo user-chosen names.
+func isStatusPageV3NotFound(err error) bool {
+	return strings.HasPrefix(err.Error(), "unexpected response status 404:")
+}
+
 // Same format the API accepts: #RGB or #RRGGBB, case-insensitive.
 var statusPageV3HexColorRegex = regexp.MustCompile(`^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$`)
 
@@ -332,7 +339,7 @@ func resourceStatusPageV3Read(d *schema.ResourceData, client interface{}) error 
 	defer cancel()
 	statusPage, err := client.(checkly.Client).GetStatusPageV3(ctx, d.Id())
 	if err != nil {
-		if strings.Contains(err.Error(), "404") {
+		if isStatusPageV3NotFound(err) {
 			// If the resource was deleted remotely, mark it as successfully
 			// gone by unsetting its ID.
 			d.SetId("")
@@ -360,7 +367,7 @@ func resourceStatusPageV3Delete(d *schema.ResourceData, client interface{}) erro
 	err := client.(checkly.Client).DeleteStatusPageV3(ctx, d.Id())
 	if err != nil {
 		// Already gone (deleted out-of-band): nothing left to do.
-		if strings.Contains(err.Error(), "404") {
+		if isStatusPageV3NotFound(err) {
 			return nil
 		}
 		return fmt.Errorf("resourceStatusPageV3Delete: API error: %w", err)

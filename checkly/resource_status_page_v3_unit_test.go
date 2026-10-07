@@ -1,6 +1,7 @@
 package checkly
 
 import (
+	"errors"
 	"sort"
 	"testing"
 
@@ -258,5 +259,18 @@ func TestStatusPageV3AutomationRuleDuplicateComponents(t *testing.T) {
 	}
 	if _, err := statusPageV3AutomationRuleFromResourceData(data); err == nil {
 		t.Error("expected an error for a duplicate component_id")
+	}
+}
+
+func TestIsStatusPageV3NotFound(t *testing.T) {
+	if !isStatusPageV3NotFound(errors.New(`unexpected response status 404: "{\"statusCode\":404}"`)) {
+		t.Error("expected a 404 response to be reported as not found")
+	}
+	// The 400 body quotes component names, which may contain "404".
+	if isStatusPageV3NotFound(errors.New(`unexpected response status 400: "\"API 404\" is the only component in group \"G\" and a group cannot be empty."`)) {
+		t.Error("expected a 400 response to not be reported as not found")
+	}
+	if isStatusPageV3NotFound(errors.New(`unexpected response status 400: "\"unexpected response status 404: x\" is the only component in group \"G\""`)) {
+		t.Error("expected a 400 response quoting the 404 prefix to not be reported as not found")
 	}
 }
