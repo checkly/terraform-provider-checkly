@@ -41,6 +41,40 @@ Hi! We are really excited that you are interested in contributing to Checkly Ter
 
 - Commit messages must follow the [semantic commit messages](https://gist.github.com/joshbuchea/6f47e86d2510bce28f8e7f42ae84c716) so that changelogs can be automatically generated.
 
+## Pull request review: Ship / Show / Ask
+
+This repo supports the [Ship / Show / Ask](https://martinfowler.com/articles/ship-show-ask.html)
+strategy. Signal your intent by ending the **PR title** with a tag (case-insensitive), e.g.
+`feat: add retries [ship]`:
+
+- **`[ship]`** — No review needed. `github-actions[bot]` auto-approves the PR; merge it yourself
+  once CI is green. Use for low-risk changes you're confident in.
+- **`[show]`** — Merge now, review after the fact. Also auto-approved; open it for visibility and
+  merge once CI passes, inviting comments for follow-up.
+- **`[ask]`** or **no tag** — Normal review. The PR waits for a human approval before it can merge.
+
+Notes:
+
+- **Auto-approval is limited to PRs opened from a branch in this repository** (i.e. members and
+  collaborators with push access). Pull requests from forks are **never** auto-approved and always
+  require manual review, regardless of the title tag.
+- The tag only counts at the very end of the title. A `[ship]`/`[show]` elsewhere in the title is
+  ignored — so e.g. a GitHub-generated revert title (`Revert "feat: x [ship]"`) still gets manual
+  review.
+- If you tag a PR `[ship]`/`[show]` and later change the title to `[ask]` (or drop the tag), the
+  earlier auto-approval is dismissed so the PR returns to manual review.
+- Dismissing the bot's approval by hand doesn't stick: while the title still ends with
+  `[ship]`/`[show]`, the next push (or other PR update) re-approves. To durably demand review on a
+  tagged PR, submit a **Request changes** review or retitle the PR to `[ask]`.
+- A draft PR tagged `[ship]`/`[show]` is approved only once it's marked ready for review.
+- This only adds an approving review; merging still respects branch protection (passing CI, etc.).
+  It does not auto-merge.
+
+The behavior lives in [`.github/workflows/ship-show-ask.yml`](.github/workflows/ship-show-ask.yml).
+It depends on two GitHub settings outside this repo: **Allow GitHub Actions to create and approve
+pull requests** must be enabled, and branch protection on `main` must require an approving review
+(a review count — not a Code Owners review, which a bot can't satisfy).
+
 ## Development Setup
 
 The development branch is `main`. This is the branch that all pull requests should be made against.
