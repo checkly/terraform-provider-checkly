@@ -3,6 +3,7 @@ package checkly
 import (
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -92,7 +93,7 @@ func Provider() *schema.Provider {
 			client := checkly.NewClient(
 				apiUrl,
 				apiKey,
-				nil,
+				&http.Client{Timeout: apiRequestTimeout()},
 				debugOutput,
 			)
 
