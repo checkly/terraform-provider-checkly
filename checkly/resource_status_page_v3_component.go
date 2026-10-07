@@ -42,6 +42,17 @@ func resourceStatusPageV3Component() *schema.Resource {
 		Update:   resourceStatusPageV3ComponentUpdate,
 		Delete:   resourceStatusPageV3ComponentDelete,
 		Importer: statusPageV3CompositeImporter("component"),
+		CustomizeDiff: func(_ context.Context, diff *schema.ResourceDiff, _ interface{}) error {
+			// An unknown type (e.g. computed from another resource) is
+			// checked again when the payload is built at apply time.
+			if !diff.NewValueKnown("type") {
+				return nil
+			}
+			return validateStatusPageV3ComponentConfiguration(
+				checkly.StatusPageComponentV3Type(diff.Get("type").(string)),
+				diff.Get("expanded_by_default").(bool),
+			)
+		},
 		Description: "A component of a v3 status page: either a SERVICE (a " +
 			"monitored thing with its own status) or a GROUP (a container " +
 			"for other components). Import uses the composite ID " +
@@ -105,22 +116,30 @@ func resourceStatusPageV3Component() *schema.Resource {
 	}
 }
 
+// The API's configuration shape is discriminated by type: a SERVICE only
+// supports showHistoricalData and rejects expandedByDefault. The attribute's
+// false default is indistinguishable from an explicit false, so only a true
+// value on a SERVICE can (and must) be rejected.
+func validateStatusPageV3ComponentConfiguration(componentType checkly.StatusPageComponentV3Type, expandedByDefault bool) error {
+	if componentType != checkly.StatusPageComponentV3TypeGroup && expandedByDefault {
+		return fmt.Errorf(`"expanded_by_default" is only available on a GROUP component`)
+	}
+	return nil
+}
+
 func statusPageV3ComponentFromResourceData(d *schema.ResourceData) (checkly.StatusPageComponentV3, error) {
 	componentType := checkly.StatusPageComponentV3Type(d.Get("type").(string))
 	showHistoricalData := d.Get("show_historical_data").(bool)
 	expandedByDefault := d.Get("expanded_by_default").(bool)
 
-	// The API's configuration shape is discriminated by type: a SERVICE only
-	// supports showHistoricalData and rejects expandedByDefault loudly. The
-	// attribute's false default is indistinguishable from an explicit false,
-	// so only a true value on a SERVICE can (and must) be caught here.
+	if err := validateStatusPageV3ComponentConfiguration(componentType, expandedByDefault); err != nil {
+		return checkly.StatusPageComponentV3{}, err
+	}
 	configuration := &checkly.StatusPageComponentV3Configuration{
 		ShowHistoricalData: &showHistoricalData,
 	}
 	if componentType == checkly.StatusPageComponentV3TypeGroup {
 		configuration.ExpandedByDefault = &expandedByDefault
-	} else if expandedByDefault {
-		return checkly.StatusPageComponentV3{}, fmt.Errorf(`"expanded_by_default" is only available on a GROUP component`)
 	}
 
 	return checkly.StatusPageComponentV3{

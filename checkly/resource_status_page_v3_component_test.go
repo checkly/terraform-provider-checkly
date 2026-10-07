@@ -37,6 +37,17 @@ func TestAccStatusPageV3ComponentCheckRequiredFields(t *testing.T) {
 			`,
 			ExpectError: regexp.MustCompile(`The argument "display_order" is required`),
 		},
+		{
+			Config: `
+				resource "checkly_status_page_v3_component" "test" {
+					status_page_id      = "6a11caa1-b6cb-4e46-8bd3-e70a90c5add8"
+					name                = "foo"
+					display_order       = 0
+					expanded_by_default = true
+				}
+			`,
+			ExpectError: regexp.MustCompile(`"expanded_by_default" is only available on a GROUP component`),
+		},
 	})
 }
 
