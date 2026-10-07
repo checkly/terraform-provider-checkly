@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/go-cty/cty"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
@@ -440,6 +441,225 @@ func TestAccGRPCMonitorFlatBuffersInvalidConfig(t *testing.T) {
 			}})
 		})
 	}
+}
+
+// TestAccGRPCMonitorUnsetAllAttributes sets the optional attributes, then
+// removes them all and asserts each one is cleared or back at its default. The
+// update endpoint keeps stored values for omitted fields, so an attribute
+// whose empty value is left out of the payload would otherwise stay set. The
+// test framework also fails any step whose plan is not empty after a refresh,
+// which catches values the API kept even when the read right after the update
+// shows them cleared.
+//
+// Not covered here: tags, group_order and alert_settings, which cannot be
+// removed on any check type yet; locations, which every monitor needs; the
+// FlatBuffers-related request attributes, covered by
+// TestAccGRPCMonitorFlatBuffers; and frequency_offset, covered by
+// TestAccGRPCMonitorUnsetFrequencyOffset.
+func TestAccGRPCMonitorUnsetAllAttributes(t *testing.T) {
+	const name = "checkly_grpc_monitor.test"
+	// Private location slugs are unique per account and limited to 30
+	// characters, so a short random suffix avoids collisions between runs.
+	slug := fmt.Sprintf("tf-grpc-unset-%d", acctest.RandInt()%100000)
+	config := func(monitor, request string) string {
+		return grpcMonitorUnsetConfig(slug, monitor, request)
+	}
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: config(`
+				description            = "description"
+				muted                  = true
+				should_fail            = true
+				run_parallel           = true
+				degraded_response_time = 3000
+				max_response_time      = 8000
+				group_id               = checkly_check_group.test.id
+				use_global_alert_settings = true
+				private_locations      = [checkly_private_location.test.slug_name]
+				runtime_id             = "2023.09"
+
+				alert_channel_subscription {
+					channel_id = checkly_alert_channel.test.id
+					activated  = true
+				}
+
+				retry_strategy {
+					type = "LINEAR"
+				}
+
+				trigger_incident {
+					service_id         = checkly_status_page_service.test.id
+					severity           = "MINOR"
+					name               = "incident"
+					description        = "incident"
+					notify_subscribers = false
+				}
+			`, grpcUnsetMethod+`
+				ip_family = "IPv6"
+				tls       = false
+				skip_ssl  = true
+				timeout   = 30
+				message   = jsonencode({ name = "Checkly" })
+
+				metadata {
+					key   = "x-key"
+					value = "value"
+				}
+
+				assertion {
+					source     = "GRPC_STATUS_CODE"
+					comparison = "EQUALS"
+					target     = "0"
+				}
+			`),
+			Check: resource.ComposeAggregateTestCheckFunc(
+				resource.TestCheckResourceAttr(name, "description", "description"),
+				resource.TestCheckResourceAttr(name, "alert_channel_subscription.#", "1"),
+				resource.TestCheckResourceAttr(name, "trigger_incident.#", "1"),
+				resource.TestCheckResourceAttr(name, "private_locations.#", "1"),
+				resource.TestCheckResourceAttr(name, "runtime_id", "2023.09"),
+				resource.TestCheckResourceAttr(name, "request.0.timeout", "30"),
+				resource.TestCheckResourceAttr(name, "request.0.metadata.#", "1"),
+				resource.TestCheckResourceAttr(name, "request.0.assertion.#", "1"),
+			),
+		},
+		{
+			Config: config("", grpcUnsetMethod),
+			Check: resource.ComposeAggregateTestCheckFunc(
+				resource.TestCheckResourceAttr(name, "description", ""),
+				resource.TestCheckResourceAttr(name, "degraded_response_time", "10000"),
+				resource.TestCheckResourceAttr(name, "max_response_time", "20000"),
+				resource.TestCheckResourceAttr(name, "muted", "false"),
+				resource.TestCheckResourceAttr(name, "should_fail", "false"),
+				resource.TestCheckResourceAttr(name, "run_parallel", "false"),
+				resource.TestCheckResourceAttr(name, "group_id", "0"),
+				resource.TestCheckResourceAttr(name, "use_global_alert_settings", "false"),
+				resource.TestCheckResourceAttr(name, "alert_channel_subscription.#", "0"),
+				resource.TestCheckResourceAttr(name, "retry_strategy.0.type", "NO_RETRIES"),
+				resource.TestCheckResourceAttr(name, "trigger_incident.#", "0"),
+				resource.TestCheckResourceAttr(name, "private_locations.#", "0"),
+				resource.TestCheckResourceAttr(name, "runtime_id", ""),
+				resource.TestCheckResourceAttr(name, "request.0.ip_family", "IPv4"),
+				resource.TestCheckResourceAttr(name, "request.0.tls", "true"),
+				resource.TestCheckResourceAttr(name, "request.0.skip_ssl", "false"),
+				resource.TestCheckResourceAttr(name, "request.0.timeout", "60"),
+				resource.TestCheckResourceAttr(name, "request.0.message", ""),
+				resource.TestCheckResourceAttr(name, "request.0.metadata.#", "0"),
+				resource.TestCheckResourceAttr(name, "request.0.assertion.#", "0"),
+			),
+		},
+		{
+			Config: config("", grpcUnsetHealthService),
+			Check:  resource.TestCheckResourceAttr(name, "request.0.service", "grpc.health.v1.Health"),
+		},
+		{
+			Config: config("", `grpc_mode = "HEALTH"`),
+			Check:  resource.TestCheckResourceAttr(name, "request.0.service", ""),
+		},
+		{
+			Config: config("", grpcUnsetHealthService),
+			Check:  resource.TestCheckResourceAttr(name, "request.0.service", "grpc.health.v1.Health"),
+		},
+		{
+			// Unset grpc_mode, switching back to BEHAVIOR, which has no service.
+			Config: config("", grpcUnsetMethod),
+			Check: resource.ComposeAggregateTestCheckFunc(
+				resource.TestCheckResourceAttr(name, "request.0.grpc_mode", "BEHAVIOR"),
+				resource.TestCheckResourceAttr(name, "request.0.service", ""),
+			),
+		},
+	})
+}
+
+// TestAccGRPCMonitorUnsetFrequencyOffset asserts removing frequency_offset
+// together with a switch to a regular frequency converges. frequency_offset is
+// required when frequency is 0 and forbidden otherwise, so it cannot be
+// removed on its own. The read discards the offset of a monitor with a regular
+// frequency, so this does not show whether the API still stores the old one.
+func TestAccGRPCMonitorUnsetFrequencyOffset(t *testing.T) {
+	const name = "checkly_grpc_monitor.test"
+	config := func(frequency string) string {
+		return fmt.Sprintf(`
+			resource "checkly_grpc_monitor" "test" {
+			  name      = "grpc-unset-frequency-offset"
+			  activated = false
+			  locations = ["us-east-1"]
+			  %s
+
+			  request {
+				host   = "grpc.example.com"
+				port   = 443
+				method = "example.Greeter/Greet"
+			  }
+			}
+		`, frequency)
+	}
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: config("frequency = 0\n\t\t\t  frequency_offset = 10"),
+			Check:  resource.TestCheckResourceAttr(name, "frequency_offset", "10"),
+		},
+		{
+			Config: config("frequency = 5"),
+			Check: resource.ComposeAggregateTestCheckFunc(
+				resource.TestCheckResourceAttr(name, "frequency", "5"),
+				resource.TestCheckResourceAttr(name, "frequency_offset", "0"),
+			),
+		},
+	})
+}
+
+const (
+	grpcUnsetMethod        = `method = "example.Greeter/Greet"`
+	grpcUnsetHealthService = `
+		grpc_mode = "HEALTH"
+		service   = "grpc.health.v1.Health"
+	`
+)
+
+// grpcMonitorUnsetConfig renders the monitor of
+// TestAccGRPCMonitorUnsetAllAttributes with the given monitor and request
+// attributes, plus the resources the fully populated monitor references. Those
+// stay in every step so removing a reference does not also destroy its target.
+func grpcMonitorUnsetConfig(slug, monitor, request string) string {
+	return fmt.Sprintf(`
+		resource "checkly_check_group" "test" {
+		  name        = "grpc-unset"
+		  activated   = true
+		  concurrency = 1
+		  locations   = ["us-east-1"]
+		}
+
+		resource "checkly_alert_channel" "test" {
+		  email {
+			address = "grpc-unset@example.com"
+		  }
+		}
+
+		resource "checkly_status_page_service" "test" {
+		  name = "grpc-unset"
+		}
+
+		resource "checkly_private_location" "test" {
+		  name      = "grpc-unset"
+		  slug_name = "%s"
+		  icon      = "bell-fill"
+		}
+
+		resource "checkly_grpc_monitor" "test" {
+		  name      = "grpc-unset"
+		  activated = false
+		  frequency = 5
+		  locations = ["us-east-1"]
+		  %s
+
+		  request {
+			host = "grpc.example.com"
+			port = 443
+			%s
+		  }
+		}
+	`, slug, monitor, request)
 }
 
 // TestAccGRPCMonitorMinimalCleanReplan asserts anti-pattern B is avoided: a
