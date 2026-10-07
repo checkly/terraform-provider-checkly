@@ -13,7 +13,22 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
+// rateLimitAllowance is how much longer than a single request an API call
+// may take, to wait out rate limits: the SDK re-sends a rate-limited (HTTP
+// 429) request after the wait the API asks for, up to a minute, but only if
+// the call's deadline leaves room for the wait and the re-sent request.
+const rateLimitAllowance = 2 * time.Minute
+
+// apiCallTimeout bounds one call to the Checkly API, including any time spent
+// waiting out rate limits. Each HTTP request within it is bounded by
+// apiRequestTimeout.
 func apiCallTimeout() time.Duration {
+	return apiRequestTimeout() + rateLimitAllowance
+}
+
+// apiRequestTimeout bounds a single HTTP request to the Checkly API:
+// API_CALL_TIMEOUT seconds, 15 by default.
+func apiRequestTimeout() time.Duration {
 	timeout := os.Getenv("API_CALL_TIMEOUT")
 	if timeout != "" {
 		v, err := strconv.ParseInt(timeout, 10, 64)
