@@ -3,7 +3,7 @@ module github.com/checkly/terraform-provider-checkly
 go 1.26.0
 
 require (
-	github.com/checkly/checkly-go-sdk v1.24.0
+	github.com/checkly/checkly-go-sdk v1.25.0
 	github.com/google/go-cmp v0.7.0
 	github.com/hashicorp/terraform-plugin-docs v0.25.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.40.1
@@ -11,6 +11,7 @@ require (
 
 require (
 	github.com/Masterminds/semver/v3 v3.5.0
+	github.com/hashicorp/go-cty v1.5.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -37,7 +38,6 @@ require (
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-checkpoint v0.5.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
-	github.com/hashicorp/go-cty v1.5.0 // indirect
 	github.com/hashicorp/go-hclog v1.6.3 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/go-plugin v1.8.0 // indirect

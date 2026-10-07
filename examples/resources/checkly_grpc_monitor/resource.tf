@@ -81,3 +81,24 @@ resource "checkly_grpc_monitor" "example-grpc-monitor-2" {
     }
   }
 }
+
+# A FlatBuffers unary monitor. Generate the binary schema first with:
+# flatc -b --schema --bfbs-builtins schema.fbs
+resource "checkly_grpc_monitor" "example-flatbuffers-monitor" {
+  name        = "Example FlatBuffers gRPC monitor"
+  activated   = true
+  should_fail = false
+  frequency   = 5
+  locations   = ["us-west-1"]
+
+  request {
+    host         = "grpc.example.com"
+    port         = 443
+    grpc_mode    = "BEHAVIOR"
+    tls          = true
+    encoding     = "FLATBUFFERS"
+    bfbs_content = filebase64("${path.module}/schema.bfbs")
+    method       = "example.Greeter/Greet"
+    message      = jsonencode({ name = "Checkly" })
+  }
+}

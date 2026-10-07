@@ -8,8 +8,10 @@ import (
 	"strings"
 
 	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/customdiff"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
 func resourceGRPCMonitor() *schema.Resource {
@@ -172,17 +174,42 @@ func resourceGRPCMonitor() *schema.Resource {
 							Optional:    true,
 							Description: "The service name to query in `HEALTH` mode. An empty value queries overall server health. Forbidden in `BEHAVIOR` mode.",
 						},
+						// encoding and service_definition have schema defaults
+						// rather than being Computed: the update endpoint keeps
+						// stored values for omitted fields, so removing either
+						// from the config must send the default explicitly to
+						// switch the monitor back.
+						"encoding": {
+							Type:         schema.TypeString,
+							Optional:     true,
+							Default:      "PROTOBUF",
+							ValidateFunc: validateOneOf([]string{"PROTOBUF", "FLATBUFFERS"}),
+							Description:  "The wire encoding used in `BEHAVIOR` mode. Possible values are `PROTOBUF` and `FLATBUFFERS`. (Default `PROTOBUF`).",
+						},
 						"service_definition": {
 							Type:         schema.TypeString,
 							Optional:     true,
-							Computed:     true,
+							Default:      "REFLECTION",
 							ValidateFunc: validateOneOf([]string{"REFLECTION", "PROTO_FILE"}),
-							Description:  "How the service definition is resolved in `BEHAVIOR` mode: `REFLECTION` uses server reflection; `PROTO_FILE` uses the inline `proto_content`. (Default `REFLECTION`).",
+							Description:  "How the service definition is resolved in `BEHAVIOR` mode: `REFLECTION` uses server reflection; `PROTO_FILE` uses the inline `proto_content`. Forbidden when `encoding = \"FLATBUFFERS\"`. (Default `REFLECTION`).",
 						},
 						"proto_content": {
 							Type:        schema.TypeString,
 							Optional:    true,
-							Description: "The inline `.proto` file source used when `service_definition = \"PROTO_FILE\"` in `BEHAVIOR` mode.",
+							Description: "The inline `.proto` file source used when `service_definition = \"PROTO_FILE\"` in `BEHAVIOR` mode. Forbidden when `encoding = \"FLATBUFFERS\"`.",
+						},
+						"bfbs_content": {
+							Type:     schema.TypeString,
+							Optional: true,
+							// An empty string means unset, like an omitted attribute.
+							ValidateFunc: validation.Any(
+								validation.StringIsEmpty,
+								validation.All(
+									validation.StringIsBase64,
+									validation.StringLenBetween(1, maxGRPCSchemaContentLength),
+								),
+							),
+							Description: "A base64-encoded binary FlatBuffers schema (`.bfbs`), at most 100 KiB once encoded. Required when `encoding = \"FLATBUFFERS\"` and forbidden otherwise. Generate it with `flatc -b --schema --bfbs-builtins schema.fbs` and load it with Terraform's `filebase64()` function.",
 						},
 						"method": {
 							Type:        schema.TypeString,
@@ -273,6 +300,7 @@ func resourceGRPCMonitor() *schema.Resource {
 		CustomizeDiff: customdiff.Sequence(
 			RetryStrategyCustomizeDiff,
 			FrequencyOffsetCustomizeDiff,
+			GRPCConfigCustomizeDiff,
 		),
 	}
 }
@@ -392,9 +420,11 @@ func setFromGRPCRequest(r checkly.GRPCRequest) []tfMap {
 	s["assertion"] = setFromAssertions(r.Assertions)
 	s["grpc_mode"] = r.GRPCConfig.Mode
 	s["tls"] = r.GRPCConfig.TLS
+	s["encoding"] = r.GRPCConfig.Encoding
 	s["service"] = r.GRPCConfig.Service
 	s["service_definition"] = r.GRPCConfig.ServiceDefinition
 	s["proto_content"] = r.GRPCConfig.ProtoContent
+	s["bfbs_content"] = r.GRPCConfig.BfbsContent
 	s["method"] = r.GRPCConfig.Method
 	s["message"] = r.GRPCConfig.Message
 	s["metadata"] = setFromGRPCMetadata(r.GRPCConfig.Metadata)
@@ -448,6 +478,27 @@ func grpcRequestFromList(s []any) checkly.GRPCRequest {
 		return checkly.GRPCRequest{}
 	}
 	res := s[0].(tfMap)
+	config := checkly.GRPCConfig{
+		Mode:              res["grpc_mode"].(string),
+		TLS:               res["tls"].(bool),
+		Encoding:          res["encoding"].(string),
+		Service:           res["service"].(string),
+		ServiceDefinition: res["service_definition"].(string),
+		ProtoContent:      res["proto_content"].(string),
+		BfbsContent:       res["bfbs_content"].(string),
+		Method:            res["method"].(string),
+		Message:           res["message"].(string),
+		Metadata:          grpcMetadataFromSet(res["metadata"].(*schema.Set)),
+	}
+	// encoding and service_definition always hold at least their defaults.
+	// Leave them out where they do not apply; the API ignores them there
+	// anyway.
+	if config.Mode == "HEALTH" {
+		config.Encoding = ""
+	}
+	if config.Encoding == "FLATBUFFERS" {
+		config.ServiceDefinition = ""
+	}
 	return checkly.GRPCRequest{
 		URL:        res["host"].(string),
 		Port:       res["port"].(int),
@@ -455,17 +506,86 @@ func grpcRequestFromList(s []any) checkly.GRPCRequest {
 		SkipSSL:    res["skip_ssl"].(bool),
 		Timeout:    res["timeout"].(int),
 		Assertions: assertionsFromSet(res["assertion"].(*schema.Set)),
-		GRPCConfig: checkly.GRPCConfig{
-			Mode:              res["grpc_mode"].(string),
-			TLS:               res["tls"].(bool),
-			Service:           res["service"].(string),
-			ServiceDefinition: res["service_definition"].(string),
-			ProtoContent:      res["proto_content"].(string),
-			Method:            res["method"].(string),
-			Message:           res["message"].(string),
-			Metadata:          grpcMetadataFromSet(res["metadata"].(*schema.Set)),
-		},
+		GRPCConfig: config,
 	}
+}
+
+// maxGRPCSchemaContentLength mirrors the API's limit on the encoded length of
+// bfbs_content.
+const maxGRPCSchemaContentLength = 100 * 1024
+
+// GRPCConfigCustomizeDiff rejects encoding/schema combinations at plan time
+// that the API would otherwise silently discard or reject on apply. It reads
+// the raw config rather than the planned values: service_definition holds its
+// default `REFLECTION` even on FLATBUFFERS monitors, so only an explicitly
+// configured value is a conflict.
+func GRPCConfigCustomizeDiff(_ context.Context, diff *schema.ResourceDiff, _ interface{}) error {
+	rawConfig := diff.GetRawConfig()
+	if rawConfig.IsNull() || !rawConfig.IsKnown() {
+		return nil
+	}
+	requests := rawConfig.GetAttr("request")
+	if !requests.IsKnown() || requests.IsNull() || requests.LengthInt() == 0 {
+		return nil
+	}
+	request := requests.Index(cty.NumberIntVal(0))
+	return validateGRPCEncoding(grpcEncodingConfig{
+		mode:              configuredString(request.GetAttr("grpc_mode"), "BEHAVIOR"),
+		encoding:          configuredString(request.GetAttr("encoding"), "PROTOBUF"),
+		bfbsContent:       configuredPresence(request.GetAttr("bfbs_content")),
+		serviceDefinition: configuredPresence(request.GetAttr("service_definition")),
+		protoContent:      configuredPresence(request.GetAttr("proto_content")),
+	})
+}
+
+// grpcEncodingConfig holds the configured values validateGRPCEncoding needs.
+// String values are "" when unknown at plan time; presence values are true
+// when the attribute is set in the config, even to a value not yet known.
+type grpcEncodingConfig struct {
+	mode              string
+	encoding          string
+	bfbsContent       bool
+	serviceDefinition bool
+	protoContent      bool
+}
+
+func validateGRPCEncoding(c grpcEncodingConfig) error {
+	switch {
+	case c.mode == "HEALTH" && (c.encoding == "FLATBUFFERS" || c.bfbsContent):
+		return fmt.Errorf("encoding = \"FLATBUFFERS\" and bfbs_content cannot be used when grpc_mode is HEALTH")
+	case c.mode != "BEHAVIOR" || c.encoding == "":
+		return nil
+	case c.encoding == "PROTOBUF" && c.bfbsContent:
+		return fmt.Errorf("bfbs_content can only be used when encoding is FLATBUFFERS")
+	case c.encoding == "FLATBUFFERS" && !c.bfbsContent:
+		return fmt.Errorf("bfbs_content is required when encoding is FLATBUFFERS")
+	case c.encoding == "FLATBUFFERS" && c.serviceDefinition:
+		return fmt.Errorf("service_definition cannot be used when encoding is FLATBUFFERS")
+	case c.encoding == "FLATBUFFERS" && c.protoContent:
+		return fmt.Errorf("proto_content cannot be used when encoding is FLATBUFFERS")
+	}
+	return nil
+}
+
+// configuredString returns a raw config string, def when it is not set, or ""
+// when its value is not known yet.
+func configuredString(v cty.Value, def string) string {
+	switch {
+	case !v.IsKnown():
+		return ""
+	case v.IsNull():
+		return def
+	}
+	return v.AsString()
+}
+
+// configuredPresence reports whether a raw config attribute is set. An empty
+// string counts as unset, matching how the SDK treats it.
+func configuredPresence(v cty.Value) bool {
+	if !v.IsKnown() {
+		return true
+	}
+	return !v.IsNull() && v.AsString() != ""
 }
 
 func grpcMetadataFromSet(s *schema.Set) []checkly.GRPCMetadata {
