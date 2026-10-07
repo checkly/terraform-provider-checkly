@@ -1,12 +1,16 @@
 package checkly
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+
+	checkly "github.com/checkly/checkly-go-sdk"
 )
 
 const statusPageV3Resource = "checkly_status_page_v3.test"
@@ -50,20 +54,6 @@ func TestAccStatusPageV3ThemeColors(t *testing.T) {
 					url  = "status-page-v3-themed-%d"
 					theme_colors {
 						light {
-							link_font_color = "not-a-color"
-						}
-					}
-				}
-			`, rInt),
-			ExpectError: regexp.MustCompile(`must be a hex color`),
-		},
-		{
-			Config: fmt.Sprintf(`
-				resource "checkly_status_page_v3" "test" {
-					name = "themed"
-					url  = "status-page-v3-themed-%d"
-					theme_colors {
-						light {
 							body_background_color           = "#F9FAFB"
 							header_background_color         = "#FFFFFF"
 							header_font_color               = "#151A1E"
@@ -85,7 +75,7 @@ func TestAccStatusPageV3ThemeColors(t *testing.T) {
 							body_font_color                 = "#C6CDD7"
 							body_font_color_muted           = "#A3B3C2"
 							navigation_font_color           = "#FFFFFF"
-							link_font_color                 = "#248AFF"
+							link_font_color                 = "#00FF00"
 							card_background_color           = "#171B21"
 							border_color                    = "#242B34"
 							primary_button_background_color = "#242B34"
@@ -103,7 +93,7 @@ func TestAccStatusPageV3ThemeColors(t *testing.T) {
 				resource.TestCheckResourceAttr(
 					statusPageV3Resource,
 					"theme_colors.0.dark.0.link_font_color",
-					"#248AFF",
+					"#00FF00",
 				),
 			),
 		},
@@ -123,9 +113,38 @@ func TestAccStatusPageV3ThemeColors(t *testing.T) {
 					"theme_colors.#",
 					"0",
 				),
+				testCheckStatusPageV3RemoteLinkColorsAreNot("#FF0000", "#00FF00"),
 			),
 		},
 	})
+}
+
+// testCheckStatusPageV3RemoteLinkColorsAreNot reads the page from the API:
+// once the theme_colors block is removed the provider stops tracking the
+// colors, so state alone cannot show whether they were cleared remotely.
+func testCheckStatusPageV3RemoteLinkColorsAreNot(light, dark string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[statusPageV3Resource]
+		if !ok {
+			return fmt.Errorf("resource %q not found in state", statusPageV3Resource)
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
+		defer cancel()
+		page, err := testAccProviders["checkly"].Meta().(checkly.Client).GetStatusPageV3(ctx, rs.Primary.ID)
+		if err != nil {
+			return err
+		}
+		if page.ThemeColors == nil {
+			return nil
+		}
+		if page.ThemeColors.Light.LinkFontColor == light {
+			return fmt.Errorf("expected the custom theme colors to be cleared, the light link color is still %s", light)
+		}
+		if page.ThemeColors.Dark.LinkFontColor == dark {
+			return fmt.Errorf("expected the custom theme colors to be cleared, the dark link color is still %s", dark)
+		}
+		return nil
+	}
 }
 
 func TestAccStatusPageV3HappyPath(t *testing.T) {

@@ -167,6 +167,53 @@ func TestAccStatusPageV3ComponentHappyPath(t *testing.T) {
 			),
 		},
 		{
+			// Removing every optional resets it remotely: the post-apply plan
+			// of this step is only empty if the API cleared each value.
+			Config: page + `
+				resource "checkly_status_page_v3_component" "group" {
+					status_page_id = checkly_status_page_v3.test.id
+					type           = "GROUP"
+					name           = "Foo group"
+					display_order  = 0
+				}
+
+				resource "checkly_status_page_v3_component" "database" {
+					status_page_id = checkly_status_page_v3.test.id
+					name           = "Database"
+					display_order  = 2
+					parent_id      = checkly_status_page_v3_component.group.id
+				}
+
+				resource "checkly_status_page_v3_component" "api" {
+					status_page_id = checkly_status_page_v3.test.id
+					name           = "Bar API"
+					display_order  = 3
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_status_page_v3_component.group",
+					"expanded_by_default",
+					"false",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_status_page_v3_component.api",
+					"description",
+					"",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_status_page_v3_component.api",
+					"hidden",
+					"false",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_status_page_v3_component.api",
+					"show_historical_data",
+					"true",
+				),
+			),
+		},
+		{
 			// Destroys the group and its last member in one apply. Terraform
 			// deletes the member first, which the API refuses — this
 			// exercises the provider's delete-the-group-first fallback.

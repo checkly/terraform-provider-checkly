@@ -160,6 +160,42 @@ func TestAccStatusPageV3AutomationRuleHappyPath(t *testing.T) {
 			),
 		},
 		{
+			// Removing every optional, including all component links, resets
+			// it remotely: the post-apply plan of this step is only empty if
+			// the API cleared each value.
+			Config: base + `
+				resource "checkly_status_page_v3_automation_rule" "test" {
+					status_page_id = checkly_status_page_v3.test.id
+					name           = "Bar API outage"
+					first_update   = "We are investigating an issue."
+					last_update    = "The issue has been resolved."
+					tags           = ["bar-api"]
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					statusPageV3AutomationRuleResource,
+					"enabled",
+					"true",
+				),
+				resource.TestCheckResourceAttr(
+					statusPageV3AutomationRuleResource,
+					"notify_subscribers",
+					"true",
+				),
+				resource.TestCheckResourceAttr(
+					statusPageV3AutomationRuleResource,
+					"cool_down_window_minutes",
+					"5",
+				),
+				resource.TestCheckResourceAttr(
+					statusPageV3AutomationRuleResource,
+					"component.#",
+					"0",
+				),
+			),
+		},
+		{
 			ResourceName:      statusPageV3AutomationRuleResource,
 			ImportState:       true,
 			ImportStateVerify: true,
