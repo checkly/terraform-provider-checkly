@@ -87,7 +87,7 @@ resource "checkly_status_page_v3_component" "database" {
 ### Optional
 
 - `allow_indexing` (Boolean) Whether search engines may index the public page. (Default `true`).
-- `custom_domain` (String) A custom user domain, e.g. "status.example.com". See the docs on updating your DNS and SSL usage.
+- `custom_domain` (String) A custom user domain, e.g. "status.example.com": a lowercase hostname without a scheme. See the docs on updating your DNS and SSL usage.
 - `default_theme` (String) The default theme of the status page. The allowed values are `AUTO`, `DARK` and `LIGHT`.
 - `description` (String) A short description shown on the status page.
 - `favicon` (String) A URL to an image file to use as the favicon of the status page.

@@ -21,6 +21,11 @@ var statusPageV3ThemeValues = allowedValues[string]{
 // here would create a permanent diff between config and state.
 var statusPageV3URLRegex = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$`)
 
+// The server lowercases the custom domain and strips a scheme before storing
+// it, so only the stored form is accepted to avoid a permanent diff. An empty
+// value is accepted too: it clears the domain like leaving it out does.
+var statusPageV3CustomDomainRegex = regexp.MustCompile(`^$|^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$`)
+
 // isStatusPageV3NotFound reports whether a v3 status page API call failed
 // with 404. It matches the SDK's status prefix rather than any "404" in the
 // message, because the quoted response body can echo user-chosen names.
@@ -133,7 +138,14 @@ func resourceStatusPageV3() *schema.Resource {
 			"custom_domain": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "A custom user domain, e.g. \"status.example.com\". See the docs on updating your DNS and SSL usage.",
+				Description: "A custom user domain, e.g. \"status.example.com\": a lowercase hostname without a scheme. See the docs on updating your DNS and SSL usage.",
+				ValidateFunc: func(value interface{}, key string) (warns []string, errs []error) {
+					v := value.(string)
+					if !statusPageV3CustomDomainRegex.MatchString(v) {
+						errs = append(errs, fmt.Errorf("%q must be a lowercase hostname without a scheme, such as \"status.example.com\", got: %s", key, v))
+					}
+					return warns, errs
+				},
 			},
 			"description": {
 				Type:        schema.TypeString,

@@ -262,6 +262,19 @@ func TestStatusPageV3AutomationRuleDuplicateComponents(t *testing.T) {
 	}
 }
 
+func TestStatusPageV3CustomDomainValidation(t *testing.T) {
+	for _, valid := range []string{"", "status.example.com", "a.b.example.co.uk", "status-1.example.com"} {
+		if !statusPageV3CustomDomainRegex.MatchString(valid) {
+			t.Errorf("expected %q to be accepted", valid)
+		}
+	}
+	for _, invalid := range []string{"Status.example.com", "https://status.example.com", "status.example.com/", "example", "-status.example.com"} {
+		if statusPageV3CustomDomainRegex.MatchString(invalid) {
+			t.Errorf("expected %q to be rejected", invalid)
+		}
+	}
+}
+
 func TestIsStatusPageV3NotFound(t *testing.T) {
 	if !isStatusPageV3NotFound(errors.New(`unexpected response status 404: "{\"statusCode\":404}"`)) {
 		t.Error("expected a 404 response to be reported as not found")
