@@ -20,7 +20,9 @@ func resourceStatusPage() *schema.Resource {
 			StateContext: schema.ImportStatePassthroughContext,
 		},
 		Description: "Checkly status pages allow you to easily communicate " +
-			"the uptime and health of your applications and services to your customers.",
+			"the uptime and health of your applications and services to your customers. " +
+			"This resource creates a legacy v2 status page: the new " +
+			"`checkly_status_page_v3` resource should always be preferred for new pages.",
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
