@@ -286,8 +286,8 @@ func TestAccGRPCMonitorFull(t *testing.T) {
 	})
 }
 
-// TestAccGRPCMonitorFlatBuffers walks one monitor through every encoding
-// transition. The update endpoint keeps stored values for omitted fields, so
+// TestAccGRPCMonitorFlatBuffers walks one monitor through every encoding and
+// service definition transition. The update endpoint keeps stored values for omitted fields, so
 // each step that removes an attribute from the config asserts the server
 // actually cleared it. The test framework also fails any step whose apply is
 // followed by a non-empty plan.
@@ -336,6 +336,24 @@ func TestAccGRPCMonitorFlatBuffers(t *testing.T) {
 				resource.TestCheckResourceAttr(name, "request.0.encoding", "PROTOBUF"),
 				resource.TestCheckResourceAttr(name, "request.0.service_definition", "PROTO_FILE"),
 			),
+		},
+		{
+			// Unset service_definition and proto_content.
+			Config: grpcMonitorFlatBuffersConfig(`
+				method = "example.Greeter/Greet"
+			`),
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(name, "request.0.service_definition", "REFLECTION"),
+				resource.TestCheckResourceAttr(name, "request.0.proto_content", ""),
+			),
+		},
+		{
+			Config: grpcMonitorFlatBuffersConfig(`
+				service_definition = "PROTO_FILE"
+				proto_content      = "syntax = \"proto3\";"
+				method             = "example.Greeter/Greet"
+			`),
+			Check: resource.TestCheckResourceAttr(name, "request.0.service_definition", "PROTO_FILE"),
 		},
 		{
 			// Switch from a proto file straight to FlatBuffers, unsetting

@@ -174,11 +174,11 @@ func resourceGRPCMonitor() *schema.Resource {
 							Optional:    true,
 							Description: "The service name to query in `HEALTH` mode. An empty value queries overall server health. Forbidden in `BEHAVIOR` mode.",
 						},
-						// encoding has a schema default rather than being
-						// Computed: the update endpoint keeps the stored
-						// encoding when the field is omitted, so removing
-						// `encoding = "FLATBUFFERS"` from the config must send
-						// an explicit PROTOBUF to switch the monitor back.
+						// encoding and service_definition have schema defaults
+						// rather than being Computed: the update endpoint keeps
+						// stored values for omitted fields, so removing either
+						// from the config must send the default explicitly to
+						// switch the monitor back.
 						"encoding": {
 							Type:         schema.TypeString,
 							Optional:     true,
@@ -189,7 +189,7 @@ func resourceGRPCMonitor() *schema.Resource {
 						"service_definition": {
 							Type:         schema.TypeString,
 							Optional:     true,
-							Computed:     true,
+							Default:      "REFLECTION",
 							ValidateFunc: validateOneOf([]string{"REFLECTION", "PROTO_FILE"}),
 							Description:  "How the service definition is resolved in `BEHAVIOR` mode: `REFLECTION` uses server reflection; `PROTO_FILE` uses the inline `proto_content`. Forbidden when `encoding = \"FLATBUFFERS\"`. (Default `REFLECTION`).",
 						},
@@ -490,9 +490,9 @@ func grpcRequestFromList(s []any) checkly.GRPCRequest {
 		Message:           res["message"].(string),
 		Metadata:          grpcMetadataFromSet(res["metadata"].(*schema.Set)),
 	}
-	// encoding always holds its default, and service_definition holds the
-	// `REFLECTION` the API reports even for FLATBUFFERS monitors. Leave them
-	// out where they do not apply; the API ignores them there anyway.
+	// encoding and service_definition always hold at least their defaults.
+	// Leave them out where they do not apply; the API ignores them there
+	// anyway.
 	if config.Mode == "HEALTH" {
 		config.Encoding = ""
 	}
@@ -516,9 +516,9 @@ const maxGRPCSchemaContentLength = 100 * 1024
 
 // GRPCConfigCustomizeDiff rejects encoding/schema combinations at plan time
 // that the API would otherwise silently discard or reject on apply. It reads
-// the raw config rather than the planned values: service_definition is
-// Computed and holds the server-reported `REFLECTION` even on FLATBUFFERS
-// monitors, so only an explicitly configured value is a conflict.
+// the raw config rather than the planned values: service_definition holds its
+// default `REFLECTION` even on FLATBUFFERS monitors, so only an explicitly
+// configured value is a conflict.
 func GRPCConfigCustomizeDiff(_ context.Context, diff *schema.ResourceDiff, _ interface{}) error {
 	rawConfig := diff.GetRawConfig()
 	if rawConfig.IsNull() || !rawConfig.IsKnown() {
