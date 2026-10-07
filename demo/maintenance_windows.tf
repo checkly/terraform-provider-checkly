@@ -16,4 +16,8 @@ resource "checkly_maintenance_windows" "maintenance-2" {
   tags = [
     "checks",
   ]
+  timezone            = "Europe/Berlin"
+  pause_all_checks    = false
+  silence_alerts_tags = ["checks"]
+  silence_all_alerts  = false
 }
