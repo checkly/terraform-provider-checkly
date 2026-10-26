@@ -178,7 +178,7 @@ func TestResolveBunVersion(t *testing.T) {
 	}{
 		{"1.3.11", "1.3"},
 		{"1.3", "1.3"},
-		{"1", "1"},
+		{"1", "1.0"},
 		{"", ""},
 	}
 	for _, tt := range tests {
@@ -215,7 +215,11 @@ func TestResolveEngineVersion(t *testing.T) {
 		{"node 16 remapped to 22 with notice", "16", nodeConfig, "22", false, true},
 		{"bun 1.3 allowed", "1.3", bunConfig, "1.3", false, false},
 		{"bun 1.2 remapped to 1.3 with notice", "1.2", bunConfig, "1.3", false, true},
-		{"bun 1.4 remapped to 1.3 with notice", "1.4", bunConfig, "1.3", false, true},
+		{"bun 1.4 allowed", "1.4", bunConfig, "1.4", false, false},
+		{"bun 1.4.4 resolves to 1.4", "1.4.4", bunConfig, "1.4", false, false},
+		{"bun 1 (latest available) allowed", "1", bunConfig, "1", false, false},
+		{"bun 1.5 remapped to 1.4 with notice", "1.5", bunConfig, "1.4", false, true},
+		{"bun 1.10 remapped to 1.4 with notice", "1.10", bunConfig, "1.4", false, true},
 		{"bun 2.0 denied", "2.0", bunConfig, "", true, true},
 	}
 	for _, tt := range tests {
@@ -333,6 +337,34 @@ func TestDetectEngine(t *testing.T) {
 		{
 			name:           "package.json engines bun",
 			files:          map[string][]byte{"package.json": []byte(`{"engines":{"bun":">=1.0"}}`)},
+			packageManager: "bun",
+			wantName:       "bun",
+			wantVersion:    "1.4",
+		},
+		{
+			name:           "package.json engines bun ~1.0 resolves to a pinned minor, not the 1 alias",
+			files:          map[string][]byte{"package.json": []byte(`{"engines":{"bun":"~1.0"}}`)},
+			packageManager: "bun",
+			wantName:       "bun",
+			wantVersion:    "1.3",
+		},
+		{
+			name:           "bun-version 1.4.2 resolves to 1.4",
+			files:          map[string][]byte{".bun-version": []byte("1.4.2")},
+			packageManager: "bun",
+			wantName:       "bun",
+			wantVersion:    "1.4",
+		},
+		{
+			name:           "unparseable bun-version falls back to the pinned default, not the 1 alias",
+			files:          map[string][]byte{".bun-version": []byte("latest")},
+			packageManager: "bun",
+			wantName:       "bun",
+			wantVersion:    "1.4",
+		},
+		{
+			name:           "bun-version 1 is read as 1.0, not the 1 alias",
+			files:          map[string][]byte{".bun-version": []byte("1")},
 			packageManager: "bun",
 			wantName:       "bun",
 			wantVersion:    "1.3",

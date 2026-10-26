@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
@@ -21,7 +22,16 @@ type engineRule struct {
 }
 
 type engineVersionConfig struct {
-	Default string       `json:"default"`
+	// Default applies to a version that semver cannot parse or that matches no
+	// rule. Explicit versions are format-validated and always match a rule, so
+	// only auto-detection reaches it; it must be a pinned version, not an alias.
+	// This is why bun's default here is a pinned minor while checkly-cli's is
+	// the "1" alias.
+	Default string `json:"default"`
+	// Aliases are version strings the API accepts as-is that semver would
+	// misread, such as bun "1" (the newest Bun 1.x the runner provides), which
+	// would otherwise parse as 1.0.0. They are accepted before any rule runs.
+	Aliases []string     `json:"aliases"`
 	Rules   []engineRule `json:"rules"`
 }
 
@@ -67,6 +77,10 @@ func resolveEngineVersion(version string, config engineVersionConfig) EngineReso
 			break
 		}
 		seen[current] = true
+
+		if slices.Contains(config.Aliases, current) {
+			return EngineResolution{Version: current, Notices: notices}
+		}
 
 		sv, err := semver.NewVersion(current)
 		if err != nil {
