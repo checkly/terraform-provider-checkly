@@ -125,7 +125,10 @@ func resolveBunVersion(raw string) string {
 	}
 	parts := strings.SplitN(raw, ".", 3)
 	if len(parts) < 2 {
-		return parts[0]
+		// A bare major is read as its .0 minor so that it goes through the
+		// rules instead of matching an alias such as bun "1"; detection only
+		// ever pins a minor.
+		return parts[0] + ".0"
 	}
 	return fmt.Sprintf("%s.%s", parts[0], parts[1])
 }

@@ -241,7 +241,7 @@ Optional:
 Required:
 
 - `name` (String) The engine name. Valid values are "node" or "bun".
-- `version` (String) The engine version (e.g. "22", "24", "26" for node; "1.3" for bun).
+- `version` (String) The engine version (e.g. "22", "24", "26" for node; "1.3", "1.4" for bun). Use "1" for bun to run the newest Bun 1.x available.
 
 
 <a id="nestedblock--runtime--playwright"></a>

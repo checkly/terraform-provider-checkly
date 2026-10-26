@@ -78,7 +78,8 @@
     {
       "name": "bun",
       "versions": {
-        "default": "1.3",
+        "default": "1.4",
+        "aliases": ["1"],
         "rules": [
           {
             "source": "<1.3",
@@ -94,11 +95,17 @@
             "follow": false
           },
           {
-            "source": "^1.4",
-            "target": "1.3",
+            "source": "~1.4",
+            "target": "1.4",
             "action": "allow",
-            "follow": true,
-            "notice": "Bun ${SOURCE} is not available yet. Consider Bun 1.3 instead."
+            "follow": false
+          },
+          {
+            "source": ">=1.5 <2",
+            "target": "1.4",
+            "action": "allow",
+            "follow": false,
+            "notice": "Bun ${SOURCE} is not available yet. Consider Bun 1.4 instead."
           },
           {
             "source": ">=2",
