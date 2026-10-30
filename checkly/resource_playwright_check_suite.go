@@ -850,7 +850,11 @@ func (r *PlaywrightCheckSuiteResource) StoreResourceData(
 	d.Set("locations", r.Locations)
 	d.Set("private_locations", r.PrivateLocations)
 
-	d.Set(environmentVariableAttributeName, listFromEnvironmentVariables(r.EnvironmentVariables))
+	envVars, err := environmentVariablesWithKnownSecrets(d, r.EnvironmentVariables)
+	if err != nil {
+		return err
+	}
+	d.Set(environmentVariableAttributeName, listFromEnvironmentVariables(envVars))
 
 	sort.Strings(r.Tags)
 	d.Set("tags", r.Tags)
@@ -862,7 +866,7 @@ func (r *PlaywrightCheckSuiteResource) StoreResourceData(
 	}
 	d.Set("use_global_alert_settings", r.UseGlobalAlertSettings)
 
-	err := d.Set("bundle", r.Bundle.ToList())
+	err = d.Set("bundle", r.Bundle.ToList())
 	if err != nil {
 		return err
 	}
