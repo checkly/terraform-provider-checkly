@@ -185,17 +185,29 @@ func mergeSecretEnvironmentVariableValues(existing, evs []checkly.EnvironmentVar
 	return res
 }
 
+// environmentVariablesWithKnownSecrets returns evs, as read from the API,
+// with each secret's value restored from the environment_variable attribute
+// currently in d. During a refresh d holds the prior state; after a create or
+// update it still holds the configured values.
+func environmentVariablesWithKnownSecrets(d *schema.ResourceData, evs []checkly.EnvironmentVariable) ([]checkly.EnvironmentVariable, error) {
+	existing, err := environmentVariablesFromResourceData(d)
+	if err != nil {
+		return nil, err
+	}
+
+	return mergeSecretEnvironmentVariableValues(existing, evs), nil
+}
+
 func updateCompatEnvironmentVariablesResourceData(d *schema.ResourceData, evs []checkly.EnvironmentVariable) error {
 	oldVars, err := deprecatedEnvironmentVariablesFromResourceData(d)
 	if err != nil {
 		return err
 	}
 
-	existing, err := environmentVariablesFromResourceData(d)
+	evs, err = environmentVariablesWithKnownSecrets(d, evs)
 	if err != nil {
 		return err
 	}
-	evs = mergeSecretEnvironmentVariableValues(existing, evs)
 
 	switch {
 	// If the resource defines old-style environment variables, update those
