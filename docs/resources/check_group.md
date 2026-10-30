@@ -282,7 +282,7 @@ Required:
 Optional:
 
 - `locked` (Boolean) If true, the value is not shown by default, but it can be accessed. (Default `false`).
-- `secret` (Boolean) If true, the value will never be visible. (Default `false`).
+- `secret` (Boolean) If true, the value will never be visible. The API never returns secret values, so Terraform keeps the last applied value and does not detect changes made outside Terraform. (Default `false`).
 
 
 <a id="nestedblock--retry_strategy"></a>

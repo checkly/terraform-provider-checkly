@@ -37,7 +37,7 @@ func makeEnvironmentVariableAttributeSchema(options EnvironmentVariableAttribute
 					Default:     false,
 				},
 				"secret": {
-					Description: "If true, the value will never be visible. (Default `false`).",
+					Description: "If true, the value will never be visible. The API never returns secret values, so Terraform keeps the last applied value and does not detect changes made outside Terraform. (Default `false`).",
 					Type:        schema.TypeBool,
 					Optional:    true,
 					Default:     false,
