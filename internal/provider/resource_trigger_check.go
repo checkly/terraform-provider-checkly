@@ -62,6 +62,7 @@ func (r *TriggerCheckResource) Schema(ctx context.Context, req resource.SchemaRe
 			},
 			"token": schema.StringAttribute{
 				Computed:    true,
+				Sensitive:   true,
 				Description: "The token value created to trigger the check",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -69,6 +70,7 @@ func (r *TriggerCheckResource) Schema(ctx context.Context, req resource.SchemaRe
 			},
 			"url": schema.StringAttribute{
 				Computed:    true,
+				Sensitive:   true,
 				Description: "The request URL to trigger the check run.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),

@@ -63,6 +63,7 @@ func (r *TriggerGroupResource) Schema(ctx context.Context, req resource.SchemaRe
 			},
 			"token": schema.StringAttribute{
 				Computed:    true,
+				Sensitive:   true,
 				Description: "The token value created to trigger the group",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -70,6 +71,7 @@ func (r *TriggerGroupResource) Schema(ctx context.Context, req resource.SchemaRe
 			},
 			"url": schema.StringAttribute{
 				Computed:    true,
+				Sensitive:   true,
 				Description: "The request URL to trigger the group run.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
