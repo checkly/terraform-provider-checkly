@@ -27,14 +27,14 @@ resource "checkly_traceroute_monitor" "example-traceroute-monitor-2" {
     "ap-northeast-1",
   ]
 
-  alert_settings {
+  alert_settings = {
     escalation_type = "RUN_BASED"
 
-    run_based_escalation {
+    run_based_escalation = {
       failed_run_threshold = 1
     }
 
-    reminders {
+    reminders = {
       amount = 1
     }
   }

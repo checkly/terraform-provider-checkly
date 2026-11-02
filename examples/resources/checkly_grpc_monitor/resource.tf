@@ -31,19 +31,19 @@ resource "checkly_grpc_monitor" "example-grpc-monitor-2" {
     "eu-central-1",
   ]
 
-  alert_settings {
+  alert_settings = {
     escalation_type = "RUN_BASED"
 
-    run_based_escalation {
+    run_based_escalation = {
       failed_run_threshold = 1
     }
 
-    reminders {
+    reminders = {
       amount = 1
     }
   }
 
-  retry_strategy {
+  retry_strategy = {
     type                 = "FIXED"
     base_backoff_seconds = 60
     max_duration_seconds = 600
