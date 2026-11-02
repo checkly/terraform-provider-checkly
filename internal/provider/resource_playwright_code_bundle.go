@@ -156,6 +156,11 @@ func (r *PlaywrightCodeBundleResource) Create(ctx context.Context, req resource.
 	// It can remain unknown when the archive file path itself was not known
 	// during plan; in that case it is computed here instead.
 	if plan.Metadata.IsUnknown() {
+		if err := archive.InspectArchivePaths(); err != nil {
+			resp.Diagnostics.AddError("Invalid Playwright Code Bundle Archive", err.Error())
+			return
+		}
+
 		checksum, err := archive.ChecksumSha256()
 		if err != nil {
 			resp.Diagnostics.AddError(
@@ -296,6 +301,13 @@ func (m playwrightCodeBundleMetadataPlanModifier) PlanModifyString(ctx context.C
 
 	archive := playwrightCodeBundleArchiveFromList(ctx, archiveList, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() || archive == nil {
+		return
+	}
+
+	// Run before the checksum comparison below, so that an archive which is
+	// already in state gets validated too, not just one that changed.
+	if err := archive.InspectArchivePaths(); err != nil {
+		resp.Diagnostics.AddError("Invalid Playwright Code Bundle Archive", err.Error())
 		return
 	}
 
