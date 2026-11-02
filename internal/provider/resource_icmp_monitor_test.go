@@ -1121,11 +1121,9 @@ func TestAccICMPMonitorUnsetSweepBasics(t *testing.T) {
 	})
 }
 
-// TestAccICMPMonitorUnsetSweepThresholdZero documents that even though the
-// schema validators accept 0 for the packet loss thresholds, the Checkly API
-// rejects an explicit 0 with a 400 ("must be greater than 0") for both
-// degraded_packet_loss_threshold and max_packet_loss_threshold. This is a
-// server-side limitation; the schema minimum should arguably be 1.
+// TestAccICMPMonitorUnsetSweepThresholdZero verifies that a packet loss
+// threshold of 0 is rejected at plan time. The Checkly API rejects an
+// explicit 0 for both thresholds even though its public schema allows it.
 func TestAccICMPMonitorUnsetSweepThresholdZero(t *testing.T) {
 	accTestCase(t, []resource.TestStep{
 		{
@@ -1142,7 +1140,7 @@ func TestAccICMPMonitorUnsetSweepThresholdZero(t *testing.T) {
 					}
 				}
 			`,
-			ExpectError: regexp.MustCompile(`degradedPacketLossThreshold[\s\S]+must be greater[\s\S]+than[\s\S]+0`),
+			ExpectError: regexp.MustCompile(`value must be between\s+1\s+and\s+100`),
 		},
 	})
 }

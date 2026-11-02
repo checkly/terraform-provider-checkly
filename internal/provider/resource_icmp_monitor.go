@@ -152,18 +152,22 @@ func (r *ICMPMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 				Optional:    true,
 				Computed:    true,
 				Default:     int64default.StaticInt64(10),
-				Description: "The packet loss percentage where the monitor should be considered degraded. Possible values are between `0` and `100`. (Default `10`).",
+				Description: "The packet loss percentage where the monitor should be considered degraded. Possible values are between `1` and `100`. (Default `10`).",
+				// The API rejects an explicit 0 even though its public schema
+				// documents it as valid.
 				Validators: []validator.Int64{
-					int64validator.Between(0, 100),
+					int64validator.Between(1, 100),
 				},
 			},
 			"max_packet_loss_threshold": schema.Int64Attribute{
 				Optional:    true,
 				Computed:    true,
 				Default:     int64default.StaticInt64(20),
-				Description: "The packet loss percentage where the monitor should be considered failing. Possible values are between `0` and `100`. (Default `20`).",
+				Description: "The packet loss percentage where the monitor should be considered failing. Possible values are between `1` and `100`. (Default `20`).",
+				// The API rejects an explicit 0 even though its public schema
+				// documents it as valid.
 				Validators: []validator.Int64{
-					int64validator.Between(0, 100),
+					int64validator.Between(1, 100),
 				},
 			},
 			"tags": schema.SetAttribute{
