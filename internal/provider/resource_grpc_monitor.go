@@ -16,7 +16,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -303,15 +302,18 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 							Default:     booldefault.StaticBool(false),
 							Description: "Whether to skip SSL certificate validation when `tls` is enabled. (Default `false`).",
 						},
+						// timeout has the API's default rather than keeping
+						// its prior state value: the update endpoint keeps the
+						// stored value of an omitted field, so removing
+						// timeout from the configuration must send the
+						// default explicitly.
 						"timeout": schema.Int64Attribute{
 							Optional:    true,
 							Computed:    true,
+							Default:     int64default.StaticInt64(60),
 							Description: "The number of seconds to wait for the gRPC call to complete before timing out. Possible values are between 1 and 180. (Default `60`).",
 							Validators: []validator.Int64{
 								int64validator.Between(1, 180),
-							},
-							PlanModifiers: []planmodifier.Int64{
-								int64planmodifier.UseStateForUnknown(),
 							},
 						},
 						"service": schema.StringAttribute{
@@ -979,8 +981,7 @@ func grpcMonitorRequestFromList(ctx context.Context, list types.List, diags *dia
 }
 
 // grpcMonitorRequestFromModel converts a request block element to its API
-// representation. Unknown computed values (attributes absent from the
-// configuration on create) convert to zero values, which the SDK omits.
+// representation.
 func grpcMonitorRequestFromModel(ctx context.Context, model GRPCMonitorRequestModel, diags *diag.Diagnostics) checkly.GRPCRequest {
 	config := checkly.GRPCConfig{
 		Mode:              model.GRPCMode.ValueString(),
