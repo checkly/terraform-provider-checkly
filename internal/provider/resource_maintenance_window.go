@@ -3,12 +3,15 @@ package provider
 import (
 	"context"
 	"fmt"
+	"regexp"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -45,6 +48,13 @@ type MaintenanceWindowResourceModel struct {
 	RepeatInterval types.Int64  `tfsdk:"repeat_interval"`
 	RepeatEndsAt   types.String `tfsdk:"repeat_ends_at"`
 	Tags           types.Set    `tfsdk:"tags"`
+
+	Timezone             types.String `tfsdk:"timezone"`
+	PauseAllChecks       types.Bool   `tfsdk:"pause_all_checks"`
+	SilenceAlertsTags    types.Set    `tfsdk:"silence_alerts_tags"`
+	SilenceAllAlerts     types.Bool   `tfsdk:"silence_all_alerts"`
+	Description          types.String `tfsdk:"description"`
+	StatusPageVisibility types.List   `tfsdk:"status_page_visibility"`
 }
 
 func (r *MaintenanceWindowResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -87,13 +97,49 @@ func (r *MaintenanceWindowResource) Schema(ctx context.Context, req resource.Sch
 			},
 			"repeat_ends_at": schema.StringAttribute{
 				Optional:    true,
-				Description: "The date on which the maintenance window should stop repeating.",
+				Description: "The date on which the maintenance window should stop repeating, interpreted as a calendar date in `timezone`.",
 			},
 			"tags": schema.SetAttribute{
 				Optional:    true,
 				ElementType: types.StringType,
-				Description: "The names of the checks and groups maintenance window should apply to.",
+				Description: "The tags of the checks and groups that are paused during the maintenance window. Ignored when `pause_all_checks` is `true`.",
 			},
+			"timezone": schema.StringAttribute{
+				Optional: true,
+				Description: "The named IANA time zone used to schedule recurring occurrences, e.g. `America/New_York`. " +
+					"Occurrences keep the same local time across daylight-saving changes. " +
+					"`starts_at` and `ends_at` remain absolute instants; the time zone does not reinterpret them. " +
+					"Use the canonical IANA name (e.g. `America/New_York`, not `US/Eastern`): the API stores canonical names, " +
+					"so an alias shows as a change on every plan. UTC offsets such as `+05:00` or `Etc/GMT+5` are not accepted. " +
+					"Defaults to `UTC`. The time zone cannot be changed while a maintenance is active.",
+				Validators: []validator.String{
+					maintenanceWindowTimezoneValidator{},
+				},
+			},
+			"pause_all_checks": schema.BoolAttribute{
+				Optional:    true,
+				Computed:    true,
+				Default:     booldefault.StaticBool(false),
+				Description: "Pause every check in the account during the maintenance window, regardless of `tags`. Defaults to `false`.",
+			},
+			"silence_alerts_tags": schema.SetAttribute{
+				Optional:    true,
+				ElementType: types.StringType,
+				Description: "The tags of the checks and groups whose alerts are silenced during the maintenance window. Ignored when `silence_all_alerts` is `true`.",
+			},
+			"silence_all_alerts": schema.BoolAttribute{
+				Optional:    true,
+				Computed:    true,
+				Default:     booldefault.StaticBool(false),
+				Description: "Silence alerts for every check in the account during the maintenance window, regardless of `silence_alerts_tags`. Defaults to `false`.",
+			},
+			"description": schema.StringAttribute{
+				Optional:    true,
+				Description: "A description of the maintenance window. When the window is visible on status pages, the description is shown there too.",
+			},
+		},
+		Blocks: map[string]schema.Block{
+			"status_page_visibility": maintenanceWindowStatusPageVisibilitySchema(),
 		},
 	}
 }
@@ -254,6 +300,14 @@ func maintenanceWindowFromModel(ctx context.Context, model *MaintenanceWindowRes
 		RepeatInterval: int(model.RepeatInterval.ValueInt64()),
 		RepeatEndsAt:   model.RepeatEndsAt.ValueString(),
 		Tags:           stringsFromSet(ctx, model.Tags, diags),
+		// The SDK sends every field, and unset values as the API's defaults,
+		// so removing an attribute from the configuration resets it.
+		Timezone:             model.Timezone.ValueString(),
+		PauseAllChecks:       model.PauseAllChecks.ValueBool(),
+		SilenceAlertsTags:    stringsFromSet(ctx, model.SilenceAlertsTags, diags),
+		SilenceAllAlerts:     model.SilenceAllAlerts.ValueBool(),
+		Description:          model.Description.ValueString(),
+		StatusPageVisibility: maintenanceWindowStatusPageVisibilityFromList(ctx, model.StatusPageVisibility, diags),
 	}
 }
 
@@ -271,7 +325,13 @@ func maintenanceWindowToModel(ctx context.Context, mw *checkly.MaintenanceWindow
 	model.RepeatUnit = stringValueOrNull(mw.RepeatUnit)
 	model.RepeatInterval = maintenanceWindowRepeatInterval(mw.RepeatInterval, model.RepeatInterval)
 	model.RepeatEndsAt = stringValueOrNull(mw.RepeatEndsAt)
-	model.Tags = maintenanceWindowTagsToSet(ctx, mw.Tags, model.Tags, diags)
+	model.Tags = maintenanceWindowStringsToSet(ctx, mw.Tags, model.Tags, diags)
+	model.Timezone = maintenanceWindowTimezone(mw.Timezone, model.Timezone)
+	model.PauseAllChecks = types.BoolValue(mw.PauseAllChecks)
+	model.SilenceAlertsTags = maintenanceWindowStringsToSet(ctx, mw.SilenceAlertsTags, model.SilenceAlertsTags, diags)
+	model.SilenceAllAlerts = types.BoolValue(mw.SilenceAllAlerts)
+	model.Description = maintenanceWindowDescription(mw.Description, model.Description)
+	model.StatusPageVisibility = maintenanceWindowStatusPageVisibilityToList(ctx, mw.StatusPageVisibility, model.StatusPageVisibility, diags)
 }
 
 // maintenanceWindowRepeatInterval converts the repeat interval from the API,
@@ -286,13 +346,111 @@ func maintenanceWindowRepeatInterval(value int, prior types.Int64) types.Int64 {
 	return types.Int64Value(int64(value))
 }
 
-// maintenanceWindowTagsToSet converts tags from the API to a set, resolving
-// the empty value against the prior data: when no tags exist remotely and
-// none were configured, the attribute stays null.
-func maintenanceWindowTagsToSet(ctx context.Context, tags []string, prior types.Set, diags *diag.Diagnostics) types.Set {
-	if len(tags) == 0 && (prior.IsNull() || prior.IsUnknown()) {
+// maintenanceWindowStringsToSet converts a string list from the API to a
+// set, resolving the empty value against the prior data: when the list is
+// empty remotely and the attribute wasn't configured, it stays null.
+func maintenanceWindowStringsToSet(ctx context.Context, values []string, prior types.Set, diags *diag.Diagnostics) types.Set {
+	if len(values) == 0 && (prior.IsNull() || prior.IsUnknown()) {
 		return types.SetNull(types.StringType)
 	}
 
-	return setFromStrings(ctx, tags, diags)
+	return setFromStrings(ctx, values, diags)
+}
+
+// maintenanceWindowDescription converts the description from the API. The
+// SDK sends an empty description as null, so an empty value from the API
+// keeps a prior empty string, which keeps `description = ""` stable.
+func maintenanceWindowDescription(value string, prior types.String) types.String {
+	if value == "" && !prior.IsUnknown() && !prior.IsNull() && prior.ValueString() == "" {
+		return prior
+	}
+
+	return stringValueOrNull(value)
+}
+
+// maintenanceWindowTimezone converts the time zone from the API. The API
+// stores canonical names, reporting a configured value with different casing,
+// and reports a UTC window as null or as "UTC" depending on its history. A
+// value equivalent to the prior one keeps the prior value so that neither
+// shows a diff; otherwise UTC maps to null, the value of an unconfigured
+// time zone.
+func maintenanceWindowTimezone(value string, prior types.String) types.String {
+	if !prior.IsNull() && !prior.IsUnknown() && timezonesEquivalent(value, prior.ValueString()) {
+		return prior
+	}
+
+	if timezonesEquivalent(value, "") {
+		return types.StringNull()
+	}
+
+	return types.StringValue(value)
+}
+
+// fixedOffsetTimezoneRegex matches UTC offsets, which the API rejects because
+// they are not named IANA zones: "+05:00" style identifiers and the
+// fixed-offset Etc/GMT±N zones. Etc/GMT+0 and Etc/GMT-0 are aliases of UTC and
+// are accepted.
+var fixedOffsetTimezoneRegex = regexp.MustCompile(`(?i)^[+-]|^Etc/GMT[+-]0*[1-9]\d?$`)
+
+var _ validator.String = maintenanceWindowTimezoneValidator{}
+
+// maintenanceWindowTimezoneValidator rejects UTC offsets at plan time.
+type maintenanceWindowTimezoneValidator struct{}
+
+func (v maintenanceWindowTimezoneValidator) Description(ctx context.Context) string {
+	return "value must be a named IANA time zone, not a UTC offset"
+}
+
+func (v maintenanceWindowTimezoneValidator) MarkdownDescription(ctx context.Context) string {
+	return v.Description(ctx)
+}
+
+func (v maintenanceWindowTimezoneValidator) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
+		return
+	}
+
+	value := req.ConfigValue.ValueString()
+	if fixedOffsetTimezoneRegex.MatchString(value) {
+		resp.Diagnostics.AddAttributeError(
+			req.Path,
+			"Invalid Time Zone",
+			fmt.Sprintf("%s must be a named IANA time zone such as \"America/New_York\", got %q; UTC offsets are not supported", req.Path, value),
+		)
+	}
+}
+
+// utcTimezoneAliases are the names the API resolves to UTC. The API may report
+// a UTC window as "UTC" or as unset, so all of them count as the same value.
+var utcTimezoneAliases = map[string]bool{
+	"":              true,
+	"utc":           true,
+	"etc/utc":       true,
+	"etc/uct":       true,
+	"uct":           true,
+	"gmt":           true,
+	"etc/gmt":       true,
+	"gmt0":          true,
+	"etc/gmt0":      true,
+	"zulu":          true,
+	"etc/zulu":      true,
+	"universal":     true,
+	"etc/universal": true,
+	"greenwich":     true,
+	"etc/greenwich": true,
+	"etc/gmt+0":     true,
+	"etc/gmt-0":     true,
+	"gmt+0":         true,
+	"gmt-0":         true,
+}
+
+// timezonesEquivalent reports whether two timezone values schedule the same
+// way. The API canonicalizes the casing of stored names, so names are compared
+// case-insensitively.
+func timezonesEquivalent(a, b string) bool {
+	a, b = strings.ToLower(a), strings.ToLower(b)
+	if utcTimezoneAliases[a] && utcTimezoneAliases[b] {
+		return true
+	}
+	return a == b
 }
