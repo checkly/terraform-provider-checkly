@@ -222,7 +222,7 @@ Required:
 Optional:
 
 - `locked` (Boolean) If true, the value is not shown by default, but it can be accessed. (Default `false`).
-- `secret` (Boolean) If true, the value will never be visible. (Default `false`).
+- `secret` (Boolean) If true, the value will never be visible. The API never returns secret values, so Terraform keeps the last applied value and does not detect changes made outside Terraform. (Default `false`).
 
 
 <a id="nestedatt--runtime"></a>
@@ -231,7 +231,7 @@ Optional:
 Optional:
 
 - `auto_detect` (Boolean) Whether to automatically detect appropriate runtime environment configuration from the bundle. (Default `true`).
-- `engine` (Attributes) The JavaScript engine used to run the Playwright tests. (see [below for nested schema](#nestedatt--runtime--engine))
+- `engine` (Attributes) The JavaScript engine used to run the Playwright tests. When `auto_detect` is enabled, no engine is set, and the code bundle has a lockfile at its root, the engine is detected from files at the bundle root. Node is taken from the first of `.node-version`, `.nvmrc`, `.tool-versions`, the `volta.node` pin in `package.json`, then `engines.node` in `package.json`; Bun from the first of `.tool-versions`, `.bun-version`, then `engines.bun`. When both are found, the engine matching the lockfile's package manager wins. `volta.extends` is not followed. (see [below for nested schema](#nestedatt--runtime--engine))
 - `playwright` (Attributes) Configure the Playwright capabilities that should be made available to the runtime environment. (see [below for nested schema](#nestedatt--runtime--playwright))
 - `steps` (Attributes) Customize the actions taken during test execution. (see [below for nested schema](#nestedatt--runtime--steps))
 - `working_dir` (String) The working directory in which runtime commands are executed. This is useful for monorepos or workspaces where the Playwright project is in a subdirectory. Use "." to explicitly specify the root.
@@ -242,7 +242,7 @@ Optional:
 Required:
 
 - `name` (String) The engine name. Valid values are "node" or "bun".
-- `version` (String) The engine version (e.g. "22", "24", "26" for node; "1.3" for bun).
+- `version` (String) The engine version (e.g. "22", "24", "26" for node; "1.3", "1.4" for bun). Use "1" for bun to run the newest Bun 1.x available.
 
 
 <a id="nestedatt--runtime--playwright"></a>

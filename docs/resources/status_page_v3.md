@@ -99,19 +99,19 @@ resource "checkly_status_page_v3_component" "database" {
 - `redirect_to` (String) The URL the user should be redirected to when clicking the logo.
 - `support_link` (String) A support contact link (http, https or mailto), shown in the page footer.
 - `terms_of_service_link` (String) A link to your terms of service, shown in the page footer.
-- `theme_colors` (Block List, Max: 1) Custom colors for the light and dark theme of the page. Requires custom theme colors to be part of your plan. The complete palette must be given: both `light` and `dark`, each with every color. Leave the block out to use Checkly's default colors; the default palette the API then reports is not tracked, and the block is not populated when importing a page. (see [below for nested schema](#nestedblock--theme_colors))
+- `theme_colors` (Block List) Custom colors for the light and dark theme of the page. Requires custom theme colors to be part of your plan. The complete palette must be given: both `light` and `dark`, each with every color. Leave the block out to use Checkly's default colors; the default palette the API then reports is not tracked, and the block is not populated when importing a page. (see [below for nested schema](#nestedblock--theme_colors))
 
 ### Read-Only
 
-- `id` (String) The ID of this resource.
+- `id` (String) The ID of the status page.
 
 <a id="nestedblock--theme_colors"></a>
 ### Nested Schema for `theme_colors`
 
-Required:
+Optional:
 
-- `dark` (Block List, Min: 1, Max: 1) The colors used when the page renders in dark mode. (see [below for nested schema](#nestedblock--theme_colors--dark))
-- `light` (Block List, Min: 1, Max: 1) The colors used when the page renders in light mode. (see [below for nested schema](#nestedblock--theme_colors--light))
+- `dark` (Block List) The colors used when the page renders in dark mode. (see [below for nested schema](#nestedblock--theme_colors--dark))
+- `light` (Block List) The colors used when the page renders in light mode. (see [below for nested schema](#nestedblock--theme_colors--light))
 
 <a id="nestedblock--theme_colors--dark"></a>
 ### Nested Schema for `theme_colors.dark`

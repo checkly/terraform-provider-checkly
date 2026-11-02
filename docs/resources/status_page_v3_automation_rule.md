@@ -60,7 +60,7 @@ resource "checkly_status_page_v3_automation_rule" "api_outage" {
 
 ### Read-Only
 
-- `id` (String) The ID of this resource.
+- `id` (String) The ID of the automation rule.
 
 <a id="nestedblock--component"></a>
 ### Nested Schema for `component`

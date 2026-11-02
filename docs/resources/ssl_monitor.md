@@ -47,14 +47,14 @@ resource "checkly_ssl_monitor" "example-ssl-monitor-2" {
     "eu-central-1",
   ]
 
-  alert_settings {
+  alert_settings = {
     escalation_type = "RUN_BASED"
 
-    run_based_escalation {
+    run_based_escalation = {
       failed_run_threshold = 1
     }
 
-    reminders {
+    reminders = {
       amount = 1
     }
   }
@@ -81,7 +81,7 @@ resource "checkly_ssl_monitor" "example-ssl-monitor-2" {
       }
     }
 
-    client_certificate {
+    client_certificate = {
       mode = "account_default"
     }
 
@@ -110,12 +110,11 @@ resource "checkly_ssl_monitor" "example-ssl-monitor-2" {
 - `activated` (Boolean) Determines if the monitor is running or not. Possible values `true`, and `false`.
 - `frequency` (Number) Controls how often the monitor should run. Defined in minutes. The allowed values are `0` (high frequency - use `frequency_offset` to define the actual frequency), `1` (1 minute), `2` (2 minutes), `5` (5 minutes), `10` (10 minutes), `15` (15 minutes), `30` (30 minutes), `60` (1 hour), `120` (2 hours), `180` (3 hours), `360` (6 hours), `720` (12 hours) and `1440` (24 hours).
 - `name` (String) The name of the monitor.
-- `request` (Block List, Min: 1, Max: 1) The parameters for the SSL connection. (see [below for nested schema](#nestedblock--request))
 
 ### Optional
 
 - `alert_channel_subscription` (Block Set) An array of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your monitor, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedblock--alert_channel_subscription))
-- `alert_settings` (Block List, Max: 1) Determines the alert escalation policy for the monitor. (see [below for nested schema](#nestedblock--alert_settings))
+- `alert_settings` (Attributes) Determines the alert escalation policy for the monitor. (see [below for nested schema](#nestedatt--alert_settings))
 - `degraded_response_time` (Number) The handshake time in milliseconds above which the monitor is considered degraded. Possible values are between 0 and 30000. (Default `10000`).
 - `description` (String) A description of the monitor.
 - `frequency_offset` (Number) When `frequency` is `0` (high frequency), `frequency_offset` is required and it alone controls how often the monitor should run. Defined in seconds. The allowed values are `0` (disabled - use `frequency` to define the actual frequency), `10` (10 seconds), `20` (20 seconds) and `30` (30 seconds).
@@ -125,17 +124,73 @@ resource "checkly_ssl_monitor" "example-ssl-monitor-2" {
 - `max_response_time` (Number) The handshake time in milliseconds above which the monitor is considered failing. Must be greater than or equal to `degraded_response_time`. Possible values are between 0 and 30000. (Default `20000`).
 - `muted` (Boolean) Determines if any notifications will be sent out when a monitor fails/degrades/recovers.
 - `private_locations` (Set of String) An array of one or more private locations slugs.
-- `retry_strategy` (Block List, Max: 1) A strategy for retrying failed check/monitor runs. (see [below for nested schema](#nestedblock--retry_strategy))
+- `request` (Block List) The parameters for the SSL connection. (see [below for nested schema](#nestedblock--request))
+- `retry_strategy` (Attributes) A strategy for retrying failed check/monitor runs. (see [below for nested schema](#nestedatt--retry_strategy))
 - `run_parallel` (Boolean) Determines if the monitor should run in all selected locations in parallel or round-robin.
 - `runtime_id` (String) The ID of the runtime to use for this monitor.
 - `should_fail` (Boolean) Allows to invert the behaviour of when a monitor is considered to fail.
 - `tags` (Set of String) A list of tags for organizing and filtering checks and monitors.
-- `trigger_incident` (Block Set, Max: 1) Create and resolve an incident based on the alert configuration. Useful for status page automation. (see [below for nested schema](#nestedblock--trigger_incident))
+- `trigger_incident` (Block Set) Create and resolve an incident based on the alert configuration. Useful for status page automation. (see [below for nested schema](#nestedblock--trigger_incident))
 - `use_global_alert_settings` (Boolean) When true, the account level alert settings will be used, not the alert setting defined on this monitor.
 
 ### Read-Only
 
-- `id` (String) The ID of this resource.
+- `id` (String) The ID of the monitor.
+
+<a id="nestedblock--alert_channel_subscription"></a>
+### Nested Schema for `alert_channel_subscription`
+
+Required:
+
+- `activated` (Boolean) Whether an alert should be sent to this channel.
+- `channel_id` (Number) The ID of the alert channel.
+
+
+<a id="nestedatt--alert_settings"></a>
+### Nested Schema for `alert_settings`
+
+Optional:
+
+- `escalation_type` (String) Determines the type of escalation to use. Possible values are `RUN_BASED` and `TIME_BASED`. (Default `RUN_BASED`).
+- `parallel_run_failure_threshold` (Attributes) Configuration for parallel run failure threshold. (see [below for nested schema](#nestedatt--alert_settings--parallel_run_failure_threshold))
+- `reminders` (Attributes) Defines how often to send reminder notifications after the initial alert. (see [below for nested schema](#nestedatt--alert_settings--reminders))
+- `run_based_escalation` (Attributes) Configuration for run-based escalation. (see [below for nested schema](#nestedatt--alert_settings--run_based_escalation))
+- `time_based_escalation` (Attributes) Configuration for time-based escalation. (see [below for nested schema](#nestedatt--alert_settings--time_based_escalation))
+
+<a id="nestedatt--alert_settings--parallel_run_failure_threshold"></a>
+### Nested Schema for `alert_settings.parallel_run_failure_threshold`
+
+Optional:
+
+- `enabled` (Boolean) Whether parallel run failure threshold is enabled. Only applies if the monitor is scheduled for multiple locations in parallel. (Default `false`).
+- `percentage` (Number) Percentage of runs that must fail to trigger alert. Possible values are `10`, `20`, `30`, `40`, `50`, `60`, `70`, `80`, `90`, and `100`. (Default `10`).
+
+
+<a id="nestedatt--alert_settings--reminders"></a>
+### Nested Schema for `alert_settings.reminders`
+
+Optional:
+
+- `amount` (Number) Number of reminder notifications to send. Possible values are `0`, `1`, `2`, `3`, `4`, `5`, and `100000` (`0` to disable, `100000` for unlimited). (Default `0`).
+- `interval` (Number) Interval between reminder notifications in minutes. Possible values are `5`, `10`, `15`, and `30`. (Default `5`).
+
+
+<a id="nestedatt--alert_settings--run_based_escalation"></a>
+### Nested Schema for `alert_settings.run_based_escalation`
+
+Optional:
+
+- `failed_run_threshold` (Number) Send an alert notification after the given number of consecutive monitor runs have failed. Possible values are between `1` and `5`. (Default `1`).
+
+
+<a id="nestedatt--alert_settings--time_based_escalation"></a>
+### Nested Schema for `alert_settings.time_based_escalation`
+
+Optional:
+
+- `minutes_failing_threshold` (Number) Send an alert notification after the monitor has been failing for the given amount of time (in minutes). Possible values are `5`, `10`, `15`, and `30`. (Default `5`).
+
+
 
 <a id="nestedblock--request"></a>
 ### Nested Schema for `request`
@@ -148,11 +203,11 @@ Optional:
 
 - `alert_days_before_expiry` (Number) Raise an alert when the certificate is within this many days of expiry. Possible values are between 1 and 365. (Default `20`).
 - `assertion` (Block Set) A request can have multiple assertions. The allowed comparisons, properties, and target formats depend on the assertion source — see the [Assertion Reference](#assertion-reference) below. (see [below for nested schema](#nestedblock--request--assertion))
-- `client_certificate` (Block Set, Max: 1) The mutual-TLS client certificate configuration. (see [below for nested schema](#nestedblock--request--client_certificate))
+- `client_certificate` (Attributes) The mutual-TLS client certificate configuration. (see [below for nested schema](#nestedatt--request--client_certificate))
 - `handshake_timeout_ms` (Number) The number of milliseconds to wait for the TLS handshake to complete before timing out. Possible values are between 1000 and 30000. (Default `10000`).
 - `ip_family` (String) The IP family to use when executing the check. The value can be either `IPv4` or `IPv6`. (Default `IPv4`).
 - `port` (Number) The port number to connect to. Possible values are between 1 and 65535. (Default `443`).
-- `security_baseline` (Block List, Max: 1) The SSL security baseline — a set of enforceable and advisory rules. Omit the block to inherit the account default baseline. Rules that are not listed keep their server defaults; removing a rule (or the whole block) resets it to its default on the next apply. Only listed rules are drift-checked: an external change to an unlisted rule is not shown by `terraform plan` and is reset on the next apply. (see [below for nested schema](#nestedblock--request--security_baseline))
+- `security_baseline` (Block List) The SSL security baseline — a set of enforceable and advisory rules. Omit the block to inherit the account default baseline. Rules that are not listed keep their server defaults; removing a rule (or the whole block) resets it to its default on the next apply. Only listed rules are drift-checked: an external change to an unlisted rule is not shown by `terraform plan` and is reset on the next apply. (see [below for nested schema](#nestedblock--request--security_baseline))
 - `server_name` (String) An optional SNI server name to send in the TLS handshake. Defaults to `hostname` when unset.
 - `skip_chain_validation` (Boolean) When true, the certificate chain is not validated against trusted roots (the certificate is still inspected for expiry and the security baseline). (Default `false`).
 
@@ -170,7 +225,7 @@ Optional:
 - `target` (String)
 
 
-<a id="nestedblock--request--client_certificate"></a>
+<a id="nestedatt--request--client_certificate"></a>
 ### Nested Schema for `request.client_certificate`
 
 Optional:
@@ -185,15 +240,15 @@ Optional:
 Optional:
 
 - `enabled` (Boolean) Whether the security baseline is enforced. (Default `true`).
-- `known_bad_ca` (Block List, Max: 1) Enforceable rule: the certificate chain must not include a known-bad CA. (see [below for nested schema](#nestedblock--request--security_baseline--known_bad_ca))
-- `min_key_size_bits` (Block List, Max: 1) Enforceable rule: the minimum public key size in bits. (see [below for nested schema](#nestedblock--request--security_baseline--min_key_size_bits))
-- `min_tls_version` (Block List, Max: 1) Enforceable rule: the minimum TLS version the server must accept. (see [below for nested schema](#nestedblock--request--security_baseline--min_tls_version))
-- `ocsp_must_staple_respected` (Block List, Max: 1) Advisory rule: an OCSP Must-Staple extension, when present, must be respected. (see [below for nested schema](#nestedblock--request--security_baseline--ocsp_must_staple_respected))
-- `recommended_key_size_bits` (Block List, Max: 1) Advisory rule: the recommended public key size in bits. (see [below for nested schema](#nestedblock--request--security_baseline--recommended_key_size_bits))
-- `recommended_tls_version` (Block List, Max: 1) Advisory rule: the recommended TLS version. (see [below for nested schema](#nestedblock--request--security_baseline--recommended_tls_version))
-- `sct_present` (Block List, Max: 1) Advisory rule: the certificate should carry a Signed Certificate Timestamp. (see [below for nested schema](#nestedblock--request--security_baseline--sct_present))
-- `weak_cipher_suite` (Block List, Max: 1) Enforceable rule: the connection must not negotiate a weak cipher suite. (see [below for nested schema](#nestedblock--request--security_baseline--weak_cipher_suite))
-- `weak_signature_algorithm` (Block List, Max: 1) Enforceable rule: the certificate must not use a weak signature algorithm. (see [below for nested schema](#nestedblock--request--security_baseline--weak_signature_algorithm))
+- `known_bad_ca` (Block List) Enforceable rule: the certificate chain must not include a known-bad CA. (see [below for nested schema](#nestedblock--request--security_baseline--known_bad_ca))
+- `min_key_size_bits` (Block List) Enforceable rule: the minimum public key size in bits. (see [below for nested schema](#nestedblock--request--security_baseline--min_key_size_bits))
+- `min_tls_version` (Block List) Enforceable rule: the minimum TLS version the server must accept. (see [below for nested schema](#nestedblock--request--security_baseline--min_tls_version))
+- `ocsp_must_staple_respected` (Block List) Advisory rule: an OCSP Must-Staple extension, when present, must be respected. (see [below for nested schema](#nestedblock--request--security_baseline--ocsp_must_staple_respected))
+- `recommended_key_size_bits` (Block List) Advisory rule: the recommended public key size in bits. (see [below for nested schema](#nestedblock--request--security_baseline--recommended_key_size_bits))
+- `recommended_tls_version` (Block List) Advisory rule: the recommended TLS version. (see [below for nested schema](#nestedblock--request--security_baseline--recommended_tls_version))
+- `sct_present` (Block List) Advisory rule: the certificate should carry a Signed Certificate Timestamp. (see [below for nested schema](#nestedblock--request--security_baseline--sct_present))
+- `weak_cipher_suite` (Block List) Enforceable rule: the connection must not negotiate a weak cipher suite. (see [below for nested schema](#nestedblock--request--security_baseline--weak_cipher_suite))
+- `weak_signature_algorithm` (Block List) Enforceable rule: the certificate must not use a weak signature algorithm. (see [below for nested schema](#nestedblock--request--security_baseline--weak_signature_algorithm))
 
 <a id="nestedblock--request--security_baseline--known_bad_ca"></a>
 ### Nested Schema for `request.security_baseline.known_bad_ca`
@@ -273,62 +328,7 @@ Optional:
 
 
 
-<a id="nestedblock--alert_channel_subscription"></a>
-### Nested Schema for `alert_channel_subscription`
-
-Required:
-
-- `activated` (Boolean) Whether an alert should be sent to this channel.
-- `channel_id` (Number) The ID of the alert channel.
-
-
-<a id="nestedblock--alert_settings"></a>
-### Nested Schema for `alert_settings`
-
-Optional:
-
-- `escalation_type` (String) Determines the type of escalation to use. Possible values are `RUN_BASED` and `TIME_BASED`. (Default `RUN_BASED`).
-- `parallel_run_failure_threshold` (Block List) Configuration for parallel run failure threshold. (see [below for nested schema](#nestedblock--alert_settings--parallel_run_failure_threshold))
-- `reminders` (Block List) Defines how often to send reminder notifications after initial alert. (see [below for nested schema](#nestedblock--alert_settings--reminders))
-- `run_based_escalation` (Block List) Configuration for run-based escalation. (see [below for nested schema](#nestedblock--alert_settings--run_based_escalation))
-- `time_based_escalation` (Block List) Configuration for time-based escalation. (see [below for nested schema](#nestedblock--alert_settings--time_based_escalation))
-
-<a id="nestedblock--alert_settings--parallel_run_failure_threshold"></a>
-### Nested Schema for `alert_settings.parallel_run_failure_threshold`
-
-Optional:
-
-- `enabled` (Boolean) Whether parallel run failure threshold is enabled. Only applies if the monitor is scheduled for multiple locations in parallel. (Default `false`).
-- `percentage` (Number) Percentage of runs that must fail to trigger alert. Possible values are `10`, `20`, `30`, `40`, `50`, `60`, `70`, `80`, `90`, and `100`. (Default `10`).
-
-
-<a id="nestedblock--alert_settings--reminders"></a>
-### Nested Schema for `alert_settings.reminders`
-
-Optional:
-
-- `amount` (Number) Number of reminder notifications to send. Possible values are `0`, `1`, `2`, `3`, `4`, `5`, and `100000` (`0` to disable, `100000` for unlimited). (Default `0`).
-- `interval` (Number) Interval between reminder notifications in minutes. Possible values are `5`, `10`, `15`, and `30`. (Default `5`).
-
-
-<a id="nestedblock--alert_settings--run_based_escalation"></a>
-### Nested Schema for `alert_settings.run_based_escalation`
-
-Optional:
-
-- `failed_run_threshold` (Number) Send an alert notification after the given number of consecutive monitor runs have failed. Possible values are between `1` and `5`. (Default `1`).
-
-
-<a id="nestedblock--alert_settings--time_based_escalation"></a>
-### Nested Schema for `alert_settings.time_based_escalation`
-
-Optional:
-
-- `minutes_failing_threshold` (Number) Send an alert notification after the monitor has been failing for the given amount of time (in minutes). Possible values are `5`, `10`, `15`, and `30`. (Default `5`).
-
-
-
-<a id="nestedblock--retry_strategy"></a>
+<a id="nestedatt--retry_strategy"></a>
 ### Nested Schema for `retry_strategy`
 
 Required:
@@ -337,15 +337,10 @@ Required:
 
 Optional:
 
-- `base_backoff_seconds` (Number) The number of seconds to wait before the first retry attempt. (Default `60`).
+- `base_backoff_seconds` (Number) The number of seconds to wait before the first retry attempt. Not available when `type` is `NO_RETRIES`. (Default `60`).
 - `max_duration_seconds` (Number) The total amount of time to continue retrying the check/monitor (maximum 600 seconds). Available when `type` is `FIXED`, `LINEAR`, or `EXPONENTIAL`. (Default `600`).
 - `max_retries` (Number) The maximum number of times to retry the check/monitor. Value must be between `1` and `10`. Available when `type` is `FIXED`, `LINEAR`, or `EXPONENTIAL`. (Default `2`).
-- `only_on` (Block List, Max: 1) Apply the retry strategy only if the defined conditions match. (see [below for nested schema](#nestedblock--retry_strategy--only_on))
-- `same_region` (Boolean) Whether retries should be run in the same region as the initial check/monitor run. (Default `true`).
-
-<a id="nestedblock--retry_strategy--only_on"></a>
-### Nested Schema for `retry_strategy.only_on`
-
+- `same_region` (Boolean) Whether retries should be run in the same region as the initial check/monitor run. Not available when `type` is `NO_RETRIES`. (Default `true`).
 
 
 <a id="nestedblock--trigger_incident"></a>

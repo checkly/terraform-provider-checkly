@@ -55,4 +55,4 @@ resource "checkly_status_page_v3_component" "api" {
 
 ### Read-Only
 
-- `id` (String) The ID of this resource.
+- `id` (String) The ID of the component.
