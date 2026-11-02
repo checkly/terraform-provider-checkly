@@ -2,6 +2,8 @@ package provider
 
 import (
 	"context"
+	"encoding/base64"
+	"errors"
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
@@ -30,6 +32,7 @@ var (
 	_ resource.ResourceWithConfigValidators = (*GRPCMonitorResource)(nil)
 	_ resource.ResourceWithImportState      = (*GRPCMonitorResource)(nil)
 	_ resource.ResourceWithModifyPlan       = (*GRPCMonitorResource)(nil)
+	_ resource.ResourceWithValidateConfig   = (*GRPCMonitorResource)(nil)
 )
 
 // NewGRPCMonitorResource returns a new checkly_grpc_monitor resource.
@@ -78,9 +81,11 @@ type GRPCMonitorRequestModel struct {
 	TLS               types.Bool   `tfsdk:"tls"`
 	SkipSSL           types.Bool   `tfsdk:"skip_ssl"`
 	Timeout           types.Int64  `tfsdk:"timeout"`
+	Encoding          types.String `tfsdk:"encoding"`
 	Service           types.String `tfsdk:"service"`
 	ServiceDefinition types.String `tfsdk:"service_definition"`
 	ProtoContent      types.String `tfsdk:"proto_content"`
+	BfbsContent       types.String `tfsdk:"bfbs_content"`
 	Method            types.String `tfsdk:"method"`
 	Message           types.String `tfsdk:"message"`
 	Metadata          types.Set    `tfsdk:"metadata"`
@@ -121,9 +126,11 @@ var grpcMonitorRequestAttrTypes = map[string]attr.Type{
 	"tls":                types.BoolType,
 	"skip_ssl":           types.BoolType,
 	"timeout":            types.Int64Type,
+	"encoding":           types.StringType,
 	"service":            types.StringType,
 	"service_definition": types.StringType,
 	"proto_content":      types.StringType,
+	"bfbs_content":       types.StringType,
 	"method":             types.StringType,
 	"message":            types.StringType,
 	"metadata":           types.SetType{ElemType: types.ObjectType{AttrTypes: grpcMonitorMetadataAttrTypes}},
@@ -313,22 +320,44 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 							Default:     stringdefault.StaticString(""),
 							Description: "The service name to query in `HEALTH` mode. An empty value queries overall server health. Forbidden in `BEHAVIOR` mode.",
 						},
+						// encoding and service_definition have schema
+						// defaults rather than keeping their prior state
+						// value: the update endpoint keeps stored values for
+						// omitted fields, so removing either from the
+						// configuration must send the default explicitly to
+						// switch the monitor back.
+						"encoding": schema.StringAttribute{
+							Optional:    true,
+							Computed:    true,
+							Default:     stringdefault.StaticString("PROTOBUF"),
+							Description: "The wire encoding used in `BEHAVIOR` mode. Possible values are `PROTOBUF` and `FLATBUFFERS`. (Default `PROTOBUF`).",
+							Validators: []validator.String{
+								stringvalidator.OneOf("PROTOBUF", "FLATBUFFERS"),
+							},
+						},
 						"service_definition": schema.StringAttribute{
 							Optional:    true,
 							Computed:    true,
-							Description: "How the service definition is resolved in `BEHAVIOR` mode: `REFLECTION` uses server reflection; `PROTO_FILE` uses the inline `proto_content`. (Default `REFLECTION`).",
+							Default:     stringdefault.StaticString("REFLECTION"),
+							Description: "How the service definition is resolved in `BEHAVIOR` mode: `REFLECTION` uses server reflection; `PROTO_FILE` uses the inline `proto_content`. Forbidden when `encoding = \"FLATBUFFERS\"`. (Default `REFLECTION`).",
 							Validators: []validator.String{
 								stringvalidator.OneOf("REFLECTION", "PROTO_FILE"),
-							},
-							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.UseStateForUnknown(),
 							},
 						},
 						"proto_content": schema.StringAttribute{
 							Optional:    true,
 							Computed:    true,
 							Default:     stringdefault.StaticString(""),
-							Description: "The inline `.proto` file source used when `service_definition = \"PROTO_FILE\"` in `BEHAVIOR` mode.",
+							Description: "The inline `.proto` file source used when `service_definition = \"PROTO_FILE\"` in `BEHAVIOR` mode. Forbidden when `encoding = \"FLATBUFFERS\"`.",
+						},
+						"bfbs_content": schema.StringAttribute{
+							Optional:    true,
+							Computed:    true,
+							Default:     stringdefault.StaticString(""),
+							Description: "A base64-encoded binary FlatBuffers schema (`.bfbs`), at most 100 KiB once encoded. Required when `encoding = \"FLATBUFFERS\"` and forbidden otherwise. Generate it with `flatc -b --schema --bfbs-builtins schema.fbs` and load it with Terraform's `filebase64()` function.",
+							Validators: []validator.String{
+								grpcMonitorBfbsContentValidator{},
+							},
 						},
 						"method": schema.StringAttribute{
 							Optional:    true,
@@ -423,6 +452,140 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 func (r *GRPCMonitorResource) ConfigValidators(ctx context.Context) []resource.ConfigValidator {
 	return []resource.ConfigValidator{
 		newFrequencyOffsetConfigValidator(),
+	}
+}
+
+// ValidateConfig rejects encoding/schema combinations that the API would
+// otherwise silently discard or reject on apply. It reads the configuration
+// rather than the planned values: service_definition holds its default
+// `REFLECTION` even on FLATBUFFERS monitors, so only an explicitly configured
+// value is a conflict.
+func (r *GRPCMonitorResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var requests types.List
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("request"), &requests)...)
+	if resp.Diagnostics.HasError() || requests.IsNull() || requests.IsUnknown() || len(requests.Elements()) == 0 {
+		return
+	}
+
+	var models []GRPCMonitorRequestModel
+	resp.Diagnostics.Append(requests.ElementsAs(ctx, &models, false)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	request := models[0]
+	err := validateGRPCEncoding(grpcEncodingConfig{
+		mode:              configuredString(request.GRPCMode, "BEHAVIOR"),
+		encoding:          configuredString(request.Encoding, "PROTOBUF"),
+		bfbsContent:       configuredPresence(request.BfbsContent),
+		serviceDefinition: configuredPresence(request.ServiceDefinition),
+		protoContent:      configuredPresence(request.ProtoContent),
+	})
+	if err != nil {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("request").AtListIndex(0),
+			"Invalid gRPC Encoding Configuration",
+			err.Error(),
+		)
+	}
+}
+
+// grpcEncodingConfig holds the configured values validateGRPCEncoding needs.
+// String values are "" when unknown at validation time; presence values are
+// true when the attribute is set in the configuration, even to a value not
+// yet known.
+type grpcEncodingConfig struct {
+	mode              string
+	encoding          string
+	bfbsContent       bool
+	serviceDefinition bool
+	protoContent      bool
+}
+
+func validateGRPCEncoding(c grpcEncodingConfig) error {
+	switch {
+	case c.mode == "HEALTH" && (c.encoding == "FLATBUFFERS" || c.bfbsContent):
+		return errors.New("encoding = \"FLATBUFFERS\" and bfbs_content cannot be used when grpc_mode is HEALTH")
+	case c.mode != "BEHAVIOR" || c.encoding == "":
+		return nil
+	case c.encoding == "PROTOBUF" && c.bfbsContent:
+		return errors.New("bfbs_content can only be used when encoding is FLATBUFFERS")
+	case c.encoding == "FLATBUFFERS" && !c.bfbsContent:
+		return errors.New("bfbs_content is required when encoding is FLATBUFFERS")
+	case c.encoding == "FLATBUFFERS" && c.serviceDefinition:
+		return errors.New("service_definition cannot be used when encoding is FLATBUFFERS")
+	case c.encoding == "FLATBUFFERS" && c.protoContent:
+		return errors.New("proto_content cannot be used when encoding is FLATBUFFERS")
+	}
+	return nil
+}
+
+// configuredString returns a configured string, def when it is not set, or ""
+// when its value is not known yet.
+func configuredString(v types.String, def string) string {
+	switch {
+	case v.IsUnknown():
+		return ""
+	case v.IsNull():
+		return def
+	}
+	return v.ValueString()
+}
+
+// configuredPresence reports whether a string attribute is set in the
+// configuration. An empty string counts as unset, as it converts to the same
+// API representation as an omitted attribute.
+func configuredPresence(v types.String) bool {
+	if v.IsUnknown() {
+		return true
+	}
+	return !v.IsNull() && v.ValueString() != ""
+}
+
+// maxGRPCSchemaContentLength mirrors the API's limit on the encoded length of
+// bfbs_content.
+const maxGRPCSchemaContentLength = 100 * 1024
+
+var _ validator.String = grpcMonitorBfbsContentValidator{}
+
+// grpcMonitorBfbsContentValidator accepts an empty string (equivalent to an
+// unset attribute) or a standard base64 string of at most
+// maxGRPCSchemaContentLength characters.
+type grpcMonitorBfbsContentValidator struct{}
+
+func (v grpcMonitorBfbsContentValidator) Description(ctx context.Context) string {
+	return fmt.Sprintf("value must be empty or a base64 string of at most %d characters", maxGRPCSchemaContentLength)
+}
+
+func (v grpcMonitorBfbsContentValidator) MarkdownDescription(ctx context.Context) string {
+	return v.Description(ctx)
+}
+
+func (v grpcMonitorBfbsContentValidator) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
+		return
+	}
+
+	value := req.ConfigValue.ValueString()
+	if value == "" {
+		return
+	}
+
+	if _, err := base64.StdEncoding.DecodeString(value); err != nil {
+		resp.Diagnostics.AddAttributeError(
+			req.Path,
+			"Invalid FlatBuffers Schema",
+			fmt.Sprintf("Attribute %s must be a base64 string: %s", req.Path, err),
+		)
+		return
+	}
+
+	if len(value) > maxGRPCSchemaContentLength {
+		resp.Diagnostics.AddAttributeError(
+			req.Path,
+			"Invalid FlatBuffers Schema",
+			fmt.Sprintf("Attribute %s must be at most %d characters long once encoded, got %d.", req.Path, maxGRPCSchemaContentLength, len(value)),
+		)
 	}
 }
 
@@ -822,12 +985,24 @@ func grpcMonitorRequestFromModel(ctx context.Context, model GRPCMonitorRequestMo
 	config := checkly.GRPCConfig{
 		Mode:              model.GRPCMode.ValueString(),
 		TLS:               model.TLS.ValueBool(),
+		Encoding:          model.Encoding.ValueString(),
 		Service:           model.Service.ValueString(),
 		ServiceDefinition: model.ServiceDefinition.ValueString(),
 		ProtoContent:      model.ProtoContent.ValueString(),
+		BfbsContent:       model.BfbsContent.ValueString(),
 		Method:            model.Method.ValueString(),
 		Message:           model.Message.ValueString(),
 		Metadata:          grpcMonitorMetadataFromSet(ctx, model.Metadata, diags),
+	}
+
+	// encoding and service_definition always hold at least their defaults.
+	// Leave them out where they do not apply; the API ignores them there
+	// anyway.
+	if config.Mode == "HEALTH" {
+		config.Encoding = ""
+	}
+	if config.Encoding == "FLATBUFFERS" {
+		config.ServiceDefinition = ""
 	}
 
 	return checkly.GRPCRequest{
@@ -853,9 +1028,11 @@ func grpcMonitorRequestToList(ctx context.Context, r checkly.GRPCRequest, diags 
 			TLS:               types.BoolValue(r.GRPCConfig.TLS),
 			SkipSSL:           types.BoolValue(r.SkipSSL),
 			Timeout:           types.Int64Value(int64(r.Timeout)),
+			Encoding:          types.StringValue(r.GRPCConfig.Encoding),
 			Service:           types.StringValue(r.GRPCConfig.Service),
 			ServiceDefinition: types.StringValue(r.GRPCConfig.ServiceDefinition),
 			ProtoContent:      types.StringValue(r.GRPCConfig.ProtoContent),
+			BfbsContent:       types.StringValue(r.GRPCConfig.BfbsContent),
 			Method:            types.StringValue(r.GRPCConfig.Method),
 			Message:           types.StringValue(r.GRPCConfig.Message),
 			Metadata:          grpcMonitorMetadataToSet(ctx, r.GRPCConfig.Metadata, diags),
