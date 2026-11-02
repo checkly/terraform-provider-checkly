@@ -323,8 +323,8 @@ func (r *PlaywrightCheckSuiteResource) Schema(ctx context.Context, req resource.
 						},
 					},
 					"engine": schema.SingleNestedAttribute{
-						Optional:    true,
-						Computed:    true,
+						Optional: true,
+						Computed: true,
 						Description: "The JavaScript engine used to run the Playwright tests. " +
 							"When `auto_detect` is enabled, no engine is set, and the code bundle has a " +
 							"lockfile at its root, the engine is detected from files at the bundle root. " +
@@ -342,8 +342,9 @@ func (r *PlaywrightCheckSuiteResource) Schema(ctx context.Context, req resource.
 								},
 							},
 							"version": schema.StringAttribute{
-								Required:    true,
-								Description: `The engine version (e.g. "22", "24", "26" for node; "1.3" for bun).`,
+								Required: true,
+								Description: `The engine version (e.g. "22", "24", "26" for node; "1.3", "1.4" for bun). ` +
+									`Use "1" for bun to run the newest Bun 1.x available.`,
 								Validators: []validator.String{
 									playwrightVersionFormatValidator{},
 								},
