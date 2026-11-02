@@ -777,6 +777,28 @@ func TestInspectLockfileDetectsEngine(t *testing.T) {
 		}
 	})
 
+	t.Run("package.json volta.node pin beats engines.node", func(t *testing.T) {
+		t.Parallel()
+		archive := buildTarGz(t, []tarEntry{
+			{name: "package-lock.json", content: []byte(syntheticPackageLock)},
+			{name: "package.json", content: []byte(`{"name":"test","dependencies":{"@playwright/test":"1.58.2"},"volta":{"node":"24.17.0"},"engines":{"node":">=22"}}`)},
+		})
+		attr := PlaywrightCodeBundlePrebuiltArchiveAttribute{File: archive}
+		info, err := attr.InspectLockfile("@playwright/test", InspectLockfileOptions{})
+		if err != nil {
+			t.Fatalf("InspectLockfile failed: %v", err)
+		}
+		if info.Engine != "node" {
+			t.Errorf("Engine = %q, want %q", info.Engine, "node")
+		}
+		if info.EngineVersion != "24" {
+			t.Errorf("EngineVersion = %q, want %q", info.EngineVersion, "24")
+		}
+		if info.EngineSource != "package.json volta.node" {
+			t.Errorf("EngineSource = %q, want %q", info.EngineSource, "package.json volta.node")
+		}
+	})
+
 	t.Run("package.json engines.node", func(t *testing.T) {
 		t.Parallel()
 		archive := buildTarGz(t, []tarEntry{

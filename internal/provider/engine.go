@@ -82,6 +82,26 @@ func parsePackageJSONEngines(content []byte) (nodeRange string, bunRange string)
 	return pkg.Engines.Node, pkg.Engines.Bun
 }
 
+// parsePackageJSONVoltaNode returns the Node version pinned by Volta in
+// package.json ("volta": {"node": "24.17.0"}), or "" when absent. Volta can
+// also pin package managers (volta.npm, volta.yarn, volta.pnpm) but never
+// Bun, so volta.node is the only key relevant to engine detection. A "volta.extends"
+// reference to another manifest is not followed: the code bundle archive
+// holds just the check's own directory, and an extends target normally
+// points at a workspace-root manifest that is not part of the archive.
+func parsePackageJSONVoltaNode(content []byte) string {
+	var pkg struct {
+		Volta struct {
+			Node string `json:"node"`
+		} `json:"volta"`
+	}
+	if err := json.Unmarshal(content, &pkg); err != nil {
+		return ""
+	}
+	s := strings.TrimSpace(pkg.Volta.Node)
+	return strings.TrimPrefix(s, "v")
+}
+
 func resolveNodeMajorVersion(raw string) string {
 	if raw == "" {
 		return ""
@@ -262,8 +282,22 @@ func detectEngine(files map[string][]byte, packageManager string) *EngineDetecti
 		}
 	}
 
-	// 5. package.json engines (range file — only consulted when no pinning file was found for that engine)
 	if raw, ok := files["package.json"]; ok {
+		// 5. package.json volta.node (pin — outranks the engines range, but
+		// loses to any dedicated version file). Like the other pinning
+		// sources, a value that cannot be resolved still claims the node
+		// candidate so the failure is reported rather than silently falling
+		// through to engines.node. This is stricter than .nvmrc, where aliases
+		// such as "lts/*" are skipped: Volta itself only ever writes exact
+		// versions, so an alias here is a broken pin worth surfacing.
+		if nodeCandidate == nil {
+			if pin := parsePackageJSONVoltaNode(raw); pin != "" {
+				resolved, notices := resolveConstraintForEngine("node", pin)
+				nodeCandidate = &candidate{engine: "node", version: resolved, rawVersion: pin, source: "package.json volta.node", notices: notices}
+			}
+		}
+
+		// 6. package.json engines (range file — only consulted when no pinning source was found for that engine)
 		nodeRange, bunRange := parsePackageJSONEngines(raw)
 		if nodeCandidate == nil && nodeRange != "" {
 			if resolved, notices := resolveConstraintForEngine("node", nodeRange); resolved != "" {

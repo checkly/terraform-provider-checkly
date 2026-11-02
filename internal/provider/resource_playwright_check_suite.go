@@ -325,7 +325,14 @@ func (r *PlaywrightCheckSuiteResource) Schema(ctx context.Context, req resource.
 					"engine": schema.SingleNestedAttribute{
 						Optional:    true,
 						Computed:    true,
-						Description: "The JavaScript engine used to run the Playwright tests.",
+						Description: "The JavaScript engine used to run the Playwright tests. " +
+							"When `auto_detect` is enabled, no engine is set, and the code bundle has a " +
+							"lockfile at its root, the engine is detected from files at the bundle root. " +
+							"Node is taken from the first of `.node-version`, `.nvmrc`, `.tool-versions`, " +
+							"the `volta.node` pin in `package.json`, then `engines.node` in `package.json`; " +
+							"Bun from the first of `.tool-versions`, `.bun-version`, then `engines.bun`. " +
+							"When both are found, the engine matching the lockfile's package manager wins. " +
+							"`volta.extends` is not followed.",
 						Attributes: map[string]schema.Attribute{
 							"name": schema.StringAttribute{
 								Required:    true,
