@@ -29,6 +29,7 @@ func TestAccClientCertificate(t *testing.T) {
 	config := `
 resource "checkly_client_certificate" "test" {
   host = "*.acme.com"
+  path = "/partner/api/"
 
   certificate = <<-EOT
 			-----BEGIN CERTIFICATE-----
@@ -84,6 +85,13 @@ resource "checkly_client_certificate" "test" {
 					"checkly_client_certificate.test",
 					"host",
 					"*.acme.com",
+				),
+				// The API drops the trailing slash; state keeps the configured
+				// spelling so the plan stays empty.
+				resource.TestCheckResourceAttr(
+					"checkly_client_certificate.test",
+					"path",
+					"/partner/api/",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_client_certificate.test",
