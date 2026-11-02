@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -148,7 +149,7 @@ func (p *ChecklyProvider) Configure(ctx context.Context, req provider.ConfigureR
 	client := checkly.NewClient(
 		apiURL,
 		apiKey,
-		nil,
+		&http.Client{Timeout: apiRequestTimeout()},
 		debugOutput,
 	)
 
