@@ -45,7 +45,9 @@ func (r *StatusPageServiceResource) Metadata(ctx context.Context, req resource.M
 func (r *StatusPageServiceResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: "Status page services represent functional pieces of " +
-			"your application or website, such as landing page, API, support portal etc.",
+			"your application or website, such as landing page, API, support portal etc. " +
+			"Services belong to legacy v2 status pages: on new v3 pages, use " +
+			"`checkly_status_page_v3_component` instead.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
