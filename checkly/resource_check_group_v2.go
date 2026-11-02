@@ -1002,7 +1002,12 @@ func (r *CheckGroupV2Resource) StoreResourceData(
 		return fmt.Errorf("failed to set %q for resource %s: %w", teardownScriptAttributeName, d.Id(), err)
 	}
 
-	err = d.Set(environmentVariableAttributeName, listFromEnvironmentVariables(r.EnvironmentVariables))
+	envVars, err := environmentVariablesWithKnownSecrets(d, r.EnvironmentVariables)
+	if err != nil {
+		return err
+	}
+
+	err = d.Set(environmentVariableAttributeName, listFromEnvironmentVariables(envVars))
 	if err != nil {
 		return err
 	}

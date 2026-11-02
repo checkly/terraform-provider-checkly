@@ -76,6 +76,7 @@ resource "checkly_check_group" "check-group-3" {
     key    = "API_KEY"
     value  = "wuZeo4aeQu1ia4aezuiphookagheiwoh"
     locked = true
+    secret = true
   }
 
   alert_settings {

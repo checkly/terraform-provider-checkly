@@ -37,7 +37,7 @@ func makeEnvironmentVariableAttributeSchema(options EnvironmentVariableAttribute
 					Default:     false,
 				},
 				"secret": {
-					Description: "If true, the value will never be visible. (Default `false`).",
+					Description: "If true, the value will never be visible. The API never returns secret values, so Terraform keeps the last applied value and does not detect changes made outside Terraform. (Default `false`).",
 					Type:        schema.TypeBool,
 					Optional:    true,
 					Default:     false,
@@ -158,8 +158,53 @@ func compatEnvironmentVariablesFromResourceData(d *schema.ResourceData) ([]check
 	}
 }
 
+// mergeSecretEnvironmentVariableValues restores the values of secret
+// environment variables from the last known values in the resource data.
+// Checkly's API never returns secret values, so evs carries an empty value
+// for them; writing that back would clobber the applied value in state and
+// produce a permanent diff on every plan.
+func mergeSecretEnvironmentVariableValues(existing, evs []checkly.EnvironmentVariable) []checkly.EnvironmentVariable {
+	values := make(map[string]string)
+	for _, v := range existing {
+		if v.Secret {
+			values[v.Key] = v.Value
+		}
+	}
+	if len(values) == 0 {
+		return evs
+	}
+	res := make([]checkly.EnvironmentVariable, len(evs))
+	copy(res, evs)
+	for i := range res {
+		if res[i].Secret {
+			if value, ok := values[res[i].Key]; ok {
+				res[i].Value = value
+			}
+		}
+	}
+	return res
+}
+
+// environmentVariablesWithKnownSecrets returns evs, as read from the API,
+// with each secret's value restored from the environment_variable attribute
+// currently in d. During a refresh d holds the prior state; after a create or
+// update it still holds the configured values.
+func environmentVariablesWithKnownSecrets(d *schema.ResourceData, evs []checkly.EnvironmentVariable) ([]checkly.EnvironmentVariable, error) {
+	existing, err := environmentVariablesFromResourceData(d)
+	if err != nil {
+		return nil, err
+	}
+
+	return mergeSecretEnvironmentVariableValues(existing, evs), nil
+}
+
 func updateCompatEnvironmentVariablesResourceData(d *schema.ResourceData, evs []checkly.EnvironmentVariable) error {
 	oldVars, err := deprecatedEnvironmentVariablesFromResourceData(d)
+	if err != nil {
+		return err
+	}
+
+	evs, err = environmentVariablesWithKnownSecrets(d, evs)
 	if err != nil {
 		return err
 	}
