@@ -1,0 +1,56 @@
+{
+    "activated": true,
+    "alert_channel_subscription": [],
+    "alert_settings": [],
+    "bundle": [
+        {
+            "id": "b",
+            "metadata": "{}"
+        }
+    ],
+    "description": null,
+    "environment_variable": [],
+    "frequency": 10,
+    "group_id": null,
+    "group_order": null,
+    "id": "123",
+    "locations": null,
+    "muted": false,
+    "name": "p",
+    "private_locations": null,
+    "run_parallel": false,
+    "runtime": [
+        {
+            "auto_detect": true,
+            "engine": [],
+            "playwright": [
+                {
+                    "device": [
+                        {
+                            "type": "chromium"
+                        }
+                    ],
+                    "version": "1.50.0"
+                }
+            ],
+            "steps": [
+                {
+                    "install": [
+                        {
+                            "command": "npm ci"
+                        }
+                    ],
+                    "test": [
+                        {
+                            "command": "npx playwright test"
+                        }
+                    ]
+                }
+            ],
+            "working_dir": ""
+        }
+    ],
+    "tags": null,
+    "trigger_incident": [],
+    "use_global_alert_settings": true
+}

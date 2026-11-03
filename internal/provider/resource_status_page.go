@@ -22,9 +22,10 @@ import (
 )
 
 var (
-	_ resource.Resource                = (*StatusPageResource)(nil)
-	_ resource.ResourceWithConfigure   = (*StatusPageResource)(nil)
-	_ resource.ResourceWithImportState = (*StatusPageResource)(nil)
+	_ resource.Resource                 = (*StatusPageResource)(nil)
+	_ resource.ResourceWithConfigure    = (*StatusPageResource)(nil)
+	_ resource.ResourceWithUpgradeState = (*StatusPageResource)(nil)
+	_ resource.ResourceWithImportState  = (*StatusPageResource)(nil)
 )
 
 // NewStatusPageResource returns a new checkly_status_page resource.
@@ -79,6 +80,7 @@ func (r *StatusPageResource) Metadata(ctx context.Context, req resource.Metadata
 
 func (r *StatusPageResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Version: sdkv2SchemaVersion + 1,
 		Description: "Checkly status pages allow you to easily communicate " +
 			"the uptime and health of your applications and services to your customers. " +
 			"This resource creates a legacy v2 status page: the new " +
@@ -171,6 +173,12 @@ func (r *StatusPageResource) Schema(ctx context.Context, req resource.SchemaRequ
 			},
 		},
 	}
+}
+
+// UpgradeState upgrades state written by the provider's SDK v2
+// implementation; see sdkv2StateUpgraders.
+func (r *StatusPageResource) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
+	return sdkv2StateUpgraders(ctx, r)
 }
 
 func (r *StatusPageResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {

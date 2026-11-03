@@ -1,0 +1,64 @@
+{
+    "activated": true,
+    "alert_channel_subscription": [],
+    "alert_settings": [
+        {
+            "escalation_type": "RUN_BASED",
+            "parallel_run_failure_threshold": [
+                {
+                    "enabled": false,
+                    "percentage": 10
+                }
+            ],
+            "reminders": [
+                {
+                    "amount": 1,
+                    "interval": 5
+                }
+            ],
+            "run_based_escalation": [
+                {
+                    "failed_run_threshold": 2
+                }
+            ],
+            "time_based_escalation": []
+        }
+    ],
+    "degraded_response_time": 4000,
+    "description": null,
+    "frequency": 10,
+    "frequency_offset": null,
+    "group_id": null,
+    "group_order": null,
+    "id": "123",
+    "locations": null,
+    "max_response_time": 5000,
+    "muted": null,
+    "name": "t",
+    "private_locations": null,
+    "request": [
+        {
+            "assertion": [],
+            "data": "",
+            "hostname": "example.com",
+            "ip_family": "IPv4",
+            "port": 443
+        }
+    ],
+    "retry_strategy": [
+        {
+            "base_backoff_seconds": 60,
+            "max_duration_seconds": 600,
+            "max_retries": 2,
+            "only_on": [],
+            "same_region": true,
+            "type": "FIXED"
+        }
+    ],
+    "run_parallel": null,
+    "runtime_id": null,
+    "should_fail": null,
+    "tags": null,
+    "trigger_incident": [],
+    "use_global_alert_settings": null
+}

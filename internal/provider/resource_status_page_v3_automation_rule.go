@@ -22,9 +22,10 @@ import (
 )
 
 var (
-	_ resource.Resource                = (*StatusPageV3AutomationRuleResource)(nil)
-	_ resource.ResourceWithConfigure   = (*StatusPageV3AutomationRuleResource)(nil)
-	_ resource.ResourceWithImportState = (*StatusPageV3AutomationRuleResource)(nil)
+	_ resource.Resource                 = (*StatusPageV3AutomationRuleResource)(nil)
+	_ resource.ResourceWithConfigure    = (*StatusPageV3AutomationRuleResource)(nil)
+	_ resource.ResourceWithUpgradeState = (*StatusPageV3AutomationRuleResource)(nil)
+	_ resource.ResourceWithImportState  = (*StatusPageV3AutomationRuleResource)(nil)
 )
 
 var statusPageV3TargetImpactValues = allowedValues[string]{
@@ -78,6 +79,7 @@ func (r *StatusPageV3AutomationRuleResource) Metadata(ctx context.Context, req r
 
 func (r *StatusPageV3AutomationRuleResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Version: sdkv2SchemaVersion + 1,
 		Description: "An automation rule of a v3 status page. When a check " +
 			"whose tags overlap with the rule's tags fails, Checkly opens " +
 			"one incident on the page impacting the listed components, and " +
@@ -161,6 +163,12 @@ func (r *StatusPageV3AutomationRuleResource) Schema(ctx context.Context, req res
 			},
 		},
 	}
+}
+
+// UpgradeState upgrades state written by the provider's SDK v2
+// implementation; see sdkv2StateUpgraders.
+func (r *StatusPageV3AutomationRuleResource) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
+	return sdkv2StateUpgraders(ctx, r)
 }
 
 func (r *StatusPageV3AutomationRuleResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {

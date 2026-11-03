@@ -1,0 +1,52 @@
+{
+    "activated": true,
+    "alert_channel_subscription": [],
+    "alert_settings": [],
+    "degraded_response_time": 15000,
+    "description": null,
+    "double_check": false,
+    "environment_variable": [
+        {
+            "key": "K",
+            "locked": false,
+            "secret": false,
+            "value": "v"
+        }
+    ],
+    "environment_variables": null,
+    "frequency": 10,
+    "frequency_offset": null,
+    "group_id": null,
+    "group_order": null,
+    "id": "123",
+    "local_setup_script": null,
+    "local_teardown_script": null,
+    "locations": null,
+    "max_response_time": 30000,
+    "muted": null,
+    "name": "b",
+    "private_locations": null,
+    "request": [],
+    "retry_strategy": [
+        {
+            "base_backoff_seconds": 60,
+            "max_duration_seconds": 600,
+            "max_retries": 2,
+            "only_on": [],
+            "same_region": true,
+            "type": "LINEAR"
+        }
+    ],
+    "run_parallel": null,
+    "runtime_id": null,
+    "script": "console.log(1)",
+    "setup_snippet_id": null,
+    "should_fail": null,
+    "ssl_check": null,
+    "ssl_check_domain": null,
+    "tags": null,
+    "teardown_snippet_id": null,
+    "trigger_incident": [],
+    "type": "BROWSER",
+    "use_global_alert_settings": null
+}

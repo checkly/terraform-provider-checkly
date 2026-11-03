@@ -22,6 +22,7 @@ import (
 var (
 	_ resource.Resource                     = (*StatusPageV3ComponentResource)(nil)
 	_ resource.ResourceWithConfigure        = (*StatusPageV3ComponentResource)(nil)
+	_ resource.ResourceWithUpgradeState     = (*StatusPageV3ComponentResource)(nil)
 	_ resource.ResourceWithImportState      = (*StatusPageV3ComponentResource)(nil)
 	_ resource.ResourceWithConfigValidators = (*StatusPageV3ComponentResource)(nil)
 )
@@ -80,6 +81,7 @@ func (r *StatusPageV3ComponentResource) Metadata(ctx context.Context, req resour
 
 func (r *StatusPageV3ComponentResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Version: sdkv2SchemaVersion + 1,
 		Description: "A component of a v3 status page: either a SERVICE (a " +
 			"monitored thing with its own status) or a GROUP (a container " +
 			"for other components). Import uses the composite ID " +
@@ -197,6 +199,12 @@ func validateStatusPageV3ComponentConfiguration(componentType checkly.StatusPage
 		return fmt.Errorf(`"expanded_by_default" is only available on a GROUP component`)
 	}
 	return nil
+}
+
+// UpgradeState upgrades state written by the provider's SDK v2
+// implementation; see sdkv2StateUpgraders.
+func (r *StatusPageV3ComponentResource) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
+	return sdkv2StateUpgraders(ctx, r)
 }
 
 func (r *StatusPageV3ComponentResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {

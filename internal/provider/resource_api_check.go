@@ -652,7 +652,11 @@ func (r *APICheckResource) MoveState(ctx context.Context) []resource.StateMover 
 					return
 				}
 
-				if req.SourceState == nil {
+				sourceState := sdkv2MoveSourceState(ctx, req, sourceSchema, &resp.Diagnostics)
+				if resp.Diagnostics.HasError() {
+					return
+				}
+				if sourceState == nil {
 					resp.Diagnostics.AddError(
 						"Unable to Move Resource State",
 						fmt.Sprintf(
@@ -667,7 +671,7 @@ func (r *APICheckResource) MoveState(ctx context.Context) []resource.StateMover 
 				}
 
 				var source CheckResourceModel
-				resp.Diagnostics.Append(req.SourceState.Get(ctx, &source)...)
+				resp.Diagnostics.Append(sourceState.Get(ctx, &source)...)
 				if resp.Diagnostics.HasError() {
 					return
 				}

@@ -28,6 +28,7 @@ import (
 var (
 	_ resource.Resource                     = (*SSLMonitorResource)(nil)
 	_ resource.ResourceWithConfigure        = (*SSLMonitorResource)(nil)
+	_ resource.ResourceWithUpgradeState     = (*SSLMonitorResource)(nil)
 	_ resource.ResourceWithConfigValidators = (*SSLMonitorResource)(nil)
 	_ resource.ResourceWithImportState      = (*SSLMonitorResource)(nil)
 	_ resource.ResourceWithModifyPlan       = (*SSLMonitorResource)(nil)
@@ -270,6 +271,7 @@ func (r *SSLMonitorResource) Metadata(ctx context.Context, req resource.Metadata
 
 func (r *SSLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Version:     sdkv2SchemaVersion + 1,
 		Description: "SSL monitors check the TLS certificate of a host and alert before it expires or violates a security baseline.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -557,6 +559,12 @@ func (r *SSLMonitorResource) ConfigValidators(ctx context.Context) []resource.Co
 	return []resource.ConfigValidator{
 		newFrequencyOffsetConfigValidator(),
 	}
+}
+
+// UpgradeState upgrades state written by the provider's SDK v2
+// implementation; see sdkv2StateUpgraders.
+func (r *SSLMonitorResource) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
+	return sdkv2StateUpgraders(ctx, r)
 }
 
 func (r *SSLMonitorResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {

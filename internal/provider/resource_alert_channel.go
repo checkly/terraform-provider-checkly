@@ -29,6 +29,7 @@ import (
 var (
 	_ resource.Resource                     = (*AlertChannelResource)(nil)
 	_ resource.ResourceWithConfigure        = (*AlertChannelResource)(nil)
+	_ resource.ResourceWithUpgradeState     = (*AlertChannelResource)(nil)
 	_ resource.ResourceWithConfigValidators = (*AlertChannelResource)(nil)
 	_ resource.ResourceWithImportState      = (*AlertChannelResource)(nil)
 	_ resource.ResourceWithModifyPlan       = (*AlertChannelResource)(nil)
@@ -189,6 +190,7 @@ func (r *AlertChannelResource) Metadata(ctx context.Context, req resource.Metada
 
 func (r *AlertChannelResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Version:     sdkv2SchemaVersion + 1,
 		Description: "Allows you to define alerting channels for the checks and groups in your account",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -464,6 +466,12 @@ func (v alertChannelExactlyOneChannelValidator) ValidateResource(ctx context.Con
 			fmt.Sprintf("An alert channel requires exactly one channel type block: %s.", strings.Join(alertChannelTypeBlockNames, ", ")),
 		)
 	}
+}
+
+// UpgradeState upgrades state written by the provider's SDK v2
+// implementation; see sdkv2StateUpgraders.
+func (r *AlertChannelResource) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
+	return sdkv2StateUpgraders(ctx, r)
 }
 
 func (r *AlertChannelResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {

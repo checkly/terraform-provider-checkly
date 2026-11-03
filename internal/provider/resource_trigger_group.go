@@ -16,9 +16,10 @@ import (
 )
 
 var (
-	_ resource.Resource                = (*TriggerGroupResource)(nil)
-	_ resource.ResourceWithConfigure   = (*TriggerGroupResource)(nil)
-	_ resource.ResourceWithImportState = (*TriggerGroupResource)(nil)
+	_ resource.Resource                 = (*TriggerGroupResource)(nil)
+	_ resource.ResourceWithConfigure    = (*TriggerGroupResource)(nil)
+	_ resource.ResourceWithUpgradeState = (*TriggerGroupResource)(nil)
+	_ resource.ResourceWithImportState  = (*TriggerGroupResource)(nil)
 )
 
 // NewTriggerGroupResource returns a new checkly_trigger_group resource.
@@ -45,6 +46,7 @@ func (r *TriggerGroupResource) Metadata(ctx context.Context, req resource.Metada
 
 func (r *TriggerGroupResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Version:     sdkv2SchemaVersion + 1,
 		Description: "Triggers allow you to run checks in a group from your CI/CD pipeline or from an external system using a webhook URL.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -79,6 +81,12 @@ func (r *TriggerGroupResource) Schema(ctx context.Context, req resource.SchemaRe
 			},
 		},
 	}
+}
+
+// UpgradeState upgrades state written by the provider's SDK v2
+// implementation; see sdkv2StateUpgraders.
+func (r *TriggerGroupResource) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
+	return sdkv2StateUpgraders(ctx, r)
 }
 
 func (r *TriggerGroupResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {

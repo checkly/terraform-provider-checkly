@@ -24,10 +24,11 @@ import (
 )
 
 var (
-	_ resource.Resource                = (*CheckGroupV2Resource)(nil)
-	_ resource.ResourceWithConfigure   = (*CheckGroupV2Resource)(nil)
-	_ resource.ResourceWithImportState = (*CheckGroupV2Resource)(nil)
-	_ resource.ResourceWithModifyPlan  = (*CheckGroupV2Resource)(nil)
+	_ resource.Resource                 = (*CheckGroupV2Resource)(nil)
+	_ resource.ResourceWithConfigure    = (*CheckGroupV2Resource)(nil)
+	_ resource.ResourceWithUpgradeState = (*CheckGroupV2Resource)(nil)
+	_ resource.ResourceWithImportState  = (*CheckGroupV2Resource)(nil)
+	_ resource.ResourceWithModifyPlan   = (*CheckGroupV2Resource)(nil)
 )
 
 // NewCheckGroupV2Resource returns a new checkly_check_group_v2 resource.
@@ -149,6 +150,7 @@ func (r *CheckGroupV2Resource) Schema(ctx context.Context, req resource.SchemaRe
 	}
 
 	resp.Schema = schema.Schema{
+		Version: sdkv2SchemaVersion + 1,
 		Description: "Check groups organize related checks together and allow optional shared configuration. " +
 			"\n\n" +
 			"Unlike `checkly_check_group` (v1), which always imposed implicit defaults for various settings, " +
@@ -347,6 +349,12 @@ func (r *CheckGroupV2Resource) Schema(ctx context.Context, req resource.SchemaRe
 			},
 		},
 	}
+}
+
+// UpgradeState upgrades state written by the provider's SDK v2
+// implementation; see sdkv2StateUpgraders.
+func (r *CheckGroupV2Resource) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
+	return sdkv2StateUpgraders(ctx, r)
 }
 
 func (r *CheckGroupV2Resource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {

@@ -1,0 +1,32 @@
+{
+    "activated": true,
+    "alert_channel_subscription": [],
+    "alert_settings": [],
+    "degraded_response_time": 3000,
+    "description": null,
+    "frequency": 10,
+    "frequency_offset": null,
+    "group_id": null,
+    "group_order": null,
+    "id": "123",
+    "locations": null,
+    "max_response_time": 5000,
+    "muted": false,
+    "name": "u",
+    "private_locations": null,
+    "request": [
+        {
+            "assertion": [],
+            "follow_redirects": true,
+            "ip_family": "IPv4",
+            "skip_ssl": false,
+            "url": "https://example.com"
+        }
+    ],
+    "retry_strategy": [],
+    "run_parallel": false,
+    "should_fail": false,
+    "tags": null,
+    "trigger_incident": [],
+    "use_global_alert_settings": true
+}

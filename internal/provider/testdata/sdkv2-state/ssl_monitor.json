@@ -1,0 +1,70 @@
+{
+    "activated": true,
+    "alert_channel_subscription": [],
+    "alert_settings": [],
+    "degraded_response_time": 10000,
+    "description": null,
+    "frequency": 60,
+    "frequency_offset": null,
+    "group_id": null,
+    "group_order": null,
+    "id": "123",
+    "locations": null,
+    "max_response_time": 20000,
+    "muted": null,
+    "name": "s",
+    "private_locations": null,
+    "request": [
+        {
+            "alert_days_before_expiry": 20,
+            "assertion": [],
+            "client_certificate": [
+                {
+                    "client_certificate_id": "",
+                    "mode": "account_default"
+                }
+            ],
+            "handshake_timeout_ms": 10000,
+            "hostname": "example.com",
+            "ip_family": "IPv4",
+            "port": 443,
+            "security_baseline": [
+                {
+                    "enabled": true,
+                    "known_bad_ca": [],
+                    "min_key_size_bits": [],
+                    "min_tls_version": [
+                        {
+                            "severity": "ERROR",
+                            "value": "TLS1.2"
+                        }
+                    ],
+                    "ocsp_must_staple_respected": [],
+                    "recommended_key_size_bits": [],
+                    "recommended_tls_version": [],
+                    "sct_present": [],
+                    "weak_cipher_suite": [],
+                    "weak_signature_algorithm": []
+                }
+            ],
+            "server_name": "",
+            "skip_chain_validation": false
+        }
+    ],
+    "retry_strategy": [
+        {
+            "base_backoff_seconds": 60,
+            "max_duration_seconds": 600,
+            "max_retries": 2,
+            "only_on": [],
+            "same_region": true,
+            "type": "NO_RETRIES"
+        }
+    ],
+    "run_parallel": null,
+    "runtime_id": null,
+    "should_fail": null,
+    "tags": null,
+    "trigger_incident": [],
+    "use_global_alert_settings": null
+}

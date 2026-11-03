@@ -15,9 +15,10 @@ import (
 )
 
 var (
-	_ resource.Resource                = (*TriggerCheckResource)(nil)
-	_ resource.ResourceWithConfigure   = (*TriggerCheckResource)(nil)
-	_ resource.ResourceWithImportState = (*TriggerCheckResource)(nil)
+	_ resource.Resource                 = (*TriggerCheckResource)(nil)
+	_ resource.ResourceWithConfigure    = (*TriggerCheckResource)(nil)
+	_ resource.ResourceWithUpgradeState = (*TriggerCheckResource)(nil)
+	_ resource.ResourceWithImportState  = (*TriggerCheckResource)(nil)
 )
 
 // NewTriggerCheckResource returns a new checkly_trigger_check resource.
@@ -44,6 +45,7 @@ func (r *TriggerCheckResource) Metadata(ctx context.Context, req resource.Metada
 
 func (r *TriggerCheckResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Version:     sdkv2SchemaVersion + 1,
 		Description: "Triggers allow you to run checks from your CI/CD pipeline or from an external system using a webhook URL.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -78,6 +80,12 @@ func (r *TriggerCheckResource) Schema(ctx context.Context, req resource.SchemaRe
 			},
 		},
 	}
+}
+
+// UpgradeState upgrades state written by the provider's SDK v2
+// implementation; see sdkv2StateUpgraders.
+func (r *TriggerCheckResource) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
+	return sdkv2StateUpgraders(ctx, r)
 }
 
 func (r *TriggerCheckResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {

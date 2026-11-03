@@ -26,6 +26,7 @@ import (
 var (
 	_ resource.Resource                     = (*ICMPMonitorResource)(nil)
 	_ resource.ResourceWithConfigure        = (*ICMPMonitorResource)(nil)
+	_ resource.ResourceWithUpgradeState     = (*ICMPMonitorResource)(nil)
 	_ resource.ResourceWithConfigValidators = (*ICMPMonitorResource)(nil)
 	_ resource.ResourceWithImportState      = (*ICMPMonitorResource)(nil)
 	_ resource.ResourceWithModifyPlan       = (*ICMPMonitorResource)(nil)
@@ -101,6 +102,7 @@ func (r *ICMPMonitorResource) Metadata(ctx context.Context, req resource.Metadat
 
 func (r *ICMPMonitorResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Version:     sdkv2SchemaVersion + 1,
 		Description: "Creates an ICMP Monitor to check host availability using ping.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -286,6 +288,12 @@ func (r *ICMPMonitorResource) ConfigValidators(ctx context.Context) []resource.C
 	return []resource.ConfigValidator{
 		newFrequencyOffsetConfigValidator(),
 	}
+}
+
+// UpgradeState upgrades state written by the provider's SDK v2
+// implementation; see sdkv2StateUpgraders.
+func (r *ICMPMonitorResource) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
+	return sdkv2StateUpgraders(ctx, r)
 }
 
 func (r *ICMPMonitorResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {

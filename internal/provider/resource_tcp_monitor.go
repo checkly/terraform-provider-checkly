@@ -27,6 +27,7 @@ import (
 var (
 	_ resource.Resource                     = (*TCPMonitorResource)(nil)
 	_ resource.ResourceWithConfigure        = (*TCPMonitorResource)(nil)
+	_ resource.ResourceWithUpgradeState     = (*TCPMonitorResource)(nil)
 	_ resource.ResourceWithConfigValidators = (*TCPMonitorResource)(nil)
 	_ resource.ResourceWithImportState      = (*TCPMonitorResource)(nil)
 	_ resource.ResourceWithMoveState        = (*TCPMonitorResource)(nil)
@@ -108,6 +109,7 @@ func (r *TCPMonitorResource) Metadata(ctx context.Context, req resource.Metadata
 
 func (r *TCPMonitorResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Version:     sdkv2SchemaVersion + 1,
 		Description: "TCP checks allow you to monitor remote endpoints at a lower level.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -300,6 +302,12 @@ func (r *TCPMonitorResource) ConfigValidators(ctx context.Context) []resource.Co
 	return []resource.ConfigValidator{
 		newFrequencyOffsetConfigValidator(),
 	}
+}
+
+// UpgradeState upgrades state written by the provider's SDK v2
+// implementation; see sdkv2StateUpgraders.
+func (r *TCPMonitorResource) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
+	return sdkv2StateUpgraders(ctx, r)
 }
 
 func (r *TCPMonitorResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
@@ -545,7 +553,11 @@ func (r *TCPMonitorResource) MoveState(ctx context.Context) []resource.StateMove
 					return
 				}
 
-				if req.SourceState == nil {
+				sourceState := sdkv2MoveSourceState(ctx, req, sourceSchema, &resp.Diagnostics)
+				if resp.Diagnostics.HasError() {
+					return
+				}
+				if sourceState == nil {
 					resp.Diagnostics.AddError(
 						"Unable to Move Resource State",
 						fmt.Sprintf(
@@ -559,7 +571,7 @@ func (r *TCPMonitorResource) MoveState(ctx context.Context) []resource.StateMove
 					return
 				}
 
-				resp.TargetState = *req.SourceState
+				resp.TargetState = *sourceState
 			},
 		},
 	}

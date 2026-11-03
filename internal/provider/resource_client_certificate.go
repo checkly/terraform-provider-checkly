@@ -20,9 +20,10 @@ import (
 )
 
 var (
-	_ resource.Resource                = (*ClientCertificateResource)(nil)
-	_ resource.ResourceWithConfigure   = (*ClientCertificateResource)(nil)
-	_ resource.ResourceWithImportState = (*ClientCertificateResource)(nil)
+	_ resource.Resource                 = (*ClientCertificateResource)(nil)
+	_ resource.ResourceWithConfigure    = (*ClientCertificateResource)(nil)
+	_ resource.ResourceWithUpgradeState = (*ClientCertificateResource)(nil)
+	_ resource.ResourceWithImportState  = (*ClientCertificateResource)(nil)
 )
 
 // NewClientCertificateResource returns a new checkly_client_certificate
@@ -54,6 +55,7 @@ func (r *ClientCertificateResource) Metadata(ctx context.Context, req resource.M
 
 func (r *ClientCertificateResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Version: sdkv2SchemaVersion + 1,
 		Description: "Use client certificates to authenticate your API " +
 			"checks to APIs that require mutual TLS (mTLS) authentication, " +
 			"or any other authentication scheme where the requester needs to " +
@@ -132,6 +134,12 @@ func (r *ClientCertificateResource) Schema(ctx context.Context, req resource.Sch
 			},
 		},
 	}
+}
+
+// UpgradeState upgrades state written by the provider's SDK v2
+// implementation; see sdkv2StateUpgraders.
+func (r *ClientCertificateResource) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
+	return sdkv2StateUpgraders(ctx, r)
 }
 
 func (r *ClientCertificateResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {

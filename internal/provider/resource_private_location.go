@@ -17,9 +17,10 @@ import (
 )
 
 var (
-	_ resource.Resource                = (*PrivateLocationResource)(nil)
-	_ resource.ResourceWithConfigure   = (*PrivateLocationResource)(nil)
-	_ resource.ResourceWithImportState = (*PrivateLocationResource)(nil)
+	_ resource.Resource                 = (*PrivateLocationResource)(nil)
+	_ resource.ResourceWithConfigure    = (*PrivateLocationResource)(nil)
+	_ resource.ResourceWithUpgradeState = (*PrivateLocationResource)(nil)
+	_ resource.ResourceWithImportState  = (*PrivateLocationResource)(nil)
 )
 
 // NewPrivateLocationResource returns a new checkly_private_location resource.
@@ -47,6 +48,7 @@ func (r *PrivateLocationResource) Metadata(ctx context.Context, req resource.Met
 
 func (r *PrivateLocationResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Version: sdkv2SchemaVersion + 1,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -83,6 +85,12 @@ func (r *PrivateLocationResource) Schema(ctx context.Context, req resource.Schem
 			},
 		},
 	}
+}
+
+// UpgradeState upgrades state written by the provider's SDK v2
+// implementation; see sdkv2StateUpgraders.
+func (r *PrivateLocationResource) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
+	return sdkv2StateUpgraders(ctx, r)
 }
 
 func (r *PrivateLocationResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {

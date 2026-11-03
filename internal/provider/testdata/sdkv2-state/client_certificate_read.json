@@ -1,0 +1,9 @@
+{
+    "certificate": "c",
+    "host": "*.example.com",
+    "id": "cc",
+    "passphrase": null,
+    "path": "",
+    "private_key": "k",
+    "trusted_ca": ""
+}

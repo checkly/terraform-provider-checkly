@@ -24,9 +24,10 @@ import (
 )
 
 var (
-	_ resource.Resource                = (*StatusPageV3Resource)(nil)
-	_ resource.ResourceWithConfigure   = (*StatusPageV3Resource)(nil)
-	_ resource.ResourceWithImportState = (*StatusPageV3Resource)(nil)
+	_ resource.Resource                 = (*StatusPageV3Resource)(nil)
+	_ resource.ResourceWithConfigure    = (*StatusPageV3Resource)(nil)
+	_ resource.ResourceWithUpgradeState = (*StatusPageV3Resource)(nil)
+	_ resource.ResourceWithImportState  = (*StatusPageV3Resource)(nil)
 )
 
 var statusPageV3ThemeValues = allowedValues[string]{
@@ -224,6 +225,7 @@ func statusPageV3OptionalString(description string, validators ...validator.Stri
 
 func (r *StatusPageV3Resource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Version: sdkv2SchemaVersion + 1,
 		Description: "Checkly status pages allow you to easily communicate " +
 			"the uptime and health of your applications and services to your " +
 			"customers. A v3 status page has no cards or services: its " +
@@ -308,6 +310,12 @@ func (r *StatusPageV3Resource) Schema(ctx context.Context, req resource.SchemaRe
 			},
 		},
 	}
+}
+
+// UpgradeState upgrades state written by the provider's SDK v2
+// implementation; see sdkv2StateUpgraders.
+func (r *StatusPageV3Resource) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
+	return sdkv2StateUpgraders(ctx, r)
 }
 
 func (r *StatusPageV3Resource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {

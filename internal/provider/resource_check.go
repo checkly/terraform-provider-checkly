@@ -28,6 +28,7 @@ import (
 var (
 	_ resource.Resource                     = (*CheckResource)(nil)
 	_ resource.ResourceWithConfigure        = (*CheckResource)(nil)
+	_ resource.ResourceWithUpgradeState     = (*CheckResource)(nil)
 	_ resource.ResourceWithImportState      = (*CheckResource)(nil)
 	_ resource.ResourceWithConfigValidators = (*CheckResource)(nil)
 	_ resource.ResourceWithValidateConfig   = (*CheckResource)(nil)
@@ -140,6 +141,7 @@ func (r *CheckResource) Metadata(ctx context.Context, req resource.MetadataReque
 
 func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Version:     sdkv2SchemaVersion + 1,
 		Description: "Checks allows you to monitor key webapp flows, backend API's and set up alerting, so you get a notification when things break or slow down.",
 		DeprecationMessage: "The `checkly_check` resource is deprecated in favor of dedicated resource types for each check type: " +
 			"`checkly_api_check`, `checkly_browser_check`, and `checkly_multistep_check`. " +
@@ -453,6 +455,12 @@ func (r *CheckResource) ValidateConfig(ctx context.Context, req resource.Validat
 			"ssl_check_domain is allowed only for Browser checks",
 		)
 	}
+}
+
+// UpgradeState upgrades state written by the provider's SDK v2
+// implementation; see sdkv2StateUpgraders.
+func (r *CheckResource) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
+	return sdkv2StateUpgraders(ctx, r)
 }
 
 func (r *CheckResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {

@@ -21,10 +21,11 @@ import (
 )
 
 var (
-	_ resource.Resource                = (*CheckGroupResource)(nil)
-	_ resource.ResourceWithConfigure   = (*CheckGroupResource)(nil)
-	_ resource.ResourceWithImportState = (*CheckGroupResource)(nil)
-	_ resource.ResourceWithModifyPlan  = (*CheckGroupResource)(nil)
+	_ resource.Resource                 = (*CheckGroupResource)(nil)
+	_ resource.ResourceWithConfigure    = (*CheckGroupResource)(nil)
+	_ resource.ResourceWithUpgradeState = (*CheckGroupResource)(nil)
+	_ resource.ResourceWithImportState  = (*CheckGroupResource)(nil)
+	_ resource.ResourceWithModifyPlan   = (*CheckGroupResource)(nil)
 )
 
 // NewCheckGroupResource returns a new checkly_check_group resource.
@@ -67,6 +68,7 @@ func (r *CheckGroupResource) Metadata(ctx context.Context, req resource.Metadata
 
 func (r *CheckGroupResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Version:     sdkv2SchemaVersion + 1,
 		Description: "Check groups allow  you to group together a set of related checks, which can also share default settings for various attributes.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -168,6 +170,12 @@ func (r *CheckGroupResource) Schema(ctx context.Context, req resource.SchemaRequ
 			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{}),
 		},
 	}
+}
+
+// UpgradeState upgrades state written by the provider's SDK v2
+// implementation; see sdkv2StateUpgraders.
+func (r *CheckGroupResource) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
+	return sdkv2StateUpgraders(ctx, r)
 }
 
 func (r *CheckGroupResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {

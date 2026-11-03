@@ -27,6 +27,7 @@ import (
 var (
 	_ resource.Resource                     = (*TracerouteMonitorResource)(nil)
 	_ resource.ResourceWithConfigure        = (*TracerouteMonitorResource)(nil)
+	_ resource.ResourceWithUpgradeState     = (*TracerouteMonitorResource)(nil)
 	_ resource.ResourceWithConfigValidators = (*TracerouteMonitorResource)(nil)
 	_ resource.ResourceWithImportState      = (*TracerouteMonitorResource)(nil)
 	_ resource.ResourceWithModifyPlan       = (*TracerouteMonitorResource)(nil)
@@ -119,6 +120,7 @@ func (r *TracerouteMonitorResource) Metadata(ctx context.Context, req resource.M
 
 func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Version:     sdkv2SchemaVersion + 1,
 		Description: "Traceroute monitors trace the network path to a host and measure per-hop latency and packet loss. Traceroute monitors do not support private locations.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -363,6 +365,12 @@ func (r *TracerouteMonitorResource) ConfigValidators(ctx context.Context) []reso
 	return []resource.ConfigValidator{
 		newFrequencyOffsetConfigValidator(),
 	}
+}
+
+// UpgradeState upgrades state written by the provider's SDK v2
+// implementation; see sdkv2StateUpgraders.
+func (r *TracerouteMonitorResource) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
+	return sdkv2StateUpgraders(ctx, r)
 }
 
 func (r *TracerouteMonitorResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {

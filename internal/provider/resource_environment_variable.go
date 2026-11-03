@@ -16,9 +16,10 @@ import (
 )
 
 var (
-	_ resource.Resource                = (*EnvironmentVariableResource)(nil)
-	_ resource.ResourceWithConfigure   = (*EnvironmentVariableResource)(nil)
-	_ resource.ResourceWithImportState = (*EnvironmentVariableResource)(nil)
+	_ resource.Resource                 = (*EnvironmentVariableResource)(nil)
+	_ resource.ResourceWithConfigure    = (*EnvironmentVariableResource)(nil)
+	_ resource.ResourceWithUpgradeState = (*EnvironmentVariableResource)(nil)
+	_ resource.ResourceWithImportState  = (*EnvironmentVariableResource)(nil)
 )
 
 // NewEnvironmentVariableResource returns a new checkly_environment_variable
@@ -48,6 +49,7 @@ func (r *EnvironmentVariableResource) Metadata(ctx context.Context, req resource
 
 func (r *EnvironmentVariableResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Version:     sdkv2SchemaVersion + 1,
 		Description: "Global environment variables that can be referenced from check scripts.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -83,6 +85,12 @@ func (r *EnvironmentVariableResource) Schema(ctx context.Context, req resource.S
 			},
 		},
 	}
+}
+
+// UpgradeState upgrades state written by the provider's SDK v2
+// implementation; see sdkv2StateUpgraders.
+func (r *EnvironmentVariableResource) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
+	return sdkv2StateUpgraders(ctx, r)
 }
 
 func (r *EnvironmentVariableResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {

@@ -367,7 +367,11 @@ func (r *MultistepCheckResource) MoveState(ctx context.Context) []resource.State
 					return
 				}
 
-				if req.SourceState == nil {
+				sourceState := sdkv2MoveSourceState(ctx, req, sourceSchema, &resp.Diagnostics)
+				if resp.Diagnostics.HasError() {
+					return
+				}
+				if sourceState == nil {
 					resp.Diagnostics.AddError(
 						"Unable to Move Resource State",
 						"The source checkly_check state could not be decoded. The "+
@@ -379,7 +383,7 @@ func (r *MultistepCheckResource) MoveState(ctx context.Context) []resource.State
 				}
 
 				var source CheckResourceModel
-				resp.Diagnostics.Append(req.SourceState.Get(ctx, &source)...)
+				resp.Diagnostics.Append(sourceState.Get(ctx, &source)...)
 				if resp.Diagnostics.HasError() {
 					return
 				}

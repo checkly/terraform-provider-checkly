@@ -21,9 +21,10 @@ import (
 )
 
 var (
-	_ resource.Resource                = (*MaintenanceWindowResource)(nil)
-	_ resource.ResourceWithConfigure   = (*MaintenanceWindowResource)(nil)
-	_ resource.ResourceWithImportState = (*MaintenanceWindowResource)(nil)
+	_ resource.Resource                 = (*MaintenanceWindowResource)(nil)
+	_ resource.ResourceWithConfigure    = (*MaintenanceWindowResource)(nil)
+	_ resource.ResourceWithUpgradeState = (*MaintenanceWindowResource)(nil)
+	_ resource.ResourceWithImportState  = (*MaintenanceWindowResource)(nil)
 )
 
 // NewMaintenanceWindowResource returns a new checkly_maintenance_windows
@@ -63,6 +64,7 @@ func (r *MaintenanceWindowResource) Metadata(ctx context.Context, req resource.M
 
 func (r *MaintenanceWindowResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Version:     sdkv2SchemaVersion + 1,
 		Description: "Maintenance windows pause alerting during scheduled maintenance for the checks and groups they apply to.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -142,6 +144,12 @@ func (r *MaintenanceWindowResource) Schema(ctx context.Context, req resource.Sch
 			"status_page_visibility": maintenanceWindowStatusPageVisibilitySchema(),
 		},
 	}
+}
+
+// UpgradeState upgrades state written by the provider's SDK v2
+// implementation; see sdkv2StateUpgraders.
+func (r *MaintenanceWindowResource) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
+	return sdkv2StateUpgraders(ctx, r)
 }
 
 func (r *MaintenanceWindowResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {

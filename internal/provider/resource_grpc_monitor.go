@@ -28,6 +28,7 @@ import (
 var (
 	_ resource.Resource                     = (*GRPCMonitorResource)(nil)
 	_ resource.ResourceWithConfigure        = (*GRPCMonitorResource)(nil)
+	_ resource.ResourceWithUpgradeState     = (*GRPCMonitorResource)(nil)
 	_ resource.ResourceWithConfigValidators = (*GRPCMonitorResource)(nil)
 	_ resource.ResourceWithImportState      = (*GRPCMonitorResource)(nil)
 	_ resource.ResourceWithModifyPlan       = (*GRPCMonitorResource)(nil)
@@ -142,6 +143,7 @@ func (r *GRPCMonitorResource) Metadata(ctx context.Context, req resource.Metadat
 
 func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Version:     sdkv2SchemaVersion + 1,
 		Description: "gRPC monitors allow you to monitor gRPC services, either via a health check (HEALTH mode) or by invoking a unary method (BEHAVIOR mode).",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -589,6 +591,12 @@ func (v grpcMonitorBfbsContentValidator) ValidateString(ctx context.Context, req
 			fmt.Sprintf("Attribute %s must be at most %d characters long once encoded, got %d.", req.Path, maxGRPCSchemaContentLength, len(value)),
 		)
 	}
+}
+
+// UpgradeState upgrades state written by the provider's SDK v2
+// implementation; see sdkv2StateUpgraders.
+func (r *GRPCMonitorResource) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
+	return sdkv2StateUpgraders(ctx, r)
 }
 
 func (r *GRPCMonitorResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {

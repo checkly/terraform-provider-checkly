@@ -25,10 +25,11 @@ import (
 )
 
 var (
-	_ resource.Resource                = (*HeartbeatMonitorResource)(nil)
-	_ resource.ResourceWithConfigure   = (*HeartbeatMonitorResource)(nil)
-	_ resource.ResourceWithImportState = (*HeartbeatMonitorResource)(nil)
-	_ resource.ResourceWithMoveState   = (*HeartbeatMonitorResource)(nil)
+	_ resource.Resource                 = (*HeartbeatMonitorResource)(nil)
+	_ resource.ResourceWithConfigure    = (*HeartbeatMonitorResource)(nil)
+	_ resource.ResourceWithUpgradeState = (*HeartbeatMonitorResource)(nil)
+	_ resource.ResourceWithImportState  = (*HeartbeatMonitorResource)(nil)
+	_ resource.ResourceWithMoveState    = (*HeartbeatMonitorResource)(nil)
 )
 
 // NewHeartbeatMonitorResource returns a new checkly_heartbeat_monitor
@@ -80,6 +81,7 @@ func (r *HeartbeatMonitorResource) Metadata(ctx context.Context, req resource.Me
 
 func (r *HeartbeatMonitorResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Version:     sdkv2SchemaVersion + 1,
 		Description: "Heartbeats allows you to monitor your cron jobs and set up alerting, so you get a notification when things break or slow down.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -170,6 +172,12 @@ func (r *HeartbeatMonitorResource) Schema(ctx context.Context, req resource.Sche
 			triggerIncidentAttributeName: makeTriggerIncidentSchema(),
 		},
 	}
+}
+
+// UpgradeState upgrades state written by the provider's SDK v2
+// implementation; see sdkv2StateUpgraders.
+func (r *HeartbeatMonitorResource) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
+	return sdkv2StateUpgraders(ctx, r)
 }
 
 func (r *HeartbeatMonitorResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
@@ -325,7 +333,11 @@ func (r *HeartbeatMonitorResource) MoveState(ctx context.Context) []resource.Sta
 					return
 				}
 
-				if req.SourceState == nil {
+				sourceState := sdkv2MoveSourceState(ctx, req, sourceSchema, &resp.Diagnostics)
+				if resp.Diagnostics.HasError() {
+					return
+				}
+				if sourceState == nil {
 					resp.Diagnostics.AddError(
 						"Unable to Move Resource State",
 						fmt.Sprintf(
@@ -339,7 +351,7 @@ func (r *HeartbeatMonitorResource) MoveState(ctx context.Context) []resource.Sta
 					return
 				}
 
-				resp.TargetState = *req.SourceState
+				resp.TargetState = *sourceState
 			},
 		},
 	}

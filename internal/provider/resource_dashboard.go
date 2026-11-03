@@ -22,9 +22,10 @@ import (
 )
 
 var (
-	_ resource.Resource                = (*DashboardResource)(nil)
-	_ resource.ResourceWithConfigure   = (*DashboardResource)(nil)
-	_ resource.ResourceWithImportState = (*DashboardResource)(nil)
+	_ resource.Resource                 = (*DashboardResource)(nil)
+	_ resource.ResourceWithConfigure    = (*DashboardResource)(nil)
+	_ resource.ResourceWithUpgradeState = (*DashboardResource)(nil)
+	_ resource.ResourceWithImportState  = (*DashboardResource)(nil)
 )
 
 // NewDashboardResource returns a new checkly_dashboard resource.
@@ -72,6 +73,7 @@ func (r *DashboardResource) Metadata(ctx context.Context, req resource.MetadataR
 
 func (r *DashboardResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Version:     sdkv2SchemaVersion + 1,
 		Description: "Dashboards are public status pages that display selected checks and their statuses.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -231,6 +233,12 @@ func (r *DashboardResource) Schema(ctx context.Context, req resource.SchemaReque
 			},
 		},
 	}
+}
+
+// UpgradeState upgrades state written by the provider's SDK v2
+// implementation; see sdkv2StateUpgraders.
+func (r *DashboardResource) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
+	return sdkv2StateUpgraders(ctx, r)
 }
 
 func (r *DashboardResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {

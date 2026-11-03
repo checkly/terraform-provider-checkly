@@ -15,9 +15,10 @@ import (
 )
 
 var (
-	_ resource.Resource                = (*SnippetResource)(nil)
-	_ resource.ResourceWithConfigure   = (*SnippetResource)(nil)
-	_ resource.ResourceWithImportState = (*SnippetResource)(nil)
+	_ resource.Resource                 = (*SnippetResource)(nil)
+	_ resource.ResourceWithConfigure    = (*SnippetResource)(nil)
+	_ resource.ResourceWithUpgradeState = (*SnippetResource)(nil)
+	_ resource.ResourceWithImportState  = (*SnippetResource)(nil)
 )
 
 // NewSnippetResource returns a new checkly_snippet resource.
@@ -43,6 +44,7 @@ func (r *SnippetResource) Metadata(ctx context.Context, req resource.MetadataReq
 
 func (r *SnippetResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Version:     sdkv2SchemaVersion + 1,
 		Description: "Snippets are reusable pieces of code that can be referenced from setup & teardown scripts of API checks, or used as partials in browser checks.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -62,6 +64,12 @@ func (r *SnippetResource) Schema(ctx context.Context, req resource.SchemaRequest
 			},
 		},
 	}
+}
+
+// UpgradeState upgrades state written by the provider's SDK v2
+// implementation; see sdkv2StateUpgraders.
+func (r *SnippetResource) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
+	return sdkv2StateUpgraders(ctx, r)
 }
 
 func (r *SnippetResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {

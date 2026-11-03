@@ -26,6 +26,7 @@ import (
 var (
 	_ resource.Resource                     = (*DNSMonitorResource)(nil)
 	_ resource.ResourceWithConfigure        = (*DNSMonitorResource)(nil)
+	_ resource.ResourceWithUpgradeState     = (*DNSMonitorResource)(nil)
 	_ resource.ResourceWithConfigValidators = (*DNSMonitorResource)(nil)
 	_ resource.ResourceWithImportState      = (*DNSMonitorResource)(nil)
 	_ resource.ResourceWithModifyPlan       = (*DNSMonitorResource)(nil)
@@ -115,6 +116,7 @@ func (r *DNSMonitorResource) Metadata(ctx context.Context, req resource.Metadata
 
 func (r *DNSMonitorResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Version:     sdkv2SchemaVersion + 1,
 		Description: "Creates a DNS Monitor to check DNS record availability and response times.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -324,6 +326,12 @@ func (r *DNSMonitorResource) ConfigValidators(ctx context.Context) []resource.Co
 	return []resource.ConfigValidator{
 		newFrequencyOffsetConfigValidator(),
 	}
+}
+
+// UpgradeState upgrades state written by the provider's SDK v2
+// implementation; see sdkv2StateUpgraders.
+func (r *DNSMonitorResource) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
+	return sdkv2StateUpgraders(ctx, r)
 }
 
 func (r *DNSMonitorResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {

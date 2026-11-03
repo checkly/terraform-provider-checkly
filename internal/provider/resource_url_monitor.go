@@ -26,6 +26,7 @@ import (
 var (
 	_ resource.Resource                     = (*URLMonitorResource)(nil)
 	_ resource.ResourceWithConfigure        = (*URLMonitorResource)(nil)
+	_ resource.ResourceWithUpgradeState     = (*URLMonitorResource)(nil)
 	_ resource.ResourceWithConfigValidators = (*URLMonitorResource)(nil)
 	_ resource.ResourceWithImportState      = (*URLMonitorResource)(nil)
 	_ resource.ResourceWithModifyPlan       = (*URLMonitorResource)(nil)
@@ -105,6 +106,7 @@ func (r *URLMonitorResource) Metadata(ctx context.Context, req resource.Metadata
 
 func (r *URLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Version:     sdkv2SchemaVersion + 1,
 		Description: "Creates a URL Monitor to check HTTP endpoint availability and response times.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -296,6 +298,12 @@ func (r *URLMonitorResource) ConfigValidators(ctx context.Context) []resource.Co
 	return []resource.ConfigValidator{
 		newFrequencyOffsetConfigValidator(),
 	}
+}
+
+// UpgradeState upgrades state written by the provider's SDK v2
+// implementation; see sdkv2StateUpgraders.
+func (r *URLMonitorResource) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
+	return sdkv2StateUpgraders(ctx, r)
 }
 
 func (r *URLMonitorResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {

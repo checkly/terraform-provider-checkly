@@ -39,8 +39,9 @@ const (
 )
 
 var (
-	_ resource.Resource              = (*PlaywrightCodeBundleResource)(nil)
-	_ resource.ResourceWithConfigure = (*PlaywrightCodeBundleResource)(nil)
+	_ resource.Resource                 = (*PlaywrightCodeBundleResource)(nil)
+	_ resource.ResourceWithConfigure    = (*PlaywrightCodeBundleResource)(nil)
+	_ resource.ResourceWithUpgradeState = (*PlaywrightCodeBundleResource)(nil)
 )
 
 // NewPlaywrightCodeBundleResource returns a new checkly_playwright_code_bundle
@@ -78,6 +79,7 @@ func (r *PlaywrightCodeBundleResource) Metadata(ctx context.Context, req resourc
 
 func (r *PlaywrightCodeBundleResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Version:     sdkv2SchemaVersion + 1,
 		Description: "A managed code bundle which can be used in Playwright Check Suite resources.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -125,6 +127,12 @@ func (r *PlaywrightCodeBundleResource) Schema(ctx context.Context, req resource.
 			},
 		},
 	}
+}
+
+// UpgradeState upgrades state written by the provider's SDK v2
+// implementation; see sdkv2StateUpgraders.
+func (r *PlaywrightCodeBundleResource) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
+	return sdkv2StateUpgraders(ctx, r)
 }
 
 func (r *PlaywrightCodeBundleResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
