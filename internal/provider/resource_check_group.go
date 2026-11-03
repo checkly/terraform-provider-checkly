@@ -68,8 +68,16 @@ func (r *CheckGroupResource) Metadata(ctx context.Context, req resource.Metadata
 
 func (r *CheckGroupResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Version:     sdkv2SchemaVersion + 1,
-		Description: "Check groups allow  you to group together a set of related checks, which can also share default settings for various attributes.",
+		Version: sdkv2SchemaVersion + 1,
+		Description: "Check groups allow you to group together a set of related checks, which can also share default settings for various attributes." +
+			"\n\n" +
+			"The `checkly_check_group` resource type is deprecated in favor of `checkly_check_group_v2`, which does " +
+			"not impose implicit defaults on its checks, and will be removed in a future version of the provider. " +
+			"Both resource types manage the same check groups, so an existing group can be switched over by " +
+			"importing it as a `checkly_check_group_v2` resource and removing the `checkly_check_group` resource " +
+			"from state. See the v2 upgrade guide for the steps.",
+		DeprecationMessage: "Use the `checkly_check_group_v2` resource instead. An existing group can be switched " +
+			"over without recreating it; see the v2 upgrade guide.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,

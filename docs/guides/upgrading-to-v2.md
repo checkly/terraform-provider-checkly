@@ -116,9 +116,9 @@ v2 fails to plan while these resource types are in state. Remove them from your 
 
 ## Deprecated resource types
 
-`checkly_check` is deprecated in favor of `checkly_api_check`, `checkly_browser_check` and `checkly_multistep_check`, which only expose the attributes of their check type. `checkly_heartbeat` and `checkly_tcp_check` are deprecated in favor of `checkly_heartbeat_monitor` and `checkly_tcp_monitor`. `checkly_maintenance_windows` is deprecated in favor of `checkly_maintenance_window`, because each resource manages a single maintenance window. The deprecated types keep working in v2.
+`checkly_check` is deprecated in favor of `checkly_api_check`, `checkly_browser_check` and `checkly_multistep_check`, which only expose the attributes of their check type. `checkly_heartbeat` and `checkly_tcp_check` are deprecated in favor of `checkly_heartbeat_monitor` and `checkly_tcp_monitor`. `checkly_maintenance_windows` is deprecated in favor of `checkly_maintenance_window`, because each resource manages a single maintenance window. The deprecated types keep working in v2. `checkly_check_group`, `checkly_status_page` and `checkly_status_page_service` are deprecated too; see [Check groups](#check-groups) and [Status pages](#status-pages).
 
-To switch a resource to its new type without recreating it, change the resource type and add a `moved` block. This works in the same plan as the provider upgrade:
+To switch a check, heartbeat, TCP or maintenance window resource to its new type without recreating it, change the resource type and add a `moved` block. This works in the same plan as the provider upgrade:
 
 ```terraform
 resource "checkly_heartbeat_monitor" "example" {
@@ -132,6 +132,67 @@ moved {
 ```
 
 When moving an API check from `checkly_check` to `checkly_api_check`, note that the default `degraded_response_time` and `max_response_time` are 5000 and 20000 instead of 15000 and 30000. Set them explicitly to keep the previous thresholds.
+
+### Check groups
+
+`checkly_check_group` is deprecated in favor of `checkly_check_group_v2`. A v1 group always applies its locations, alert settings, retry strategy and scheduling strategy to its checks; a v2 group only applies the settings you enforce with its `enforce_*` attributes.
+
+Both resource types manage the same check groups, so you can switch a group over without recreating it or its checks. This needs Terraform 1.7 or later:
+
+1. Add a `checkly_check_group_v2` resource with an `import` block that takes the ID of the existing group. To keep the group's behavior, enforce the settings that the v1 group applies:
+
+   ```terraform
+   resource "checkly_check_group_v2" "example" {
+     name = "Example group"
+
+     enforce_locations = {
+       enabled   = true
+       locations = ["eu-central-1"]
+     }
+
+     enforce_alert_settings = {
+       enabled                   = true
+       use_global_alert_settings = false
+       # alert_settings = { ... } as on the v1 group
+     }
+
+     enforce_retry_strategy = {
+       enabled = true
+       retry_strategy = {
+         type = "NO_RETRIES" # as on the v1 group
+       }
+     }
+
+     enforce_scheduling_strategy = {
+       enabled      = true
+       run_parallel = false
+     }
+   }
+
+   import {
+     to = checkly_check_group_v2.example
+     id = checkly_check_group.example.id
+   }
+   ```
+
+1. Run `terraform plan`. The import should not plan an update; if it does, adjust the configuration until it does not, unless you mean to change the group.
+1. Apply. Then remove the `import` block, replace the `checkly_check_group` resource with a `removed` block, so that Terraform forgets it without deleting the group, and point references such as `group_id` at the new resource:
+
+   ```terraform
+   removed {
+     from = checkly_check_group.example
+
+     lifecycle {
+       destroy = false
+     }
+   }
+   ```
+
+### Status pages
+
+`checkly_status_page` and `checkly_status_page_service` are deprecated in favor of `checkly_status_page_v3`, together with `checkly_status_page_v3_component` and `checkly_status_page_v3_automation_rule`. v3 status pages are separate objects, so an existing page cannot be converted: create a v3 page alongside it, then remove the old one.
+
+Maintenance windows can only be shown on v2 status pages for now: `status_page_visibility` on `checkly_maintenance_window` takes the IDs of `checkly_status_page` and `checkly_status_page_service` resources. Keep the v2 page if you rely on that.
 
 ## Expected one-time changes
 

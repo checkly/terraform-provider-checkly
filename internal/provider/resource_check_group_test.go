@@ -6,7 +6,9 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
@@ -1451,6 +1453,86 @@ func TestAccCheckGroupAlertChannelSubscriptions(t *testing.T) {
 					"0",
 				),
 			),
+		},
+	})
+}
+
+// TestAccCheckGroupSwitchToV2 follows the documented way of switching an
+// existing group from the deprecated checkly_check_group to
+// checkly_check_group_v2: import the group as checkly_check_group_v2, then
+// remove the checkly_check_group resource from state without destroying it.
+// Both resource types manage the same API object, so the imported group must
+// match its equivalent configuration without changes. That configuration
+// enforces the settings checkly_check_group always applies to its checks.
+func TestAccCheckGroupSwitchToV2(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-group-switch-%d", acctest.RandInt())
+	v1 := fmt.Sprintf(`
+		resource "checkly_check_group" "test" {
+			name        = %q
+			activated   = true
+			concurrency = 1
+			locations   = ["eu-central-1"]
+		}
+	`, name)
+	v2 := fmt.Sprintf(`
+		resource "checkly_check_group_v2" "test" {
+			name = %q
+
+			enforce_locations = {
+				enabled   = true
+				locations = ["eu-central-1"]
+			}
+
+			enforce_alert_settings = {
+				enabled                   = true
+				use_global_alert_settings = false
+			}
+
+			enforce_retry_strategy = {
+				enabled = true
+				retry_strategy = {
+					type = "NO_RETRIES"
+				}
+			}
+
+			enforce_scheduling_strategy = {
+				enabled      = true
+				run_parallel = false
+			}
+		}
+	`, name)
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: v1,
+		},
+		{
+			Config: v1 + v2 + `
+				import {
+					to = checkly_check_group_v2.test
+					id = checkly_check_group.test.id
+				}
+			`,
+			ConfigPlanChecks: resource.ConfigPlanChecks{
+				PreApply: []plancheck.PlanCheck{
+					plancheck.ExpectResourceAction("checkly_check_group_v2.test", plancheck.ResourceActionNoop),
+				},
+			},
+		},
+		{
+			Config: v2 + `
+				removed {
+					from = checkly_check_group.test
+
+					lifecycle {
+						destroy = false
+					}
+				}
+			`,
+			ConfigPlanChecks: resource.ConfigPlanChecks{
+				PreApply: []plancheck.PlanCheck{
+					plancheck.ExpectResourceAction("checkly_check_group_v2.test", plancheck.ResourceActionNoop),
+				},
+			},
 		},
 	})
 }

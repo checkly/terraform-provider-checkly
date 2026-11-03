@@ -83,8 +83,14 @@ func (r *StatusPageResource) Schema(ctx context.Context, req resource.SchemaRequ
 		Version: sdkv2SchemaVersion + 1,
 		Description: "Checkly status pages allow you to easily communicate " +
 			"the uptime and health of your applications and services to your customers. " +
-			"This resource creates a legacy v2 status page: the new " +
-			"`checkly_status_page_v3` resource should always be preferred for new pages.",
+			"This resource creates a legacy v2 status page." +
+			"\n\n" +
+			"The `checkly_status_page` resource type is deprecated in favor of `checkly_status_page_v3` and will " +
+			"be removed in a future version of the provider. v3 status pages are separate objects, so an " +
+			"existing page cannot be converted: create a v3 page alongside it instead. Maintenance windows can " +
+			"only be shown on v2 status pages for now.",
+		DeprecationMessage: "Use the `checkly_status_page_v3` resource instead. v3 status pages are separate " +
+			"objects, so an existing page cannot be converted; see the v2 upgrade guide.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,

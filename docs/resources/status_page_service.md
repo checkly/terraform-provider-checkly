@@ -4,11 +4,14 @@ page_title: "checkly_status_page_service Resource - terraform-provider-checkly"
 subcategory: ""
 description: |-
   Status page services represent functional pieces of your application or website, such as landing page, API, support portal etc. Services belong to legacy v2 status pages: on new v3 pages, use checkly_status_page_v3_component instead.
+  The checkly_status_page_service resource type is deprecated together with checkly_status_page and will be removed in a future version of the provider. Maintenance windows can only be shown on v2 status pages and their services for now.
 ---
 
 # checkly_status_page_service (Resource)
 
 Status page services represent functional pieces of your application or website, such as landing page, API, support portal etc. Services belong to legacy v2 status pages: on new v3 pages, use `checkly_status_page_v3_component` instead.
+
+The `checkly_status_page_service` resource type is deprecated together with `checkly_status_page` and will be removed in a future version of the provider. Maintenance windows can only be shown on v2 status pages and their services for now.
 
 ## Example Usage
 

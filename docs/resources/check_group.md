@@ -3,12 +3,15 @@
 page_title: "checkly_check_group Resource - terraform-provider-checkly"
 subcategory: ""
 description: |-
-  Check groups allow  you to group together a set of related checks, which can also share default settings for various attributes.
+  Check groups allow you to group together a set of related checks, which can also share default settings for various attributes.
+  The checkly_check_group resource type is deprecated in favor of checkly_check_group_v2, which does not impose implicit defaults on its checks, and will be removed in a future version of the provider. Both resource types manage the same check groups, so an existing group can be switched over by importing it as a checkly_check_group_v2 resource and removing the checkly_check_group resource from state. See the v2 upgrade guide for the steps.
 ---
 
 # checkly_check_group (Resource)
 
-Check groups allow  you to group together a set of related checks, which can also share default settings for various attributes.
+Check groups allow you to group together a set of related checks, which can also share default settings for various attributes.
+
+The `checkly_check_group` resource type is deprecated in favor of `checkly_check_group_v2`, which does not impose implicit defaults on its checks, and will be removed in a future version of the provider. Both resource types manage the same check groups, so an existing group can be switched over by importing it as a `checkly_check_group_v2` resource and removing the `checkly_check_group` resource from state. See the v2 upgrade guide for the steps.
 
 ## Example Usage
 
