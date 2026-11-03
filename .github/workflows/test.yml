@@ -13,6 +13,14 @@ on:
   repository_dispatch:
     types: [deploy-success]
 
+# The acceptance tests use a shared Checkly account. Runs on the same ref wait
+# for each other instead of overlapping there, and a newer pending run replaces
+# an older one. This holds back the build jobs of a new push too, while
+# cancelling a running test leg would leave its resources behind in the
+# account. Runs on different refs can still overlap.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+
 jobs:
   build:
     name: Go build
@@ -52,13 +60,9 @@ jobs:
     name: Matrix test
     needs: build
     runs-on: ubuntu-latest
-    # The legs share one Checkly account, so they run one at a time. The
-    # concurrency group keys on the Terraform version: a group shared by all
-    # legs would cancel the ones waiting behind the running one.
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.terraform }}
     timeout-minutes: 15
     strategy:
+      # The legs share one Checkly account, so they run one at a time.
       max-parallel: 1
       # The shared account makes single tests flaky, which should not cancel
       # the remaining legs.
