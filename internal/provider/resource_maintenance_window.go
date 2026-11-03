@@ -379,13 +379,13 @@ func maintenanceWindowToModel(ctx context.Context, mw *checkly.MaintenanceWindow
 	// from the API always means the attribute is unset.
 	model.RepeatUnit = stringValueOrNull(mw.RepeatUnit)
 	model.RepeatInterval = maintenanceWindowRepeatInterval(mw.RepeatInterval, model.RepeatInterval)
-	model.RepeatEndsAt = stringValueOrNull(mw.RepeatEndsAt)
+	model.RepeatEndsAt = stringValueOrPriorEmpty(mw.RepeatEndsAt, model.RepeatEndsAt)
 	model.Tags = maintenanceWindowStringsToSet(ctx, mw.Tags, model.Tags, diags)
 	model.Timezone = maintenanceWindowTimezone(mw.Timezone, model.Timezone)
 	model.PauseAllChecks = types.BoolValue(mw.PauseAllChecks)
 	model.SilenceAlertsTags = maintenanceWindowStringsToSet(ctx, mw.SilenceAlertsTags, model.SilenceAlertsTags, diags)
 	model.SilenceAllAlerts = types.BoolValue(mw.SilenceAllAlerts)
-	model.Description = maintenanceWindowDescription(mw.Description, model.Description)
+	model.Description = stringValueOrPriorEmpty(mw.Description, model.Description)
 	model.StatusPageVisibility = maintenanceWindowStatusPageVisibilityToList(ctx, mw.StatusPageVisibility, model.StatusPageVisibility, diags)
 }
 
@@ -410,17 +410,6 @@ func maintenanceWindowStringsToSet(ctx context.Context, values []string, prior t
 	}
 
 	return setFromStrings(ctx, values, diags)
-}
-
-// maintenanceWindowDescription converts the description from the API. The
-// SDK sends an empty description as null, so an empty value from the API
-// keeps a prior empty string, which keeps `description = ""` stable.
-func maintenanceWindowDescription(value string, prior types.String) types.String {
-	if value == "" && !prior.IsUnknown() && !prior.IsNull() && prior.ValueString() == "" {
-		return prior
-	}
-
-	return stringValueOrNull(value)
 }
 
 // maintenanceWindowTimezone converts the time zone from the API. The API

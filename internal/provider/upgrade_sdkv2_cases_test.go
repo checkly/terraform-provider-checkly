@@ -2,6 +2,7 @@ package provider
 
 import (
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -1373,6 +1374,82 @@ resource "checkly_private_location" "test" {
 		}
 		c := newSDKv2UpgradeCase(config, config)
 		c.expectUpdate = "checkly_client_certificate.test"
+		return c
+	}(),
+
+	// The API stores an empty trusted CA bundle as none, which v2 refreshes
+	// as unset. A configured "" must update in place once rather than
+	// replace the certificate, and then stay stable.
+	"client_certificate_empty_trusted_ca": func() sdkv2UpgradeCase {
+		config := regexp.MustCompile(`(?s)  trusted_ca = <<-EOT.*?EOT\n`).ReplaceAllString(upgradeCertificate, "  trusted_ca = \"\"\n")
+		if config == upgradeCertificate {
+			panic("upgradeCertificate no longer sets trusted_ca")
+		}
+		c := newSDKv2UpgradeCase(config, config)
+		c.expectUpdate = "checkly_client_certificate.test"
+		return c
+	}(),
+
+	"alert_channel_webhook": newSDKv2UpgradeCase(`
+resource "checkly_alert_channel" "test" {
+  webhook {
+    name = "tf-upgrade-{{id}}-webhook"
+    url  = "https://example.com/tf-upgrade-{{id}}"
+  }
+}
+`, `
+resource "checkly_alert_channel" "test" {
+  webhook {
+    name = "tf-upgrade-{{id}}-webhook"
+    url  = "https://example.com/tf-upgrade-{{id}}"
+  }
+}
+`),
+
+	// SDK v2 stored "" for the unset optional strings of a channel, so a
+	// configured "" updates in place once and then stays stable.
+	"alert_channel_webhook_empty_strings": func() sdkv2UpgradeCase {
+		config := `
+resource "checkly_alert_channel" "test" {
+  webhook {
+    name           = "tf-upgrade-{{id}}-webhook"
+    url            = "https://example.com/tf-upgrade-{{id}}"
+    template       = ""
+    webhook_secret = ""
+  }
+}
+`
+		c := newSDKv2UpgradeCase(config, config)
+		c.expectUpdate = "checkly_alert_channel.test"
+		return c
+	}(),
+
+	"alert_channel_pagerduty": newSDKv2UpgradeCase(`
+resource "checkly_alert_channel" "test" {
+  pagerduty {
+    service_key = "tf-upgrade-{{id}}"
+  }
+}
+`, `
+resource "checkly_alert_channel" "test" {
+  pagerduty {
+    service_key = "tf-upgrade-{{id}}"
+  }
+}
+`),
+
+	"alert_channel_pagerduty_empty_strings": func() sdkv2UpgradeCase {
+		config := `
+resource "checkly_alert_channel" "test" {
+  pagerduty {
+    service_key  = "tf-upgrade-{{id}}"
+    service_name = ""
+    account      = ""
+  }
+}
+`
+		c := newSDKv2UpgradeCase(config, config)
+		c.expectUpdate = "checkly_alert_channel.test"
 		return c
 	}(),
 

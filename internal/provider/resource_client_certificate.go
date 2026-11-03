@@ -141,7 +141,16 @@ func (r *ClientCertificateResource) Schema(ctx context.Context, req resource.Sch
 				Optional:    true,
 				Description: "PEM formatted bundle of CA certificates that the client should trust. The bundle may contain many CA certificates.",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					// The API stores an empty bundle as none, so switching
+					// between "" and unset does not change the certificate.
+					stringplanmodifier.RequiresReplaceIf(
+						func(ctx context.Context, req planmodifier.StringRequest, resp *stringplanmodifier.RequiresReplaceIfFuncResponse) {
+							resp.RequiresReplace = req.PlanValue.IsUnknown() ||
+								req.StateValue.ValueString() != req.PlanValue.ValueString()
+						},
+						"Changing the trusted CA bundle forces a new resource to be created.",
+						"Changing the trusted CA bundle forces a new resource to be created.",
+					),
 				},
 			},
 		},
@@ -221,13 +230,14 @@ func (r *ClientCertificateResource) Read(ctx context.Context, req resource.ReadR
 	// The API does not return the passphrase either, and even if it did, the
 	// value would be encrypted. The value already present in state is kept
 	// as-is.
-	state.TrustedCA = stringValueOrNull(clientCertificate.TrustedCA)
+	state.TrustedCA = stringValueOrPriorEmpty(clientCertificate.TrustedCA, state.TrustedCA)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
-// Update only stores the new spelling of a path that changed by a trailing
-// slash, which the API ignores; every other change requires replacement.
+// Update only stores changes the API ignores: a path that changed by a
+// trailing slash, or a trusted CA bundle switched between "" and unset. Every
+// other change requires replacement.
 func (r *ClientCertificateResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var plan ClientCertificateResourceModel
 

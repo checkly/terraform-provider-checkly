@@ -330,7 +330,7 @@ func TestMaintenanceWindowDescription(t *testing.T) {
 		{"Planned upgrade", types.StringNull(), types.StringValue("Planned upgrade")},
 	}
 	for _, tc := range cases {
-		if got := maintenanceWindowDescription(tc.api, tc.prior); !got.Equal(tc.want) {
+		if got := stringValueOrPriorEmpty(tc.api, tc.prior); !got.Equal(tc.want) {
 			t.Errorf("description from %q with prior %v = %v, want %v", tc.api, tc.prior, got, tc.want)
 		}
 	}

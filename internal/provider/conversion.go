@@ -80,6 +80,19 @@ func stringValueOrNull(value string) types.String {
 	return types.StringValue(value)
 }
 
+// stringValueOrPriorEmpty converts an optional string from the API like
+// stringValueOrNull, except that an empty string stays empty when the prior
+// value is empty. The API reports "" for an unset field, so an attribute
+// configured as "" would otherwise refresh to null and differ from its
+// configuration.
+func stringValueOrPriorEmpty(value string, prior types.String) types.String {
+	if value == "" && !prior.IsNull() && !prior.IsUnknown() && prior.ValueString() == "" {
+		return prior
+	}
+
+	return stringValueOrNull(value)
+}
+
 // int64OrNullWhenUnknown resolves an unknown value to null. Useful when an
 // optional+computed value turns out to have no value tracked by the API.
 func int64OrNullWhenUnknown(value types.Int64) types.Int64 {

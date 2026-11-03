@@ -414,9 +414,8 @@ func dashboardFromModel(ctx context.Context, model *DashboardResourceModel, diag
 // so that values the API omits can be resolved against it.
 func dashboardToModel(ctx context.Context, dashboard *checkly.Dashboard, model *DashboardResourceModel, diags *diag.Diagnostics) {
 	model.CustomURL = types.StringValue(dashboard.CustomUrl)
-	// The API returns an empty custom domain when none is configured; map it
-	// to null to match an unset optional attribute.
-	model.CustomDomain = stringValueOrNull(dashboard.CustomDomain)
+	// The API returns an empty custom domain when none is configured.
+	model.CustomDomain = stringValueOrPriorEmpty(dashboard.CustomDomain, model.CustomDomain)
 	model.Logo = types.StringValue(dashboard.Logo)
 	model.Favicon = types.StringValue(dashboard.Favicon)
 	model.Link = types.StringValue(dashboard.Link)

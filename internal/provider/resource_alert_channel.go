@@ -22,6 +22,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 
 	checkly "github.com/checkly/checkly-go-sdk"
 )
@@ -819,9 +820,9 @@ func alertChannelToModel(ctx context.Context, ac *checkly.AlertChannel, model *A
 	model.SlackApp = alertChannelSlackAppToSet(ctx, ac.SlackApp, diags)
 	model.SMS = alertChannelSMSToSet(ctx, ac.SMS, diags)
 	model.Call = alertChannelCallToSet(ctx, ac.CALL, diags)
-	model.Webhook = alertChannelWebhookToSet(ctx, ac.Webhook, diags)
+	model.Webhook = alertChannelWebhookToSet(ctx, ac.Webhook, model.Webhook, diags)
 	model.Opsgenie = alertChannelOpsgenieToSet(ctx, ac.Opsgenie, diags)
-	model.Pagerduty = alertChannelPagerdutyToSet(ctx, ac.Pagerduty, diags)
+	model.Pagerduty = alertChannelPagerdutyToSet(ctx, ac.Pagerduty, model.Pagerduty, diags)
 
 	if ac.SendRecovery != nil {
 		model.SendRecovery = types.BoolValue(*ac.SendRecovery)
@@ -923,11 +924,14 @@ func alertChannelCallToSet(ctx context.Context, cfg *checkly.AlertChannelCall, d
 	return set
 }
 
-func alertChannelWebhookToSet(ctx context.Context, cfg *checkly.AlertChannelWebhook, diags *diag.Diagnostics) types.Set {
+func alertChannelWebhookToSet(ctx context.Context, cfg *checkly.AlertChannelWebhook, prior types.Set, diags *diag.Diagnostics) types.Set {
 	elemType := types.ObjectType{AttrTypes: alertChannelWebhookAttrTypes}
 	if cfg == nil {
 		return types.SetNull(elemType)
 	}
+
+	var priorModel alertChannelWebhookModel
+	alertChannelPriorElement(ctx, prior, &priorModel)
 
 	set, d := types.SetValueFrom(ctx, elemType, []alertChannelWebhookModel{
 		{
@@ -936,12 +940,11 @@ func alertChannelWebhookToSet(ctx context.Context, cfg *checkly.AlertChannelWebh
 			Headers:         alertChannelMapFromKeyValues(ctx, cfg.Headers, diags),
 			QueryParameters: alertChannelMapFromKeyValues(ctx, cfg.QueryParameters, diags),
 			// The API returns "" for optional string fields that are not
-			// set. Unset optional attributes are null, so map "" back to
-			// null to keep refresh consistent with the configuration.
-			Template:      stringValueOrNull(cfg.Template),
+			// set.
+			Template:      stringValueOrPriorEmpty(cfg.Template, priorModel.Template),
 			URL:           types.StringValue(cfg.URL),
-			WebhookSecret: stringValueOrNull(cfg.WebhookSecret),
-			WebhookType:   stringValueOrNull(cfg.WebhookType),
+			WebhookSecret: stringValueOrPriorEmpty(cfg.WebhookSecret, priorModel.WebhookSecret),
+			WebhookType:   stringValueOrPriorEmpty(cfg.WebhookType, priorModel.WebhookType),
 		},
 	})
 	diags.Append(d...)
@@ -968,25 +971,44 @@ func alertChannelOpsgenieToSet(ctx context.Context, cfg *checkly.AlertChannelOps
 	return set
 }
 
-func alertChannelPagerdutyToSet(ctx context.Context, cfg *checkly.AlertChannelPagerduty, diags *diag.Diagnostics) types.Set {
+func alertChannelPagerdutyToSet(ctx context.Context, cfg *checkly.AlertChannelPagerduty, prior types.Set, diags *diag.Diagnostics) types.Set {
 	elemType := types.ObjectType{AttrTypes: alertChannelPagerdutyAttrTypes}
 	if cfg == nil {
 		return types.SetNull(elemType)
 	}
 
+	var priorModel alertChannelPagerdutyModel
+	alertChannelPriorElement(ctx, prior, &priorModel)
+
 	set, d := types.SetValueFrom(ctx, elemType, []alertChannelPagerdutyModel{
 		{
 			// The API returns "" for optional string fields that are not
-			// set. Unset optional attributes are null, so map "" back to
-			// null to keep refresh consistent with the configuration.
-			Account:     stringValueOrNull(cfg.Account),
+			// set.
+			Account:     stringValueOrPriorEmpty(cfg.Account, priorModel.Account),
 			ServiceKey:  types.StringValue(cfg.ServiceKey),
-			ServiceName: stringValueOrNull(cfg.ServiceName),
+			ServiceName: stringValueOrPriorEmpty(cfg.ServiceName, priorModel.ServiceName),
 		},
 	})
 	diags.Append(d...)
 
 	return set
+}
+
+// alertChannelPriorElement decodes the single element of a prior channel
+// block into target, leaving target zero-valued (with null attributes) when
+// there is no prior element.
+func alertChannelPriorElement(ctx context.Context, prior types.Set, target any) {
+	if prior.IsNull() || prior.IsUnknown() || len(prior.Elements()) != 1 {
+		return
+	}
+
+	obj, ok := prior.Elements()[0].(types.Object)
+	if !ok || obj.IsNull() || obj.IsUnknown() {
+		return
+	}
+
+	// A prior element that fails to decode is no worse than none at all.
+	_ = obj.As(ctx, target, basetypes.ObjectAsOptions{})
 }
 
 // alertChannelKeyValuesFromMap converts a map of strings to the API's
