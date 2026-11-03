@@ -7,7 +7,7 @@ terraform {
   required_providers {
     checkly = {
       source  = "checkly/checkly"
-      version = "1.7.1"
+      version = "~> 2.0"
     }
   }
 }
@@ -19,9 +19,8 @@ provider "checkly" {
 }
 
 # Create your first API Check
-resource "checkly_check" "example_check" {
+resource "checkly_api_check" "example_check" {
   name                      = "Example API check"
-  type                      = "API"
   activated                 = true
   should_fail               = false
   frequency                 = 10

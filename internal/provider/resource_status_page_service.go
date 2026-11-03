@@ -55,7 +55,8 @@ func (r *StatusPageServiceResource) Schema(ctx context.Context, req resource.Sch
 			"will be removed in a future version of the provider. Maintenance windows can only be shown on v2 " +
 			"status pages and their services for now.",
 		DeprecationMessage: "Use `checkly_status_page_v3_component` resources on a `checkly_status_page_v3` page " +
-			"instead; see the v2 upgrade guide.",
+			"instead; see the v2 upgrade guide. Keep the service if you show maintenance windows on it, which v3 " +
+			"pages do not support yet.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,

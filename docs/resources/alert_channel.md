@@ -157,7 +157,7 @@ EOT
 }
 
 # Connecting the alert channel to a check
-resource "checkly_check" "example_check" {
+resource "checkly_api_check" "example_check" {
   name = "Example check"
 
   alert_channel_subscription {

@@ -81,7 +81,7 @@ All other blocks, such as `request`, `assertion`, `alert_channel_subscription` a
 
 These attributes were deprecated in v1.x. Remove them from your configuration:
 
-- `environment_variables` (the map) on `checkly_check` and `checkly_check_group`. Unlike the attributes below, it did take effect: rewrite each entry as an `environment_variable` block with the same `key` and `value`, so that the variables are kept.
+- `environment_variables` (the map) on `checkly_check` and `checkly_check_group`. Unlike the attributes below, it did take effect: rewrite each entry as an `environment_variable` block with the same `key` and `value`, so that the variables are kept. It was deprecated throughout v1.x and, unlike `double_check`, it is not a separate API setting: the blocks set exactly the same variables, so v2 removes it.
 - `ssl_check` on `checkly_check`, which the API ignored.
 - `alert_settings.ssl_certificates` on all resource types that had it, which the API ignored.
 - `retry_strategy.only_on` on `checkly_dns_monitor`, `checkly_grpc_monitor`, `checkly_icmp_monitor`, `checkly_ssl_monitor`, `checkly_tcp_check`, `checkly_tcp_monitor` and `checkly_traceroute_monitor`, where it had no conditions to set.

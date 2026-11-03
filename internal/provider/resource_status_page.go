@@ -90,7 +90,8 @@ func (r *StatusPageResource) Schema(ctx context.Context, req resource.SchemaRequ
 			"existing page cannot be converted: create a v3 page alongside it instead. Maintenance windows can " +
 			"only be shown on v2 status pages for now.",
 		DeprecationMessage: "Use the `checkly_status_page_v3` resource instead. v3 status pages are separate " +
-			"objects, so an existing page cannot be converted; see the v2 upgrade guide.",
+			"objects, so an existing page cannot be converted; see the v2 upgrade guide. Keep the page if you show " +
+			"maintenance windows on it, which v3 pages do not support yet.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
