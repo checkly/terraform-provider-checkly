@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 )
 
 // upgradeRunID makes names, slugs and URLs unique per test run, since many of
@@ -1383,9 +1382,7 @@ resource "checkly_private_location" "test" {
 			panic("upgradeCertificate no longer sets the expected path")
 		}
 		c := newSDKv2UpgradeCase(config, config)
-		c.planChecks = []plancheck.PlanCheck{
-			plancheck.ExpectResourceAction("checkly_client_certificate.test", plancheck.ResourceActionUpdate),
-		}
+		c.expectUpdate = "checkly_client_certificate.test"
 		return c
 	}(),
 
