@@ -431,6 +431,11 @@ func (r *CheckGroupV2Resource) Create(ctx context.Context, req resource.CreateRe
 	// which the create response is not guaranteed to be.
 	created, err := r.client.GetGroupV2(apiCtx, result.ID)
 	if err != nil {
+		// The group exists now. Record it from the create response, so
+		// that Terraform tracks it (as tainted, because of the error)
+		// instead of losing track of it.
+		checkGroupV2ToModel(ctx, result, &plan, &resp.Diagnostics)
+		resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 		resp.Diagnostics.AddError(
 			"Unable to Read Check Group (v2) After Creation",
 			fmt.Sprintf("Checkly API error: %s", err),
