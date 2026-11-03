@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -55,5 +57,35 @@ func TestInactiveEscalationPlanModifier(t *testing.T) {
 				t.Errorf("planned %s, want %s", resp.PlanValue, c.want)
 			}
 		})
+	}
+}
+
+// An escalation object that is not configured is planned unknown, so the
+// conversion has to apply its documented default.
+func TestAlertSettingsFromObjectEscalationDefaults(t *testing.T) {
+	ctx := context.Background()
+
+	alertSettings := func(escalationType string) types.Object {
+		return types.ObjectValueMust(alertSettingsAttrTypes, map[string]attr.Value{
+			"escalation_type":                types.StringValue(escalationType),
+			"run_based_escalation":           types.ObjectUnknown(runBasedEscalationAttrTypes),
+			"time_based_escalation":          types.ObjectUnknown(timeBasedEscalationAttrTypes),
+			"reminders":                      types.ObjectUnknown(remindersAttrTypes),
+			"parallel_run_failure_threshold": types.ObjectUnknown(parallelRunFailureThresholdAttrTypes),
+		})
+	}
+
+	var diags diag.Diagnostics
+	runBased := alertSettingsFromObject(ctx, alertSettings("RUN_BASED"), &diags)
+	timeBased := alertSettingsFromObject(ctx, alertSettings("TIME_BASED"), &diags)
+	if diags.HasError() {
+		t.Fatal(diags)
+	}
+
+	if got := runBased.RunBasedEscalation.FailedRunThreshold; got != 1 {
+		t.Errorf("failed run threshold = %d, want 1", got)
+	}
+	if got := timeBased.TimeBasedEscalation.MinutesFailingThreshold; got != 5 {
+		t.Errorf("minutes failing threshold = %d, want 5", got)
 	}
 }

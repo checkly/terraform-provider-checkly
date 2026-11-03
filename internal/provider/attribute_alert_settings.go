@@ -267,6 +267,13 @@ func alertSettingsFromObject(ctx context.Context, obj types.Object, diags *diag.
 			}
 		}
 	} else {
+		if alertSettings.EscalationType == checkly.TimeBased {
+			// The documented default of time_based_escalation, which the
+			// plan leaves unknown when the object is not configured.
+			alertSettings.TimeBasedEscalation = checkly.TimeBasedEscalation{
+				MinutesFailingThreshold: 5,
+			}
+		}
 		if !model.TimeBasedEscalation.IsNull() && !model.TimeBasedEscalation.IsUnknown() {
 			var escalation TimeBasedEscalationModel
 			diags.Append(model.TimeBasedEscalation.As(ctx, &escalation, basetypes.ObjectAsOptions{})...)
