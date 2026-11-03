@@ -209,6 +209,9 @@ func (r *CheckGroupV2Resource) Schema(ctx context.Context, req resource.SchemaRe
 				Optional: true,
 				Computed: true,
 				Default:  objectdefault.StaticValue(checkGroupV2DisabledEnforcementObject(checkGroupV2EnforceAlertSettingsAttrTypes)),
+				PlanModifiers: []planmodifier.Object{
+					checkGroupV2DisabledEnforcementIgnoredFields,
+				},
 				Description: "Enforces alert settings for the whole group. " +
 					"Overrides check configuration.",
 				Attributes: map[string]schema.Attribute{
@@ -249,6 +252,9 @@ func (r *CheckGroupV2Resource) Schema(ctx context.Context, req resource.SchemaRe
 				Optional: true,
 				Computed: true,
 				Default:  objectdefault.StaticValue(checkGroupV2DisabledEnforcementObject(checkGroupV2EnforceLocationsAttrTypes)),
+				PlanModifiers: []planmodifier.Object{
+					checkGroupV2DisabledEnforcementIgnoredFields,
+				},
 				Description: "Enforces public and private locations for the whole group. " +
 					"Overrides check configuration.",
 				Validators: []validator.Object{
@@ -275,6 +281,9 @@ func (r *CheckGroupV2Resource) Schema(ctx context.Context, req resource.SchemaRe
 				Optional: true,
 				Computed: true,
 				Default:  objectdefault.StaticValue(checkGroupV2DisabledEnforcementObject(checkGroupV2EnforceRetryStrategyAttrTypes)),
+				PlanModifiers: []planmodifier.Object{
+					checkGroupV2DisabledEnforcementIgnoredFields,
+				},
 				Description: "Enforces a retry strategy for the whole group. " +
 					"Overrides check configuration.",
 				Attributes: map[string]schema.Attribute{
@@ -292,6 +301,9 @@ func (r *CheckGroupV2Resource) Schema(ctx context.Context, req resource.SchemaRe
 				Optional: true,
 				Computed: true,
 				Default:  objectdefault.StaticValue(checkGroupV2DisabledEnforcementObject(checkGroupV2EnforceSchedulingStrategyAttrTypes)),
+				PlanModifiers: []planmodifier.Object{
+					checkGroupV2DisabledEnforcementIgnoredFields,
+				},
 				Description: "Enforces a scheduling strategy for the whole group. " +
 					"Overrides check configuration.",
 				Attributes: map[string]schema.Attribute{

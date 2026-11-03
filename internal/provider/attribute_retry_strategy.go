@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/defaults"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectdefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
@@ -149,6 +150,9 @@ func makeRetryStrategyAttributeSchema(options RetryStrategyAttributeSchemaOption
 		Default:     objectDefault,
 		Description: "A strategy for retrying failed check/monitor runs.",
 		Attributes:  attributes,
+		PlanModifiers: []planmodifier.Object{
+			retryStrategyIgnoredFields,
+		},
 	}
 }
 

@@ -27,6 +27,10 @@ import (
 //     implementations keep such prior values, so they would never become
 //     null again and every plan would propose removing them.
 //
+// Zero values of nested fields that the API only ignores in some cases, such
+// as the retry_strategy fields NO_RETRIES does not use, are not normalized
+// here: ignoredFieldsPlanModifier keeps whatever is stored for them.
+//
 // Every resource type that the SDK v2 implementation provided therefore has
 // a newer schema version and upgrades the old state with sdkv2StateUpgraders.
 const sdkv2SchemaVersion = 0
