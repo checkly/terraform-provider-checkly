@@ -1,0 +1,115 @@
+---
+page_title: "Upgrading to v2 of the Checkly provider"
+description: |-
+  How to upgrade from v1.x of the Checkly provider, and what changed in v2.
+---
+
+# Upgrading to v2 of the Checkly provider
+
+Version 2 of the provider is built on the [Terraform Plugin Framework](https://developer.hashicorp.com/terraform/plugin/framework) instead of the Terraform Plugin SDK v2. Most resources keep their names and attributes, but some configuration syntax changes, and a few deprecated attributes are gone.
+
+Existing state is upgraded automatically: you do not need to import or recreate any resources. After updating your configuration as described below, `terraform plan` should report no changes.
+
+## Requirements
+
+- Terraform 1.0 or later. The provider now uses version 6 of the Terraform plugin protocol.
+- Terraform 1.8 or later to move resources between resource types with `moved` blocks (see [Deprecated resource types](#deprecated-resource-types)).
+
+## Recommended procedure
+
+1. Run `terraform plan` with the latest v1.x release and apply any pending changes, so that you start from a clean plan.
+1. Back up your state, for example with `terraform state pull > backup.tfstate`. Once v2 has refreshed the state, v1.x can no longer read it; to go back to v1.x, restore the backup.
+1. Update the version constraint, for example `version = "~> 2.0"`, and run `terraform init -upgrade`.
+1. Update your configuration as described in [Configuration changes](#configuration-changes). `terraform validate` points at every line that needs to change.
+1. Run `terraform plan`. It should report no changes, except for the cases listed under [Expected one-time changes](#expected-one-time-changes).
+
+## Configuration changes
+
+### Single nested objects are attributes
+
+Objects that a resource can hold at most one of were blocks in v1.x. They are now attributes, which are assigned with `=`:
+
+```terraform
+# v1.x
+resource "checkly_url_monitor" "example" {
+  # ...
+  alert_settings {
+    escalation_type = "RUN_BASED"
+    run_based_escalation {
+      failed_run_threshold = 1
+    }
+  }
+  retry_strategy {
+    type = "FIXED"
+  }
+}
+
+# v2
+resource "checkly_url_monitor" "example" {
+  # ...
+  alert_settings = {
+    escalation_type = "RUN_BASED"
+    run_based_escalation = {
+      failed_run_threshold = 1
+    }
+  }
+  retry_strategy = {
+    type = "FIXED"
+  }
+}
+```
+
+Collections nested inside such an attribute become lists of objects, for example `assertion = [{ ... }]` inside `api_check_defaults`.
+
+This affects:
+
+| Resource type | Attributes |
+|---|---|
+| `checkly_check` | `alert_settings` (and its `parallel_run_failure_threshold`, `reminders`, `run_based_escalation`, `time_based_escalation`), `request.basic_auth`, `retry_strategy` (and its `only_on`) |
+| `checkly_check_group` | `alert_settings` (and nested objects as above), `api_check_defaults` (and its `basic_auth` and `assertion`), `retry_strategy` (and its `only_on`) |
+| `checkly_check_group_v2` | `api_check_defaults` (and its `basic_auth` and `assertion`), `enforce_alert_settings` (and its `alert_settings` and `alert_channel_subscription`), `enforce_locations`, `enforce_retry_strategy` (and its `retry_strategy`), `enforce_scheduling_strategy` |
+| `checkly_heartbeat`, `checkly_heartbeat_monitor` | `alert_settings` (and nested objects as above) |
+| `checkly_url_monitor` | `alert_settings` (and nested objects as above), `retry_strategy` (and its `only_on`) |
+| `checkly_dns_monitor`, `checkly_grpc_monitor`, `checkly_icmp_monitor`, `checkly_tcp_check`, `checkly_tcp_monitor`, `checkly_traceroute_monitor` | `alert_settings` (and nested objects as above), `retry_strategy` |
+| `checkly_ssl_monitor` | `alert_settings` (and nested objects as above), `request.client_certificate`, `retry_strategy` |
+| `checkly_playwright_check_suite` | `alert_settings` (and nested objects as above), `runtime` (and its `engine`, `playwright`, `steps`) |
+
+All other blocks, such as `request`, `assertion`, `alert_channel_subscription` and `heartbeat`, keep their block syntax.
+
+### Removed attributes
+
+These attributes were deprecated in v1.x and had no effect. Remove them from your configuration:
+
+- `double_check` on `checkly_check` and `checkly_check_group`. Use `retry_strategy` instead.
+- `ssl_check` on `checkly_check`.
+- `environment_variables` (the map) on `checkly_check` and `checkly_check_group`. Use `environment_variable` blocks instead.
+- `alert_settings.ssl_certificates` on all resource types that had it.
+- `retry_strategy.only_on` on `checkly_dns_monitor`, `checkly_grpc_monitor`, `checkly_icmp_monitor`, `checkly_ssl_monitor`, `checkly_tcp_check`, `checkly_tcp_monitor` and `checkly_traceroute_monitor`, where it had no conditions to set.
+
+### Sensitive environment variable values
+
+`value` of `checkly_environment_variable` is now sensitive, so Terraform redacts it in plan output. An output that exposes it must set `sensitive = true`.
+
+## Deprecated resource types
+
+`checkly_check` is deprecated in favor of `checkly_api_check`, `checkly_browser_check` and `checkly_multistep_check`, which only expose the attributes of their check type. `checkly_heartbeat` and `checkly_tcp_check` are deprecated in favor of `checkly_heartbeat_monitor` and `checkly_tcp_monitor`. The deprecated types keep working in v2.
+
+To switch a resource to its new type without recreating it, change the resource type and add a `moved` block. This works in the same plan as the provider upgrade:
+
+```terraform
+resource "checkly_heartbeat_monitor" "example" {
+  # ...
+}
+
+moved {
+  from = checkly_heartbeat.example
+  to   = checkly_heartbeat_monitor.example
+}
+```
+
+When moving an API check from `checkly_check` to `checkly_api_check`, note that the default `degraded_response_time` and `max_response_time` are 5000 and 20000 instead of 15000 and 30000. Set them explicitly to keep the previous thresholds.
+
+## Expected one-time changes
+
+- v1.x stored an unset optional string, number or collection as an empty value (`""`, `0` or `[]`), and v2 stores it as null. If your configuration sets such an attribute to an empty value explicitly, for example `tags = []` or `repeat_interval = 0`, the first plan shows an in-place update to that empty value. Removing the attribute from the configuration has the same effect and avoids the update.
+- `checkly_client_certificate`: v1.x stored `path` without a trailing slash. If your configuration has one, for example `path = "/partner/api/"`, the first plan shows an in-place update of `path` that does not change the certificate.
