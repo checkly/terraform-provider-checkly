@@ -123,6 +123,7 @@ func makeAlertSettingsAttributeSchema(options AlertSettingsAttributeSchemaOption
 				Description: "Configuration for run-based escalation.",
 				PlanModifiers: []planmodifier.Object{
 					objectplanmodifier.UseNonNullStateForUnknown(),
+					inactiveEscalationPlanModifier{escalationType: "RUN_BASED"},
 				},
 				Attributes: map[string]schema.Attribute{
 					"failed_run_threshold": schema.Int64Attribute{
@@ -142,6 +143,7 @@ func makeAlertSettingsAttributeSchema(options AlertSettingsAttributeSchemaOption
 				Description: "Configuration for time-based escalation.",
 				PlanModifiers: []planmodifier.Object{
 					objectplanmodifier.UseNonNullStateForUnknown(),
+					inactiveEscalationPlanModifier{escalationType: "TIME_BASED"},
 				},
 				Attributes: map[string]schema.Attribute{
 					"minutes_failing_threshold": schema.Int64Attribute{
@@ -348,4 +350,37 @@ func alertSettingsToObject(ctx context.Context, as checkly.AlertSettings, prior 
 	diags.Append(objDiags...)
 
 	return obj
+}
+
+// inactiveEscalationPlanModifier plans the stored value, null included, of
+// an unconfigured escalation object that belongs to escalationType while the
+// planned escalation_type is a different one. The API does not track the
+// inactive escalation, so Read resolves it to its stored value or null.
+// Without this, any other change of the resource would plan the inactive
+// escalation as unknown, because UseNonNullStateForUnknown leaves a null
+// stored value unknown.
+type inactiveEscalationPlanModifier struct {
+	escalationType string
+}
+
+func (m inactiveEscalationPlanModifier) Description(ctx context.Context) string {
+	return fmt.Sprintf("Keeps the stored value while escalation_type is not %s.", m.escalationType)
+}
+
+func (m inactiveEscalationPlanModifier) MarkdownDescription(ctx context.Context) string {
+	return m.Description(ctx)
+}
+
+func (m inactiveEscalationPlanModifier) PlanModifyObject(ctx context.Context, req planmodifier.ObjectRequest, resp *planmodifier.ObjectResponse) {
+	if !resp.PlanValue.IsUnknown() || !req.ConfigValue.IsNull() || req.StateValue.IsUnknown() {
+		return
+	}
+
+	var escalationType types.String
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, req.Path.ParentPath().AtName("escalation_type"), &escalationType)...)
+	if resp.Diagnostics.HasError() || escalationType.IsNull() || escalationType.IsUnknown() || escalationType.ValueString() == m.escalationType {
+		return
+	}
+
+	resp.PlanValue = req.StateValue
 }
