@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
 // testAccProtoV6ProviderFactories are used to instantiate a provider during
@@ -47,8 +48,39 @@ func accTestCaseWithErrorCheck(t *testing.T, steps []resource.TestStep, errorChe
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		CheckDestroy:             nil,
 		ErrorCheck:               errorCheck,
+		TerraformVersionChecks:   terraformVersionChecks(steps),
 		Steps:                    steps,
 	})
+}
+
+// configBlockVersionChecks lists the configuration blocks that need a newer
+// Terraform than the provider's minimum of 1.0, with a check that skips the
+// versions which cannot run them as the tests use them.
+var configBlockVersionChecks = []struct {
+	block *regexp.Regexp
+	check tfversion.TerraformVersionCheck
+}{
+	// moved blocks between resource types.
+	{regexp.MustCompile(`(?m)^\s*moved\s*\{`), tfversion.SkipBelow(tfversion.Version1_8_0)},
+	{regexp.MustCompile(`(?m)^\s*removed\s*\{`), tfversion.SkipBelow(tfversion.Version1_7_0)},
+	// import blocks whose id refers to another resource.
+	{regexp.MustCompile(`(?m)^\s*import\s*\{`), tfversion.SkipBelow(tfversion.Version1_6_0)},
+}
+
+// terraformVersionChecks skips a test on Terraform versions that cannot run
+// the configuration blocks its steps use.
+func terraformVersionChecks(steps []resource.TestStep) []tfversion.TerraformVersionCheck {
+	var checks []tfversion.TerraformVersionCheck
+	for _, b := range configBlockVersionChecks {
+		for _, step := range steps {
+			if b.block.MatchString(step.Config) {
+				checks = append(checks, b.check)
+				break
+			}
+		}
+	}
+
+	return checks
 }
 
 // testCheckResourceAttrExpr tests resource attributes using regular

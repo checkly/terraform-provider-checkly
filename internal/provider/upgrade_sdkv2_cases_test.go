@@ -360,6 +360,30 @@ resource "checkly_check_group" "test" {
 }
 `),
 
+	"check_multistep": newSDKv2UpgradeCase(`
+resource "checkly_check" "test" {
+  name                      = "tf-upgrade-{{id}}-check-multistep"
+  type                      = "MULTI_STEP"
+  frequency                 = 60
+  activated                 = true
+  locations                 = ["eu-central-1"]
+  use_global_alert_settings = true
+  runtime_id                = "2023.09"
+  script                    = "console.log('test')"
+}
+`, `
+resource "checkly_check" "test" {
+  name                      = "tf-upgrade-{{id}}-check-multistep"
+  type                      = "MULTI_STEP"
+  frequency                 = 60
+  activated                 = true
+  locations                 = ["eu-central-1"]
+  use_global_alert_settings = true
+  runtime_id                = "2023.09"
+  script                    = "console.log('test')"
+}
+`),
+
 	"check_browser": newSDKv2UpgradeCase(`
 resource "checkly_check" "test" {
   name                      = "tf-upgrade-{{id}}-check-browser"
@@ -2525,6 +2549,123 @@ resource "checkly_playwright_check_suite" "test" {
 
 	// A moved block in the same plan as the provider upgrade: the source
 	// state is still at the SDK v2 schema version.
+	"moved_check_to_browser_check": newSDKv2UpgradeCase(`
+resource "checkly_check" "test" {
+  name                      = "tf-upgrade-{{id}}-moved-browser"
+  type                      = "BROWSER"
+  frequency                 = 720
+  activated                 = true
+  locations                 = ["eu-central-1"]
+  use_global_alert_settings = true
+  script                    = "console.log('test')"
+
+  environment_variable {
+    key   = "BASE_URL"
+    value = "https://www.checklyhq.com"
+  }
+}
+`, `
+resource "checkly_browser_check" "test" {
+  name                      = "tf-upgrade-{{id}}-moved-browser"
+  frequency                 = 720
+  activated                 = true
+  locations                 = ["eu-central-1"]
+  use_global_alert_settings = true
+  script                    = "console.log('test')"
+
+  environment_variable {
+    key   = "BASE_URL"
+    value = "https://www.checklyhq.com"
+  }
+}
+
+moved {
+  from = checkly_check.test
+  to   = checkly_browser_check.test
+}
+`),
+
+	"moved_check_to_multistep_check": newSDKv2UpgradeCase(`
+resource "checkly_check" "test" {
+  name                      = "tf-upgrade-{{id}}-moved-multistep"
+  type                      = "MULTI_STEP"
+  frequency                 = 60
+  activated                 = true
+  locations                 = ["eu-central-1"]
+  use_global_alert_settings = true
+  runtime_id                = "2023.09"
+  script                    = "console.log('test')"
+}
+`, `
+resource "checkly_multistep_check" "test" {
+  name                      = "tf-upgrade-{{id}}-moved-multistep"
+  frequency                 = 60
+  activated                 = true
+  locations                 = ["eu-central-1"]
+  use_global_alert_settings = true
+  runtime_id                = "2023.09"
+  script                    = "console.log('test')"
+}
+
+moved {
+  from = checkly_check.test
+  to   = checkly_multistep_check.test
+}
+`),
+
+	"moved_tcp_check_to_tcp_monitor": newSDKv2UpgradeCase(`
+resource "checkly_tcp_check" "test" {
+  name                      = "tf-upgrade-{{id}}-moved-tcp"
+  frequency                 = 60
+  activated                 = true
+  locations                 = ["eu-central-1"]
+  use_global_alert_settings = true
+
+  request {
+    hostname = "api.checklyhq.com"
+    port     = 80
+    assertion {
+      source     = "RESPONSE_TIME"
+      property   = ""
+      comparison = "LESS_THAN"
+      target     = "2000"
+    }
+  }
+
+  retry_strategy {
+    type = "FIXED"
+  }
+}
+`, `
+resource "checkly_tcp_monitor" "test" {
+  name                      = "tf-upgrade-{{id}}-moved-tcp"
+  frequency                 = 60
+  activated                 = true
+  locations                 = ["eu-central-1"]
+  use_global_alert_settings = true
+
+  request {
+    hostname = "api.checklyhq.com"
+    port     = 80
+    assertion {
+      source     = "RESPONSE_TIME"
+      property   = ""
+      comparison = "LESS_THAN"
+      target     = "2000"
+    }
+  }
+
+  retry_strategy = {
+    type = "FIXED"
+  }
+}
+
+moved {
+  from = checkly_tcp_check.test
+  to   = checkly_tcp_monitor.test
+}
+`),
+
 	"moved_check_to_api_check": newSDKv2UpgradeCase(`
 resource "checkly_check" "test" {
   name                   = "tf-upgrade-{{id}}-moved-api"

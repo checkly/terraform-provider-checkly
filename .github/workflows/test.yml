@@ -52,17 +52,24 @@ jobs:
     name: Matrix test
     needs: build
     runs-on: ubuntu-latest
+    # The legs share one Checkly account, so they run one at a time. The
+    # concurrency group keys on the Terraform version: a group shared by all
+    # legs would cancel the ones waiting behind the running one.
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.terraform }}
     timeout-minutes: 15
     strategy:
-      fail-fast: true
+      max-parallel: 1
+      # The shared account makes single tests flaky, which should not cancel
+      # the remaining legs.
+      fail-fast: false
       matrix:
-        # list whatever Terraform versions here you would like to support
-        # The Plugin Framework needs Terraform 1.0 or later. 1.8 is the
-        # oldest version that can move resources between resource types,
-        # which the moved block tests do.
+        # The provider supports Terraform 1.0 or later. Tests that use
+        # moved, removed or import blocks skip the versions that lack them,
+        # so 1.8, the oldest version that can move resources between
+        # resource types, runs those.
         terraform:
+          - '1.0.*'
           - '1.8.*'
           - '1.*'
     steps:
