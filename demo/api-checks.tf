@@ -26,16 +26,6 @@ resource "checkly_api_check" "api-check-1" {
 
 }
 
-# Add a command line trigger for the check and create an output for the trigger URL
-resource "checkly_trigger_check" "trigger-api-check-1" {
-  check_id = checkly_api_check.api-check-1.id
-}
-
-output "trigger_api_check-1-url" {
-  value     = checkly_trigger_check.trigger-api-check-1.url
-  sensitive = true
-}
-
 # Fully fledged API check
 resource "checkly_api_check" "api-check-2" {
   name                   = "API check 2"

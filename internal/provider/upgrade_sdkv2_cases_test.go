@@ -1269,66 +1269,6 @@ resource "checkly_alert_channel" "test" {
 }
 `),
 
-	"trigger_check": newSDKv2UpgradeCase(`
-resource "checkly_check" "test" {
-  name                      = "tf-upgrade-{{id}}-trigger-check"
-  type                      = "API"
-  frequency                 = 60
-  activated                 = false
-  locations                 = ["eu-central-1"]
-  use_global_alert_settings = true
-
-  request {
-    url = "https://api.checklyhq.com/public-stats"
-  }
-}
-
-resource "checkly_trigger_check" "test" {
-  check_id = checkly_check.test.id
-}
-`, `
-resource "checkly_check" "test" {
-  name                      = "tf-upgrade-{{id}}-trigger-check"
-  type                      = "API"
-  frequency                 = 60
-  activated                 = false
-  locations                 = ["eu-central-1"]
-  use_global_alert_settings = true
-
-  request {
-    url = "https://api.checklyhq.com/public-stats"
-  }
-}
-
-resource "checkly_trigger_check" "test" {
-  check_id = checkly_check.test.id
-}
-`),
-
-	"trigger_group": newSDKv2UpgradeCase(`
-resource "checkly_check_group" "test" {
-  name        = "tf-upgrade-{{id}}-trigger-group"
-  activated   = true
-  concurrency = 1
-  locations   = ["eu-central-1"]
-}
-
-resource "checkly_trigger_group" "test" {
-  group_id = checkly_check_group.test.id
-}
-`, `
-resource "checkly_check_group" "test" {
-  name        = "tf-upgrade-{{id}}-trigger-group"
-  activated   = true
-  concurrency = 1
-  locations   = ["eu-central-1"]
-}
-
-resource "checkly_trigger_group" "test" {
-  group_id = checkly_check_group.test.id
-}
-`),
-
 	"environment_variable": newSDKv2UpgradeCase(`
 resource "checkly_environment_variable" "plain" {
   key    = "TF_UPGRADE_{{id}}_PLAIN"

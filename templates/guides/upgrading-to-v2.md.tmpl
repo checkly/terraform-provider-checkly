@@ -8,7 +8,7 @@ description: |-
 
 Version 2 of the provider is built on the [Terraform Plugin Framework](https://developer.hashicorp.com/terraform/plugin/framework) instead of the Terraform Plugin SDK v2. Most resources keep their names and attributes, but some configuration syntax changes, and a few deprecated attributes are gone.
 
-Existing state is upgraded automatically: you do not need to import or recreate any resources. After updating your configuration as described below, `terraform plan` should report no changes.
+Existing state is upgraded automatically: you do not need to import or recreate any resources. The exceptions are the [removed resource types](#removed-resource-types), which you need to take out of your state before upgrading. After updating your configuration as described below, `terraform plan` should report no changes.
 
 ## Requirements
 
@@ -18,6 +18,7 @@ Existing state is upgraded automatically: you do not need to import or recreate 
 ## Recommended procedure
 
 1. Run `terraform plan` with the latest v1.x release and apply any pending changes, so that you start from a clean plan.
+1. If you use `checkly_trigger_check` or `checkly_trigger_group`, take them out of your configuration and state, as described in [Removed resource types](#removed-resource-types).
 1. Back up your state, for example with `terraform state pull > backup.tfstate`. Once v2 has refreshed the state, v1.x can no longer read it; to go back to v1.x, restore the backup.
 1. Update the version constraint, for example `version = "~> 2.0"`, and run `terraform init -upgrade`.
 1. Update your configuration as described in [Configuration changes](#configuration-changes). `terraform validate` points at every line that needs to change.
@@ -91,6 +92,27 @@ These attributes were deprecated in v1.x and had no effect. Remove them from you
 ### Sensitive environment variable values
 
 `value` of `checkly_environment_variable` is now sensitive, so Terraform redacts it in plan output. An output that exposes it must set `sensitive = true`.
+
+## Removed resource types
+
+`checkly_trigger_check` and `checkly_trigger_group` are gone. They managed command line trigger URLs, which Checkly has deprecated. To run checks on demand, use the [Checkly CLI](https://www.checklyhq.com/docs/cli/) (`npx checkly trigger`) or the check sessions trigger endpoint of the Checkly API (`POST /v1/check-sessions/trigger`).
+
+v2 fails to plan while these resource types are in state. Remove them from your configuration, then either:
+
+- Delete the triggers by running `terraform apply` while still on v1.x.
+- Keep the trigger URLs working for now by removing the resources from state only. While still on v1.x, with Terraform 1.7 or later, add a `removed` block for each resource and run `terraform apply`:
+
+  ```terraform
+  removed {
+    from = checkly_trigger_check.example
+
+    lifecycle {
+      destroy = false
+    }
+  }
+  ```
+
+  Alternatively, run `terraform state rm checkly_trigger_check.example`, which also works after upgrading to v2. A `removed` block does not.
 
 ## Deprecated resource types
 

@@ -50,7 +50,7 @@ func TestResourceSchemasAreValid(t *testing.T) {
 }
 
 // Credentials must be marked Sensitive so Terraform redacts them in plan
-// output. A trigger url embeds its token, so it is a credential too.
+// output.
 func TestSensitiveAttributes(t *testing.T) {
 	ctx := context.Background()
 
@@ -64,8 +64,6 @@ func TestSensitiveAttributes(t *testing.T) {
 
 	cases := map[string][]string{
 		"checkly_client_certificate": {"private_key", "passphrase"},
-		"checkly_trigger_check":      {"token", "url"},
-		"checkly_trigger_group":      {"token", "url"},
 	}
 
 	for resourceName, attrNames := range cases {

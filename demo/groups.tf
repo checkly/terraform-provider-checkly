@@ -10,16 +10,6 @@ resource "checkly_check_group" "check-group-1" {
   ]
 }
 
-# Add a command line trigger for the group and create an output for the trigger URL
-resource "checkly_trigger_group" "trigger-check-group-1" {
-  group_id = checkly_check_group.check-group-1.id
-}
-
-output "trigger_check-group-1-url" {
-  value     = checkly_trigger_group.trigger-check-group-1.url
-  sensitive = true
-}
-
 #-- Check group with minimal API defaults
 resource "checkly_check_group" "check-group-2" {
   name        = "Check Group 2 with minimal api check defaults"

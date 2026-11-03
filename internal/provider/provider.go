@@ -198,8 +198,6 @@ func (p *ChecklyProvider) Resources(ctx context.Context) []func() resource.Resou
 		NewTCPCheckResource,
 		NewTCPMonitorResource,
 		NewTracerouteMonitorResource,
-		NewTriggerCheckResource,
-		NewTriggerGroupResource,
 		NewURLMonitorResource,
 	}
 }
