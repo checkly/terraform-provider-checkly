@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -301,4 +302,73 @@ func TestSDKv2StateUpgradeCoverage(t *testing.T) {
 			t.Errorf("%s: has no state upgrader for schema version %d", metadata.TypeName, sdkv2SchemaVersion)
 		}
 	}
+}
+
+// A mover must leave state it does not handle to other movers, and refuse
+// moves that would lose data.
+func TestMoveSDKv2StateRejections(t *testing.T) {
+	ctx := context.Background()
+
+	move := func(t *testing.T, target resource.Resource, req resource.MoveStateRequest) resource.MoveStateResponse {
+		t.Helper()
+
+		var schemaResp resource.SchemaResponse
+		target.Schema(ctx, resource.SchemaRequest{}, &schemaResp)
+		resp := resource.MoveStateResponse{TargetState: tfsdk.State{Schema: schemaResp.Schema}}
+		target.(resource.ResourceWithMoveState).MoveState(ctx)[0].StateMover(ctx, req, &resp)
+		return resp
+	}
+
+	t.Run("a check of another type", func(t *testing.T) {
+		resp := move(t, NewAPICheckResource(), resource.MoveStateRequest{
+			SourceProviderAddress: "registry.terraform.io/checkly/checkly",
+			SourceTypeName:        "checkly_check",
+			SourceSchemaVersion:   sdkv2SchemaVersion,
+			SourceRawState:        readSDKv2StateFixture(t, "check_browser"),
+		})
+		if !resp.Diagnostics.HasError() {
+			t.Fatal("expected an error")
+		}
+		if detail := resp.Diagnostics.Errors()[0].Detail(); !strings.Contains(detail, "checkly_browser_check") {
+			t.Errorf("error does not name checkly_browser_check: %s", detail)
+		}
+	})
+
+	for name, req := range map[string]resource.MoveStateRequest{
+		"another provider": {
+			SourceProviderAddress: "registry.terraform.io/other/example",
+			SourceTypeName:        "checkly_check",
+			SourceSchemaVersion:   sdkv2SchemaVersion,
+			SourceRawState:        readSDKv2StateFixture(t, "check"),
+		},
+		"another resource type": {
+			SourceProviderAddress: "registry.terraform.io/checkly/checkly",
+			SourceTypeName:        "checkly_url_monitor",
+			SourceSchemaVersion:   sdkv2SchemaVersion,
+			SourceRawState:        readSDKv2StateFixture(t, "url_monitor"),
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			for _, target := range []resource.Resource{NewAPICheckResource(), NewHeartbeatMonitorResource()} {
+				resp := move(t, target, req)
+				if resp.Diagnostics.HasError() {
+					t.Fatalf("unexpected diagnostics: %v", resp.Diagnostics)
+				}
+				if !resp.TargetState.Raw.IsNull() {
+					t.Errorf("target state was set: %v", resp.TargetState.Raw)
+				}
+			}
+		})
+	}
+
+	t.Run("state that cannot be decoded", func(t *testing.T) {
+		resp := move(t, NewHeartbeatMonitorResource(), resource.MoveStateRequest{
+			SourceProviderAddress: "registry.terraform.io/checkly/checkly",
+			SourceTypeName:        "checkly_heartbeat",
+			SourceSchemaVersion:   sdkv2SchemaVersion + 1,
+		})
+		if !resp.Diagnostics.HasError() {
+			t.Fatal("expected an error")
+		}
+	})
 }

@@ -21,6 +21,18 @@ func stringsFromSet(ctx context.Context, set types.Set, diags *diag.Diagnostics)
 	return values
 }
 
+// stringsFromSetOrEmpty is stringsFromSet for API properties that must
+// serialize as an empty JSON array rather than null: null and unknown sets
+// convert to an empty slice.
+func stringsFromSetOrEmpty(ctx context.Context, set types.Set, diags *diag.Diagnostics) []string {
+	values := stringsFromSet(ctx, set, diags)
+	if values == nil {
+		return []string{}
+	}
+
+	return values
+}
+
 // setFromStrings converts a Go slice to a set of strings. A nil slice
 // converts to an empty set.
 func setFromStrings(ctx context.Context, values []string, diags *diag.Diagnostics) types.Set {

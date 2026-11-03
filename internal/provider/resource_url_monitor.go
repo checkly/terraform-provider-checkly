@@ -301,38 +301,7 @@ func (r *URLMonitorResource) Configure(ctx context.Context, req resource.Configu
 // instead. Substituting static values keeps every set element fully known
 // and stable across plans, which set element correlation requires.
 func (r *URLMonitorResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	// A destroy plan has no planned state to default values in.
-	if req.Plan.Raw.IsNull() {
-		return
-	}
-
-	var configRequest types.Set
-	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("request"), &configRequest)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	// When the configuration contains unknown values (references to
-	// attributes of resources that have not been created yet), null values
-	// cannot be distinguished from values that will resolve at apply time.
-	// Leave the plan untouched; the apply-time re-plan applies the defaults
-	// once the configuration values are known.
-	if valueContainsUnknown(ctx, configRequest) {
-		return
-	}
-
-	var request types.Set
-	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("request"), &request)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	request = urlMonitorRequestWithDefaults(ctx, request, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("request"), request)...)
+	planNestedDefaults(ctx, req, resp, path.Root("request"), urlMonitorRequestWithDefaults)
 }
 
 // urlMonitorRequestWithDefaults returns the request block value with default
@@ -498,15 +467,9 @@ func urlMonitorFromModel(ctx context.Context, model *URLMonitorResourceModel, di
 	}
 
 	// The locations property is serialized even when empty.
-	locations := stringsFromSet(ctx, model.Locations, diags)
-	if locations == nil {
-		locations = []string{}
-	}
+	locations := stringsFromSetOrEmpty(ctx, model.Locations, diags)
 
-	privateLocations := stringsFromSet(ctx, model.PrivateLocations, diags)
-	if privateLocations == nil {
-		privateLocations = []string{}
-	}
+	privateLocations := stringsFromSetOrEmpty(ctx, model.PrivateLocations, diags)
 
 	alertSettings := alertSettingsFromObject(ctx, model.AlertSettings, diags)
 

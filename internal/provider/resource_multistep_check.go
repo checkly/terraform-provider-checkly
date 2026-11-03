@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -340,108 +339,37 @@ func (r *MultistepCheckResource) ImportState(ctx context.Context, req resource.I
 // type. Only MULTI_STEP checks can be moved to this resource type; the other
 // check types have their own dedicated resource types.
 func (r *MultistepCheckResource) MoveState(ctx context.Context) []resource.StateMover {
-	var schemaResp resource.SchemaResponse
-	(&CheckResource{}).Schema(ctx, resource.SchemaRequest{}, &schemaResp)
-	sourceSchema := schemaResp.Schema
-
-	return []resource.StateMover{
-		{
-			SourceSchema: &sourceSchema,
-			StateMover: func(ctx context.Context, req resource.MoveStateRequest, resp *resource.MoveStateResponse) {
-				if !strings.HasSuffix(req.SourceProviderAddress, "/checkly") {
-					return
-				}
-
-				if req.SourceTypeName != "checkly_check" {
-					return
-				}
-
-				sourceState := sdkv2MoveSourceState(ctx, req, sourceSchema, &resp.Diagnostics)
-				if resp.Diagnostics.HasError() {
-					return
-				}
-				if sourceState == nil {
-					resp.Diagnostics.AddError(
-						"Unable to Move Resource State",
-						"The source checkly_check state could not be decoded. The "+
-							"state may have been created by an older version of the "+
-							"provider. Upgrade the source resource to the current "+
-							"provider version before moving it.",
-					)
-					return
-				}
-
-				var source CheckResourceModel
-				resp.Diagnostics.Append(sourceState.Get(ctx, &source)...)
-				if resp.Diagnostics.HasError() {
-					return
-				}
-
-				checkType := source.Type.ValueString()
-				if checkType != "MULTI_STEP" {
-					resp.Diagnostics.AddError(
-						"Unable to Move Resource State",
-						fmt.Sprintf(
-							"The source checkly_check resource has type %q and cannot "+
-								"be moved to checkly_multistep_check, which only supports "+
-								"MULTI_STEP checks. Move the resource to %s instead.",
-							checkType,
-							multistepCheckMoveStateTargetForType(checkType),
-						),
-					)
-					return
-				}
-
-				// The frequency_offset, request, response time, snippet, local
-				// script and ssl_check_domain attributes of checkly_check do
-				// not exist on checkly_multistep_check and are discarded. The
-				// script_path and dependency attributes are new and have no
-				// source value.
-				target := MultistepCheckResourceModel{
-					ID:                       source.ID,
-					Name:                     source.Name,
-					Description:              source.Description,
-					Frequency:                source.Frequency,
-					Activated:                source.Activated,
-					Muted:                    source.Muted,
-					ShouldFail:               source.ShouldFail,
-					RunParallel:              source.RunParallel,
-					Locations:                source.Locations,
-					Script:                   source.Script,
-					ScriptPath:               types.StringNull(),
-					Dependency:               types.ListValueMust(types.ObjectType{AttrTypes: scriptDependencyAttrTypes}, []attr.Value{}),
-					EnvironmentVariable:      source.EnvironmentVariable,
-					Tags:                     source.Tags,
-					RuntimeID:                source.RuntimeID,
-					AlertChannelSubscription: source.AlertChannelSubscription,
-					PrivateLocations:         source.PrivateLocations,
-					AlertSettings:            source.AlertSettings,
-					UseGlobalAlertSettings:   source.UseGlobalAlertSettings,
-					GroupID:                  source.GroupID,
-					GroupOrder:               source.GroupOrder,
-					RetryStrategy:            source.RetryStrategy,
-					TriggerIncident:          source.TriggerIncident,
-				}
-
-				resp.Diagnostics.Append(resp.TargetState.Set(ctx, &target)...)
-			},
-		},
-	}
-}
-
-// multistepCheckMoveStateTargetForType maps a checkly_check type value to the
-// name of the dedicated resource type that replaces it.
-func multistepCheckMoveStateTargetForType(checkType string) string {
-	switch checkType {
-	case "API":
-		return "checkly_api_check"
-	case "BROWSER":
-		return "checkly_browser_check"
-	case "MULTI_STEP":
-		return "checkly_multistep_check"
-	default:
-		return "the dedicated resource type for its check type"
-	}
+	return checkStateMovers(ctx, "MULTI_STEP", func(source *CheckResourceModel) MultistepCheckResourceModel {
+		// The frequency_offset, request, response time, snippet, local script
+		// and ssl_check_domain attributes of checkly_check do not exist on
+		// checkly_multistep_check and are discarded. The script_path and
+		// dependency attributes are new and have no source value.
+		return MultistepCheckResourceModel{
+			ID:                       source.ID,
+			Name:                     source.Name,
+			Description:              source.Description,
+			Frequency:                source.Frequency,
+			Activated:                source.Activated,
+			Muted:                    source.Muted,
+			ShouldFail:               source.ShouldFail,
+			RunParallel:              source.RunParallel,
+			Locations:                source.Locations,
+			Script:                   source.Script,
+			ScriptPath:               types.StringNull(),
+			Dependency:               types.ListValueMust(types.ObjectType{AttrTypes: scriptDependencyAttrTypes}, []attr.Value{}),
+			EnvironmentVariable:      source.EnvironmentVariable,
+			Tags:                     source.Tags,
+			RuntimeID:                source.RuntimeID,
+			AlertChannelSubscription: source.AlertChannelSubscription,
+			PrivateLocations:         source.PrivateLocations,
+			AlertSettings:            source.AlertSettings,
+			UseGlobalAlertSettings:   source.UseGlobalAlertSettings,
+			GroupID:                  source.GroupID,
+			GroupOrder:               source.GroupOrder,
+			RetryStrategy:            source.RetryStrategy,
+			TriggerIncident:          source.TriggerIncident,
+		}
+	})
 }
 
 // validateMultistepCheckRuntimeSupport validates that the configured runtime
@@ -484,15 +412,9 @@ func multistepCheckFromModel(ctx context.Context, model *MultistepCheckResourceM
 	}
 
 	// The locations property is serialized even when empty.
-	locations := stringsFromSet(ctx, model.Locations, diags)
-	if locations == nil {
-		locations = []string{}
-	}
+	locations := stringsFromSetOrEmpty(ctx, model.Locations, diags)
 
-	privateLocations := stringsFromSet(ctx, model.PrivateLocations, diags)
-	if privateLocations == nil {
-		privateLocations = []string{}
-	}
+	privateLocations := stringsFromSetOrEmpty(ctx, model.PrivateLocations, diags)
 
 	alertSettings := alertSettingsFromObject(ctx, model.AlertSettings, diags)
 

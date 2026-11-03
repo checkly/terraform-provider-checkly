@@ -564,38 +564,7 @@ func (r *SSLMonitorResource) Configure(ctx context.Context, req resource.Configu
 // request block and the security baseline blocks are lists, so their own
 // attributes can keep using schema defaults.
 func (r *SSLMonitorResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	// A destroy plan has no planned state to default values in.
-	if req.Plan.Raw.IsNull() {
-		return
-	}
-
-	var configRequest types.List
-	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("request"), &configRequest)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	// When the configuration contains unknown values (references to
-	// attributes of resources that have not been created yet), null values
-	// cannot be distinguished from values that will resolve at apply time.
-	// Leave the plan untouched; the apply-time re-plan applies the defaults
-	// once the configuration values are known.
-	if valueContainsUnknown(ctx, configRequest) {
-		return
-	}
-
-	var request types.List
-	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("request"), &request)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	request = sslMonitorRequestWithDefaults(ctx, request, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("request"), request)...)
+	planNestedDefaults(ctx, req, resp, path.Root("request"), sslMonitorRequestWithDefaults)
 }
 
 // sslMonitorRequestWithDefaults returns the request block value with default
@@ -752,15 +721,9 @@ func (r *SSLMonitorResource) ImportState(ctx context.Context, req resource.Impor
 // sslMonitorFromModel converts the resource model to its API representation.
 func sslMonitorFromModel(ctx context.Context, model *SSLMonitorResourceModel, diags *diag.Diagnostics) checkly.SSLMonitor {
 	// The locations property is serialized even when empty.
-	locations := stringsFromSet(ctx, model.Locations, diags)
-	if locations == nil {
-		locations = []string{}
-	}
+	locations := stringsFromSetOrEmpty(ctx, model.Locations, diags)
 
-	privateLocations := stringsFromSet(ctx, model.PrivateLocations, diags)
-	if privateLocations == nil {
-		privateLocations = []string{}
-	}
+	privateLocations := stringsFromSetOrEmpty(ctx, model.PrivateLocations, diags)
 
 	monitor := checkly.SSLMonitor{
 		ID:                        model.ID.ValueString(),

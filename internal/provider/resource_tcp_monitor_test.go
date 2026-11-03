@@ -1,47 +1,11 @@
 package provider
 
 import (
-	"fmt"
 	"regexp"
-	"strconv"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
-
-// tcpMonitorTestCheckAlertChannelSubscription checks that the resource has an
-// alert channel subscription for the channel created by the resource named by
-// channelResourceName, with the expected activation state.
-func tcpMonitorTestCheckAlertChannelSubscription(resourceName, channelResourceName, expectedActivated string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		rs, ok := s.RootModule().Resources[resourceName]
-		if !ok {
-			return fmt.Errorf("resource not found: %s", resourceName)
-		}
-
-		channelRS, ok := s.RootModule().Resources[channelResourceName]
-		if !ok {
-			return fmt.Errorf("resource not found: %s", channelResourceName)
-		}
-		wantChannelID := channelRS.Primary.Attributes["id"]
-
-		count := rs.Primary.Attributes["alert_channel_subscription.#"]
-		n, _ := strconv.Atoi(count)
-		for i := range n {
-			prefix := fmt.Sprintf("alert_channel_subscription.%d", i)
-			if rs.Primary.Attributes[prefix+".channel_id"] == wantChannelID {
-				got := rs.Primary.Attributes[prefix+".activated"]
-				if got != expectedActivated {
-					return fmt.Errorf("channel %s: expected activated=%s, got %s", wantChannelID, expectedActivated, got)
-				}
-				return nil
-			}
-		}
-
-		return fmt.Errorf("no alert_channel_subscription with channel_id=%s found", wantChannelID)
-	}
-}
 
 func TestAccTCPMonitorRequiredFields(t *testing.T) {
 	config := `resource "checkly_tcp_monitor" "test" {}`
@@ -1744,13 +1708,15 @@ func TestAccTCPMonitorAlertChannelSubscriptions(t *testing.T) {
 					"alert_channel_subscription.#",
 					"2",
 				),
-				tcpMonitorTestCheckAlertChannelSubscription(
+				testCheckAlertChannelSubscription(
 					"checkly_tcp_monitor.test",
+					"alert_channel_subscription",
 					"checkly_alert_channel.email_1",
 					"true",
 				),
-				tcpMonitorTestCheckAlertChannelSubscription(
+				testCheckAlertChannelSubscription(
 					"checkly_tcp_monitor.test",
+					"alert_channel_subscription",
 					"checkly_alert_channel.email_2",
 					"false",
 				),
@@ -1816,18 +1782,21 @@ func TestAccTCPMonitorAlertChannelSubscriptions(t *testing.T) {
 					"alert_channel_subscription.#",
 					"3",
 				),
-				tcpMonitorTestCheckAlertChannelSubscription(
+				testCheckAlertChannelSubscription(
 					"checkly_tcp_monitor.test",
+					"alert_channel_subscription",
 					"checkly_alert_channel.email_1",
 					"false",
 				),
-				tcpMonitorTestCheckAlertChannelSubscription(
+				testCheckAlertChannelSubscription(
 					"checkly_tcp_monitor.test",
+					"alert_channel_subscription",
 					"checkly_alert_channel.email_2",
 					"true",
 				),
-				tcpMonitorTestCheckAlertChannelSubscription(
+				testCheckAlertChannelSubscription(
 					"checkly_tcp_monitor.test",
+					"alert_channel_subscription",
 					"checkly_alert_channel.email_3",
 					"true",
 				),

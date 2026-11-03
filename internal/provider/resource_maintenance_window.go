@@ -304,46 +304,7 @@ func (r *MaintenanceWindowResource) ImportState(ctx context.Context, req resourc
 // resource type. Both resource types share the exact same schema, so the
 // source state can be used as the target state without transformation.
 func (r *MaintenanceWindowResource) MoveState(ctx context.Context) []resource.StateMover {
-	var schemaResp resource.SchemaResponse
-	r.Schema(ctx, resource.SchemaRequest{}, &schemaResp)
-	sourceSchema := schemaResp.Schema
-
-	return []resource.StateMover{
-		{
-			SourceSchema: &sourceSchema,
-			StateMover: func(ctx context.Context, req resource.MoveStateRequest, resp *resource.MoveStateResponse) {
-				if !strings.HasSuffix(req.SourceProviderAddress, "/checkly") {
-					return
-				}
-
-				switch req.SourceTypeName {
-				case "checkly_maintenance_windows", "checkly_maintenance_window":
-				default:
-					return
-				}
-
-				sourceState := sdkv2MoveSourceState(ctx, req, sourceSchema, &resp.Diagnostics)
-				if resp.Diagnostics.HasError() {
-					return
-				}
-				if sourceState == nil {
-					resp.Diagnostics.AddError(
-						"Unable to Move Resource State",
-						fmt.Sprintf(
-							"The source %s state could not be decoded. The state may "+
-								"have been created by an older version of the provider. "+
-								"Upgrade the source resource to the current provider "+
-								"version before moving it.",
-							req.SourceTypeName,
-						),
-					)
-					return
-				}
-
-				resp.TargetState = *sourceState
-			},
-		},
-	}
+	return renamedResourceStateMovers(ctx, r, "checkly_maintenance_windows", "checkly_maintenance_window")
 }
 
 func maintenanceWindowFromModel(ctx context.Context, model *MaintenanceWindowResourceModel, diags *diag.Diagnostics) checkly.MaintenanceWindow {

@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
@@ -305,38 +304,7 @@ func (r *TCPMonitorResource) Configure(ctx context.Context, req resource.Configu
 // instead. Substituting static values keeps every set element fully known
 // and stable across plans, which set element correlation requires.
 func (r *TCPMonitorResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	// A destroy plan has no planned state to default values in.
-	if req.Plan.Raw.IsNull() {
-		return
-	}
-
-	var configRequest types.Set
-	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("request"), &configRequest)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	// When the configuration contains unknown values (references to
-	// attributes of resources that have not been created yet), null values
-	// cannot be distinguished from values that will resolve at apply time.
-	// Leave the plan untouched; the apply-time re-plan applies the defaults
-	// once the configuration values are known.
-	if valueContainsUnknown(ctx, configRequest) {
-		return
-	}
-
-	var request types.Set
-	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("request"), &request)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	request = tcpMonitorRequestWithDefaults(ctx, request, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("request"), request)...)
+	planNestedDefaults(ctx, req, resp, path.Root("request"), tcpMonitorRequestWithDefaults)
 }
 
 // tcpMonitorRequestWithDefaults returns the request block value with default
@@ -495,60 +463,15 @@ func (r *TCPMonitorResource) ImportState(ctx context.Context, req resource.Impor
 // type. Both resource types share the exact same schema, so the source state
 // can be used as the target state without transformation.
 func (r *TCPMonitorResource) MoveState(ctx context.Context) []resource.StateMover {
-	var schemaResp resource.SchemaResponse
-	r.Schema(ctx, resource.SchemaRequest{}, &schemaResp)
-	sourceSchema := schemaResp.Schema
-
-	return []resource.StateMover{
-		{
-			SourceSchema: &sourceSchema,
-			StateMover: func(ctx context.Context, req resource.MoveStateRequest, resp *resource.MoveStateResponse) {
-				if !strings.HasSuffix(req.SourceProviderAddress, "/checkly") {
-					return
-				}
-
-				switch req.SourceTypeName {
-				case "checkly_tcp_check", "checkly_tcp_monitor":
-				default:
-					return
-				}
-
-				sourceState := sdkv2MoveSourceState(ctx, req, sourceSchema, &resp.Diagnostics)
-				if resp.Diagnostics.HasError() {
-					return
-				}
-				if sourceState == nil {
-					resp.Diagnostics.AddError(
-						"Unable to Move Resource State",
-						fmt.Sprintf(
-							"The source %s state could not be decoded. The state may "+
-								"have been created by an older version of the provider. "+
-								"Upgrade the source resource to the current provider "+
-								"version before moving it.",
-							req.SourceTypeName,
-						),
-					)
-					return
-				}
-
-				resp.TargetState = *sourceState
-			},
-		},
-	}
+	return renamedResourceStateMovers(ctx, r, "checkly_tcp_check", "checkly_tcp_monitor")
 }
 
 // tcpMonitorFromModel converts the resource model to its API representation.
 func tcpMonitorFromModel(ctx context.Context, model *TCPMonitorResourceModel, diags *diag.Diagnostics) checkly.TCPMonitor {
 	// The locations property is serialized even when empty.
-	locations := stringsFromSet(ctx, model.Locations, diags)
-	if locations == nil {
-		locations = []string{}
-	}
+	locations := stringsFromSetOrEmpty(ctx, model.Locations, diags)
 
-	privateLocations := stringsFromSet(ctx, model.PrivateLocations, diags)
-	if privateLocations == nil {
-		privateLocations = []string{}
-	}
+	privateLocations := stringsFromSetOrEmpty(ctx, model.PrivateLocations, diags)
 
 	monitor := checkly.TCPMonitor{
 		ID:                        model.ID.ValueString(),

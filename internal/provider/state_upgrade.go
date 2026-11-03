@@ -5,6 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -218,30 +220,78 @@ func forEachObject(value any, fn func(map[string]any)) {
 	}
 }
 
-// sdkv2MoveSourceState returns the state of a `moved` block's source
-// resource, decoded with sourceSchema. The framework only decodes source
-// state that already matches sourceSchema; state still at
-// sdkv2SchemaVersion is upgraded first, so that resources can be moved in the
-// same plan that upgrades the provider. If that upgrade fails, it adds an
-// error to diags and returns nil. It also returns nil if the framework could
-// not decode the source state.
-func sdkv2MoveSourceState(ctx context.Context, req resource.MoveStateRequest, sourceSchema schema.Schema, diags *diag.Diagnostics) *tfsdk.State {
-	if req.SourceSchemaVersion != sdkv2SchemaVersion || req.SourceRawState == nil {
-		return req.SourceState
+// moveSourceState returns the state of a `moved` block's source resource,
+// decoded with sourceSchema, if this provider wrote it as one of
+// sourceTypeNames. For any other source it returns nil without diagnostics,
+// leaving the move to Terraform's other state movers.
+//
+// The framework only decodes source state that already matches sourceSchema;
+// state still at sdkv2SchemaVersion is upgraded first, so that resources can
+// be moved in the same plan that upgrades the provider. If the source state
+// can be neither upgraded nor decoded, it adds an error to diags and returns
+// nil.
+func moveSourceState(ctx context.Context, req resource.MoveStateRequest, sourceSchema schema.Schema, diags *diag.Diagnostics, sourceTypeNames ...string) *tfsdk.State {
+	if !strings.HasSuffix(req.SourceProviderAddress, "/checkly") {
+		return nil
+	}
+	if !slices.Contains(sourceTypeNames, req.SourceTypeName) {
+		return nil
 	}
 
-	value, err := upgradeSDKv2RawState(ctx, req.SourceRawState, sourceSchema)
-	if err != nil {
+	if req.SourceSchemaVersion == sdkv2SchemaVersion && req.SourceRawState != nil {
+		value, err := upgradeSDKv2RawState(ctx, req.SourceRawState, sourceSchema)
+		if err != nil {
+			diags.AddError(
+				"Unable to Move Resource State",
+				fmt.Sprintf(
+					"The %s state written by an earlier version of the provider could not be "+
+						"converted to the current schema. Please report this to the provider developers.\n\n%s",
+					req.SourceTypeName, err,
+				),
+			)
+			return nil
+		}
+
+		return &tfsdk.State{Schema: sourceSchema, Raw: value}
+	}
+
+	if req.SourceState == nil {
 		diags.AddError(
 			"Unable to Move Resource State",
 			fmt.Sprintf(
-				"The %s state written by an earlier version of the provider could not be "+
-					"converted to the current schema. Please report this to the provider developers.\n\n%s",
-				req.SourceTypeName, err,
+				"The source %s state could not be decoded. The state may "+
+					"have been created by an older version of the provider. "+
+					"Upgrade the source resource to the current provider "+
+					"version before moving it.",
+				req.SourceTypeName,
 			),
 		)
 		return nil
 	}
 
-	return &tfsdk.State{Schema: sourceSchema, Raw: value}
+	return req.SourceState
+}
+
+// renamedResourceStateMovers returns the state movers of resource r for
+// `moved` blocks from sourceTypeNames, resource types of this provider that
+// share the exact schema of r. The source state is used as the target state
+// without transformation.
+func renamedResourceStateMovers(ctx context.Context, r resource.Resource, sourceTypeNames ...string) []resource.StateMover {
+	var schemaResp resource.SchemaResponse
+	r.Schema(ctx, resource.SchemaRequest{}, &schemaResp)
+	sourceSchema := schemaResp.Schema
+
+	return []resource.StateMover{
+		{
+			SourceSchema: &sourceSchema,
+			StateMover: func(ctx context.Context, req resource.MoveStateRequest, resp *resource.MoveStateResponse) {
+				sourceState := moveSourceState(ctx, req, sourceSchema, &resp.Diagnostics, sourceTypeNames...)
+				if sourceState == nil {
+					return
+				}
+
+				resp.TargetState = *sourceState
+			},
+		},
+	}
 }

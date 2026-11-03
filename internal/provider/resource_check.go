@@ -336,38 +336,7 @@ func (r *CheckResource) Configure(ctx context.Context, req resource.ConfigureReq
 // instead. Substituting static values keeps every set element fully known
 // and stable across plans, which set element correlation requires.
 func (r *CheckResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	// A destroy plan has no planned state to default values in.
-	if req.Plan.Raw.IsNull() {
-		return
-	}
-
-	var configRequest types.Set
-	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("request"), &configRequest)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	// When the configuration contains unknown values (references to
-	// attributes of resources that have not been created yet), null values
-	// cannot be distinguished from values that will resolve at apply time.
-	// Leave the plan untouched; the apply-time re-plan applies the defaults
-	// once the configuration values are known.
-	if valueContainsUnknown(ctx, configRequest) {
-		return
-	}
-
-	var request types.Set
-	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("request"), &request)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	request = apiCheckRequestWithDefaults(ctx, request, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("request"), request)...)
+	planNestedDefaults(ctx, req, resp, path.Root("request"), apiCheckRequestWithDefaults)
 }
 
 func (r *CheckResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -497,6 +466,69 @@ func (r *CheckResource) ImportState(ctx context.Context, req resource.ImportStat
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
 
+// checkStateMovers returns the state movers of the dedicated check resource
+// type targetTypeName for `moved` blocks from checkly_check. Only checks of
+// type checkType can be moved; toTarget maps the source model to the target
+// model, which is stored as the target state.
+func checkStateMovers[T any](ctx context.Context, checkType string, toTarget func(source *CheckResourceModel) T) []resource.StateMover {
+	targetTypeName := checkResourceTypeForCheckType(checkType)
+	var schemaResp resource.SchemaResponse
+	(&CheckResource{}).Schema(ctx, resource.SchemaRequest{}, &schemaResp)
+	sourceSchema := schemaResp.Schema
+
+	return []resource.StateMover{
+		{
+			SourceSchema: &sourceSchema,
+			StateMover: func(ctx context.Context, req resource.MoveStateRequest, resp *resource.MoveStateResponse) {
+				sourceState := moveSourceState(ctx, req, sourceSchema, &resp.Diagnostics, "checkly_check")
+				if sourceState == nil {
+					return
+				}
+
+				var source CheckResourceModel
+				resp.Diagnostics.Append(sourceState.Get(ctx, &source)...)
+				if resp.Diagnostics.HasError() {
+					return
+				}
+
+				if sourceType := source.Type.ValueString(); sourceType != checkType {
+					resp.Diagnostics.AddError(
+						"Unable to Move Resource State",
+						fmt.Sprintf(
+							"The source checkly_check resource has type %q and cannot "+
+								"be moved to %s, which only supports %s checks. Move the "+
+								"resource to %s instead.",
+							sourceType,
+							targetTypeName,
+							checkType,
+							checkResourceTypeForCheckType(sourceType),
+						),
+					)
+					return
+				}
+
+				target := toTarget(&source)
+				resp.Diagnostics.Append(resp.TargetState.Set(ctx, &target)...)
+			},
+		},
+	}
+}
+
+// checkResourceTypeForCheckType maps a checkly_check type value to the name
+// of the dedicated resource type that replaces it.
+func checkResourceTypeForCheckType(checkType string) string {
+	switch checkType {
+	case checkly.TypeAPI:
+		return "checkly_api_check"
+	case checkly.TypeBrowser:
+		return "checkly_browser_check"
+	case "MULTI_STEP":
+		return "checkly_multistep_check"
+	default:
+		return "the dedicated resource type for its check type"
+	}
+}
+
 // validateCheckRuntimeSupport validates that the configured runtime supports
 // multistep checks when the check has a runtime ID set. Note that if the
 // runtime ID is coming from the account defaults or group, then it is not
@@ -576,10 +608,7 @@ func checkFromModel(ctx context.Context, model *CheckResourceModel, diags *diag.
 		check.RuntimeID = &runtimeID
 	}
 
-	privateLocations := stringsFromSet(ctx, model.PrivateLocations, diags)
-	if privateLocations == nil {
-		privateLocations = []string{}
-	}
+	privateLocations := stringsFromSetOrEmpty(ctx, model.PrivateLocations, diags)
 	check.PrivateLocations = &privateLocations
 
 	// The request and frequency_offset properties only apply to API checks.

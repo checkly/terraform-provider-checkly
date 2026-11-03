@@ -3,48 +3,12 @@ package provider
 import (
 	"fmt"
 	"regexp"
-	"strconv"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
-	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
-
-// checkGroupTestCheckAlertChannelSubscription checks that an alert channel
-// subscription collection contains a subscription for the channel created by
-// channelResourceName with the expected activation state.
-func checkGroupTestCheckAlertChannelSubscription(resourceName, collectionPath, channelResourceName, expectedActivated string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		rs, ok := s.RootModule().Resources[resourceName]
-		if !ok {
-			return fmt.Errorf("resource not found: %s", resourceName)
-		}
-
-		// Resolve the channel_id from another resource's attribute
-		channelRS, ok := s.RootModule().Resources[channelResourceName]
-		if !ok {
-			return fmt.Errorf("resource not found: %s", channelResourceName)
-		}
-		wantChannelID := channelRS.Primary.Attributes["id"]
-
-		count := rs.Primary.Attributes[collectionPath+".#"]
-		n, _ := strconv.Atoi(count)
-		for i := range n {
-			prefix := fmt.Sprintf("%s.%d", collectionPath, i)
-			if rs.Primary.Attributes[prefix+".channel_id"] == wantChannelID {
-				got := rs.Primary.Attributes[prefix+".activated"]
-				if got != expectedActivated {
-					return fmt.Errorf("channel %s: expected activated=%s, got %s", wantChannelID, expectedActivated, got)
-				}
-				return nil
-			}
-		}
-
-		return fmt.Errorf("no alert channel subscription with channel_id=%s found", wantChannelID)
-	}
-}
 
 func TestAccCheckGroupEmptyConfig(t *testing.T) {
 	config := `resource "checkly_check_group" "test" {}`
@@ -1335,13 +1299,13 @@ func TestAccCheckGroupAlertChannelSubscriptions(t *testing.T) {
 					"alert_channel_subscription.#",
 					"2",
 				),
-				checkGroupTestCheckAlertChannelSubscription(
+				testCheckAlertChannelSubscription(
 					"checkly_check_group.test",
 					"alert_channel_subscription",
 					"checkly_alert_channel.email_1",
 					"true",
 				),
-				checkGroupTestCheckAlertChannelSubscription(
+				testCheckAlertChannelSubscription(
 					"checkly_check_group.test",
 					"alert_channel_subscription",
 					"checkly_alert_channel.email_2",
@@ -1398,19 +1362,19 @@ func TestAccCheckGroupAlertChannelSubscriptions(t *testing.T) {
 					"alert_channel_subscription.#",
 					"3",
 				),
-				checkGroupTestCheckAlertChannelSubscription(
+				testCheckAlertChannelSubscription(
 					"checkly_check_group.test",
 					"alert_channel_subscription",
 					"checkly_alert_channel.email_1",
 					"false",
 				),
-				checkGroupTestCheckAlertChannelSubscription(
+				testCheckAlertChannelSubscription(
 					"checkly_check_group.test",
 					"alert_channel_subscription",
 					"checkly_alert_channel.email_2",
 					"true",
 				),
-				checkGroupTestCheckAlertChannelSubscription(
+				testCheckAlertChannelSubscription(
 					"checkly_check_group.test",
 					"alert_channel_subscription",
 					"checkly_alert_channel.email_3",

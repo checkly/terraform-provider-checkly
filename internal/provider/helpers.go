@@ -11,7 +11,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
 
 	checkly "github.com/checkly/checkly-go-sdk"
 )
@@ -169,4 +172,45 @@ func (v *allowedValues[T]) String() string {
 
 		return buf.String()
 	}
+}
+
+// planNestedDefaults replaces the planned value at p with withDefaults
+// applied to it. It implements ModifyPlan for resources whose nested
+// optional+computed attributes cannot use schema defaults, typically because
+// they are nested in sets: substituting static values instead keeps every set
+// element fully known and stable across plans, which set element correlation
+// requires.
+//
+// Destroy plans have no planned state to default values in and are left
+// alone. So are plans whose configuration at p contains unknown values
+// (references to attributes of resources that have not been created yet):
+// null values cannot be distinguished from values that will resolve at apply
+// time, and the apply-time re-plan applies the defaults once the
+// configuration values are known.
+func planNestedDefaults[T attr.Value](ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse, p path.Path, withDefaults func(context.Context, T, *diag.Diagnostics) T) {
+	if req.Plan.Raw.IsNull() {
+		return
+	}
+
+	var config T
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, p, &config)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if valueContainsUnknown(ctx, config) {
+		return
+	}
+
+	var planned T
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, p, &planned)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	planned = withDefaults(ctx, planned, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, p, planned)...)
 }

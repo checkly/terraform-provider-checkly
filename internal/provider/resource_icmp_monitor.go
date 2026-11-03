@@ -293,38 +293,7 @@ func (r *ICMPMonitorResource) Configure(ctx context.Context, req resource.Config
 // request block itself is a list, so its own attributes can keep using schema
 // defaults.
 func (r *ICMPMonitorResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	// A destroy plan has no planned state to default values in.
-	if req.Plan.Raw.IsNull() {
-		return
-	}
-
-	var configRequest types.List
-	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("request"), &configRequest)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	// When the configuration contains unknown values (references to
-	// attributes of resources that have not been created yet), null values
-	// cannot be distinguished from values that will resolve at apply time.
-	// Leave the plan untouched; the apply-time re-plan applies the defaults
-	// once the configuration values are known.
-	if valueContainsUnknown(ctx, configRequest) {
-		return
-	}
-
-	var request types.List
-	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("request"), &request)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	request = icmpMonitorRequestWithDefaults(ctx, request, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("request"), request)...)
+	planNestedDefaults(ctx, req, resp, path.Root("request"), icmpMonitorRequestWithDefaults)
 }
 
 // icmpMonitorRequestWithDefaults returns the request block value with default
@@ -488,10 +457,7 @@ func icmpMonitorFromModel(ctx context.Context, model *ICMPMonitorResourceModel, 
 	}
 
 	// The locations property is serialized even when empty.
-	locations := stringsFromSet(ctx, model.Locations, diags)
-	if locations == nil {
-		locations = []string{}
-	}
+	locations := stringsFromSetOrEmpty(ctx, model.Locations, diags)
 
 	alertSettings := alertSettingsFromObject(ctx, model.AlertSettings, diags)
 

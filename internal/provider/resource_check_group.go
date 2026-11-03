@@ -200,38 +200,7 @@ func (r *CheckGroupResource) Configure(ctx context.Context, req resource.Configu
 // element fully known and stable across plans, which set element correlation
 // requires.
 func (r *CheckGroupResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	// A destroy plan has no planned state to default values in.
-	if req.Plan.Raw.IsNull() {
-		return
-	}
-
-	var configDefaults types.Object
-	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(apiCheckDefaultsAttributeName), &configDefaults)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	// When the configuration contains unknown values (references to
-	// attributes of resources that have not been created yet), null values
-	// cannot be distinguished from values that will resolve at apply time.
-	// Leave the plan untouched; the apply-time re-plan applies the defaults
-	// once the configuration values are known.
-	if valueContainsUnknown(ctx, configDefaults) {
-		return
-	}
-
-	var defaults types.Object
-	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root(apiCheckDefaultsAttributeName), &defaults)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	defaults = apiCheckDefaultsWithDefaults(ctx, defaults, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root(apiCheckDefaultsAttributeName), defaults)...)
+	planNestedDefaults(ctx, req, resp, path.Root(apiCheckDefaultsAttributeName), apiCheckDefaultsWithDefaults)
 }
 
 func (r *CheckGroupResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -405,17 +374,6 @@ func (r *CheckGroupResource) ImportState(ctx context.Context, req resource.Impor
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
 
-// checkGroupStrings ensures a non-nil slice so that the value serializes as
-// an empty JSON array rather than null, which is what the Checkly API
-// expects for unset string collections.
-func checkGroupStrings(values []string) []string {
-	if values == nil {
-		return []string{}
-	}
-
-	return values
-}
-
 // checkGroupFromModel converts the resource data model to its API
 // representation.
 func checkGroupFromModel(ctx context.Context, model *CheckGroupResourceModel, diags *diag.Diagnostics) checkly.Group {
@@ -431,8 +389,8 @@ func checkGroupFromModel(ctx context.Context, model *CheckGroupResourceModel, di
 		Activated:                 model.Activated.ValueBool(),
 		Muted:                     model.Muted.ValueBool(),
 		RunParallel:               model.RunParallel.ValueBool(),
-		Locations:                 checkGroupStrings(stringsFromSet(ctx, model.Locations, diags)),
-		Tags:                      checkGroupStrings(stringsFromSet(ctx, model.Tags, diags)),
+		Locations:                 stringsFromSetOrEmpty(ctx, model.Locations, diags),
+		Tags:                      stringsFromSetOrEmpty(ctx, model.Tags, diags),
 		EnvironmentVariables:      environmentVariablesFromList(ctx, model.EnvironmentVariable, diags),
 		SetupSnippetID:            model.SetupSnippetID.ValueInt64(),
 		TearDownSnippetID:         model.TeardownSnippetID.ValueInt64(),
@@ -451,7 +409,7 @@ func checkGroupFromModel(ctx context.Context, model *CheckGroupResourceModel, di
 		group.RuntimeID = &runtimeID
 	}
 
-	privateLocations := checkGroupStrings(stringsFromSet(ctx, model.PrivateLocations, diags))
+	privateLocations := stringsFromSetOrEmpty(ctx, model.PrivateLocations, diags)
 	group.PrivateLocations = &privateLocations
 
 	return group

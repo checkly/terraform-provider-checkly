@@ -675,13 +675,13 @@ func TestAccCheckGroupV2AlertChannelSubscriptions(t *testing.T) {
 					"enforce_alert_settings.alert_channel_subscription.#",
 					"2",
 				),
-				checkGroupTestCheckAlertChannelSubscription(
+				testCheckAlertChannelSubscription(
 					checkGroupV2Resource,
 					"enforce_alert_settings.alert_channel_subscription",
 					"checkly_alert_channel.email_1",
 					"true",
 				),
-				checkGroupTestCheckAlertChannelSubscription(
+				testCheckAlertChannelSubscription(
 					checkGroupV2Resource,
 					"enforce_alert_settings.alert_channel_subscription",
 					"checkly_alert_channel.email_2",
@@ -752,19 +752,19 @@ func TestAccCheckGroupV2AlertChannelSubscriptions(t *testing.T) {
 					"enforce_alert_settings.alert_channel_subscription.#",
 					"3",
 				),
-				checkGroupTestCheckAlertChannelSubscription(
+				testCheckAlertChannelSubscription(
 					checkGroupV2Resource,
 					"enforce_alert_settings.alert_channel_subscription",
 					"checkly_alert_channel.email_1",
 					"false",
 				),
-				checkGroupTestCheckAlertChannelSubscription(
+				testCheckAlertChannelSubscription(
 					checkGroupV2Resource,
 					"enforce_alert_settings.alert_channel_subscription",
 					"checkly_alert_channel.email_2",
 					"true",
 				),
-				checkGroupTestCheckAlertChannelSubscription(
+				testCheckAlertChannelSubscription(
 					checkGroupV2Resource,
 					"enforce_alert_settings.alert_channel_subscription",
 					"checkly_alert_channel.email_3",
@@ -1566,7 +1566,7 @@ func TestAccCheckGroupV2UnsetSweepAlertChannelSubscriptions(t *testing.T) {
 					"enforce_alert_settings.alert_channel_subscription.#",
 					"1",
 				),
-				checkGroupTestCheckAlertChannelSubscription(
+				testCheckAlertChannelSubscription(
 					checkGroupV2Resource,
 					"enforce_alert_settings.alert_channel_subscription",
 					"checkly_alert_channel.email",

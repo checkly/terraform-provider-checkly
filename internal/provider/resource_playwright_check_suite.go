@@ -567,10 +567,7 @@ func playwrightCheckSuiteFromModel(
 	alertSettings := alertSettingsFromObject(ctx, model.AlertSettings, diags)
 	check.AlertSettings = &alertSettings
 
-	privateLocations := stringsFromSet(ctx, model.PrivateLocations, diags)
-	if privateLocations == nil {
-		privateLocations = []string{}
-	}
+	privateLocations := stringsFromSetOrEmpty(ctx, model.PrivateLocations, diags)
 	check.PrivateLocations = &privateLocations
 
 	if !model.Bundle.IsNull() && !model.Bundle.IsUnknown() {

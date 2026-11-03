@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -323,38 +322,7 @@ func (r *APICheckResource) Configure(ctx context.Context, req resource.Configure
 // instead. Substituting static values keeps every set element fully known
 // and stable across plans, which set element correlation requires.
 func (r *APICheckResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	// A destroy plan has no planned state to default values in.
-	if req.Plan.Raw.IsNull() {
-		return
-	}
-
-	var configRequest types.Set
-	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("request"), &configRequest)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	// When the configuration contains unknown values (references to
-	// attributes of resources that have not been created yet), null values
-	// cannot be distinguished from values that will resolve at apply time.
-	// Leave the plan untouched; the apply-time re-plan applies the defaults
-	// once the configuration values are known.
-	if valueContainsUnknown(ctx, configRequest) {
-		return
-	}
-
-	var request types.Set
-	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("request"), &request)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	request = apiCheckRequestWithDefaults(ctx, request, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("request"), request)...)
+	planNestedDefaults(ctx, req, resp, path.Root("request"), apiCheckRequestWithDefaults)
 }
 
 func (r *APICheckResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -480,101 +448,37 @@ func (r *APICheckResource) ImportState(ctx context.Context, req resource.ImportS
 // attributes that do not apply to API checks (type, script,
 // environment_variable and ssl_check_domain).
 func (r *APICheckResource) MoveState(ctx context.Context) []resource.StateMover {
-	var schemaResp resource.SchemaResponse
-	(&CheckResource{}).Schema(ctx, resource.SchemaRequest{}, &schemaResp)
-	sourceSchema := schemaResp.Schema
-
-	return []resource.StateMover{
-		{
-			SourceSchema: &sourceSchema,
-			StateMover: func(ctx context.Context, req resource.MoveStateRequest, resp *resource.MoveStateResponse) {
-				if !strings.HasSuffix(req.SourceProviderAddress, "/checkly") {
-					return
-				}
-
-				if req.SourceTypeName != "checkly_check" {
-					return
-				}
-
-				sourceState := sdkv2MoveSourceState(ctx, req, sourceSchema, &resp.Diagnostics)
-				if resp.Diagnostics.HasError() {
-					return
-				}
-				if sourceState == nil {
-					resp.Diagnostics.AddError(
-						"Unable to Move Resource State",
-						fmt.Sprintf(
-							"The source %s state could not be decoded. The state may "+
-								"have been created by an older version of the provider. "+
-								"Upgrade the source resource to the current provider "+
-								"version before moving it.",
-							req.SourceTypeName,
-						),
-					)
-					return
-				}
-
-				var source CheckResourceModel
-				resp.Diagnostics.Append(sourceState.Get(ctx, &source)...)
-				if resp.Diagnostics.HasError() {
-					return
-				}
-
-				if source.Type.ValueString() != checkly.TypeAPI {
-					targetResource := "a dedicated resource for this check type"
-					switch source.Type.ValueString() {
-					case checkly.TypeBrowser:
-						targetResource = "the checkly_browser_check resource"
-					case "MULTI_STEP":
-						targetResource = "the checkly_multistep_check resource"
-					}
-					resp.Diagnostics.AddError(
-						"Unable to Move Resource State",
-						fmt.Sprintf(
-							"checkly_api_check can only replace checkly_check resources "+
-								"with type = \"API\", but the source check has type = %q. "+
-								"Use %s instead.",
-							source.Type.ValueString(),
-							targetResource,
-						),
-					)
-					return
-				}
-
-				target := APICheckResourceModel{
-					ID:                       source.ID,
-					Name:                     source.Name,
-					Description:              source.Description,
-					Frequency:                source.Frequency,
-					FrequencyOffset:          source.FrequencyOffset,
-					Activated:                source.Activated,
-					Muted:                    source.Muted,
-					ShouldFail:               source.ShouldFail,
-					RunParallel:              source.RunParallel,
-					Locations:                source.Locations,
-					DegradedResponseTime:     source.DegradedResponseTime,
-					MaxResponseTime:          source.MaxResponseTime,
-					Tags:                     source.Tags,
-					SetupSnippetID:           source.SetupSnippetID,
-					TeardownSnippetID:        source.TeardownSnippetID,
-					LocalSetupScript:         source.LocalSetupScript,
-					LocalTeardownScript:      source.LocalTeardownScript,
-					RuntimeID:                source.RuntimeID,
-					AlertChannelSubscription: source.AlertChannelSubscription,
-					PrivateLocations:         source.PrivateLocations,
-					AlertSettings:            source.AlertSettings,
-					UseGlobalAlertSettings:   source.UseGlobalAlertSettings,
-					Request:                  source.Request,
-					GroupID:                  source.GroupID,
-					GroupOrder:               source.GroupOrder,
-					RetryStrategy:            source.RetryStrategy,
-					TriggerIncident:          source.TriggerIncident,
-				}
-
-				resp.Diagnostics.Append(resp.TargetState.Set(ctx, &target)...)
-			},
-		},
-	}
+	return checkStateMovers(ctx, checkly.TypeAPI, func(source *CheckResourceModel) APICheckResourceModel {
+		return APICheckResourceModel{
+			ID:                       source.ID,
+			Name:                     source.Name,
+			Description:              source.Description,
+			Frequency:                source.Frequency,
+			FrequencyOffset:          source.FrequencyOffset,
+			Activated:                source.Activated,
+			Muted:                    source.Muted,
+			ShouldFail:               source.ShouldFail,
+			RunParallel:              source.RunParallel,
+			Locations:                source.Locations,
+			DegradedResponseTime:     source.DegradedResponseTime,
+			MaxResponseTime:          source.MaxResponseTime,
+			Tags:                     source.Tags,
+			SetupSnippetID:           source.SetupSnippetID,
+			TeardownSnippetID:        source.TeardownSnippetID,
+			LocalSetupScript:         source.LocalSetupScript,
+			LocalTeardownScript:      source.LocalTeardownScript,
+			RuntimeID:                source.RuntimeID,
+			AlertChannelSubscription: source.AlertChannelSubscription,
+			PrivateLocations:         source.PrivateLocations,
+			AlertSettings:            source.AlertSettings,
+			UseGlobalAlertSettings:   source.UseGlobalAlertSettings,
+			Request:                  source.Request,
+			GroupID:                  source.GroupID,
+			GroupOrder:               source.GroupOrder,
+			RetryStrategy:            source.RetryStrategy,
+			TriggerIncident:          source.TriggerIncident,
+		}
+	})
 }
 
 var _ resource.ConfigValidator = (*apiCheckFrequencyOffsetConfigValidator)(nil)
@@ -687,15 +591,9 @@ func apiCheckFromModel(ctx context.Context, model *APICheckResourceModel, diags 
 	}
 
 	// The locations property is serialized even when empty.
-	locations := stringsFromSet(ctx, model.Locations, diags)
-	if locations == nil {
-		locations = []string{}
-	}
+	locations := stringsFromSetOrEmpty(ctx, model.Locations, diags)
 
-	privateLocations := stringsFromSet(ctx, model.PrivateLocations, diags)
-	if privateLocations == nil {
-		privateLocations = []string{}
-	}
+	privateLocations := stringsFromSetOrEmpty(ctx, model.PrivateLocations, diags)
 
 	alertSettings := alertSettingsFromObject(ctx, model.AlertSettings, diags)
 

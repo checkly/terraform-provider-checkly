@@ -490,38 +490,7 @@ func (r *AlertChannelResource) Configure(ctx context.Context, req resource.Confi
 // instead. Substituting static values keeps every set element fully known
 // and stable across plans, which set element correlation requires.
 func (r *AlertChannelResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	// A destroy plan has no planned state to default values in.
-	if req.Plan.Raw.IsNull() {
-		return
-	}
-
-	var configWebhook types.Set
-	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("webhook"), &configWebhook)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	// When the configuration contains unknown values (references to
-	// attributes of resources that have not been created yet), null values
-	// cannot be distinguished from values that will resolve at apply time.
-	// Leave the plan untouched; the apply-time re-plan applies the defaults
-	// once the configuration values are known.
-	if valueContainsUnknown(ctx, configWebhook) {
-		return
-	}
-
-	var webhook types.Set
-	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("webhook"), &webhook)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	webhook = alertChannelWebhookWithDefaults(ctx, webhook, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("webhook"), webhook)...)
+	planNestedDefaults(ctx, req, resp, path.Root("webhook"), alertChannelWebhookWithDefaults)
 }
 
 // alertChannelWebhookWithDefaults returns the webhook block value with
