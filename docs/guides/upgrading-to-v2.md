@@ -28,7 +28,7 @@ Existing state is upgraded automatically: you do not need to import or recreate 
 
 ### Single nested objects are attributes
 
-Objects that a resource can hold at most one of were blocks in v1.x. They are now attributes, which are assigned with `=`:
+Some objects that a resource can hold at most one of, such as `alert_settings` and `retry_strategy`, were blocks in v1.x. They are now attributes, which are assigned with `=`:
 
 ```terraform
 # v1.x
@@ -75,7 +75,7 @@ This affects:
 | `checkly_ssl_monitor` | `alert_settings` (and nested objects as above), `request.client_certificate`, `retry_strategy` |
 | `checkly_playwright_check_suite` | `alert_settings` (and nested objects as above), `runtime` (and its `engine`, `playwright`, `steps`) |
 
-All other blocks, such as `request`, `assertion`, `alert_channel_subscription` and `heartbeat`, keep their block syntax.
+The table lists every such attribute. All other blocks, such as `request`, `assertion`, `alert_channel_subscription` and `heartbeat`, keep their block syntax.
 
 ### Removed attributes
 
@@ -155,7 +155,7 @@ moved {
 
 The per-type check resources have no `double_check`. Before moving a check that sets it, replace it with the equivalent `retry_strategy` shown under [Deprecated attributes](#deprecated-attributes), or the check stops retrying.
 
-When moving an API check from `checkly_check` to `checkly_api_check`, note that the default `degraded_response_time` and `max_response_time` are 5000 and 20000 instead of 15000 and 30000. Set them explicitly to keep the previous thresholds.
+When moving an API check from `checkly_check` to `checkly_api_check`, note that the default `degraded_response_time` and `max_response_time` are 5000 and 20000 instead of 15000 and 30000. Set them explicitly to keep the previous thresholds. Also remove `frequency_offset = 0`: `checkly_api_check` expresses a disabled offset by leaving `frequency_offset` unset and rejects 0.
 
 ### Check groups
 
