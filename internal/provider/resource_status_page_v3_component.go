@@ -219,7 +219,7 @@ func (r *StatusPageV3ComponentResource) readInto(ctx context.Context, model *Sta
 
 	component, err := r.client.GetStatusPageComponentV3(apiCtx, model.StatusPageID.ValueString(), model.ID.ValueString())
 	if err != nil {
-		return isStatusPageV3NotFound(err), err
+		return isNotFoundError(err), err
 	}
 
 	statusPageV3ComponentToModel(component, model)
@@ -345,7 +345,7 @@ func (r *StatusPageV3ComponentResource) Delete(ctx context.Context, req resource
 	err := r.client.DeleteStatusPageComponentV3(apiCtx, state.StatusPageID.ValueString(), state.ID.ValueString())
 	if err != nil {
 		// Already gone, e.g. deleted along with its page.
-		if isStatusPageV3NotFound(err) {
+		if isNotFoundError(err) {
 			return
 		}
 		resp.Diagnostics.AddError(

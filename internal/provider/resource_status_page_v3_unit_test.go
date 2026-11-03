@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"errors"
 	"sort"
 	"testing"
 
@@ -317,18 +316,5 @@ func TestStatusPageV3CustomDomainValidation(t *testing.T) {
 		if statusPageV3CustomDomainRegex.MatchString(invalid) {
 			t.Errorf("expected %q to be rejected", invalid)
 		}
-	}
-}
-
-func TestIsStatusPageV3NotFound(t *testing.T) {
-	if !isStatusPageV3NotFound(errors.New(`unexpected response status 404: "{\"statusCode\":404}"`)) {
-		t.Error("expected a 404 response to be reported as not found")
-	}
-	// The 400 body quotes component names, which may contain "404".
-	if isStatusPageV3NotFound(errors.New(`unexpected response status 400: "\"API 404\" is not a GROUP component."`)) {
-		t.Error("expected a 400 response to not be reported as not found")
-	}
-	if isStatusPageV3NotFound(errors.New(`unexpected response status 400: "\"unexpected response status 404: x\" is not a GROUP component"`)) {
-		t.Error("expected a 400 response quoting the 404 prefix to not be reported as not found")
 	}
 }

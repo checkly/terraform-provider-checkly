@@ -48,13 +48,6 @@ var statusPageV3CustomDomainRegex = regexp.MustCompile(`^$|^[a-z0-9](?:[a-z0-9-]
 // Same format the API accepts: #RGB or #RRGGBB, case-insensitive.
 var statusPageV3HexColorRegex = regexp.MustCompile(`^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$`)
 
-// isStatusPageV3NotFound reports whether a v3 status page API call failed
-// with 404. It matches the SDK's status prefix rather than any "404" in the
-// message, because the quoted response body can echo user-chosen names.
-func isStatusPageV3NotFound(err error) bool {
-	return strings.HasPrefix(err.Error(), "unexpected response status 404:")
-}
-
 // The twelve colors of one theme, in the order the API documents them.
 // `field` points into a group so the same table drives the schema, the
 // expand and the flatten.
@@ -330,7 +323,7 @@ func (r *StatusPageV3Resource) readInto(ctx context.Context, model *StatusPageV3
 
 	statusPage, err := r.client.GetStatusPageV3(apiCtx, model.ID.ValueString())
 	if err != nil {
-		return isStatusPageV3NotFound(err), err
+		return isNotFoundError(err), err
 	}
 
 	statusPageV3ToModel(ctx, statusPage, model, diags)
@@ -462,7 +455,7 @@ func (r *StatusPageV3Resource) Delete(ctx context.Context, req resource.DeleteRe
 	err := r.client.DeleteStatusPageV3(apiCtx, state.ID.ValueString())
 	if err != nil {
 		// Already gone (deleted out-of-band): nothing left to do.
-		if isStatusPageV3NotFound(err) {
+		if isNotFoundError(err) {
 			return
 		}
 		resp.Diagnostics.AddError(

@@ -183,7 +183,7 @@ func (r *StatusPageV3AutomationRuleResource) readInto(ctx context.Context, model
 
 	rule, err := r.client.GetStatusPageAutomationRuleV3(apiCtx, model.StatusPageID.ValueString(), model.ID.ValueString())
 	if err != nil {
-		return isStatusPageV3NotFound(err), err
+		return isNotFoundError(err), err
 	}
 
 	statusPageV3AutomationRuleToModel(ctx, rule, model, diags)
@@ -324,7 +324,7 @@ func (r *StatusPageV3AutomationRuleResource) Delete(ctx context.Context, req res
 	err := r.client.DeleteStatusPageAutomationRuleV3(apiCtx, state.StatusPageID.ValueString(), state.ID.ValueString())
 	if err != nil {
 		// Already gone (deleted along with its page): nothing left to do.
-		if isStatusPageV3NotFound(err) {
+		if isNotFoundError(err) {
 			return
 		}
 		resp.Diagnostics.AddError(
