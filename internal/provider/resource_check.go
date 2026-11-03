@@ -150,7 +150,7 @@ func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 			"Use a `moved` block to migrate existing resources without recreating them. " +
 			"When migrating an API check, note that the default `degraded_response_time` and `max_response_time` " +
 			"changed from 15000/30000 to 5000/20000 — set them explicitly to keep the previous thresholds. " +
-			"API checks no longer accept `environment_variable` entries (they only applied to browser checks).",
+			"`checkly_api_check` has no `environment_variable` blocks, which never had an effect on API checks.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -424,10 +424,12 @@ func (r *CheckResource) ValidateConfig(ctx context.Context, req resource.Validat
 	var checkType types.String
 	var frequency types.Int64
 	var sslCheckDomain types.String
+	var environmentVariables types.List
 
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("type"), &checkType)...)
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(frequencyAttributeName), &frequency)...)
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("ssl_check_domain"), &sslCheckDomain)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(environmentVariableAttributeName), &environmentVariables)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -456,6 +458,18 @@ func (r *CheckResource) ValidateConfig(ctx context.Context, req resource.Validat
 			path.Root("ssl_check_domain"),
 			"Invalid Attribute Combination",
 			"ssl_check_domain is allowed only for Browser checks",
+		)
+	}
+
+	// The API ignores environment variables of API checks, so they would
+	// show as a change in every plan.
+	if checkType.ValueString() == checkly.TypeAPI &&
+		!environmentVariables.IsUnknown() && len(environmentVariables.Elements()) > 0 {
+		resp.Diagnostics.AddAttributeWarning(
+			path.Root(environmentVariableAttributeName),
+			"Environment Variables Have No Effect",
+			"API checks do not use environment variables, so the API does not store them and every plan "+
+				"shows them as a change. Remove the environment_variable blocks from this check.",
 		)
 	}
 }
