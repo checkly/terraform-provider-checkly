@@ -59,13 +59,12 @@ jobs:
       fail-fast: true
       matrix:
         # list whatever Terraform versions here you would like to support
+        # The Plugin Framework needs Terraform 1.0 or later. 1.8 is the
+        # oldest version that can move resources between resource types,
+        # which the moved block tests do.
         terraform:
-#           - '0.12.*'
-#           - '0.13.*'
-#           - '0.14.*'
-          - '0.15.*'
-#           - '1.0.*'
-          - '1.1.*'
+          - '1.8.*'
+          - '1.*'
     steps:
     - name: Set up Go
       uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
