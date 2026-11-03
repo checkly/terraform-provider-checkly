@@ -86,22 +86,6 @@ type TracerouteMonitorRequestModel struct {
 	Assertion      types.Set    `tfsdk:"assertion"`
 }
 
-// TracerouteMonitorAssertionModel describes the request.assertion block data
-// model.
-type TracerouteMonitorAssertionModel struct {
-	Source     types.String `tfsdk:"source"`
-	Property   types.String `tfsdk:"property"`
-	Comparison types.String `tfsdk:"comparison"`
-	Target     types.String `tfsdk:"target"`
-}
-
-var tracerouteMonitorAssertionAttrTypes = map[string]attr.Type{
-	"source":     types.StringType,
-	"property":   types.StringType,
-	"comparison": types.StringType,
-	"target":     types.StringType,
-}
-
 var tracerouteMonitorRequestAttrTypes = map[string]attr.Type{
 	"url":              types.StringType,
 	"protocol":         types.StringType,
@@ -111,7 +95,7 @@ var tracerouteMonitorRequestAttrTypes = map[string]attr.Type{
 	"max_unknown_hops": types.Int64Type,
 	"ptr_lookup":       types.BoolType,
 	"timeout":          types.Int64Type,
-	"assertion":        types.SetType{ElemType: types.ObjectType{AttrTypes: tracerouteMonitorAssertionAttrTypes}},
+	"assertion":        types.SetType{ElemType: types.ObjectType{AttrTypes: assertionAttrTypes}},
 }
 
 func (r *TracerouteMonitorResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -401,7 +385,7 @@ func (r *TracerouteMonitorResource) ModifyPlan(ctx context.Context, req resource
 	// cannot be distinguished from values that will resolve at apply time.
 	// Leave the plan untouched; the apply-time re-plan applies the defaults
 	// once the configuration values are known.
-	if valueContainsUnknown(configRequest) {
+	if valueContainsUnknown(ctx, configRequest) {
 		return
 	}
 
@@ -434,35 +418,10 @@ func tracerouteMonitorRequestWithDefaults(ctx context.Context, list types.List, 
 	}
 
 	for i, model := range models {
-		models[i].Assertion = tracerouteMonitorAssertionsWithDefaults(ctx, model.Assertion, diags)
+		models[i].Assertion = assertionsWithPropertyAndTargetDefaults(ctx, model.Assertion, diags)
 	}
 
 	result, d := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: tracerouteMonitorRequestAttrTypes}, models)
-	diags.Append(d...)
-
-	return result
-}
-
-// tracerouteMonitorAssertionsWithDefaults returns the request.assertion block
-// value with default values substituted for null and unknown
-// optional+computed attributes.
-func tracerouteMonitorAssertionsWithDefaults(ctx context.Context, set types.Set, diags *diag.Diagnostics) types.Set {
-	if set.IsNull() || set.IsUnknown() {
-		return set
-	}
-
-	var models []TracerouteMonitorAssertionModel
-	diags.Append(set.ElementsAs(ctx, &models, false)...)
-	if diags.HasError() {
-		return set
-	}
-
-	for i, model := range models {
-		models[i].Property = stringOrDefault(model.Property, "")
-		models[i].Target = stringOrDefault(model.Target, "")
-	}
-
-	result, d := types.SetValueFrom(ctx, types.ObjectType{AttrTypes: tracerouteMonitorAssertionAttrTypes}, models)
 	diags.Append(d...)
 
 	return result
@@ -672,10 +631,10 @@ func tracerouteMonitorToModel(ctx context.Context, c *checkly.TracerouteMonitor,
 	model.Muted = types.BoolValue(c.Muted)
 	model.ShouldFail = types.BoolValue(c.ShouldFail)
 	model.RunParallel = types.BoolValue(c.RunParallel)
-	model.Locations = tracerouteMonitorStringSet(ctx, c.Locations, model.Locations, diags)
+	model.Locations = stringSetFromAPINullIfUnset(ctx, c.Locations, model.Locations, diags)
 	model.DegradedResponseTime = types.Int64Value(int64(c.DegradedResponseTime))
 	model.MaxResponseTime = types.Int64Value(int64(c.MaxResponseTime))
-	model.Tags = tracerouteMonitorStringSet(ctx, c.Tags, model.Tags, diags)
+	model.Tags = stringSetFromAPINullIfUnset(ctx, c.Tags, model.Tags, diags)
 
 	// The API does not track a runtime ID for monitors using the default
 	// runtime. A prior empty string is preserved because it converts to the
@@ -699,18 +658,6 @@ func tracerouteMonitorToModel(ctx context.Context, c *checkly.TracerouteMonitor,
 	model.Request = tracerouteMonitorRequestToList(ctx, c.Request, diags)
 	model.AlertChannelSubscription = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, diags)
 	model.TriggerIncident = triggerIncidentToSet(ctx, c.TriggerIncident, diags)
-}
-
-// tracerouteMonitorStringSet converts a string slice from the API to a set
-// value. An empty slice resolves to null when the prior value is null, so
-// that an optional set that is absent from the configuration stays null in
-// state.
-func tracerouteMonitorStringSet(ctx context.Context, values []string, prior types.Set, diags *diag.Diagnostics) types.Set {
-	if len(values) == 0 && (prior.IsNull() || prior.IsUnknown()) {
-		return types.SetNull(types.StringType)
-	}
-
-	return setFromStrings(ctx, values, diags)
 }
 
 // tracerouteMonitorRequestFromList converts the request block value to its
@@ -757,7 +704,7 @@ func tracerouteMonitorRequestFromModel(ctx context.Context, model TracerouteMoni
 		MaxUnknownHops: int(model.MaxUnknownHops.ValueInt64()),
 		PtrLookup:      &ptrLookup,
 		Timeout:        int(model.Timeout.ValueInt64()),
-		Assertions:     tracerouteMonitorAssertionsFromSet(ctx, model.Assertion, diags),
+		Assertions:     assertionsFromSet(ctx, model.Assertion, diags),
 	}
 
 	if model.Port.IsNull() || model.Port.IsUnknown() {
@@ -799,56 +746,10 @@ func tracerouteMonitorRequestToList(ctx context.Context, r checkly.TracerouteReq
 			MaxUnknownHops: types.Int64Value(int64(r.MaxUnknownHops)),
 			PtrLookup:      types.BoolValue(ptrLookup),
 			Timeout:        types.Int64Value(int64(r.Timeout)),
-			Assertion:      tracerouteMonitorAssertionsToSet(ctx, r.Assertions, diags),
+			Assertion:      assertionsToSet(ctx, r.Assertions, diags),
 		},
 	})
 	diags.Append(d...)
 
 	return list
-}
-
-// tracerouteMonitorAssertionsFromSet converts the request.assertion block
-// value to its API representation.
-func tracerouteMonitorAssertionsFromSet(ctx context.Context, set types.Set, diags *diag.Diagnostics) []checkly.Assertion {
-	assertions := []checkly.Assertion{}
-
-	if set.IsNull() || set.IsUnknown() {
-		return assertions
-	}
-
-	var models []TracerouteMonitorAssertionModel
-	diags.Append(set.ElementsAs(ctx, &models, false)...)
-	if diags.HasError() {
-		return assertions
-	}
-
-	for _, model := range models {
-		assertions = append(assertions, checkly.Assertion{
-			Source:     model.Source.ValueString(),
-			Property:   model.Property.ValueString(),
-			Comparison: model.Comparison.ValueString(),
-			Target:     model.Target.ValueString(),
-		})
-	}
-
-	return assertions
-}
-
-// tracerouteMonitorAssertionsToSet converts the API representation of
-// assertions to the request.assertion block value.
-func tracerouteMonitorAssertionsToSet(ctx context.Context, assertions []checkly.Assertion, diags *diag.Diagnostics) types.Set {
-	models := make([]TracerouteMonitorAssertionModel, len(assertions))
-	for i, assertion := range assertions {
-		models[i] = TracerouteMonitorAssertionModel{
-			Source:     types.StringValue(assertion.Source),
-			Property:   types.StringValue(assertion.Property),
-			Comparison: types.StringValue(assertion.Comparison),
-			Target:     types.StringValue(assertion.Target),
-		}
-	}
-
-	set, d := types.SetValueFrom(ctx, types.ObjectType{AttrTypes: tracerouteMonitorAssertionAttrTypes}, models)
-	diags.Append(d...)
-
-	return set
 }

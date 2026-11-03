@@ -742,14 +742,14 @@ func playwrightCheckSuiteToModel(
 	model.GroupID = types.Int64Value(check.GroupID)
 	model.GroupOrder = types.Int64Value(int64(check.GroupOrder))
 
-	model.Locations = playwrightCheckSuiteSetPreservingNull(ctx, check.Locations, model.Locations, diags)
-	model.Tags = playwrightCheckSuiteSetPreservingNull(ctx, check.Tags, model.Tags, diags)
+	model.Locations = stringSetFromAPIEmptyIfUnknown(ctx, check.Locations, model.Locations, diags)
+	model.Tags = stringSetFromAPIEmptyIfUnknown(ctx, check.Tags, model.Tags, diags)
 
 	var privateLocations []string
 	if check.PrivateLocations != nil {
 		privateLocations = *check.PrivateLocations
 	}
-	model.PrivateLocations = playwrightCheckSuiteSetPreservingNull(ctx, privateLocations, model.PrivateLocations, diags)
+	model.PrivateLocations = stringSetFromAPIEmptyIfUnknown(ctx, privateLocations, model.PrivateLocations, diags)
 
 	if len(check.EnvironmentVariables) == 0 && model.EnvironmentVariable.IsNull() {
 		// Keep null; an absent block list stays absent.
@@ -784,22 +784,6 @@ func playwrightCheckSuiteToModel(
 	// kept as-is.
 
 	model.Runtime = playwrightCheckSuiteRuntimeFromAPI(ctx, check, model.Runtime, diags)
-}
-
-// playwrightCheckSuiteSetPreservingNull converts a string slice from the API
-// to a set value. When the API tracks no values and the prior value was
-// null, null is preserved so that an unset attribute stays unset.
-func playwrightCheckSuiteSetPreservingNull(
-	ctx context.Context,
-	values []string,
-	prior types.Set,
-	diags *diag.Diagnostics,
-) types.Set {
-	if len(values) == 0 && prior.IsNull() {
-		return prior
-	}
-
-	return setFromStrings(ctx, values, diags)
 }
 
 // playwrightCheckSuiteRuntimeFromAPI converts the runtime-related fields of

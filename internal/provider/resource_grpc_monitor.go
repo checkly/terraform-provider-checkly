@@ -98,24 +98,9 @@ type GRPCMonitorMetadataModel struct {
 	Value types.String `tfsdk:"value"`
 }
 
-// GRPCMonitorAssertionModel describes the request.assertion block data model.
-type GRPCMonitorAssertionModel struct {
-	Source     types.String `tfsdk:"source"`
-	Property   types.String `tfsdk:"property"`
-	Comparison types.String `tfsdk:"comparison"`
-	Target     types.String `tfsdk:"target"`
-}
-
 var grpcMonitorMetadataAttrTypes = map[string]attr.Type{
 	"key":   types.StringType,
 	"value": types.StringType,
-}
-
-var grpcMonitorAssertionAttrTypes = map[string]attr.Type{
-	"source":     types.StringType,
-	"property":   types.StringType,
-	"comparison": types.StringType,
-	"target":     types.StringType,
 }
 
 var grpcMonitorRequestAttrTypes = map[string]attr.Type{
@@ -134,7 +119,7 @@ var grpcMonitorRequestAttrTypes = map[string]attr.Type{
 	"method":             types.StringType,
 	"message":            types.StringType,
 	"metadata":           types.SetType{ElemType: types.ObjectType{AttrTypes: grpcMonitorMetadataAttrTypes}},
-	"assertion":          types.SetType{ElemType: types.ObjectType{AttrTypes: grpcMonitorAssertionAttrTypes}},
+	"assertion":          types.SetType{ElemType: types.ObjectType{AttrTypes: assertionAttrTypes}},
 }
 
 func (r *GRPCMonitorResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -627,7 +612,7 @@ func (r *GRPCMonitorResource) ModifyPlan(ctx context.Context, req resource.Modif
 	// cannot be distinguished from values that will resolve at apply time.
 	// Leave the plan untouched; the apply-time re-plan applies the defaults
 	// once the configuration values are known.
-	if valueContainsUnknown(configRequest) {
+	if valueContainsUnknown(ctx, configRequest) {
 		return
 	}
 
@@ -661,7 +646,7 @@ func grpcMonitorRequestWithDefaults(ctx context.Context, list types.List, diags 
 
 	for i, model := range models {
 		models[i].Metadata = grpcMonitorMetadataWithDefaults(ctx, model.Metadata, diags)
-		models[i].Assertion = grpcMonitorAssertionsWithDefaults(ctx, model.Assertion, diags)
+		models[i].Assertion = assertionsWithPropertyAndTargetDefaults(ctx, model.Assertion, diags)
 	}
 
 	result, d := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: grpcMonitorRequestAttrTypes}, models)
@@ -689,31 +674,6 @@ func grpcMonitorMetadataWithDefaults(ctx context.Context, set types.Set, diags *
 	}
 
 	result, d := types.SetValueFrom(ctx, types.ObjectType{AttrTypes: grpcMonitorMetadataAttrTypes}, models)
-	diags.Append(d...)
-
-	return result
-}
-
-// grpcMonitorAssertionsWithDefaults returns the request.assertion block value
-// with default values substituted for null and unknown optional+computed
-// attributes.
-func grpcMonitorAssertionsWithDefaults(ctx context.Context, set types.Set, diags *diag.Diagnostics) types.Set {
-	if set.IsNull() || set.IsUnknown() {
-		return set
-	}
-
-	var models []GRPCMonitorAssertionModel
-	diags.Append(set.ElementsAs(ctx, &models, false)...)
-	if diags.HasError() {
-		return set
-	}
-
-	for i, model := range models {
-		models[i].Property = stringOrDefault(model.Property, "")
-		models[i].Target = stringOrDefault(model.Target, "")
-	}
-
-	result, d := types.SetValueFrom(ctx, types.ObjectType{AttrTypes: grpcMonitorAssertionAttrTypes}, models)
 	diags.Append(d...)
 
 	return result
@@ -926,10 +886,10 @@ func grpcMonitorToModel(ctx context.Context, c *checkly.GRPCMonitor, model *GRPC
 	model.Muted = types.BoolValue(c.Muted)
 	model.ShouldFail = types.BoolValue(c.ShouldFail)
 	model.RunParallel = types.BoolValue(c.RunParallel)
-	model.Locations = grpcMonitorStringSet(ctx, c.Locations, model.Locations, diags)
+	model.Locations = stringSetFromAPINullIfUnset(ctx, c.Locations, model.Locations, diags)
 	model.DegradedResponseTime = types.Int64Value(int64(c.DegradedResponseTime))
 	model.MaxResponseTime = types.Int64Value(int64(c.MaxResponseTime))
-	model.Tags = grpcMonitorStringSet(ctx, c.Tags, model.Tags, diags)
+	model.Tags = stringSetFromAPINullIfUnset(ctx, c.Tags, model.Tags, diags)
 
 	// The API does not track a runtime ID for monitors using the default
 	// runtime. A prior empty string is preserved because it converts to the
@@ -944,7 +904,7 @@ func grpcMonitorToModel(ctx context.Context, c *checkly.GRPCMonitor, model *GRPC
 	if c.PrivateLocations != nil {
 		privateLocations = *c.PrivateLocations
 	}
-	model.PrivateLocations = grpcMonitorStringSet(ctx, privateLocations, model.PrivateLocations, diags)
+	model.PrivateLocations = stringSetFromAPINullIfUnset(ctx, privateLocations, model.PrivateLocations, diags)
 
 	if c.AlertSettings != nil {
 		model.AlertSettings = alertSettingsToObject(ctx, *c.AlertSettings, model.AlertSettings, diags)
@@ -959,17 +919,6 @@ func grpcMonitorToModel(ctx context.Context, c *checkly.GRPCMonitor, model *GRPC
 	model.Request = grpcMonitorRequestToList(ctx, c.Request, diags)
 	model.AlertChannelSubscription = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, diags)
 	model.TriggerIncident = triggerIncidentToSet(ctx, c.TriggerIncident, diags)
-}
-
-// grpcMonitorStringSet converts a string slice from the API to a set value.
-// An empty slice resolves to null when the prior value is null, so that an
-// optional set that is absent from the configuration stays null in state.
-func grpcMonitorStringSet(ctx context.Context, values []string, prior types.Set, diags *diag.Diagnostics) types.Set {
-	if len(values) == 0 && (prior.IsNull() || prior.IsUnknown()) {
-		return types.SetNull(types.StringType)
-	}
-
-	return setFromStrings(ctx, values, diags)
 }
 
 // grpcMonitorRequestFromList converts the request block value to its API
@@ -1020,7 +969,7 @@ func grpcMonitorRequestFromModel(ctx context.Context, model GRPCMonitorRequestMo
 		IPFamily:   model.IPFamily.ValueString(),
 		SkipSSL:    model.SkipSSL.ValueBool(),
 		Timeout:    int(model.Timeout.ValueInt64()),
-		Assertions: grpcMonitorAssertionsFromSet(ctx, model.Assertion, diags),
+		Assertions: assertionsFromSet(ctx, model.Assertion, diags),
 		GRPCConfig: config,
 	}
 }
@@ -1045,7 +994,7 @@ func grpcMonitorRequestToList(ctx context.Context, r checkly.GRPCRequest, diags 
 			Method:            types.StringValue(r.GRPCConfig.Method),
 			Message:           types.StringValue(r.GRPCConfig.Message),
 			Metadata:          grpcMonitorMetadataToSet(ctx, r.GRPCConfig.Metadata, diags),
-			Assertion:         grpcMonitorAssertionsToSet(ctx, r.Assertions, diags),
+			Assertion:         assertionsToSet(ctx, r.Assertions, diags),
 		},
 	})
 	diags.Append(d...)
@@ -1105,52 +1054,6 @@ func grpcMonitorMetadataToSet(ctx context.Context, metadata []checkly.GRPCMetada
 	}
 
 	set, d := types.SetValueFrom(ctx, types.ObjectType{AttrTypes: grpcMonitorMetadataAttrTypes}, models)
-	diags.Append(d...)
-
-	return set
-}
-
-// grpcMonitorAssertionsFromSet converts the request.assertion block value to
-// its API representation.
-func grpcMonitorAssertionsFromSet(ctx context.Context, set types.Set, diags *diag.Diagnostics) []checkly.Assertion {
-	assertions := []checkly.Assertion{}
-
-	if set.IsNull() || set.IsUnknown() {
-		return assertions
-	}
-
-	var models []GRPCMonitorAssertionModel
-	diags.Append(set.ElementsAs(ctx, &models, false)...)
-	if diags.HasError() {
-		return assertions
-	}
-
-	for _, model := range models {
-		assertions = append(assertions, checkly.Assertion{
-			Source:     model.Source.ValueString(),
-			Property:   model.Property.ValueString(),
-			Comparison: model.Comparison.ValueString(),
-			Target:     model.Target.ValueString(),
-		})
-	}
-
-	return assertions
-}
-
-// grpcMonitorAssertionsToSet converts the API representation of assertions to
-// the request.assertion block value.
-func grpcMonitorAssertionsToSet(ctx context.Context, assertions []checkly.Assertion, diags *diag.Diagnostics) types.Set {
-	models := make([]GRPCMonitorAssertionModel, len(assertions))
-	for i, assertion := range assertions {
-		models[i] = GRPCMonitorAssertionModel{
-			Source:     types.StringValue(assertion.Source),
-			Property:   types.StringValue(assertion.Property),
-			Comparison: types.StringValue(assertion.Comparison),
-			Target:     types.StringValue(assertion.Target),
-		}
-	}
-
-	set, d := types.SetValueFrom(ctx, types.ObjectType{AttrTypes: grpcMonitorAssertionAttrTypes}, models)
 	diags.Append(d...)
 
 	return set

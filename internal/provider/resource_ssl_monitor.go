@@ -127,14 +127,6 @@ type SSLMonitorClientCertificateModel struct {
 	ClientCertificateID types.String `tfsdk:"client_certificate_id"`
 }
 
-// SSLMonitorAssertionModel describes the request.assertion block data model.
-type SSLMonitorAssertionModel struct {
-	Source     types.String `tfsdk:"source"`
-	Property   types.String `tfsdk:"property"`
-	Comparison types.String `tfsdk:"comparison"`
-	Target     types.String `tfsdk:"target"`
-}
-
 var sslMonitorBaselineTLSRuleAttrTypes = map[string]attr.Type{
 	"value":    types.StringType,
 	"severity": types.StringType,
@@ -167,13 +159,6 @@ var sslMonitorClientCertificateAttrTypes = map[string]attr.Type{
 	"client_certificate_id": types.StringType,
 }
 
-var sslMonitorAssertionAttrTypes = map[string]attr.Type{
-	"source":     types.StringType,
-	"property":   types.StringType,
-	"comparison": types.StringType,
-	"target":     types.StringType,
-}
-
 var sslMonitorRequestAttrTypes = map[string]attr.Type{
 	"hostname":                 types.StringType,
 	"port":                     types.Int64Type,
@@ -184,7 +169,7 @@ var sslMonitorRequestAttrTypes = map[string]attr.Type{
 	"alert_days_before_expiry": types.Int64Type,
 	"security_baseline":        types.ListType{ElemType: types.ObjectType{AttrTypes: sslMonitorSecurityBaselineAttrTypes}},
 	"client_certificate":       types.ObjectType{AttrTypes: sslMonitorClientCertificateAttrTypes},
-	"assertion":                types.SetType{ElemType: types.ObjectType{AttrTypes: sslMonitorAssertionAttrTypes}},
+	"assertion":                types.SetType{ElemType: types.ObjectType{AttrTypes: assertionAttrTypes}},
 }
 
 // sslMonitorBaselineSeverityAttribute returns the severity attribute for a
@@ -595,7 +580,7 @@ func (r *SSLMonitorResource) ModifyPlan(ctx context.Context, req resource.Modify
 	// cannot be distinguished from values that will resolve at apply time.
 	// Leave the plan untouched; the apply-time re-plan applies the defaults
 	// once the configuration values are known.
-	if valueContainsUnknown(configRequest) {
+	if valueContainsUnknown(ctx, configRequest) {
 		return
 	}
 
@@ -628,35 +613,10 @@ func sslMonitorRequestWithDefaults(ctx context.Context, list types.List, diags *
 	}
 
 	for i, model := range models {
-		models[i].Assertion = sslMonitorAssertionsWithDefaults(ctx, model.Assertion, diags)
+		models[i].Assertion = assertionsWithPropertyAndTargetDefaults(ctx, model.Assertion, diags)
 	}
 
 	result, d := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: sslMonitorRequestAttrTypes}, models)
-	diags.Append(d...)
-
-	return result
-}
-
-// sslMonitorAssertionsWithDefaults returns the request.assertion block value
-// with default values substituted for null and unknown optional+computed
-// attributes.
-func sslMonitorAssertionsWithDefaults(ctx context.Context, set types.Set, diags *diag.Diagnostics) types.Set {
-	if set.IsNull() || set.IsUnknown() {
-		return set
-	}
-
-	var models []SSLMonitorAssertionModel
-	diags.Append(set.ElementsAs(ctx, &models, false)...)
-	if diags.HasError() {
-		return set
-	}
-
-	for i, model := range models {
-		models[i].Property = stringOrDefault(model.Property, "")
-		models[i].Target = stringOrDefault(model.Target, "")
-	}
-
-	result, d := types.SetValueFrom(ctx, types.ObjectType{AttrTypes: sslMonitorAssertionAttrTypes}, models)
 	diags.Append(d...)
 
 	return result
@@ -869,10 +829,10 @@ func sslMonitorToModel(ctx context.Context, c *checkly.SSLMonitor, model *SSLMon
 	model.Muted = types.BoolValue(c.Muted)
 	model.ShouldFail = types.BoolValue(c.ShouldFail)
 	model.RunParallel = types.BoolValue(c.RunParallel)
-	model.Locations = sslMonitorStringSet(ctx, c.Locations, model.Locations, diags)
+	model.Locations = stringSetFromAPINullIfUnset(ctx, c.Locations, model.Locations, diags)
 	model.DegradedResponseTime = types.Int64Value(int64(c.DegradedResponseTime))
 	model.MaxResponseTime = types.Int64Value(int64(c.MaxResponseTime))
-	model.Tags = sslMonitorStringSet(ctx, c.Tags, model.Tags, diags)
+	model.Tags = stringSetFromAPINullIfUnset(ctx, c.Tags, model.Tags, diags)
 
 	// The API does not track a runtime ID for monitors using the default
 	// runtime. A prior empty string is preserved because it converts to the
@@ -887,7 +847,7 @@ func sslMonitorToModel(ctx context.Context, c *checkly.SSLMonitor, model *SSLMon
 	if c.PrivateLocations != nil {
 		privateLocations = *c.PrivateLocations
 	}
-	model.PrivateLocations = sslMonitorStringSet(ctx, privateLocations, model.PrivateLocations, diags)
+	model.PrivateLocations = stringSetFromAPINullIfUnset(ctx, privateLocations, model.PrivateLocations, diags)
 
 	if c.AlertSettings != nil {
 		model.AlertSettings = alertSettingsToObject(ctx, *c.AlertSettings, model.AlertSettings, diags)
@@ -902,17 +862,6 @@ func sslMonitorToModel(ctx context.Context, c *checkly.SSLMonitor, model *SSLMon
 	model.Request = sslMonitorRequestToList(ctx, c.Request, model.Request, diags)
 	model.AlertChannelSubscription = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, diags)
 	model.TriggerIncident = triggerIncidentToSet(ctx, c.TriggerIncident, diags)
-}
-
-// sslMonitorStringSet converts a string slice from the API to a set value. An
-// empty slice resolves to null when the prior value is null, so that an
-// optional set that is absent from the configuration stays null in state.
-func sslMonitorStringSet(ctx context.Context, values []string, prior types.Set, diags *diag.Diagnostics) types.Set {
-	if len(values) == 0 && (prior.IsNull() || prior.IsUnknown()) {
-		return types.SetNull(types.StringType)
-	}
-
-	return setFromStrings(ctx, values, diags)
 }
 
 // sslMonitorRequestFromList converts the request block value to its API
@@ -952,7 +901,7 @@ func sslMonitorRequestFromList(ctx context.Context, list types.List, diags *diag
 
 	request := checkly.SSLRequest{
 		SSLConfig:  config,
-		Assertions: sslMonitorAssertionsFromSet(ctx, model.Assertion, diags),
+		Assertions: assertionsFromSet(ctx, model.Assertion, diags),
 	}
 
 	// client_certificate.mode maps to sslConfig.clientCertificateMode
@@ -1002,7 +951,7 @@ func sslMonitorRequestToList(ctx context.Context, r checkly.SSLRequest, prior ty
 			AlertDaysBeforeExpiry: types.Int64Value(int64(config.AlertDaysBeforeExpiry)),
 			SecurityBaseline:      sslMonitorSecurityBaselineToList(ctx, config.SecurityBaseline, priorRequest.SecurityBaseline, diags),
 			ClientCertificate:     sslMonitorClientCertificateToObject(ctx, r, priorRequest.ClientCertificate, diags),
-			Assertion:             sslMonitorAssertionsToSet(ctx, r.Assertions, diags),
+			Assertion:             assertionsToSet(ctx, r.Assertions, diags),
 		},
 	})
 	diags.Append(d...)
@@ -1245,50 +1194,4 @@ func sslMonitorSeverityRuleToList(remote *checkly.SSLBaselineSeverityRule, prior
 			"severity": types.StringValue(remote.Severity),
 		}),
 	})
-}
-
-// sslMonitorAssertionsFromSet converts the request.assertion block value to
-// its API representation.
-func sslMonitorAssertionsFromSet(ctx context.Context, set types.Set, diags *diag.Diagnostics) []checkly.Assertion {
-	assertions := []checkly.Assertion{}
-
-	if set.IsNull() || set.IsUnknown() {
-		return assertions
-	}
-
-	var models []SSLMonitorAssertionModel
-	diags.Append(set.ElementsAs(ctx, &models, false)...)
-	if diags.HasError() {
-		return assertions
-	}
-
-	for _, model := range models {
-		assertions = append(assertions, checkly.Assertion{
-			Source:     model.Source.ValueString(),
-			Property:   model.Property.ValueString(),
-			Comparison: model.Comparison.ValueString(),
-			Target:     model.Target.ValueString(),
-		})
-	}
-
-	return assertions
-}
-
-// sslMonitorAssertionsToSet converts the API representation of assertions to
-// the request.assertion block value.
-func sslMonitorAssertionsToSet(ctx context.Context, assertions []checkly.Assertion, diags *diag.Diagnostics) types.Set {
-	models := make([]SSLMonitorAssertionModel, len(assertions))
-	for i, assertion := range assertions {
-		models[i] = SSLMonitorAssertionModel{
-			Source:     types.StringValue(assertion.Source),
-			Property:   types.StringValue(assertion.Property),
-			Comparison: types.StringValue(assertion.Comparison),
-			Target:     types.StringValue(assertion.Target),
-		}
-	}
-
-	set, d := types.SetValueFrom(ctx, types.ObjectType{AttrTypes: sslMonitorAssertionAttrTypes}, models)
-	diags.Append(d...)
-
-	return set
 }

@@ -28,40 +28,12 @@ type apiCheckDefaultsModel struct {
 	BasicAuth       types.Object `tfsdk:"basic_auth"`
 }
 
-// apiCheckDefaultsAssertionModel describes the
-// api_check_defaults.assertion attribute data model.
-type apiCheckDefaultsAssertionModel struct {
-	Source     types.String `tfsdk:"source"`
-	Property   types.String `tfsdk:"property"`
-	Comparison types.String `tfsdk:"comparison"`
-	Target     types.String `tfsdk:"target"`
-}
-
-// apiCheckDefaultsBasicAuthModel describes the
-// api_check_defaults.basic_auth attribute data model.
-type apiCheckDefaultsBasicAuthModel struct {
-	Username types.String `tfsdk:"username"`
-	Password types.String `tfsdk:"password"`
-}
-
-var apiCheckDefaultsAssertionAttrTypes = map[string]attr.Type{
-	"source":     types.StringType,
-	"property":   types.StringType,
-	"comparison": types.StringType,
-	"target":     types.StringType,
-}
-
-var apiCheckDefaultsBasicAuthAttrTypes = map[string]attr.Type{
-	"username": types.StringType,
-	"password": types.StringType,
-}
-
 var apiCheckDefaultsAttrTypes = map[string]attr.Type{
 	"url":              types.StringType,
 	"headers":          types.MapType{ElemType: types.StringType},
 	"query_parameters": types.MapType{ElemType: types.StringType},
-	"assertion":        types.SetType{ElemType: types.ObjectType{AttrTypes: apiCheckDefaultsAssertionAttrTypes}},
-	"basic_auth":       types.ObjectType{AttrTypes: apiCheckDefaultsBasicAuthAttrTypes},
+	"assertion":        types.SetType{ElemType: types.ObjectType{AttrTypes: assertionAttrTypes}},
+	"basic_auth":       types.ObjectType{AttrTypes: apiCheckBasicAuthAttrTypes},
 }
 
 // apiCheckDefaultsDefaultObject returns the canonical attribute value for a
@@ -74,8 +46,8 @@ func apiCheckDefaultsDefaultObject() types.Object {
 		"url":              types.StringValue(""),
 		"headers":          types.MapValueMust(types.StringType, map[string]attr.Value{}),
 		"query_parameters": types.MapValueMust(types.StringType, map[string]attr.Value{}),
-		"assertion":        types.SetValueMust(types.ObjectType{AttrTypes: apiCheckDefaultsAssertionAttrTypes}, []attr.Value{}),
-		"basic_auth":       types.ObjectNull(apiCheckDefaultsBasicAuthAttrTypes),
+		"assertion":        types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{}),
+		"basic_auth":       types.ObjectNull(apiCheckBasicAuthAttrTypes),
 	})
 }
 
@@ -110,7 +82,7 @@ func makeAPICheckDefaultsAttributeSchema() schema.SingleNestedAttribute {
 			"assertion": schema.SetNestedAttribute{
 				Optional:    true,
 				Computed:    true,
-				Default:     setdefault.StaticValue(types.SetValueMust(types.ObjectType{AttrTypes: apiCheckDefaultsAssertionAttrTypes}, []attr.Value{})),
+				Default:     setdefault.StaticValue(types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{})),
 				Description: "Default assertions for API checks in this group.",
 				NestedObject: schema.NestedAttributeObject{
 					// Attributes nested in this set attribute must not use
@@ -177,33 +149,9 @@ func apiCheckDefaultsWithDefaults(ctx context.Context, obj types.Object, diags *
 		return obj
 	}
 
-	model.Assertion = apiCheckDefaultsAssertionsWithDefaults(ctx, model.Assertion, diags)
+	model.Assertion = assertionsWithPropertyDefault(ctx, model.Assertion, diags)
 
 	result, d := types.ObjectValueFrom(ctx, apiCheckDefaultsAttrTypes, model)
-	diags.Append(d...)
-
-	return result
-}
-
-// apiCheckDefaultsAssertionsWithDefaults returns the
-// api_check_defaults.assertion attribute value with default values
-// substituted for null and unknown optional+computed attributes.
-func apiCheckDefaultsAssertionsWithDefaults(ctx context.Context, set types.Set, diags *diag.Diagnostics) types.Set {
-	if set.IsNull() || set.IsUnknown() {
-		return set
-	}
-
-	var models []apiCheckDefaultsAssertionModel
-	diags.Append(set.ElementsAs(ctx, &models, false)...)
-	if diags.HasError() {
-		return set
-	}
-
-	for i, model := range models {
-		models[i].Property = stringOrDefault(model.Property, "")
-	}
-
-	result, d := types.SetValueFrom(ctx, types.ObjectType{AttrTypes: apiCheckDefaultsAssertionAttrTypes}, models)
 	diags.Append(d...)
 
 	return result
@@ -249,51 +197,6 @@ func apiCheckDefaultsMapFromKeyValues(keyValues []checkly.KeyValue) types.Map {
 	return types.MapValueMust(types.StringType, elements)
 }
 
-// apiCheckDefaultsAssertionsFromSet converts the assertion attribute value to
-// its API representation. Null and unknown sets convert to nil.
-func apiCheckDefaultsAssertionsFromSet(ctx context.Context, set types.Set, diags *diag.Diagnostics) []checkly.Assertion {
-	if set.IsNull() || set.IsUnknown() {
-		return nil
-	}
-
-	var models []apiCheckDefaultsAssertionModel
-	diags.Append(set.ElementsAs(ctx, &models, false)...)
-	if diags.HasError() {
-		return nil
-	}
-
-	assertions := make([]checkly.Assertion, len(models))
-	for i, model := range models {
-		assertions[i] = checkly.Assertion{
-			Source:     model.Source.ValueString(),
-			Property:   model.Property.ValueString(),
-			Comparison: model.Comparison.ValueString(),
-			Target:     model.Target.ValueString(),
-		}
-	}
-
-	return assertions
-}
-
-// apiCheckDefaultsAssertionsToSet converts the API representation of
-// assertions to the assertion attribute value.
-func apiCheckDefaultsAssertionsToSet(ctx context.Context, assertions []checkly.Assertion, diags *diag.Diagnostics) types.Set {
-	models := make([]apiCheckDefaultsAssertionModel, len(assertions))
-	for i, assertion := range assertions {
-		models[i] = apiCheckDefaultsAssertionModel{
-			Source:     types.StringValue(assertion.Source),
-			Property:   types.StringValue(assertion.Property),
-			Comparison: types.StringValue(assertion.Comparison),
-			Target:     types.StringValue(assertion.Target),
-		}
-	}
-
-	set, d := types.SetValueFrom(ctx, types.ObjectType{AttrTypes: apiCheckDefaultsAssertionAttrTypes}, models)
-	diags.Append(d...)
-
-	return set
-}
-
 // apiCheckDefaultsFromObject converts the api_check_defaults attribute value
 // to its API representation. Null and unknown values convert to empty API
 // check defaults.
@@ -312,11 +215,11 @@ func apiCheckDefaultsFromObject(ctx context.Context, obj types.Object, diags *di
 		BaseURL:         model.URL.ValueString(),
 		Headers:         apiCheckDefaultsKeyValuesFromMap(ctx, model.Headers, diags),
 		QueryParameters: apiCheckDefaultsKeyValuesFromMap(ctx, model.QueryParameters, diags),
-		Assertions:      apiCheckDefaultsAssertionsFromSet(ctx, model.Assertion, diags),
+		Assertions:      assertionsFromSet(ctx, model.Assertion, diags),
 	}
 
 	if !model.BasicAuth.IsNull() && !model.BasicAuth.IsUnknown() {
-		var basicAuth apiCheckDefaultsBasicAuthModel
+		var basicAuth apiCheckBasicAuthModel
 		diags.Append(model.BasicAuth.As(ctx, &basicAuth, basetypes.ObjectAsOptions{})...)
 		defaults.BasicAuth = checkly.BasicAuth{
 			Username: basicAuth.Username.ValueString(),
@@ -336,10 +239,10 @@ func apiCheckDefaultsFromObject(ctx context.Context, obj types.Object, diags *di
 // or previously stored attribute value) is preserved when it also holds empty
 // credentials, so that the resulting value stays consistent with the plan.
 func apiCheckDefaultsToObject(ctx context.Context, defaults checkly.APICheckDefaults, prior types.Object, diags *diag.Diagnostics) types.Object {
-	basicAuth := types.ObjectNull(apiCheckDefaultsBasicAuthAttrTypes)
+	basicAuth := types.ObjectNull(apiCheckBasicAuthAttrTypes)
 
 	if defaults.BasicAuth.Username != "" || defaults.BasicAuth.Password != "" {
-		basicAuth = types.ObjectValueMust(apiCheckDefaultsBasicAuthAttrTypes, map[string]attr.Value{
+		basicAuth = types.ObjectValueMust(apiCheckBasicAuthAttrTypes, map[string]attr.Value{
 			"username": types.StringValue(defaults.BasicAuth.Username),
 			"password": types.StringValue(defaults.BasicAuth.Password),
 		})
@@ -357,7 +260,7 @@ func apiCheckDefaultsToObject(ctx context.Context, defaults checkly.APICheckDefa
 		"url":              types.StringValue(defaults.BaseURL),
 		"headers":          apiCheckDefaultsMapFromKeyValues(defaults.Headers),
 		"query_parameters": apiCheckDefaultsMapFromKeyValues(defaults.QueryParameters),
-		"assertion":        apiCheckDefaultsAssertionsToSet(ctx, defaults.Assertions, diags),
+		"assertion":        assertionsToSet(ctx, defaults.Assertions, diags),
 		"basic_auth":       basicAuth,
 	})
 	diags.Append(d...)

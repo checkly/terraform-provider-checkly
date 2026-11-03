@@ -400,11 +400,7 @@ func heartbeatMonitorToModel(ctx context.Context, c *checkly.HeartbeatMonitor, m
 
 	// The API reports no tags as an empty array. Preserve a prior null value
 	// so that an unset attribute stays unset.
-	if len(c.Tags) == 0 && (model.Tags.IsNull() || model.Tags.IsUnknown()) {
-		model.Tags = types.SetNull(types.StringType)
-	} else {
-		model.Tags = setFromStrings(ctx, c.Tags, diags)
-	}
+	model.Tags = stringSetFromAPINullIfUnset(ctx, c.Tags, model.Tags, diags)
 
 	model.AlertSettings = alertSettingsToObject(ctx, c.AlertSettings, model.AlertSettings, diags)
 	model.UseGlobalAlertSettings = types.BoolValue(c.UseGlobalAlertSettings)

@@ -501,7 +501,7 @@ func (r *AlertChannelResource) ModifyPlan(ctx context.Context, req resource.Modi
 	// cannot be distinguished from values that will resolve at apply time.
 	// Leave the plan untouched; the apply-time re-plan applies the defaults
 	// once the configuration values are known.
-	if valueContainsUnknown(configWebhook) {
+	if valueContainsUnknown(ctx, configWebhook) {
 		return
 	}
 

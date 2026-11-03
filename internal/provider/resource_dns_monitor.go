@@ -82,24 +82,9 @@ type DNSMonitorNameServerModel struct {
 	Port types.Int64  `tfsdk:"port"`
 }
 
-// DNSMonitorAssertionModel describes the request.assertion block data model.
-type DNSMonitorAssertionModel struct {
-	Source     types.String `tfsdk:"source"`
-	Property   types.String `tfsdk:"property"`
-	Comparison types.String `tfsdk:"comparison"`
-	Target     types.String `tfsdk:"target"`
-}
-
 var dnsMonitorNameServerAttrTypes = map[string]attr.Type{
 	"host": types.StringType,
 	"port": types.Int64Type,
-}
-
-var dnsMonitorAssertionAttrTypes = map[string]attr.Type{
-	"source":     types.StringType,
-	"property":   types.StringType,
-	"comparison": types.StringType,
-	"target":     types.StringType,
 }
 
 var dnsMonitorRequestAttrTypes = map[string]attr.Type{
@@ -107,7 +92,7 @@ var dnsMonitorRequestAttrTypes = map[string]attr.Type{
 	"query":       types.StringType,
 	"protocol":    types.StringType,
 	"name_server": types.ListType{ElemType: types.ObjectType{AttrTypes: dnsMonitorNameServerAttrTypes}},
-	"assertion":   types.SetType{ElemType: types.ObjectType{AttrTypes: dnsMonitorAssertionAttrTypes}},
+	"assertion":   types.SetType{ElemType: types.ObjectType{AttrTypes: assertionAttrTypes}},
 }
 
 func (r *DNSMonitorResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -362,7 +347,7 @@ func (r *DNSMonitorResource) ModifyPlan(ctx context.Context, req resource.Modify
 	// cannot be distinguished from values that will resolve at apply time.
 	// Leave the plan untouched; the apply-time re-plan applies the defaults
 	// once the configuration values are known.
-	if valueContainsUnknown(configRequest) {
+	if valueContainsUnknown(ctx, configRequest) {
 		return
 	}
 
@@ -395,34 +380,10 @@ func dnsMonitorRequestWithDefaults(ctx context.Context, list types.List, diags *
 	}
 
 	for i, model := range models {
-		models[i].Assertions = dnsMonitorAssertionsWithDefaults(ctx, model.Assertions, diags)
+		models[i].Assertions = assertionsWithPropertyDefault(ctx, model.Assertions, diags)
 	}
 
 	result, d := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: dnsMonitorRequestAttrTypes}, models)
-	diags.Append(d...)
-
-	return result
-}
-
-// dnsMonitorAssertionsWithDefaults returns the request.assertion block value
-// with default values substituted for null and unknown optional+computed
-// attributes.
-func dnsMonitorAssertionsWithDefaults(ctx context.Context, set types.Set, diags *diag.Diagnostics) types.Set {
-	if set.IsNull() || set.IsUnknown() {
-		return set
-	}
-
-	var models []DNSMonitorAssertionModel
-	diags.Append(set.ElementsAs(ctx, &models, false)...)
-	if diags.HasError() {
-		return set
-	}
-
-	for i, model := range models {
-		models[i].Property = stringOrDefault(model.Property, "")
-	}
-
-	result, d := types.SetValueFrom(ctx, types.ObjectType{AttrTypes: dnsMonitorAssertionAttrTypes}, models)
 	diags.Append(d...)
 
 	return result
@@ -626,10 +587,10 @@ func dnsMonitorToModel(ctx context.Context, c *checkly.DNSMonitor, model *DNSMon
 	model.Activated = types.BoolValue(c.Activated)
 	model.Muted = types.BoolValue(c.Muted)
 	model.RunParallel = types.BoolValue(c.RunParallel)
-	model.Locations = dnsMonitorStringSet(ctx, c.Locations, model.Locations, diags)
+	model.Locations = stringSetFromAPINullIfUnset(ctx, c.Locations, model.Locations, diags)
 	model.DegradedResponseTime = types.Int64Value(int64(c.DegradedResponseTime))
 	model.MaxResponseTime = types.Int64Value(int64(c.MaxResponseTime))
-	model.Tags = dnsMonitorStringSet(ctx, c.Tags, model.Tags, diags)
+	model.Tags = stringSetFromAPINullIfUnset(ctx, c.Tags, model.Tags, diags)
 
 	if c.AlertSettings != nil {
 		model.AlertSettings = alertSettingsToObject(ctx, *c.AlertSettings, model.AlertSettings, diags)
@@ -644,17 +605,6 @@ func dnsMonitorToModel(ctx context.Context, c *checkly.DNSMonitor, model *DNSMon
 	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, diags)
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, model.RetryStrategy, diags)
 	model.TriggerIncident = triggerIncidentToSet(ctx, c.TriggerIncident, diags)
-}
-
-// dnsMonitorStringSet converts a string slice from the API to a set value.
-// An empty slice resolves to null when the prior value is null, so that an
-// optional set that is absent from the configuration stays null in state.
-func dnsMonitorStringSet(ctx context.Context, values []string, prior types.Set, diags *diag.Diagnostics) types.Set {
-	if len(values) == 0 && (prior.IsNull() || prior.IsUnknown()) {
-		return types.SetNull(types.StringType)
-	}
-
-	return setFromStrings(ctx, values, diags)
 }
 
 // dnsMonitorRequestFromList converts the request block value to its API
@@ -680,7 +630,7 @@ func dnsMonitorRequestFromList(ctx context.Context, list types.List, diags *diag
 		NameServer: nameServer.Host.ValueString(),
 		Port:       int(nameServer.Port.ValueInt64()),
 		Protocol:   model.Protocol.ValueString(),
-		Assertions: dnsMonitorAssertionsFromSet(ctx, model.Assertions, diags),
+		Assertions: assertionsFromSet(ctx, model.Assertions, diags),
 	}
 }
 
@@ -693,7 +643,7 @@ func dnsMonitorRequestToList(ctx context.Context, r checkly.DNSRequest, diags *d
 			Query:      types.StringValue(r.Query),
 			Protocol:   types.StringValue(r.Protocol),
 			NameServer: dnsMonitorNameServerToList(ctx, r.NameServer, r.Port, diags),
-			Assertions: dnsMonitorAssertionsToSet(ctx, r.Assertions, diags),
+			Assertions: assertionsToSet(ctx, r.Assertions, diags),
 		},
 	})
 	diags.Append(d...)
@@ -775,50 +725,4 @@ func (v dnsMonitorNameServerValidator) ValidateObject(ctx context.Context, req v
 				"Remove the empty block to use the default name server.",
 		)
 	}
-}
-
-// dnsMonitorAssertionsFromSet converts the request.assertion block value to
-// its API representation.
-func dnsMonitorAssertionsFromSet(ctx context.Context, set types.Set, diags *diag.Diagnostics) []checkly.Assertion {
-	assertions := []checkly.Assertion{}
-
-	if set.IsNull() || set.IsUnknown() {
-		return assertions
-	}
-
-	var models []DNSMonitorAssertionModel
-	diags.Append(set.ElementsAs(ctx, &models, false)...)
-	if diags.HasError() {
-		return assertions
-	}
-
-	for _, model := range models {
-		assertions = append(assertions, checkly.Assertion{
-			Source:     model.Source.ValueString(),
-			Property:   model.Property.ValueString(),
-			Comparison: model.Comparison.ValueString(),
-			Target:     model.Target.ValueString(),
-		})
-	}
-
-	return assertions
-}
-
-// dnsMonitorAssertionsToSet converts the API representation of assertions to
-// the request.assertion block value.
-func dnsMonitorAssertionsToSet(ctx context.Context, assertions []checkly.Assertion, diags *diag.Diagnostics) types.Set {
-	models := make([]DNSMonitorAssertionModel, len(assertions))
-	for i, assertion := range assertions {
-		models[i] = DNSMonitorAssertionModel{
-			Source:     types.StringValue(assertion.Source),
-			Property:   types.StringValue(assertion.Property),
-			Comparison: types.StringValue(assertion.Comparison),
-			Target:     types.StringValue(assertion.Target),
-		}
-	}
-
-	set, d := types.SetValueFrom(ctx, types.ObjectType{AttrTypes: dnsMonitorAssertionAttrTypes}, models)
-	diags.Append(d...)
-
-	return set
 }

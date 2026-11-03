@@ -127,7 +127,7 @@ func TestGRPCMonitorRequestFromModelDropsInapplicableFields(t *testing.T) {
 			Method:            types.StringValue("a.B/C"),
 			Message:           types.StringValue(""),
 			Metadata:          types.SetNull(types.ObjectType{AttrTypes: grpcMonitorMetadataAttrTypes}),
-			Assertion:         types.SetNull(types.ObjectType{AttrTypes: grpcMonitorAssertionAttrTypes}),
+			Assertion:         types.SetNull(types.ObjectType{AttrTypes: assertionAttrTypes}),
 		}
 	}
 

@@ -80,26 +80,11 @@ type TCPMonitorRequestModel struct {
 	IPFamily  types.String `tfsdk:"ip_family"`
 }
 
-// TCPMonitorAssertionModel describes the request.assertion block data model.
-type TCPMonitorAssertionModel struct {
-	Source     types.String `tfsdk:"source"`
-	Property   types.String `tfsdk:"property"`
-	Comparison types.String `tfsdk:"comparison"`
-	Target     types.String `tfsdk:"target"`
-}
-
-var tcpMonitorAssertionAttrTypes = map[string]attr.Type{
-	"source":     types.StringType,
-	"property":   types.StringType,
-	"comparison": types.StringType,
-	"target":     types.StringType,
-}
-
 var tcpMonitorRequestAttrTypes = map[string]attr.Type{
 	"hostname":  types.StringType,
 	"port":      types.Int64Type,
 	"data":      types.StringType,
-	"assertion": types.SetType{ElemType: types.ObjectType{AttrTypes: tcpMonitorAssertionAttrTypes}},
+	"assertion": types.SetType{ElemType: types.ObjectType{AttrTypes: assertionAttrTypes}},
 	"ip_family": types.StringType,
 }
 
@@ -336,7 +321,7 @@ func (r *TCPMonitorResource) ModifyPlan(ctx context.Context, req resource.Modify
 	// cannot be distinguished from values that will resolve at apply time.
 	// Leave the plan untouched; the apply-time re-plan applies the defaults
 	// once the configuration values are known.
-	if valueContainsUnknown(configRequest) {
+	if valueContainsUnknown(ctx, configRequest) {
 		return
 	}
 
@@ -370,35 +355,10 @@ func tcpMonitorRequestWithDefaults(ctx context.Context, set types.Set, diags *di
 	for i, model := range models {
 		models[i].Data = stringOrDefault(model.Data, "")
 		models[i].IPFamily = stringOrDefault(model.IPFamily, "IPv4")
-		models[i].Assertion = tcpMonitorAssertionsWithDefaults(ctx, model.Assertion, diags)
+		models[i].Assertion = assertionsWithPropertyAndTargetDefaults(ctx, model.Assertion, diags)
 	}
 
 	result, d := types.SetValueFrom(ctx, types.ObjectType{AttrTypes: tcpMonitorRequestAttrTypes}, models)
-	diags.Append(d...)
-
-	return result
-}
-
-// tcpMonitorAssertionsWithDefaults returns the request.assertion block value
-// with default values substituted for null and unknown optional+computed
-// attributes.
-func tcpMonitorAssertionsWithDefaults(ctx context.Context, set types.Set, diags *diag.Diagnostics) types.Set {
-	if set.IsNull() || set.IsUnknown() {
-		return set
-	}
-
-	var models []TCPMonitorAssertionModel
-	diags.Append(set.ElementsAs(ctx, &models, false)...)
-	if diags.HasError() {
-		return set
-	}
-
-	for i, model := range models {
-		models[i].Property = stringOrDefault(model.Property, "")
-		models[i].Target = stringOrDefault(model.Target, "")
-	}
-
-	result, d := types.SetValueFrom(ctx, types.ObjectType{AttrTypes: tcpMonitorAssertionAttrTypes}, models)
 	diags.Append(d...)
 
 	return result
@@ -660,22 +620,14 @@ func tcpMonitorToModel(ctx context.Context, c *checkly.TCPMonitor, model *TCPMon
 
 	// The API reports no locations as an empty array. Preserve a prior null
 	// value so that an unset attribute stays unset.
-	if len(c.Locations) == 0 && (model.Locations.IsNull() || model.Locations.IsUnknown()) {
-		model.Locations = types.SetNull(types.StringType)
-	} else {
-		model.Locations = setFromStrings(ctx, c.Locations, diags)
-	}
+	model.Locations = stringSetFromAPINullIfUnset(ctx, c.Locations, model.Locations, diags)
 
 	model.DegradedResponseTime = types.Int64Value(int64(c.DegradedResponseTime))
 	model.MaxResponseTime = types.Int64Value(int64(c.MaxResponseTime))
 
 	// The API reports no tags as an empty array. Preserve a prior null value
 	// so that an unset attribute stays unset.
-	if len(c.Tags) == 0 && (model.Tags.IsNull() || model.Tags.IsUnknown()) {
-		model.Tags = types.SetNull(types.StringType)
-	} else {
-		model.Tags = setFromStrings(ctx, c.Tags, diags)
-	}
+	model.Tags = stringSetFromAPINullIfUnset(ctx, c.Tags, model.Tags, diags)
 
 	// The API does not track a runtime ID for monitors using the default
 	// runtime. A prior empty string is preserved because it converts to the
@@ -690,11 +642,7 @@ func tcpMonitorToModel(ctx context.Context, c *checkly.TCPMonitor, model *TCPMon
 	if c.PrivateLocations != nil {
 		privateLocations = *c.PrivateLocations
 	}
-	if len(privateLocations) == 0 && (model.PrivateLocations.IsNull() || model.PrivateLocations.IsUnknown()) {
-		model.PrivateLocations = types.SetNull(types.StringType)
-	} else {
-		model.PrivateLocations = setFromStrings(ctx, privateLocations, diags)
-	}
+	model.PrivateLocations = stringSetFromAPINullIfUnset(ctx, privateLocations, model.PrivateLocations, diags)
 
 	if c.AlertSettings != nil {
 		model.AlertSettings = alertSettingsToObject(ctx, *c.AlertSettings, model.AlertSettings, diags)
@@ -730,7 +678,7 @@ func tcpMonitorRequestFromSet(ctx context.Context, set types.Set, diags *diag.Di
 		Hostname:   model.Hostname.ValueString(),
 		Port:       uint16(model.Port.ValueInt64()),
 		Data:       model.Data.ValueString(),
-		Assertions: tcpMonitorAssertionsFromSet(ctx, model.Assertion, diags),
+		Assertions: assertionsFromSet(ctx, model.Assertion, diags),
 		IPFamily:   model.IPFamily.ValueString(),
 	}
 }
@@ -744,61 +692,12 @@ func tcpMonitorRequestToSet(ctx context.Context, request checkly.TCPRequest, dia
 		"hostname":  types.StringValue(request.Hostname),
 		"port":      types.Int64Value(int64(request.Port)),
 		"data":      types.StringValue(request.Data),
-		"assertion": tcpMonitorAssertionsToSet(ctx, request.Assertions, diags),
+		"assertion": assertionsToSet(ctx, request.Assertions, diags),
 		"ip_family": types.StringValue(request.IPFamily),
 	})
 	diags.Append(d...)
 
 	set, d := types.SetValue(elementType, []attr.Value{obj})
-	diags.Append(d...)
-
-	return set
-}
-
-// tcpMonitorAssertionsFromSet converts the request.assertion block value to
-// its API representation.
-func tcpMonitorAssertionsFromSet(ctx context.Context, set types.Set, diags *diag.Diagnostics) []checkly.Assertion {
-	if set.IsNull() || set.IsUnknown() {
-		return nil
-	}
-
-	var models []TCPMonitorAssertionModel
-	diags.Append(set.ElementsAs(ctx, &models, false)...)
-	if diags.HasError() {
-		return nil
-	}
-
-	assertions := make([]checkly.Assertion, len(models))
-	for i, model := range models {
-		assertions[i] = checkly.Assertion{
-			Source:     model.Source.ValueString(),
-			Property:   model.Property.ValueString(),
-			Comparison: model.Comparison.ValueString(),
-			Target:     model.Target.ValueString(),
-		}
-	}
-
-	return assertions
-}
-
-// tcpMonitorAssertionsToSet converts the API representation of assertions to
-// the request.assertion block value.
-func tcpMonitorAssertionsToSet(ctx context.Context, assertions []checkly.Assertion, diags *diag.Diagnostics) types.Set {
-	elementType := types.ObjectType{AttrTypes: tcpMonitorAssertionAttrTypes}
-
-	values := make([]attr.Value, len(assertions))
-	for i, assertion := range assertions {
-		obj, d := types.ObjectValue(tcpMonitorAssertionAttrTypes, map[string]attr.Value{
-			"source":     types.StringValue(assertion.Source),
-			"property":   types.StringValue(assertion.Property),
-			"comparison": types.StringValue(assertion.Comparison),
-			"target":     types.StringValue(assertion.Target),
-		})
-		diags.Append(d...)
-		values[i] = obj
-	}
-
-	set, d := types.SetValue(elementType, values)
 	diags.Append(d...)
 
 	return set

@@ -66,17 +66,6 @@ type BrowserCheckResourceModel struct {
 	TriggerIncident          types.Set    `tfsdk:"trigger_incident"`
 }
 
-// BrowserCheckDependencyModel describes the dependency block data model.
-type BrowserCheckDependencyModel struct {
-	Path    types.String `tfsdk:"path"`
-	Content types.String `tfsdk:"content"`
-}
-
-var browserCheckDependencyAttrTypes = map[string]attr.Type{
-	"path":    types.StringType,
-	"content": types.StringType,
-}
-
 func (r *BrowserCheckResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_browser_check"
 }
@@ -414,7 +403,7 @@ func (r *BrowserCheckResource) MoveState(ctx context.Context) []resource.StateMo
 					Locations:                source.Locations,
 					Script:                   source.Script,
 					ScriptPath:               types.StringNull(),
-					Dependency:               types.ListValueMust(types.ObjectType{AttrTypes: browserCheckDependencyAttrTypes}, []attr.Value{}),
+					Dependency:               types.ListValueMust(types.ObjectType{AttrTypes: scriptDependencyAttrTypes}, []attr.Value{}),
 					EnvironmentVariable:      source.EnvironmentVariable,
 					Tags:                     source.Tags,
 					SSLCheckDomain:           source.SSLCheckDomain,
@@ -485,7 +474,7 @@ func browserCheckFromModel(ctx context.Context, model *BrowserCheckResourceModel
 		Locations:                 locations,
 		Script:                    model.Script.ValueString(),
 		ScriptPath:                optionalStringPointer(model.ScriptPath),
-		Dependencies:              browserCheckDependenciesFromList(ctx, model.Dependency, diags),
+		Dependencies:              scriptDependenciesFromList(ctx, model.Dependency, diags),
 		EnvironmentVariables:      environmentVariablesFromList(ctx, model.EnvironmentVariable, diags),
 		SSLCheckDomain:            model.SSLCheckDomain.ValueString(),
 		Tags:                      stringsFromSet(ctx, model.Tags, diags),
@@ -547,7 +536,7 @@ func browserCheckToModel(ctx context.Context, c *checkly.BrowserCheck, model *Br
 	model.Muted = types.BoolValue(c.Muted)
 	model.ShouldFail = types.BoolValue(c.ShouldFail)
 	model.RunParallel = types.BoolValue(c.RunParallel)
-	model.Locations = browserCheckStringSetFromAPI(ctx, c.Locations, prior.Locations, diags)
+	model.Locations = stringSetFromAPIEmptyIfUnknown(ctx, c.Locations, prior.Locations, diags)
 	model.Script = types.StringValue(c.Script)
 
 	// An empty script path is not tracked by the Checkly API. A configured
@@ -561,9 +550,9 @@ func browserCheckToModel(ctx context.Context, c *checkly.BrowserCheck, model *Br
 		model.ScriptPath = types.StringNull()
 	}
 
-	model.Dependency = browserCheckDependenciesToList(ctx, c.Dependencies, prior.Dependency, diags)
+	model.Dependency = scriptDependenciesToList(ctx, c.Dependencies, prior.Dependency, diags)
 	model.EnvironmentVariable = environmentVariablesToList(ctx, c.EnvironmentVariables, prior.EnvironmentVariable, diags)
-	model.Tags = browserCheckStringSetFromAPI(ctx, c.Tags, prior.Tags, diags)
+	model.Tags = stringSetFromAPIEmptyIfUnknown(ctx, c.Tags, prior.Tags, diags)
 
 	// An empty SSL check domain is not tracked by the Checkly API. A
 	// configured empty value is preserved so that it does not drift to null.
@@ -601,91 +590,4 @@ func browserCheckToModel(ctx context.Context, c *checkly.BrowserCheck, model *Br
 	model.GroupOrder = types.Int64Value(int64(c.GroupOrder))
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, prior.RetryStrategy, diags)
 	model.TriggerIncident = triggerIncidentToSet(ctx, c.TriggerIncident, diags)
-}
-
-// browserCheckStringSetFromAPI converts a string slice from the API to a set
-// of strings. An empty value converts to null when the prior value is null,
-// so that an omitted collection does not cause drift against an empty API
-// response.
-func browserCheckStringSetFromAPI(ctx context.Context, values []string, prior types.Set, diags *diag.Diagnostics) types.Set {
-	if len(values) == 0 && prior.IsNull() {
-		return prior
-	}
-
-	return setFromStrings(ctx, values, diags)
-}
-
-// browserCheckDependenciesFromList converts the dependency block value to its
-// API representation. Null, unknown and empty values convert to nil.
-func browserCheckDependenciesFromList(ctx context.Context, list types.List, diags *diag.Diagnostics) []checkly.ScriptDependency {
-	if list.IsNull() || list.IsUnknown() {
-		return nil
-	}
-
-	var models []BrowserCheckDependencyModel
-	diags.Append(list.ElementsAs(ctx, &models, false)...)
-	if diags.HasError() || len(models) == 0 {
-		return nil
-	}
-
-	deps := make([]checkly.ScriptDependency, len(models))
-	for i, model := range models {
-		deps[i] = checkly.ScriptDependency{
-			Path:    model.Path.ValueString(),
-			Content: model.Content.ValueString(),
-		}
-	}
-
-	return deps
-}
-
-// browserCheckDependenciesToList converts the API representation of script
-// dependencies to the dependency block value. The API does not preserve the
-// configured order of dependencies, so the prior list's order (matched by
-// path) is kept where possible; dependencies without a prior entry are
-// appended in API order. An unconfigured block is an empty list, so no
-// dependencies convert to an empty list.
-func browserCheckDependenciesToList(ctx context.Context, deps []checkly.ScriptDependency, prior types.List, diags *diag.Diagnostics) types.List {
-	elementType := types.ObjectType{AttrTypes: browserCheckDependencyAttrTypes}
-
-	byPath := make(map[string]checkly.ScriptDependency, len(deps))
-	for _, dep := range deps {
-		byPath[dep.Path] = dep
-	}
-
-	models := make([]BrowserCheckDependencyModel, 0, len(deps))
-	used := make(map[string]bool, len(deps))
-
-	if !prior.IsNull() && !prior.IsUnknown() {
-		var priorModels []BrowserCheckDependencyModel
-		diags.Append(prior.ElementsAs(ctx, &priorModels, false)...)
-		if diags.HasError() {
-			return types.ListNull(elementType)
-		}
-
-		for _, priorModel := range priorModels {
-			path := priorModel.Path.ValueString()
-			if dep, ok := byPath[path]; ok && !used[path] {
-				models = append(models, BrowserCheckDependencyModel{
-					Path:    types.StringValue(dep.Path),
-					Content: types.StringValue(dep.Content),
-				})
-				used[path] = true
-			}
-		}
-	}
-
-	for _, dep := range deps {
-		if !used[dep.Path] {
-			models = append(models, BrowserCheckDependencyModel{
-				Path:    types.StringValue(dep.Path),
-				Content: types.StringValue(dep.Content),
-			})
-		}
-	}
-
-	list, d := types.ListValueFrom(ctx, elementType, models)
-	diags.Append(d...)
-
-	return list
 }

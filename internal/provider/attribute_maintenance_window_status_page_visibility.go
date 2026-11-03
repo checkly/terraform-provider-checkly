@@ -202,8 +202,8 @@ func maintenanceWindowStatusPageVisibilityToList(ctx context.Context, v checkly.
 			AutoStart:             types.BoolValue(v.AutoStart == nil || *v.AutoStart),
 			AutoEnd:               types.BoolValue(v.AutoEnd == nil || *v.AutoEnd),
 			ShowAffectedServices:  types.BoolValue(v.ShowAffectedServices == nil || *v.ShowAffectedServices),
-			StatusPageIDs:         maintenanceWindowStringsToSet(ctx, v.StatusPageIDs, priorModel.StatusPageIDs, diags),
-			ServiceIDs:            maintenanceWindowStringsToSet(ctx, v.ServiceIDs, priorModel.ServiceIDs, diags),
+			StatusPageIDs:         stringSetFromAPINullIfUnset(ctx, v.StatusPageIDs, priorModel.StatusPageIDs, diags),
+			ServiceIDs:            stringSetFromAPINullIfUnset(ctx, v.ServiceIDs, priorModel.ServiceIDs, diags),
 		},
 	})
 	diags.Append(d...)

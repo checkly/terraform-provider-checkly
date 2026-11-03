@@ -74,26 +74,11 @@ type ICMPMonitorRequestModel struct {
 	Assertions types.Set    `tfsdk:"assertion"`
 }
 
-// ICMPMonitorAssertionModel describes the request.assertion block data model.
-type ICMPMonitorAssertionModel struct {
-	Source     types.String `tfsdk:"source"`
-	Property   types.String `tfsdk:"property"`
-	Comparison types.String `tfsdk:"comparison"`
-	Target     types.String `tfsdk:"target"`
-}
-
-var icmpMonitorAssertionAttrTypes = map[string]attr.Type{
-	"source":     types.StringType,
-	"property":   types.StringType,
-	"comparison": types.StringType,
-	"target":     types.StringType,
-}
-
 var icmpMonitorRequestAttrTypes = map[string]attr.Type{
 	"hostname":   types.StringType,
 	"ip_family":  types.StringType,
 	"ping_count": types.Int64Type,
-	"assertion":  types.SetType{ElemType: types.ObjectType{AttrTypes: icmpMonitorAssertionAttrTypes}},
+	"assertion":  types.SetType{ElemType: types.ObjectType{AttrTypes: assertionAttrTypes}},
 }
 
 func (r *ICMPMonitorResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -324,7 +309,7 @@ func (r *ICMPMonitorResource) ModifyPlan(ctx context.Context, req resource.Modif
 	// cannot be distinguished from values that will resolve at apply time.
 	// Leave the plan untouched; the apply-time re-plan applies the defaults
 	// once the configuration values are known.
-	if valueContainsUnknown(configRequest) {
+	if valueContainsUnknown(ctx, configRequest) {
 		return
 	}
 
@@ -357,34 +342,10 @@ func icmpMonitorRequestWithDefaults(ctx context.Context, list types.List, diags 
 	}
 
 	for i, model := range models {
-		models[i].Assertions = icmpMonitorAssertionsWithDefaults(ctx, model.Assertions, diags)
+		models[i].Assertions = assertionsWithPropertyDefault(ctx, model.Assertions, diags)
 	}
 
 	result, d := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: icmpMonitorRequestAttrTypes}, models)
-	diags.Append(d...)
-
-	return result
-}
-
-// icmpMonitorAssertionsWithDefaults returns the request.assertion block value
-// with default values substituted for null and unknown optional+computed
-// attributes.
-func icmpMonitorAssertionsWithDefaults(ctx context.Context, set types.Set, diags *diag.Diagnostics) types.Set {
-	if set.IsNull() || set.IsUnknown() {
-		return set
-	}
-
-	var models []ICMPMonitorAssertionModel
-	diags.Append(set.ElementsAs(ctx, &models, false)...)
-	if diags.HasError() {
-		return set
-	}
-
-	for i, model := range models {
-		models[i].Property = stringOrDefault(model.Property, "")
-	}
-
-	result, d := types.SetValueFrom(ctx, types.ObjectType{AttrTypes: icmpMonitorAssertionAttrTypes}, models)
 	diags.Append(d...)
 
 	return result
@@ -588,10 +549,10 @@ func icmpMonitorToModel(ctx context.Context, c *checkly.ICMPMonitor, model *ICMP
 	model.Activated = types.BoolValue(c.Activated)
 	model.Muted = types.BoolValue(c.Muted)
 	model.RunParallel = types.BoolValue(c.RunParallel)
-	model.Locations = icmpMonitorStringSet(ctx, c.Locations, model.Locations, diags)
+	model.Locations = stringSetFromAPINullIfUnset(ctx, c.Locations, model.Locations, diags)
 	model.DegradedPacketLossThreshold = types.Int64Value(int64(c.DegradedPacketLossThreshold))
 	model.MaxPacketLossThreshold = types.Int64Value(int64(c.MaxPacketLossThreshold))
-	model.Tags = icmpMonitorStringSet(ctx, c.Tags, model.Tags, diags)
+	model.Tags = stringSetFromAPINullIfUnset(ctx, c.Tags, model.Tags, diags)
 
 	if c.AlertSettings != nil {
 		model.AlertSettings = alertSettingsToObject(ctx, *c.AlertSettings, model.AlertSettings, diags)
@@ -606,17 +567,6 @@ func icmpMonitorToModel(ctx context.Context, c *checkly.ICMPMonitor, model *ICMP
 	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, diags)
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, model.RetryStrategy, diags)
 	model.TriggerIncident = triggerIncidentToSet(ctx, c.TriggerIncident, diags)
-}
-
-// icmpMonitorStringSet converts a string slice from the API to a set value.
-// An empty slice resolves to null when the prior value is null, so that an
-// optional set that is absent from the configuration stays null in state.
-func icmpMonitorStringSet(ctx context.Context, values []string, prior types.Set, diags *diag.Diagnostics) types.Set {
-	if len(values) == 0 && (prior.IsNull() || prior.IsUnknown()) {
-		return types.SetNull(types.StringType)
-	}
-
-	return setFromStrings(ctx, values, diags)
 }
 
 // icmpMonitorRequestFromList converts the request block value to its API
@@ -638,7 +588,7 @@ func icmpMonitorRequestFromList(ctx context.Context, list types.List, diags *dia
 		Hostname:   model.Hostname.ValueString(),
 		IPFamily:   model.IPFamily.ValueString(),
 		PingCount:  int(model.PingCount.ValueInt64()),
-		Assertions: icmpMonitorAssertionsFromSet(ctx, model.Assertions, diags),
+		Assertions: assertionsFromSet(ctx, model.Assertions, diags),
 	}
 }
 
@@ -650,56 +600,10 @@ func icmpMonitorRequestToList(ctx context.Context, r checkly.ICMPRequest, diags 
 			Hostname:   types.StringValue(r.Hostname),
 			IPFamily:   types.StringValue(r.IPFamily),
 			PingCount:  types.Int64Value(int64(r.PingCount)),
-			Assertions: icmpMonitorAssertionsToSet(ctx, r.Assertions, diags),
+			Assertions: assertionsToSet(ctx, r.Assertions, diags),
 		},
 	})
 	diags.Append(d...)
 
 	return list
-}
-
-// icmpMonitorAssertionsFromSet converts the request.assertion block value to
-// its API representation.
-func icmpMonitorAssertionsFromSet(ctx context.Context, set types.Set, diags *diag.Diagnostics) []checkly.Assertion {
-	assertions := []checkly.Assertion{}
-
-	if set.IsNull() || set.IsUnknown() {
-		return assertions
-	}
-
-	var models []ICMPMonitorAssertionModel
-	diags.Append(set.ElementsAs(ctx, &models, false)...)
-	if diags.HasError() {
-		return assertions
-	}
-
-	for _, model := range models {
-		assertions = append(assertions, checkly.Assertion{
-			Source:     model.Source.ValueString(),
-			Property:   model.Property.ValueString(),
-			Comparison: model.Comparison.ValueString(),
-			Target:     model.Target.ValueString(),
-		})
-	}
-
-	return assertions
-}
-
-// icmpMonitorAssertionsToSet converts the API representation of assertions
-// to the request.assertion block value.
-func icmpMonitorAssertionsToSet(ctx context.Context, assertions []checkly.Assertion, diags *diag.Diagnostics) types.Set {
-	models := make([]ICMPMonitorAssertionModel, len(assertions))
-	for i, assertion := range assertions {
-		models[i] = ICMPMonitorAssertionModel{
-			Source:     types.StringValue(assertion.Source),
-			Property:   types.StringValue(assertion.Property),
-			Comparison: types.StringValue(assertion.Comparison),
-			Target:     types.StringValue(assertion.Target),
-		}
-	}
-
-	set, d := types.SetValueFrom(ctx, types.ObjectType{AttrTypes: icmpMonitorAssertionAttrTypes}, models)
-	diags.Append(d...)
-
-	return set
 }

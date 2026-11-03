@@ -28,7 +28,7 @@ func TestTracerouteMonitorRequestFromModelDerivesDefaults(t *testing.T) {
 			MaxUnknownHops: maxUnknownHops,
 			PtrLookup:      types.BoolValue(false),
 			Timeout:        types.Int64Unknown(),
-			Assertion:      types.SetNull(types.ObjectType{AttrTypes: tracerouteMonitorAssertionAttrTypes}),
+			Assertion:      types.SetNull(types.ObjectType{AttrTypes: assertionAttrTypes}),
 		}
 	}
 

@@ -380,10 +380,10 @@ func maintenanceWindowToModel(ctx context.Context, mw *checkly.MaintenanceWindow
 	model.RepeatUnit = stringValueOrNull(mw.RepeatUnit)
 	model.RepeatInterval = maintenanceWindowRepeatInterval(mw.RepeatInterval, model.RepeatInterval)
 	model.RepeatEndsAt = stringValueOrPriorEmpty(mw.RepeatEndsAt, model.RepeatEndsAt)
-	model.Tags = maintenanceWindowStringsToSet(ctx, mw.Tags, model.Tags, diags)
+	model.Tags = stringSetFromAPINullIfUnset(ctx, mw.Tags, model.Tags, diags)
 	model.Timezone = maintenanceWindowTimezone(mw.Timezone, model.Timezone)
 	model.PauseAllChecks = types.BoolValue(mw.PauseAllChecks)
-	model.SilenceAlertsTags = maintenanceWindowStringsToSet(ctx, mw.SilenceAlertsTags, model.SilenceAlertsTags, diags)
+	model.SilenceAlertsTags = stringSetFromAPINullIfUnset(ctx, mw.SilenceAlertsTags, model.SilenceAlertsTags, diags)
 	model.SilenceAllAlerts = types.BoolValue(mw.SilenceAllAlerts)
 	model.Description = stringValueOrPriorEmpty(mw.Description, model.Description)
 	model.StatusPageVisibility = maintenanceWindowStatusPageVisibilityToList(ctx, mw.StatusPageVisibility, model.StatusPageVisibility, diags)
@@ -399,17 +399,6 @@ func maintenanceWindowRepeatInterval(value int, prior types.Int64) types.Int64 {
 	}
 
 	return types.Int64Value(int64(value))
-}
-
-// maintenanceWindowStringsToSet converts a string list from the API to a
-// set, resolving the empty value against the prior data: when the list is
-// empty remotely and the attribute wasn't configured, it stays null.
-func maintenanceWindowStringsToSet(ctx context.Context, values []string, prior types.Set, diags *diag.Diagnostics) types.Set {
-	if len(values) == 0 && (prior.IsNull() || prior.IsUnknown()) {
-		return types.SetNull(types.StringType)
-	}
-
-	return setFromStrings(ctx, values, diags)
 }
 
 // maintenanceWindowTimezone converts the time zone from the API. The API

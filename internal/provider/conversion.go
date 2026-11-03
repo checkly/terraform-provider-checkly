@@ -34,6 +34,32 @@ func setFromStrings(ctx context.Context, values []string, diags *diag.Diagnostic
 	return set
 }
 
+// stringSetFromAPINullIfUnset converts a string slice from the API to a set of strings.
+// The API reports an unset collection as an empty array, so an empty value
+// converts to null when the prior value (planned or previously stored) is
+// null or unknown. An optional attribute absent from the configuration thus
+// stays null instead of drifting to an empty set.
+func stringSetFromAPINullIfUnset(ctx context.Context, values []string, prior types.Set, diags *diag.Diagnostics) types.Set {
+	if len(values) == 0 && (prior.IsNull() || prior.IsUnknown()) {
+		return types.SetNull(types.StringType)
+	}
+
+	return setFromStrings(ctx, values, diags)
+}
+
+// stringSetFromAPIEmptyIfUnknown converts a string slice from the API to a
+// set of strings. An empty value keeps the prior value when that is null, so
+// that an omitted collection does not cause drift against an empty API
+// response. Unlike stringSetFromAPINullIfUnset, an unknown prior value converts to an
+// empty set.
+func stringSetFromAPIEmptyIfUnknown(ctx context.Context, values []string, prior types.Set, diags *diag.Diagnostics) types.Set {
+	if len(values) == 0 && prior.IsNull() {
+		return prior
+	}
+
+	return setFromStrings(ctx, values, diags)
+}
+
 // stringsFromList converts a list of strings to a Go slice. Null and unknown
 // lists convert to nil.
 func stringsFromList(ctx context.Context, list types.List, diags *diag.Diagnostics) []string {
@@ -125,48 +151,14 @@ func stringOrNullWhenUnknown(value types.String) types.String {
 
 // valueContainsUnknown reports whether the value, or any value nested within
 // it, is unknown. Configuration values are unknown when they reference
-// attributes of resources that have not been created yet.
-func valueContainsUnknown(value attr.Value) bool {
-	if value.IsUnknown() {
+// attributes of resources that have not been created yet. A value that cannot
+// be converted to its Terraform representation is reported as unknown, so
+// that callers err on the side of leaving the plan untouched.
+func valueContainsUnknown(ctx context.Context, value attr.Value) bool {
+	tfValue, err := value.ToTerraformValue(ctx)
+	if err != nil {
 		return true
 	}
 
-	if value.IsNull() {
-		return false
-	}
-
-	switch v := value.(type) {
-	case types.Object:
-		for _, nested := range v.Attributes() {
-			if valueContainsUnknown(nested) {
-				return true
-			}
-		}
-	case types.List:
-		for _, nested := range v.Elements() {
-			if valueContainsUnknown(nested) {
-				return true
-			}
-		}
-	case types.Set:
-		for _, nested := range v.Elements() {
-			if valueContainsUnknown(nested) {
-				return true
-			}
-		}
-	case types.Map:
-		for _, nested := range v.Elements() {
-			if valueContainsUnknown(nested) {
-				return true
-			}
-		}
-	case types.Tuple:
-		for _, nested := range v.Elements() {
-			if valueContainsUnknown(nested) {
-				return true
-			}
-		}
-	}
-
-	return false
+	return !tfValue.IsFullyKnown()
 }

@@ -1,0 +1,116 @@
+package provider
+
+import (
+	"context"
+
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	checkly "github.com/checkly/checkly-go-sdk"
+)
+
+// assertionModel describes the data model of an assertion block. Checks,
+// monitors and API check defaults share this model; each resource defines
+// its own schema and validators for it.
+type assertionModel struct {
+	Source     types.String `tfsdk:"source"`
+	Property   types.String `tfsdk:"property"`
+	Comparison types.String `tfsdk:"comparison"`
+	Target     types.String `tfsdk:"target"`
+}
+
+var assertionAttrTypes = map[string]attr.Type{
+	"source":     types.StringType,
+	"property":   types.StringType,
+	"comparison": types.StringType,
+	"target":     types.StringType,
+}
+
+// assertionsWithPropertyDefault returns the assertion block value with an
+// empty string substituted for a null or unknown property.
+func assertionsWithPropertyDefault(ctx context.Context, set types.Set, diags *diag.Diagnostics) types.Set {
+	return assertionsWithDefaults(ctx, set, false, diags)
+}
+
+// assertionsWithPropertyAndTargetDefaults returns the assertion block value
+// with empty strings substituted for a null or unknown property and target.
+func assertionsWithPropertyAndTargetDefaults(ctx context.Context, set types.Set, diags *diag.Diagnostics) types.Set {
+	return assertionsWithDefaults(ctx, set, true, diags)
+}
+
+// assertionsWithDefaults applies the default values of the optional+computed
+// assertion attributes during plan modification, where schema defaults
+// cannot be used because the attributes are nested in set elements. The
+// target attribute is only defaulted when defaultTarget is set, since it is
+// not optional+computed in every schema.
+func assertionsWithDefaults(ctx context.Context, set types.Set, defaultTarget bool, diags *diag.Diagnostics) types.Set {
+	if set.IsNull() || set.IsUnknown() {
+		return set
+	}
+
+	var models []assertionModel
+	diags.Append(set.ElementsAs(ctx, &models, false)...)
+	if diags.HasError() {
+		return set
+	}
+
+	for i, model := range models {
+		models[i].Property = stringOrDefault(model.Property, "")
+		if defaultTarget {
+			models[i].Target = stringOrDefault(model.Target, "")
+		}
+	}
+
+	result, d := types.SetValueFrom(ctx, types.ObjectType{AttrTypes: assertionAttrTypes}, models)
+	diags.Append(d...)
+
+	return result
+}
+
+// assertionsFromSet converts an assertion block value to its API
+// representation. Null and unknown values convert to an empty (non-nil)
+// slice.
+func assertionsFromSet(ctx context.Context, set types.Set, diags *diag.Diagnostics) []checkly.Assertion {
+	assertions := []checkly.Assertion{}
+
+	if set.IsNull() || set.IsUnknown() {
+		return assertions
+	}
+
+	var models []assertionModel
+	diags.Append(set.ElementsAs(ctx, &models, false)...)
+	if diags.HasError() {
+		return assertions
+	}
+
+	for _, model := range models {
+		assertions = append(assertions, checkly.Assertion{
+			Source:     model.Source.ValueString(),
+			Property:   model.Property.ValueString(),
+			Comparison: model.Comparison.ValueString(),
+			Target:     model.Target.ValueString(),
+		})
+	}
+
+	return assertions
+}
+
+// assertionsToSet converts the API representation of assertions to an
+// assertion block value.
+func assertionsToSet(ctx context.Context, assertions []checkly.Assertion, diags *diag.Diagnostics) types.Set {
+	models := make([]assertionModel, len(assertions))
+	for i, assertion := range assertions {
+		models[i] = assertionModel{
+			Source:     types.StringValue(assertion.Source),
+			Property:   types.StringValue(assertion.Property),
+			Comparison: types.StringValue(assertion.Comparison),
+			Target:     types.StringValue(assertion.Target),
+		}
+	}
+
+	set, d := types.SetValueFrom(ctx, types.ObjectType{AttrTypes: assertionAttrTypes}, models)
+	diags.Append(d...)
+
+	return set
+}

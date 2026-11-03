@@ -77,26 +77,11 @@ type URLMonitorRequestModel struct {
 	IPFamily        types.String `tfsdk:"ip_family"`
 }
 
-// URLMonitorAssertionModel describes the request.assertion block data model.
-type URLMonitorAssertionModel struct {
-	Source     types.String `tfsdk:"source"`
-	Property   types.String `tfsdk:"property"`
-	Comparison types.String `tfsdk:"comparison"`
-	Target     types.String `tfsdk:"target"`
-}
-
-var urlMonitorAssertionAttrTypes = map[string]attr.Type{
-	"source":     types.StringType,
-	"property":   types.StringType,
-	"comparison": types.StringType,
-	"target":     types.StringType,
-}
-
 var urlMonitorRequestAttrTypes = map[string]attr.Type{
 	"url":              types.StringType,
 	"follow_redirects": types.BoolType,
 	"skip_ssl":         types.BoolType,
-	"assertion":        types.SetType{ElemType: types.ObjectType{AttrTypes: urlMonitorAssertionAttrTypes}},
+	"assertion":        types.SetType{ElemType: types.ObjectType{AttrTypes: assertionAttrTypes}},
 	"ip_family":        types.StringType,
 }
 
@@ -332,7 +317,7 @@ func (r *URLMonitorResource) ModifyPlan(ctx context.Context, req resource.Modify
 	// cannot be distinguished from values that will resolve at apply time.
 	// Leave the plan untouched; the apply-time re-plan applies the defaults
 	// once the configuration values are known.
-	if valueContainsUnknown(configRequest) {
+	if valueContainsUnknown(ctx, configRequest) {
 		return
 	}
 
@@ -367,34 +352,10 @@ func urlMonitorRequestWithDefaults(ctx context.Context, set types.Set, diags *di
 		models[i].FollowRedirects = boolOrDefault(model.FollowRedirects, true)
 		models[i].SkipSSL = boolOrDefault(model.SkipSSL, false)
 		models[i].IPFamily = stringOrDefault(model.IPFamily, "IPv4")
-		models[i].Assertions = urlMonitorAssertionsWithDefaults(ctx, model.Assertions, diags)
+		models[i].Assertions = assertionsWithPropertyDefault(ctx, model.Assertions, diags)
 	}
 
 	result, d := types.SetValueFrom(ctx, types.ObjectType{AttrTypes: urlMonitorRequestAttrTypes}, models)
-	diags.Append(d...)
-
-	return result
-}
-
-// urlMonitorAssertionsWithDefaults returns the request.assertion block value
-// with default values substituted for null and unknown optional+computed
-// attributes.
-func urlMonitorAssertionsWithDefaults(ctx context.Context, set types.Set, diags *diag.Diagnostics) types.Set {
-	if set.IsNull() || set.IsUnknown() {
-		return set
-	}
-
-	var models []URLMonitorAssertionModel
-	diags.Append(set.ElementsAs(ctx, &models, false)...)
-	if diags.HasError() {
-		return set
-	}
-
-	for i, model := range models {
-		models[i].Property = stringOrDefault(model.Property, "")
-	}
-
-	result, d := types.SetValueFrom(ctx, types.ObjectType{AttrTypes: urlMonitorAssertionAttrTypes}, models)
 	diags.Append(d...)
 
 	return result
@@ -606,10 +567,10 @@ func urlMonitorToModel(ctx context.Context, c *checkly.URLMonitor, model *URLMon
 	model.Muted = types.BoolValue(c.Muted)
 	model.ShouldFail = types.BoolValue(c.ShouldFail)
 	model.RunParallel = types.BoolValue(c.RunParallel)
-	model.Locations = urlMonitorStringSet(ctx, c.Locations, model.Locations, diags)
+	model.Locations = stringSetFromAPINullIfUnset(ctx, c.Locations, model.Locations, diags)
 	model.DegradedResponseTime = types.Int64Value(int64(c.DegradedResponseTime))
 	model.MaxResponseTime = types.Int64Value(int64(c.MaxResponseTime))
-	model.Tags = urlMonitorStringSet(ctx, c.Tags, model.Tags, diags)
+	model.Tags = stringSetFromAPINullIfUnset(ctx, c.Tags, model.Tags, diags)
 
 	if c.AlertSettings != nil {
 		model.AlertSettings = alertSettingsToObject(ctx, *c.AlertSettings, model.AlertSettings, diags)
@@ -626,22 +587,11 @@ func urlMonitorToModel(ctx context.Context, c *checkly.URLMonitor, model *URLMon
 	if c.PrivateLocations != nil {
 		privateLocations = *c.PrivateLocations
 	}
-	model.PrivateLocations = urlMonitorStringSet(ctx, privateLocations, model.PrivateLocations, diags)
+	model.PrivateLocations = stringSetFromAPINullIfUnset(ctx, privateLocations, model.PrivateLocations, diags)
 
 	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, diags)
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, model.RetryStrategy, diags)
 	model.TriggerIncident = triggerIncidentToSet(ctx, c.TriggerIncident, diags)
-}
-
-// urlMonitorStringSet converts a string slice from the API to a set value.
-// An empty slice resolves to null when the prior value is null, so that an
-// optional set that is absent from the configuration stays null in state.
-func urlMonitorStringSet(ctx context.Context, values []string, prior types.Set, diags *diag.Diagnostics) types.Set {
-	if len(values) == 0 && (prior.IsNull() || prior.IsUnknown()) {
-		return types.SetNull(types.StringType)
-	}
-
-	return setFromStrings(ctx, values, diags)
 }
 
 // urlMonitorRequestFromSet converts the request block value to its API
@@ -663,7 +613,7 @@ func urlMonitorRequestFromSet(ctx context.Context, set types.Set, diags *diag.Di
 		URL:             model.URL.ValueString(),
 		FollowRedirects: model.FollowRedirects.ValueBool(),
 		SkipSSL:         model.SkipSSL.ValueBool(),
-		Assertions:      urlMonitorAssertionsFromSet(ctx, model.Assertions, diags),
+		Assertions:      assertionsFromSet(ctx, model.Assertions, diags),
 		IPFamily:        model.IPFamily.ValueString(),
 	}
 }
@@ -676,56 +626,10 @@ func urlMonitorRequestToSet(ctx context.Context, r checkly.URLRequest, diags *di
 			URL:             types.StringValue(r.URL),
 			FollowRedirects: types.BoolValue(r.FollowRedirects),
 			SkipSSL:         types.BoolValue(r.SkipSSL),
-			Assertions:      urlMonitorAssertionsToSet(ctx, r.Assertions, diags),
+			Assertions:      assertionsToSet(ctx, r.Assertions, diags),
 			IPFamily:        types.StringValue(r.IPFamily),
 		},
 	})
-	diags.Append(d...)
-
-	return set
-}
-
-// urlMonitorAssertionsFromSet converts the request.assertion block value to
-// its API representation.
-func urlMonitorAssertionsFromSet(ctx context.Context, set types.Set, diags *diag.Diagnostics) []checkly.Assertion {
-	assertions := []checkly.Assertion{}
-
-	if set.IsNull() || set.IsUnknown() {
-		return assertions
-	}
-
-	var models []URLMonitorAssertionModel
-	diags.Append(set.ElementsAs(ctx, &models, false)...)
-	if diags.HasError() {
-		return assertions
-	}
-
-	for _, model := range models {
-		assertions = append(assertions, checkly.Assertion{
-			Source:     model.Source.ValueString(),
-			Property:   model.Property.ValueString(),
-			Comparison: model.Comparison.ValueString(),
-			Target:     model.Target.ValueString(),
-		})
-	}
-
-	return assertions
-}
-
-// urlMonitorAssertionsToSet converts the API representation of assertions to
-// the request.assertion block value.
-func urlMonitorAssertionsToSet(ctx context.Context, assertions []checkly.Assertion, diags *diag.Diagnostics) types.Set {
-	models := make([]URLMonitorAssertionModel, len(assertions))
-	for i, assertion := range assertions {
-		models[i] = URLMonitorAssertionModel{
-			Source:     types.StringValue(assertion.Source),
-			Property:   types.StringValue(assertion.Property),
-			Comparison: types.StringValue(assertion.Comparison),
-			Target:     types.StringValue(assertion.Target),
-		}
-	}
-
-	set, d := types.SetValueFrom(ctx, types.ObjectType{AttrTypes: urlMonitorAssertionAttrTypes}, models)
 	diags.Append(d...)
 
 	return set

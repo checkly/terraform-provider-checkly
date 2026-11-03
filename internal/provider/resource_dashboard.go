@@ -427,7 +427,7 @@ func dashboardToModel(ctx context.Context, dashboard *checkly.Dashboard, model *
 	model.Paginate = types.BoolValue(dashboard.Paginate)
 	model.ChecksPerPage = types.Int64Value(int64(dashboard.ChecksPerPage))
 	model.PaginationRate = types.Int64Value(int64(dashboard.PaginationRate))
-	model.Tags = dashboardTagsToSet(ctx, dashboard.Tags, model.Tags, diags)
+	model.Tags = stringSetFromAPINullIfUnset(ctx, dashboard.Tags, model.Tags, diags)
 	model.HideTags = types.BoolValue(dashboard.HideTags)
 	model.UseTagsAndOperator = types.BoolValue(dashboard.UseTagsAndOperator)
 	model.EnableIncidents = types.BoolValue(dashboard.EnableIncidents)
@@ -467,15 +467,4 @@ func dashboardBoolValue(value *bool, absent bool) types.Bool {
 	}
 
 	return types.BoolValue(*value)
-}
-
-// dashboardTagsToSet converts tags from the API to a set, resolving the empty
-// value against the prior data: when no tags exist remotely and none were
-// configured, the attribute stays null.
-func dashboardTagsToSet(ctx context.Context, tags []string, prior types.Set, diags *diag.Diagnostics) types.Set {
-	if len(tags) == 0 && (prior.IsNull() || prior.IsUnknown()) {
-		return types.SetNull(types.StringType)
-	}
-
-	return setFromStrings(ctx, tags, diags)
 }
