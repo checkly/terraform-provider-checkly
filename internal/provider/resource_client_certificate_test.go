@@ -1,9 +1,16 @@
 package provider
 
 import (
+	"context"
 	"regexp"
 	"testing"
 
+	fwresource "github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
@@ -148,4 +155,41 @@ resource "checkly_client_certificate" "test" {
 			),
 		},
 	})
+}
+
+func TestClientCertificatePathRequiresReplace(t *testing.T) {
+	ctx := context.Background()
+
+	var schemaResp fwresource.SchemaResponse
+	NewClientCertificateResource().Schema(ctx, fwresource.SchemaRequest{}, &schemaResp)
+	pathAttr := schemaResp.Schema.Attributes["path"].(schema.StringAttribute)
+
+	cases := []struct {
+		state, plan types.String
+		want        bool
+	}{
+		{types.StringValue("/partner/api"), types.StringValue("/partner/api/"), false},
+		{types.StringValue("/partner/api/"), types.StringValue("/partner/api"), false},
+		{types.StringValue("/partner/api"), types.StringValue("/partner"), true},
+		{types.StringNull(), types.StringValue("/partner"), true},
+		{types.StringValue("/partner"), types.StringNull(), true},
+		{types.StringNull(), types.StringUnknown(), true},
+	}
+
+	for _, c := range cases {
+		req := planmodifier.StringRequest{
+			StateValue:  c.state,
+			PlanValue:   c.plan,
+			ConfigValue: c.plan,
+			State:       tfsdk.State{Raw: tftypes.NewValue(tftypes.Object{}, map[string]tftypes.Value{})},
+			Plan:        tfsdk.Plan{Raw: tftypes.NewValue(tftypes.Object{}, map[string]tftypes.Value{})},
+		}
+		resp := planmodifier.StringResponse{PlanValue: c.plan}
+		for _, m := range pathAttr.PlanModifiers {
+			m.PlanModifyString(ctx, req, &resp)
+		}
+		if resp.RequiresReplace != c.want {
+			t.Errorf("path %s -> %s: RequiresReplace = %t, want %t", c.state, c.plan, resp.RequiresReplace, c.want)
+		}
+	}
 }

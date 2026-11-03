@@ -67,7 +67,8 @@ func (r *ClientCertificateResource) Schema(ctx context.Context, req resource.Sch
 			"to limit the certificate to requests under a URL path prefix." +
 			"\n\n" +
 			"Changing the value of any attribute forces a new resource to " +
-			"be created.",
+			"be created, except for adding or removing a trailing `/` of " +
+			"`path`, which the API ignores.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -92,7 +93,18 @@ func (r *ClientCertificateResource) Schema(ctx context.Context, req resource.Sch
 					"monitors only use certificates without a path. Omit it to use the " +
 					"certificate for every path on the host.",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					// The API ignores a trailing slash, so changing only that
+					// is an in-place update of the stored spelling. Releases
+					// before v2.0.0 stored the path without it.
+					stringplanmodifier.RequiresReplaceIf(
+						func(ctx context.Context, req planmodifier.StringRequest, resp *stringplanmodifier.RequiresReplaceIfFuncResponse) {
+							resp.RequiresReplace = req.PlanValue.IsUnknown() ||
+								strings.TrimSuffix(req.StateValue.ValueString(), "/") !=
+									strings.TrimSuffix(req.PlanValue.ValueString(), "/")
+						},
+						"Changing the path other than by a trailing slash forces a new resource to be created.",
+						"Changing the path other than by a trailing slash forces a new resource to be created.",
+					),
 				},
 				// The API refuses these too; failing at plan time is clearer
 				// than an apply error, and a bare "/" would otherwise be
@@ -214,8 +226,8 @@ func (r *ClientCertificateResource) Read(ctx context.Context, req resource.ReadR
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
-// Update is never called because every attribute requires replacement, but
-// the framework requires an implementation.
+// Update only stores the new spelling of a path that changed by a trailing
+// slash, which the API ignores; every other change requires replacement.
 func (r *ClientCertificateResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var plan ClientCertificateResourceModel
 
