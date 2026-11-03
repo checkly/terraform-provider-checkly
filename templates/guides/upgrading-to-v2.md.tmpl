@@ -86,6 +86,8 @@ These attributes were deprecated in v1.x and had no effect. Remove them from you
 - `alert_settings.ssl_certificates` on all resource types that had it.
 - `retry_strategy.only_on` on `checkly_dns_monitor`, `checkly_grpc_monitor`, `checkly_icmp_monitor`, `checkly_ssl_monitor`, `checkly_tcp_check`, `checkly_tcp_monitor` and `checkly_traceroute_monitor`, where it had no conditions to set.
 
+`environment_variable` blocks on a `checkly_check` with `type = "API"` have no effect either, because API checks do not use environment variables, and they cause a change in every plan. Remove them as well.
+
 ### Sensitive environment variable values
 
 `value` of `checkly_environment_variable` is now sensitive, so Terraform redacts it in plan output. An output that exposes it must set `sensitive = true`.
