@@ -3,12 +3,18 @@
 page_title: "checkly_maintenance_windows Resource - terraform-provider-checkly"
 subcategory: ""
 description: |-
-  Maintenance windows pause alerting during scheduled maintenance for the checks and groups they apply to.
+  The checkly_maintenance_windows resource has been renamed to checkly_maintenance_window, because each resource manages a single maintenance window. The checkly_maintenance_windows resource type is deprecated and will be removed in a future version of the provider.
+  The schemas of both resource types are identical, and existing checkly_maintenance_windows resources can be migrated to checkly_maintenance_window using a moved block.
+  We recommend using the checkly_maintenance_window resource type for any new resources.
 ---
 
 # checkly_maintenance_windows (Resource)
 
-Maintenance windows pause alerting during scheduled maintenance for the checks and groups they apply to.
+The `checkly_maintenance_windows` resource has been renamed to `checkly_maintenance_window`, because each resource manages a single maintenance window. The `checkly_maintenance_windows` resource type is deprecated and will be removed in a future version of the provider.
+
+The schemas of both resource types are identical, and existing `checkly_maintenance_windows` resources can be migrated to `checkly_maintenance_window` using a `moved` block.
+
+We recommend using the `checkly_maintenance_window` resource type for any new resources.
 
 ## Example Usage
 

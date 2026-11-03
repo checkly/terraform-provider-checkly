@@ -184,6 +184,7 @@ func (p *ChecklyProvider) Resources(ctx context.Context) []func() resource.Resou
 		NewHeartbeatMonitorResource,
 		NewICMPMonitorResource,
 		NewMaintenanceWindowResource,
+		NewMaintenanceWindowsResource,
 		NewMultistepCheckResource,
 		NewPlaywrightCheckSuiteResource,
 		NewPlaywrightCodeBundleResource,

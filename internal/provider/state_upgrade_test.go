@@ -224,6 +224,13 @@ func TestMoveSDKv2State(t *testing.T) {
 			attr:       path.Root("heartbeat").AtName("grace_unit"),
 			want:       types.StringValue("hours"),
 		},
+		"checkly_maintenance_windows to checkly_maintenance_window": {
+			target:     NewMaintenanceWindowResource(),
+			sourceType: "checkly_maintenance_windows",
+			fixture:    "maintenance_windows",
+			attr:       path.Root("repeat_unit"),
+			want:       types.StringValue("WEEK"),
+		},
 	}
 
 	for name, c := range cases {

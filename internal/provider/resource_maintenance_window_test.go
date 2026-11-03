@@ -360,7 +360,7 @@ func TestAccMaintenanceWindowControlsAllFields(t *testing.T) {
 		}
 	`, rInt, rInt, rInt)
 	withEverything := statusPage + fmt.Sprintf(`
-		resource "checkly_maintenance_windows" "test" {
+		resource "checkly_maintenance_window" "test" {
 			name                = "Maintenance Window %d"
 			starts_at           = "2099-01-01T09:00:00.000Z"
 			ends_at             = "2099-01-01T10:00:00.000Z"
@@ -386,7 +386,7 @@ func TestAccMaintenanceWindowControlsAllFields(t *testing.T) {
 		}
 	`, rInt)
 	withDefaultBlock := statusPage + fmt.Sprintf(`
-		resource "checkly_maintenance_windows" "test" {
+		resource "checkly_maintenance_window" "test" {
 			name      = "Maintenance Window %d"
 			starts_at = "2099-01-01T09:00:00.000Z"
 			ends_at   = "2099-01-01T10:00:00.000Z"
@@ -397,13 +397,13 @@ func TestAccMaintenanceWindowControlsAllFields(t *testing.T) {
 		}
 	`, rInt)
 	withNothing := statusPage + fmt.Sprintf(`
-		resource "checkly_maintenance_windows" "test" {
+		resource "checkly_maintenance_window" "test" {
 			name      = "Maintenance Window %d"
 			starts_at = "2099-01-01T09:00:00.000Z"
 			ends_at   = "2099-01-01T10:00:00.000Z"
 		}
 	`, rInt)
-	const r = "checkly_maintenance_windows.test"
+	const r = "checkly_maintenance_window.test"
 	accTestCase(t, []resource.TestStep{
 		{
 			Config: withEverything,
@@ -449,6 +449,44 @@ func TestAccMaintenanceWindowControlsAllFields(t *testing.T) {
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(r, "status_page_visibility.#", "1"),
 				resource.TestCheckResourceAttr(r, "status_page_visibility.0.enabled", "false"),
+			),
+		},
+	})
+}
+
+// TestAccMaintenanceWindowsMovedToMaintenanceWindow exercises the MoveState
+// implementation of checkly_maintenance_window via a `moved` block from
+// checkly_maintenance_windows.
+func TestAccMaintenanceWindowsMovedToMaintenanceWindow(t *testing.T) {
+	name := fmt.Sprintf("Maintenance Window %d", acctest.RandInt())
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: fmt.Sprintf(`
+				resource "checkly_maintenance_windows" "test" {
+					name      = %q
+					starts_at = "2099-01-01T09:00:00.000Z"
+					ends_at   = "2099-01-01T10:00:00.000Z"
+					tags      = ["tf-acc"]
+				}
+			`, name),
+		},
+		{
+			Config: fmt.Sprintf(`
+				resource "checkly_maintenance_window" "test" {
+					name      = %q
+					starts_at = "2099-01-01T09:00:00.000Z"
+					ends_at   = "2099-01-01T10:00:00.000Z"
+					tags      = ["tf-acc"]
+				}
+
+				moved {
+					from = checkly_maintenance_windows.test
+					to   = checkly_maintenance_window.test
+				}
+			`, name),
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_maintenance_window.test", "name", name),
+				resource.TestCheckResourceAttr("checkly_maintenance_window.test", "tags.#", "1"),
 			),
 		},
 	})

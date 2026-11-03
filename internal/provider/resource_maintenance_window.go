@@ -25,15 +25,16 @@ var (
 	_ resource.ResourceWithConfigure    = (*MaintenanceWindowResource)(nil)
 	_ resource.ResourceWithUpgradeState = (*MaintenanceWindowResource)(nil)
 	_ resource.ResourceWithImportState  = (*MaintenanceWindowResource)(nil)
+	_ resource.ResourceWithMoveState    = (*MaintenanceWindowResource)(nil)
 )
 
-// NewMaintenanceWindowResource returns a new checkly_maintenance_windows
+// NewMaintenanceWindowResource returns a new checkly_maintenance_window
 // resource.
 func NewMaintenanceWindowResource() resource.Resource {
 	return &MaintenanceWindowResource{}
 }
 
-// MaintenanceWindowResource implements the checkly_maintenance_windows
+// MaintenanceWindowResource implements the checkly_maintenance_window
 // resource.
 type MaintenanceWindowResource struct {
 	client checkly.Client
@@ -59,7 +60,7 @@ type MaintenanceWindowResourceModel struct {
 }
 
 func (r *MaintenanceWindowResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_maintenance_windows"
+	resp.TypeName = req.ProviderTypeName + "_maintenance_window"
 }
 
 func (r *MaintenanceWindowResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
@@ -297,6 +298,52 @@ func (r *MaintenanceWindowResource) Delete(ctx context.Context, req resource.Del
 
 func (r *MaintenanceWindowResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+}
+
+// MoveState enables `moved` blocks from the legacy checkly_maintenance_windows
+// resource type. Both resource types share the exact same schema, so the
+// source state can be used as the target state without transformation.
+func (r *MaintenanceWindowResource) MoveState(ctx context.Context) []resource.StateMover {
+	var schemaResp resource.SchemaResponse
+	r.Schema(ctx, resource.SchemaRequest{}, &schemaResp)
+	sourceSchema := schemaResp.Schema
+
+	return []resource.StateMover{
+		{
+			SourceSchema: &sourceSchema,
+			StateMover: func(ctx context.Context, req resource.MoveStateRequest, resp *resource.MoveStateResponse) {
+				if !strings.HasSuffix(req.SourceProviderAddress, "/checkly") {
+					return
+				}
+
+				switch req.SourceTypeName {
+				case "checkly_maintenance_windows", "checkly_maintenance_window":
+				default:
+					return
+				}
+
+				sourceState := sdkv2MoveSourceState(ctx, req, sourceSchema, &resp.Diagnostics)
+				if resp.Diagnostics.HasError() {
+					return
+				}
+				if sourceState == nil {
+					resp.Diagnostics.AddError(
+						"Unable to Move Resource State",
+						fmt.Sprintf(
+							"The source %s state could not be decoded. The state may "+
+								"have been created by an older version of the provider. "+
+								"Upgrade the source resource to the current provider "+
+								"version before moving it.",
+							req.SourceTypeName,
+						),
+					)
+					return
+				}
+
+				resp.TargetState = *sourceState
+			},
+		},
+	}
 }
 
 func maintenanceWindowFromModel(ctx context.Context, model *MaintenanceWindowResourceModel, diags *diag.Diagnostics) checkly.MaintenanceWindow {

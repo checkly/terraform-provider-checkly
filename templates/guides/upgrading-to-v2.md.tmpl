@@ -116,7 +116,7 @@ v2 fails to plan while these resource types are in state. Remove them from your 
 
 ## Deprecated resource types
 
-`checkly_check` is deprecated in favor of `checkly_api_check`, `checkly_browser_check` and `checkly_multistep_check`, which only expose the attributes of their check type. `checkly_heartbeat` and `checkly_tcp_check` are deprecated in favor of `checkly_heartbeat_monitor` and `checkly_tcp_monitor`. The deprecated types keep working in v2.
+`checkly_check` is deprecated in favor of `checkly_api_check`, `checkly_browser_check` and `checkly_multistep_check`, which only expose the attributes of their check type. `checkly_heartbeat` and `checkly_tcp_check` are deprecated in favor of `checkly_heartbeat_monitor` and `checkly_tcp_monitor`. `checkly_maintenance_windows` is deprecated in favor of `checkly_maintenance_window`, because each resource manages a single maintenance window. The deprecated types keep working in v2.
 
 To switch a resource to its new type without recreating it, change the resource type and add a `moved` block. This works in the same plan as the provider upgrade:
 

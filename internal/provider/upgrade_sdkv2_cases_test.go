@@ -2494,4 +2494,25 @@ moved {
   to   = checkly_heartbeat_monitor.test
 }
 `),
+
+	"moved_maintenance_windows_to_maintenance_window": newSDKv2UpgradeCase(`
+resource "checkly_maintenance_windows" "test" {
+  name      = "tf-upgrade-{{id}}-moved-maintenance"
+  starts_at = "2099-01-01T09:00:00.000Z"
+  ends_at   = "2099-01-01T10:00:00.000Z"
+  tags      = ["tf-upgrade"]
+}
+`, `
+resource "checkly_maintenance_window" "test" {
+  name      = "tf-upgrade-{{id}}-moved-maintenance"
+  starts_at = "2099-01-01T09:00:00.000Z"
+  ends_at   = "2099-01-01T10:00:00.000Z"
+  tags      = ["tf-upgrade"]
+}
+
+moved {
+  from = checkly_maintenance_windows.test
+  to   = checkly_maintenance_window.test
+}
+`),
 }

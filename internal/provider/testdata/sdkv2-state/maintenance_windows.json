@@ -1,0 +1,18 @@
+{
+    "description": "Planned upgrade",
+    "ends_at": "2030-01-02T00:00:00.000Z",
+    "id": "123",
+    "name": "m",
+    "pause_all_checks": false,
+    "repeat_ends_at": "",
+    "repeat_interval": 1,
+    "repeat_unit": "WEEK",
+    "silence_alerts_tags": [],
+    "silence_all_alerts": false,
+    "starts_at": "2030-01-01T00:00:00.000Z",
+    "status_page_visibility": [],
+    "tags": [
+        "a"
+    ],
+    "timezone": ""
+}
