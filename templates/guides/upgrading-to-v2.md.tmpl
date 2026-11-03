@@ -102,9 +102,18 @@ retry_strategy = {
 }
 ```
 
-### Sensitive environment variable values
+### Sensitive values
 
-`value` of `checkly_environment_variable` is now sensitive, so Terraform redacts it in plan output. An output that exposes it must set `sensitive = true`.
+These attributes are now sensitive, so Terraform redacts them in plan output:
+
+- `value` of `checkly_environment_variable`, and of `environment_variable` blocks on checks, check groups and Playwright check suites.
+- `password` of `basic_auth` in a check `request` and in `api_check_defaults`.
+- `slack.url`, `webhook.url`, `webhook.webhook_secret`, `opsgenie.api_key` and `pagerduty.service_key` of `checkly_alert_channel`.
+- `heartbeat.ping_token` of `checkly_heartbeat_monitor` and `checkly_heartbeat`.
+
+An output that exposes one of them, for example a heartbeat ping URL built from `ping_token`, must set `sensitive = true`.
+
+Terraform cannot redact a single attribute inside a set of blocks, so plans show the whole `slack`, `webhook`, `opsgenie` or `pagerduty` block of an alert channel as sensitive. Header and query parameter values, such as those of a webhook or an API check request, are not redacted: keep credentials in them out of shared plan output, for example by using a global environment variable in a check.
 
 ## Removed resource types
 

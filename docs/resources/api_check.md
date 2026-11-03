@@ -313,7 +313,7 @@ Optional:
 
 Required:
 
-- `password` (String)
+- `password` (String, Sensitive)
 - `username` (String)
 
 

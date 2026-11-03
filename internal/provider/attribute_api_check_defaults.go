@@ -125,6 +125,7 @@ func makeAPICheckDefaultsAttributeSchema() schema.SingleNestedAttribute {
 					},
 					"password": schema.StringAttribute{
 						Required:    true,
+						Sensitive:   true,
 						Description: "The basic auth password.",
 					},
 				},

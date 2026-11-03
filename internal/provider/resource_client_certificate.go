@@ -134,20 +134,19 @@ func (r *ClientCertificateResource) Schema(ctx context.Context, req resource.Sch
 				Sensitive:   true,
 				Description: "Passphrase for the private key.",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.RequiresReplaceIf(
+						requiresReplaceUnlessOnlyEmptiness,
+						"Changing the passphrase forces a new resource to be created.",
+						"Changing the passphrase forces a new resource to be created.",
+					),
 				},
 			},
 			"trusted_ca": schema.StringAttribute{
 				Optional:    true,
 				Description: "PEM formatted bundle of CA certificates that the client should trust. The bundle may contain many CA certificates.",
 				PlanModifiers: []planmodifier.String{
-					// The API stores an empty bundle as none, so switching
-					// between "" and unset does not change the certificate.
 					stringplanmodifier.RequiresReplaceIf(
-						func(ctx context.Context, req planmodifier.StringRequest, resp *stringplanmodifier.RequiresReplaceIfFuncResponse) {
-							resp.RequiresReplace = req.PlanValue.IsUnknown() ||
-								req.StateValue.ValueString() != req.PlanValue.ValueString()
-						},
+						requiresReplaceUnlessOnlyEmptiness,
 						"Changing the trusted CA bundle forces a new resource to be created.",
 						"Changing the trusted CA bundle forces a new resource to be created.",
 					),
@@ -155,6 +154,14 @@ func (r *ClientCertificateResource) Schema(ctx context.Context, req resource.Sch
 			},
 		},
 	}
+}
+
+// requiresReplaceUnlessOnlyEmptiness requires replacement for any change but
+// one between "" and unset. The API treats an empty passphrase or trusted CA
+// bundle as none, so that change leaves the certificate as it is.
+func requiresReplaceUnlessOnlyEmptiness(ctx context.Context, req planmodifier.StringRequest, resp *stringplanmodifier.RequiresReplaceIfFuncResponse) {
+	resp.RequiresReplace = req.PlanValue.IsUnknown() ||
+		req.StateValue.ValueString() != req.PlanValue.ValueString()
 }
 
 // UpgradeState upgrades state written by the provider's SDK v2
@@ -236,8 +243,8 @@ func (r *ClientCertificateResource) Read(ctx context.Context, req resource.ReadR
 }
 
 // Update only stores changes the API ignores: a path that changed by a
-// trailing slash, or a trusted CA bundle switched between "" and unset. Every
-// other change requires replacement.
+// trailing slash, or a passphrase or trusted CA bundle switched between ""
+// and unset. Every other change requires replacement.
 func (r *ClientCertificateResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var plan ClientCertificateResourceModel
 

@@ -142,8 +142,8 @@ func TestUpgradeSDKv2State(t *testing.T) {
 	})
 
 	t.Run("client_certificate with an empty passphrase", func(t *testing.T) {
-		// passphrase is never read from the API, so its configured empty
-		// value must survive the upgrade.
+		// An empty passphrase is the same as none, so it upgrades like any
+		// other empty optional string.
 		raw := `{"id":"cc","host":"*.example.com","certificate":"c","private_key":"k","passphrase":"","path":"","trusted_ca":""}`
 		var schemaResp resource.SchemaResponse
 		NewClientCertificateResource().Schema(context.Background(), resource.SchemaRequest{}, &schemaResp)
@@ -152,7 +152,7 @@ func TestUpgradeSDKv2State(t *testing.T) {
 			t.Fatal(err)
 		}
 		state := tfsdk.State{Schema: schemaResp.Schema, Raw: value}
-		requireStateValue(t, state, path.Root("passphrase"), types.StringValue(""))
+		requireStateNull(t, state, path.Root("passphrase"))
 		requireStateNull(t, state, path.Root("path"))
 	})
 

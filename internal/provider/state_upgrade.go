@@ -142,10 +142,7 @@ func normalizeSDKv2Object(obj map[string]any, attrs map[string]schema.Attribute,
 			}
 		}
 
-		// Sensitive values are not read back from the API, so SDK v2 state
-		// holds exactly what was configured, including an explicit "".
-		// Turning that into null could never be undone by Read.
-		if attr.IsOptional() && !attr.IsComputed() && !attr.IsSensitive() && isSDKv2ZeroValue(value) {
+		if attr.IsOptional() && !attr.IsComputed() && isSDKv2ZeroValue(value) {
 			value = nil
 		}
 		obj[name] = value

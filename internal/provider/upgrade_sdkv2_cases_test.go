@@ -1414,6 +1414,19 @@ resource "checkly_private_location" "test" {
 		return c
 	}(),
 
+	// An empty passphrase is the same as none, which v2 stores as unset. A
+	// configured "" must update in place once rather than replace the
+	// certificate, and then stay stable.
+	"client_certificate_empty_passphrase": func() sdkv2UpgradeCase {
+		config := strings.Replace(upgradeCertificate, `passphrase = "secret password"`, `passphrase = ""`, 1)
+		if config == upgradeCertificate {
+			panic("upgradeCertificate no longer sets the expected passphrase")
+		}
+		c := newSDKv2UpgradeCase(config, config)
+		c.expectUpdate = "checkly_client_certificate.test"
+		return c
+	}(),
+
 	"alert_channel_webhook": newSDKv2UpgradeCase(`
 resource "checkly_alert_channel" "test" {
   webhook {

@@ -50,6 +50,7 @@ func makeEnvironmentVariableSchema(options EnvironmentVariableAttributeSchemaOpt
 				},
 				"value": schema.StringAttribute{
 					Required:    true,
+					Sensitive:   true,
 					Description: "The value of the environment variable or secret.",
 				},
 				"locked": schema.BoolAttribute{

@@ -122,7 +122,7 @@ Required:
 
 Optional:
 
-- `ping_token` (String) Custom token to generate your ping URL. Checkly will expect a ping to `https://ping.checklyhq.com/[PING_TOKEN]`.
+- `ping_token` (String, Sensitive) Custom token to generate your ping URL. Checkly will expect a ping to `https://ping.checklyhq.com/[PING_TOKEN]`.
 
 
 <a id="nestedblock--trigger_incident"></a>

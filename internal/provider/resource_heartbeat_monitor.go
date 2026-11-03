@@ -158,6 +158,7 @@ func (r *HeartbeatMonitorResource) Schema(ctx context.Context, req resource.Sche
 					},
 					"ping_token": schema.StringAttribute{
 						Optional:    true,
+						Sensitive:   true,
 						Computed:    true,
 						Description: "Custom token to generate your ping URL. Checkly will expect a ping to `https://ping.checklyhq.com/[PING_TOKEN]`.",
 						PlanModifiers: []planmodifier.String{

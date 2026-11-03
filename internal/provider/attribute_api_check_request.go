@@ -135,7 +135,8 @@ func apiCheckRequestBlockSchema(opts apiCheckRequestBlockSchemaOptions) schema.S
 							Required: true,
 						},
 						"password": schema.StringAttribute{
-							Required: true,
+							Required:  true,
+							Sensitive: true,
 						},
 					},
 				},

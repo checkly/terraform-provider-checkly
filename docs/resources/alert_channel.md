@@ -217,7 +217,7 @@ Required:
 
 Required:
 
-- `api_key` (String)
+- `api_key` (String, Sensitive)
 - `name` (String)
 - `priority` (String)
 - `region` (String)
@@ -228,7 +228,7 @@ Required:
 
 Required:
 
-- `service_key` (String)
+- `service_key` (String, Sensitive)
 
 Optional:
 
@@ -242,7 +242,7 @@ Optional:
 Required:
 
 - `channel` (String) The name of the alert's Slack channel
-- `url` (String) The Slack webhook URL
+- `url` (String, Sensitive) The Slack webhook URL
 
 
 <a id="nestedblock--slack_app"></a>
@@ -268,7 +268,7 @@ Required:
 Required:
 
 - `name` (String)
-- `url` (String)
+- `url` (String, Sensitive)
 
 Optional:
 
@@ -276,5 +276,5 @@ Optional:
 - `method` (String) (Default `POST`)
 - `query_parameters` (Map of String)
 - `template` (String)
-- `webhook_secret` (String)
+- `webhook_secret` (String, Sensitive)
 - `webhook_type` (String) Type of the webhook. The allowed values are `WEBHOOK_CORALOGIX`, `WEBHOOK_DISCORD`, `WEBHOOK_FIREHYDRANT`, `WEBHOOK_GITLAB_ALERT`, `WEBHOOK_ILERT`, `WEBHOOK_INCIDENTIO`, `WEBHOOK_MSTEAMS`, `WEBHOOK_ROOTLY`, `WEBHOOK_SPIKESH`, `WEBHOOK_SPLUNK` and `WEBHOOK_TELEGRAM`.

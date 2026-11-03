@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -50,7 +51,7 @@ func TestResourceSchemasAreValid(t *testing.T) {
 }
 
 // Credentials must be marked Sensitive so Terraform redacts them in plan
-// output.
+// output. Attributes of nested objects and blocks are given as dotted paths.
 func TestSensitiveAttributes(t *testing.T) {
 	ctx := context.Background()
 
@@ -63,24 +64,80 @@ func TestSensitiveAttributes(t *testing.T) {
 	schemas := resourceSchemas(t)
 
 	cases := map[string][]string{
-		"checkly_client_certificate": {"private_key", "passphrase"},
+		"checkly_client_certificate":   {"private_key", "passphrase"},
+		"checkly_environment_variable": {"value"},
+		"checkly_dashboard":            {"key"},
+		"checkly_private_location":     {"keys"},
+		"checkly_alert_channel": {
+			"slack.url",
+			"webhook.url",
+			"webhook.webhook_secret",
+			"opsgenie.api_key",
+			"pagerduty.service_key",
+		},
+		"checkly_api_check":              {"request.basic_auth.password"},
+		"checkly_check":                  {"request.basic_auth.password", "environment_variable.value"},
+		"checkly_check_group":            {"api_check_defaults.basic_auth.password", "environment_variable.value"},
+		"checkly_check_group_v2":         {"api_check_defaults.basic_auth.password", "environment_variable.value"},
+		"checkly_browser_check":          {"environment_variable.value"},
+		"checkly_multistep_check":        {"environment_variable.value"},
+		"checkly_playwright_check_suite": {"environment_variable.value"},
+		"checkly_heartbeat_monitor":      {"heartbeat.ping_token"},
+		"checkly_heartbeat":              {"heartbeat.ping_token"},
 	}
 
-	for resourceName, attrNames := range cases {
+	for resourceName, attrPaths := range cases {
 		s, ok := schemas[resourceName]
 		if !ok {
 			t.Errorf("resource %s not found", resourceName)
 			continue
 		}
-		for _, attrName := range attrNames {
-			attr, ok := s.Attributes[attrName]
+		for _, attrPath := range attrPaths {
+			attr, ok := schemaAttributeAtPath(s, strings.Split(attrPath, "."))
 			if !ok {
-				t.Errorf("%s: attribute %s not found", resourceName, attrName)
+				t.Errorf("%s: attribute %s not found", resourceName, attrPath)
 				continue
 			}
 			if !attr.IsSensitive() {
-				t.Errorf("%s: attribute %s is not Sensitive", resourceName, attrName)
+				t.Errorf("%s: attribute %s is not Sensitive", resourceName, attrPath)
 			}
 		}
 	}
+}
+
+// schemaAttributeAtPath looks up an attribute by the names of the attributes
+// and blocks that lead to it, skipping over list and set elements.
+func schemaAttributeAtPath(s schema.Schema, names []string) (schema.Attribute, bool) {
+	attributes, blocks := s.Attributes, s.Blocks
+	for i, name := range names {
+		if attr, ok := attributes[name]; ok {
+			if i == len(names)-1 {
+				return attr, true
+			}
+			switch attr := attr.(type) {
+			case schema.SingleNestedAttribute:
+				attributes, blocks = attr.Attributes, nil
+			case schema.ListNestedAttribute:
+				attributes, blocks = attr.NestedObject.Attributes, nil
+			case schema.SetNestedAttribute:
+				attributes, blocks = attr.NestedObject.Attributes, nil
+			default:
+				return nil, false
+			}
+			continue
+		}
+
+		switch block := blocks[name].(type) {
+		case schema.SingleNestedBlock:
+			attributes, blocks = block.Attributes, block.Blocks
+		case schema.ListNestedBlock:
+			attributes, blocks = block.NestedObject.Attributes, block.NestedObject.Blocks
+		case schema.SetNestedBlock:
+			attributes, blocks = block.NestedObject.Attributes, block.NestedObject.Blocks
+		default:
+			return nil, false
+		}
+	}
+
+	return nil, false
 }

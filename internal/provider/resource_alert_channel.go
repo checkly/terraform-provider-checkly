@@ -258,6 +258,7 @@ func (r *AlertChannelResource) Schema(ctx context.Context, req resource.SchemaRe
 					Attributes: map[string]schema.Attribute{
 						"url": schema.StringAttribute{
 							Required:    true,
+							Sensitive:   true,
 							Description: "The Slack webhook URL",
 						},
 						"channel": schema.StringAttribute{
@@ -354,10 +355,12 @@ func (r *AlertChannelResource) Schema(ctx context.Context, req resource.SchemaRe
 							Optional: true,
 						},
 						"url": schema.StringAttribute{
-							Required: true,
+							Required:  true,
+							Sensitive: true,
 						},
 						"webhook_secret": schema.StringAttribute{
-							Optional: true,
+							Optional:  true,
+							Sensitive: true,
 						},
 						"webhook_type": schema.StringAttribute{
 							Optional:    true,
@@ -379,7 +382,8 @@ func (r *AlertChannelResource) Schema(ctx context.Context, req resource.SchemaRe
 							Required: true,
 						},
 						"api_key": schema.StringAttribute{
-							Required: true,
+							Required:  true,
+							Sensitive: true,
 						},
 						"region": schema.StringAttribute{
 							Required: true,
@@ -397,7 +401,8 @@ func (r *AlertChannelResource) Schema(ctx context.Context, req resource.SchemaRe
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"service_key": schema.StringAttribute{
-							Required: true,
+							Required:  true,
+							Sensitive: true,
 						},
 						"service_name": schema.StringAttribute{
 							Optional: true,

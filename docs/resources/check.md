@@ -289,7 +289,7 @@ Optional:
 Required:
 
 - `key` (String) The name of the environment variable or secret.
-- `value` (String) The value of the environment variable or secret.
+- `value` (String, Sensitive) The value of the environment variable or secret.
 
 Optional:
 
@@ -336,7 +336,7 @@ Optional:
 
 Required:
 
-- `password` (String)
+- `password` (String, Sensitive)
 - `username` (String)
 
 

@@ -259,7 +259,7 @@ Optional:
 
 Required:
 
-- `password` (String) The basic auth password.
+- `password` (String, Sensitive) The basic auth password.
 - `username` (String) The basic auth username.
 
 
@@ -270,7 +270,7 @@ Required:
 Required:
 
 - `key` (String) The name of the environment variable or secret.
-- `value` (String) The value of the environment variable or secret.
+- `value` (String, Sensitive) The value of the environment variable or secret.
 
 Optional:
 
