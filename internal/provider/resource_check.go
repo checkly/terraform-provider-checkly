@@ -73,6 +73,7 @@ type CheckResourceModel struct {
 	PrivateLocations         types.Set    `tfsdk:"private_locations"`
 	AlertSettings            types.Object `tfsdk:"alert_settings"`
 	UseGlobalAlertSettings   types.Bool   `tfsdk:"use_global_alert_settings"`
+	DoubleCheck              types.Bool   `tfsdk:"double_check"`
 	Request                  types.Set    `tfsdk:"request"`
 	GroupID                  types.Int64  `tfsdk:"group_id"`
 	GroupOrder               types.Int64  `tfsdk:"group_order"`
@@ -299,7 +300,9 @@ func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 			},
 			retryStrategyAttributeName: makeRetryStrategyAttributeSchema(RetryStrategyAttributeSchemaOptions{
 				SupportsOnlyOnNetworkError: true,
+				DoubleCheck:                true,
 			}),
+			doubleCheckAttributeName: doubleCheckAttributeSchema(),
 		},
 		Blocks: map[string]schema.Block{
 			environmentVariableAttributeName: makeEnvironmentVariableSchema(EnvironmentVariableAttributeSchemaOptions{
@@ -696,6 +699,7 @@ func checkFromModel(ctx context.Context, model *CheckResourceModel, diags *diag.
 		LocalTearDownScript:       model.LocalTeardownScript.ValueString(),
 		AlertSettings:             alertSettingsFromObject(ctx, model.AlertSettings, diags),
 		UseGlobalAlertSettings:    model.UseGlobalAlertSettings.ValueBool(),
+		DoubleCheck:               model.DoubleCheck.ValueBool(),
 		GroupID:                   model.GroupID.ValueInt64(),
 		GroupOrder:                int(model.GroupOrder.ValueInt64()),
 		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscription, diags),
@@ -795,6 +799,7 @@ func checkToModel(ctx context.Context, c *checkly.Check, model *CheckResourceMod
 	}
 	model.AlertSettings = alertSettingsToObject(ctx, c.AlertSettings, prior.AlertSettings, diags)
 	model.UseGlobalAlertSettings = types.BoolValue(c.UseGlobalAlertSettings)
+	model.DoubleCheck = types.BoolValue(c.DoubleCheck)
 	// The request property only applies to API checks; the API reports a
 	// zero-valued request config for other check types. For non-API checks
 	// the prior value is preserved: a configured request block is ignored by

@@ -1536,3 +1536,38 @@ func TestAccCheckGroupSwitchToV2(t *testing.T) {
 		},
 	})
 }
+
+// TestAccCheckGroupDoubleCheck covers the deprecated double_check attribute,
+// which implies a single retry in another region when retry_strategy is not
+// configured, and switches back to no retries when removed.
+func TestAccCheckGroupDoubleCheck(t *testing.T) {
+	config := func(doubleCheck string) string {
+		return fmt.Sprintf(`
+			resource "checkly_check_group" "test" {
+				name        = "tf-acc-group-double-check"
+				activated   = true
+				concurrency = 1
+				locations   = ["eu-central-1"]
+				%s
+			}
+		`, doubleCheck)
+	}
+	const r = "checkly_check_group.test"
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: config("double_check = true"),
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(r, "double_check", "true"),
+				resource.TestCheckResourceAttr(r, "retry_strategy.type", "FIXED"),
+				resource.TestCheckResourceAttr(r, "retry_strategy.max_retries", "1"),
+			),
+		},
+		{
+			Config: config(""),
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(r, "double_check", "false"),
+				resource.TestCheckResourceAttr(r, "retry_strategy.type", "NO_RETRIES"),
+			),
+		},
+	})
+}

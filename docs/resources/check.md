@@ -200,6 +200,7 @@ resource "checkly_check" "example_check" {
 - `alert_settings` (Attributes) Determines the alert escalation policy for the check. (see [below for nested schema](#nestedatt--alert_settings))
 - `degraded_response_time` (Number) The response time in milliseconds starting from which a check should be considered degraded. Possible values are between 0 and 30000. (Default `15000`).
 - `description` (String) A description of the check.
+- `double_check` (Boolean, Deprecated) Setting this to `true` will trigger a retry when a check fails from the failing region and another, randomly selected region before marking the check as failed. (Default `false`).
 - `environment_variable` (Block List) Insert environment variables into the runtime environment. Only relevant for browser checks. Use global environment variables whenever possible. (see [below for nested schema](#nestedblock--environment_variable))
 - `frequency_offset` (Number) Only relevant when `type` is `API`. When `frequency` is `0` (high frequency), `frequency_offset` is required and it alone controls how often the check should run. Defined in seconds. The allowed values are `0` (disabled - use `frequency` to define the actual frequency), `10` (10 seconds), `20` (20 seconds) and `30` (30 seconds).
 - `group_id` (Number) The id of the check group this check is part of.

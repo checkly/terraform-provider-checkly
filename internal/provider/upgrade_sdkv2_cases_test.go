@@ -309,6 +309,56 @@ resource "checkly_check" "test" {
 }
 `),
 
+	// double_check is deprecated but still works, so it must upgrade
+	// together with the retry strategy it implies.
+	"check_double_check": newSDKv2UpgradeCase(`
+resource "checkly_check" "test" {
+  name                      = "tf-upgrade-{{id}}-check-double-check"
+  type                      = "API"
+  frequency                 = 60
+  activated                 = false
+  locations                 = ["eu-central-1"]
+  use_global_alert_settings = true
+  double_check              = true
+
+  request {
+    url = "https://api.checklyhq.com/public-stats"
+  }
+}
+`, `
+resource "checkly_check" "test" {
+  name                      = "tf-upgrade-{{id}}-check-double-check"
+  type                      = "API"
+  frequency                 = 60
+  activated                 = false
+  locations                 = ["eu-central-1"]
+  use_global_alert_settings = true
+  double_check              = true
+
+  request {
+    url = "https://api.checklyhq.com/public-stats"
+  }
+}
+`),
+
+	"check_group_double_check": newSDKv2UpgradeCase(`
+resource "checkly_check_group" "test" {
+  name         = "tf-upgrade-{{id}}-group-double-check"
+  activated    = true
+  concurrency  = 1
+  locations    = ["eu-central-1"]
+  double_check = true
+}
+`, `
+resource "checkly_check_group" "test" {
+  name         = "tf-upgrade-{{id}}-group-double-check"
+  activated    = true
+  concurrency  = 1
+  locations    = ["eu-central-1"]
+  double_check = true
+}
+`),
+
 	"check_browser": newSDKv2UpgradeCase(`
 resource "checkly_check" "test" {
   name                      = "tf-upgrade-{{id}}-check-browser"

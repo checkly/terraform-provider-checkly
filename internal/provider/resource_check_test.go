@@ -2256,3 +2256,55 @@ func TestAccCheckAlertChannelSubscriptions(t *testing.T) {
 		},
 	})
 }
+
+// TestAccCheckDoubleCheck covers the deprecated double_check attribute, which
+// implies a single retry in another region when retry_strategy is not
+// configured, and switches back to no retries when removed.
+func TestAccCheckDoubleCheck(t *testing.T) {
+	config := func(doubleCheck string) string {
+		return fmt.Sprintf(`
+			resource "checkly_check" "test" {
+				name                      = "tf-acc-double-check"
+				type                      = "API"
+				frequency                 = 60
+				activated                 = false
+				locations                 = ["eu-central-1"]
+				use_global_alert_settings = true
+				%s
+
+				request {
+					url = "https://api.checklyhq.com/public-stats"
+				}
+			}
+		`, doubleCheck)
+	}
+	const r = "checkly_check.test"
+	accTestCase(t, []resource.TestStep{
+		{
+			// Fails validation before anything is created.
+			Config: config(`
+				double_check = true
+				retry_strategy = {
+					type = "FIXED"
+				}
+			`),
+			ExpectError: regexp.MustCompile(`Invalid Attribute Combination`),
+		},
+		{
+			Config: config("double_check = true"),
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(r, "double_check", "true"),
+				resource.TestCheckResourceAttr(r, "retry_strategy.type", "FIXED"),
+				resource.TestCheckResourceAttr(r, "retry_strategy.max_retries", "1"),
+				resource.TestCheckResourceAttr(r, "retry_strategy.same_region", "false"),
+			),
+		},
+		{
+			Config: config(""),
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(r, "double_check", "false"),
+				resource.TestCheckResourceAttr(r, "retry_strategy.type", "NO_RETRIES"),
+			),
+		},
+	})
+}

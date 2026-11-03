@@ -74,6 +74,9 @@ type RetryStrategyAttributeSchemaOptions struct {
 	// Required makes the attribute required instead of optional+computed
 	// with a NO_RETRIES default.
 	Required bool
+	// DoubleCheck plans the retry strategy that the deprecated double_check
+	// attribute implies, for resources that have it.
+	DoubleCheck bool
 }
 
 // makeRetryStrategyAttributeSchema returns the schema for the retry_strategy
@@ -143,16 +146,20 @@ func makeRetryStrategyAttributeSchema(options RetryStrategyAttributeSchemaOption
 		objectDefault = objectdefault.StaticValue(noRetriesObject(options.SupportsOnlyOnNetworkError))
 	}
 
+	var planModifiers []planmodifier.Object
+	if options.DoubleCheck {
+		planModifiers = append(planModifiers, doubleCheckRetryStrategyPlanModifier{})
+	}
+	planModifiers = append(planModifiers, retryStrategyIgnoredFields)
+
 	return schema.SingleNestedAttribute{
-		Optional:    !options.Required,
-		Required:    options.Required,
-		Computed:    !options.Required,
-		Default:     objectDefault,
-		Description: "A strategy for retrying failed check/monitor runs.",
-		Attributes:  attributes,
-		PlanModifiers: []planmodifier.Object{
-			retryStrategyIgnoredFields,
-		},
+		Optional:      !options.Required,
+		Required:      options.Required,
+		Computed:      !options.Required,
+		Default:       objectDefault,
+		Description:   "A strategy for retrying failed check/monitor runs.",
+		Attributes:    attributes,
+		PlanModifiers: planModifiers,
 	}
 }
 

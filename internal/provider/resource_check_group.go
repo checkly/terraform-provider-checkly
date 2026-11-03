@@ -58,6 +58,7 @@ type CheckGroupResourceModel struct {
 	AlertChannelSubscription types.Set    `tfsdk:"alert_channel_subscription"`
 	AlertSettings            types.Object `tfsdk:"alert_settings"`
 	UseGlobalAlertSettings   types.Bool   `tfsdk:"use_global_alert_settings"`
+	DoubleCheck              types.Bool   `tfsdk:"double_check"`
 	APICheckDefaults         types.Object `tfsdk:"api_check_defaults"`
 	RetryStrategy            types.Object `tfsdk:"retry_strategy"`
 }
@@ -169,7 +170,9 @@ func (r *CheckGroupResource) Schema(ctx context.Context, req resource.SchemaRequ
 			apiCheckDefaultsAttributeName: makeAPICheckDefaultsAttributeSchema(),
 			retryStrategyAttributeName: makeRetryStrategyAttributeSchema(RetryStrategyAttributeSchemaOptions{
 				SupportsOnlyOnNetworkError: true,
+				DoubleCheck:                true,
 			}),
+			doubleCheckAttributeName: doubleCheckAttributeSchema(),
 		},
 		Blocks: map[string]schema.Block{
 			environmentVariableAttributeName: makeEnvironmentVariableSchema(EnvironmentVariableAttributeSchemaOptions{
@@ -437,6 +440,7 @@ func checkGroupFromModel(ctx context.Context, model *CheckGroupResourceModel, di
 		LocalTearDownScript:       model.LocalTeardownScript.ValueString(),
 		AlertSettings:             alertSettingsFromObject(ctx, model.AlertSettings, diags),
 		UseGlobalAlertSettings:    model.UseGlobalAlertSettings.ValueBool(),
+		DoubleCheck:               model.DoubleCheck.ValueBool(),
 		APICheckDefaults:          apiCheckDefaultsFromObject(ctx, model.APICheckDefaults, diags),
 		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscription, diags),
 		RetryStrategy:             retryStrategyFromObject(ctx, model.RetryStrategy, diags),
@@ -491,6 +495,7 @@ func checkGroupToModel(ctx context.Context, group *checkly.Group, model *CheckGr
 	model.AlertChannelSubscription = alertChannelSubscriptionsToSet(ctx, group.AlertChannelSubscriptions, diags)
 	model.AlertSettings = alertSettingsToObject(ctx, group.AlertSettings, model.AlertSettings, diags)
 	model.UseGlobalAlertSettings = types.BoolValue(group.UseGlobalAlertSettings)
+	model.DoubleCheck = types.BoolValue(group.DoubleCheck)
 	model.APICheckDefaults = apiCheckDefaultsToObject(ctx, group.APICheckDefaults, model.APICheckDefaults, diags)
 	model.RetryStrategy = retryStrategyToObject(ctx, group.RetryStrategy, model.RetryStrategy, diags)
 }

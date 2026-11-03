@@ -79,15 +79,28 @@ All other blocks, such as `request`, `assertion`, `alert_channel_subscription` a
 
 ### Removed attributes
 
-These attributes were deprecated in v1.x and had no effect. Remove them from your configuration:
+These attributes were deprecated in v1.x. Remove them from your configuration:
 
-- `double_check` on `checkly_check` and `checkly_check_group`. Use `retry_strategy` instead.
-- `ssl_check` on `checkly_check`.
-- `environment_variables` (the map) on `checkly_check` and `checkly_check_group`. Use `environment_variable` blocks instead.
-- `alert_settings.ssl_certificates` on all resource types that had it.
+- `environment_variables` (the map) on `checkly_check` and `checkly_check_group`. Unlike the attributes below, it did take effect: rewrite each entry as an `environment_variable` block with the same `key` and `value`, so that the variables are kept.
+- `ssl_check` on `checkly_check`, which the API ignored.
+- `alert_settings.ssl_certificates` on all resource types that had it, which the API ignored.
 - `retry_strategy.only_on` on `checkly_dns_monitor`, `checkly_grpc_monitor`, `checkly_icmp_monitor`, `checkly_ssl_monitor`, `checkly_tcp_check`, `checkly_tcp_monitor` and `checkly_traceroute_monitor`, where it had no conditions to set.
 
 `environment_variable` blocks on a `checkly_check` with `type = "API"` have no effect either, because API checks do not use environment variables, and they cause a change in every plan. Remove them as well.
+
+### Deprecated attributes
+
+`double_check` on `checkly_check` and `checkly_check_group` is still deprecated and still works as in v1.x: without a `retry_strategy`, it retries a failed run once in another region. To replace it, remove it and set the equivalent retry strategy:
+
+```terraform
+retry_strategy = {
+  type                 = "FIXED"
+  max_retries          = 1
+  base_backoff_seconds = 0
+  max_duration_seconds = 600
+  same_region          = false
+}
+```
 
 ### Sensitive environment variable values
 
@@ -130,6 +143,8 @@ moved {
   to   = checkly_heartbeat_monitor.example
 }
 ```
+
+The per-type check resources have no `double_check`. Before moving a check that sets it, replace it with the equivalent `retry_strategy` shown under [Deprecated attributes](#deprecated-attributes), or the check stops retrying.
 
 When moving an API check from `checkly_check` to `checkly_api_check`, note that the default `degraded_response_time` and `max_response_time` are 5000 and 20000 instead of 15000 and 30000. Set them explicitly to keep the previous thresholds.
 

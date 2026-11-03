@@ -170,9 +170,10 @@ func TestUpgradeSDKv2State(t *testing.T) {
 	})
 
 	t.Run("check", func(t *testing.T) {
-		// double_check, ssl_check and environment_variables have been removed.
+		// ssl_check and environment_variables have been removed.
 		state := upgradeSDKv2Fixture(t, NewCheckResource(), "check")
 		requireStateValue(t, state, path.Root("type"), types.StringValue("API"))
+		requireStateValue(t, state, path.Root("double_check"), types.BoolValue(true))
 		requireStateValue(t, state, path.Root("retry_strategy").AtName("type"), types.StringValue("FIXED"))
 	})
 }
