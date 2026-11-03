@@ -94,7 +94,7 @@ func TestAccPlaywrightCodeBundleBrokenSymlink(t *testing.T) {
 			Config: `
 				resource "checkly_playwright_code_bundle" "test" {
 					prebuilt_archive {
-						file = "../fixtures/playwright-project-broken-symlink.tar.gz"
+						file = "../../fixtures/playwright-project-broken-symlink.tar.gz"
 					}
 				}
 			`,
