@@ -168,12 +168,6 @@ resource "checkly_check" "test" {
     }
   }
 
-  environment_variable {
-    key    = "FOO"
-    value  = "bar"
-    locked = true
-  }
-
   alert_settings {
     escalation_type = "RUN_BASED"
     run_based_escalation {
@@ -251,12 +245,6 @@ resource "checkly_check" "test" {
       comparison = "GREATER_THAN"
       target     = "100"
     }
-  }
-
-  environment_variable {
-    key    = "FOO"
-    value  = "bar"
-    locked = true
   }
 
   alert_settings = {
