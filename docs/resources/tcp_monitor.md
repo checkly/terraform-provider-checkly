@@ -25,7 +25,7 @@ resource "checkly_tcp_monitor" "example-tcp-monitor" {
     "us-west-1"
   ]
 
-  request {
+  request = {
     hostname = "api.checklyhq.com"
     port     = 80
   }
@@ -66,24 +66,25 @@ resource "checkly_tcp_monitor" "example-tcp-monitor-2" {
     same_region          = false
   }
 
-  request {
+  request = {
     hostname = "api.checklyhq.com"
     port     = 80
     data     = "hello"
 
-    assertion {
-      source     = "RESPONSE_DATA"
-      property   = ""
-      comparison = "CONTAINS"
-      target     = "welcome"
-    }
-
-    assertion {
-      source     = "RESPONSE_TIME"
-      property   = ""
-      comparison = "LESS_THAN"
-      target     = "2000"
-    }
+    assertion = [
+      {
+        source     = "RESPONSE_DATA"
+        property   = ""
+        comparison = "CONTAINS"
+        target     = "welcome"
+      },
+      {
+        source     = "RESPONSE_TIME"
+        property   = ""
+        comparison = "LESS_THAN"
+        target     = "2000"
+      },
+    ]
   }
 }
 ```
@@ -96,6 +97,7 @@ resource "checkly_tcp_monitor" "example-tcp-monitor-2" {
 - `activated` (Boolean) Determines if the check is running or not. Possible values `true`, and `false`.
 - `frequency` (Number) Controls how often the monitor should run. Defined in minutes. The allowed values are `0` (high frequency - use `frequency_offset` to define the actual frequency), `1` (1 minute), `2` (2 minutes), `5` (5 minutes), `10` (10 minutes), `15` (15 minutes), `30` (30 minutes), `60` (1 hour), `120` (2 hours), `180` (3 hours), `360` (6 hours), `720` (12 hours) and `1440` (24 hours).
 - `name` (String) The name of the check.
+- `request` (Attributes) The parameters for the TCP connection. (see [below for nested schema](#nestedatt--request))
 
 ### Optional
 
@@ -110,7 +112,6 @@ resource "checkly_tcp_monitor" "example-tcp-monitor-2" {
 - `max_response_time` (Number) The response time in milliseconds starting from which a check should be considered failing. Possible values are between 0 and 5000. (Default `5000`).
 - `muted` (Boolean) Determines if any notifications will be sent out when a check fails/degrades/recovers.
 - `private_locations` (Set of String) An array of one or more private locations slugs.
-- `request` (Block Set) The parameters for the TCP connection. (see [below for nested schema](#nestedblock--request))
 - `retry_strategy` (Attributes) A strategy for retrying failed check/monitor runs. (see [below for nested schema](#nestedatt--retry_strategy))
 - `run_parallel` (Boolean) Determines if the check should run in all selected locations in parallel or round-robin.
 - `runtime_id` (String) The ID of the runtime to use for this check.
@@ -122,6 +123,35 @@ resource "checkly_tcp_monitor" "example-tcp-monitor-2" {
 ### Read-Only
 
 - `id` (String) The ID of the monitor.
+
+<a id="nestedatt--request"></a>
+### Nested Schema for `request`
+
+Required:
+
+- `hostname` (String) The hostname or IP to connect to. Do not include a scheme or a port in this value.
+- `port` (Number) The port number to connect to.
+
+Optional:
+
+- `assertion` (Attributes Set) A request can have multiple assertions. (see [below for nested schema](#nestedatt--request--assertion))
+- `data` (String) The data to send to the target host.
+- `ip_family` (String) The IP family to use when executing the TCP check. The value can be either `IPv4` or `IPv6`. (Default `IPv4`).
+
+<a id="nestedatt--request--assertion"></a>
+### Nested Schema for `request.assertion`
+
+Required:
+
+- `comparison` (String) The type of comparison to be executed between expected and actual value of the assertion. Possible values are `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL`, and `NOT_NULL`.
+- `source` (String) The source of the asserted value. Possible values are `RESPONSE_DATA` and `RESPONSE_TIME`.
+
+Optional:
+
+- `property` (String)
+- `target` (String)
+
+
 
 <a id="nestedblock--alert_channel_subscription"></a>
 ### Nested Schema for `alert_channel_subscription`
@@ -175,35 +205,6 @@ Optional:
 Optional:
 
 - `minutes_failing_threshold` (Number) Send an alert notification after the monitor has been failing for the given amount of time (in minutes). Possible values are `5`, `10`, `15`, and `30`. (Default `5`).
-
-
-
-<a id="nestedblock--request"></a>
-### Nested Schema for `request`
-
-Required:
-
-- `hostname` (String) The hostname or IP to connect to. Do not include a scheme or a port in this value.
-- `port` (Number) The port number to connect to.
-
-Optional:
-
-- `assertion` (Block Set) A request can have multiple assertions. (see [below for nested schema](#nestedblock--request--assertion))
-- `data` (String) The data to send to the target host.
-- `ip_family` (String) The IP family to use when executing the TCP check. The value can be either `IPv4` or `IPv6`. (Default `IPv4`).
-
-<a id="nestedblock--request--assertion"></a>
-### Nested Schema for `request.assertion`
-
-Required:
-
-- `comparison` (String) The type of comparison to be executed between expected and actual value of the assertion. Possible values are `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL`, and `NOT_NULL`.
-- `source` (String) The source of the asserted value. Possible values are `RESPONSE_DATA` and `RESPONSE_TIME`.
-
-Optional:
-
-- `property` (String)
-- `target` (String)
 
 
 

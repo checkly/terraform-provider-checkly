@@ -8,13 +8,13 @@ resource "checkly_url_monitor" "example-url-monitor" {
     "eu-west-1"
   ]
 
-  request {
+  request = {
     url = "https://welcome.checklyhq.com"
 
-    assertion {
+    assertion = [{
       source     = "STATUS_CODE"
       comparison = "EQUALS"
       target     = "200"
-    }
+    }]
   }
 }

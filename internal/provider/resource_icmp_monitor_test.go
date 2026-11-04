@@ -29,16 +29,8 @@ func TestAccICMPMonitorRequiredFields(t *testing.T) {
 			ExpectError: regexp.MustCompile(`The argument "frequency" is required, but no definition was found.`),
 		},
 		{
-			// Terraform only reports the missing request block once all
-			// required attributes are present.
-			Config: `
-				resource "checkly_icmp_monitor" "test" {
-					name      = "test-required-fields"
-					activated = true
-					frequency = 60
-				}
-			`,
-			ExpectError: regexp.MustCompile(`Block request must have a configuration value`),
+			Config:      config,
+			ExpectError: regexp.MustCompile(`The argument "request" is required, but no definition was found.`),
 		},
 	})
 }
@@ -56,15 +48,15 @@ func TestAccICMPMonitorBasic(t *testing.T) {
 					locations                 = ["us-east-1", "eu-central-1"]
 					use_global_alert_settings = true
 
-					request {
+					request = {
 						hostname = "example.com"
 
-						assertion {
+						assertion = [{
 							source     = "LATENCY"
 							property   = "avg"
 							comparison = "LESS_THAN"
 							target     = "200"
-						}
+						}]
 					}
 				}
 			`,
@@ -94,30 +86,20 @@ func TestAccICMPMonitorBasic(t *testing.T) {
 					"locations.*",
 					"us-east-1",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_icmp_monitor.test",
-					"request.*.hostname",
+					"request.hostname",
 					"example.com",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_icmp_monitor.test",
-					"request.*.assertion.*.source",
-					"LATENCY",
-				),
-				testCheckResourceAttrExpr(
-					"checkly_icmp_monitor.test",
-					"request.*.assertion.*.property",
-					"avg",
-				),
-				testCheckResourceAttrExpr(
-					"checkly_icmp_monitor.test",
-					"request.*.assertion.*.comparison",
-					"LESS_THAN",
-				),
-				testCheckResourceAttrExpr(
-					"checkly_icmp_monitor.test",
-					"request.*.assertion.*.target",
-					"200",
+					"request.assertion.*",
+					map[string]string{
+						"source":     "LATENCY",
+						"property":   "avg",
+						"comparison": "LESS_THAN",
+						"target":     "200",
+					},
 				),
 			),
 		},
@@ -137,15 +119,15 @@ func TestAccICMPMonitorDescriptionRemoval(t *testing.T) {
 					locations                 = ["us-east-1", "eu-central-1"]
 					use_global_alert_settings = true
 
-					request {
+					request = {
 						hostname = "example.com"
 
-						assertion {
+						assertion = [{
 							source     = "LATENCY"
 							property   = "avg"
 							comparison = "LESS_THAN"
 							target     = "200"
-						}
+						}]
 					}
 				}
 			`,
@@ -165,15 +147,15 @@ func TestAccICMPMonitorDescriptionRemoval(t *testing.T) {
 					locations                 = ["us-east-1", "eu-central-1"]
 					use_global_alert_settings = true
 
-					request {
+					request = {
 						hostname = "example.com"
 
-						assertion {
+						assertion = [{
 							source     = "LATENCY"
 							property   = "avg"
 							comparison = "LESS_THAN"
 							target     = "200"
-						}
+						}]
 					}
 				}
 			`,
@@ -204,24 +186,22 @@ func TestAccICMPMonitorFull(t *testing.T) {
 						"ap-northeast-1"
 					]
 
-					request {
+					request = {
 						hostname   = "api.checklyhq.com"
 						ip_family  = "IPv4"
 						ping_count = 10
 
-						assertion {
+						assertion = [{
 							source     = "LATENCY"
 							property   = "avg"
 							comparison = "LESS_THAN"
 							target     = "200"
-						}
-
-						assertion {
+						}, {
 							source     = "LATENCY"
 							property   = "max"
 							comparison = "LESS_THAN"
 							target     = "500"
-						}
+						}]
 					}
 
 					alert_settings = {
@@ -259,40 +239,45 @@ func TestAccICMPMonitorFull(t *testing.T) {
 					`"locations.#"`,
 					"3",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_icmp_monitor.test",
-					"request.*.hostname",
+					"request.hostname",
 					"api.checklyhq.com",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_icmp_monitor.test",
-					"request.*.ip_family",
+					"request.ip_family",
 					"IPv4",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_icmp_monitor.test",
-					"request.*.ping_count",
+					"request.ping_count",
 					"10",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_icmp_monitor.test",
-					"request.*.assertion.#",
+					"request.assertion.#",
 					"2",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_icmp_monitor.test",
-					"request.*.assertion.*.comparison",
-					"LESS_THAN",
+					"request.assertion.*",
+					map[string]string{
+						"source":     "LATENCY",
+						"property":   "avg",
+						"comparison": "LESS_THAN",
+						"target":     "200",
+					},
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_icmp_monitor.test",
-					"request.*.assertion.*.target",
-					"200",
-				),
-				testCheckResourceAttrExpr(
-					"checkly_icmp_monitor.test",
-					"request.*.assertion.*.target",
-					"500",
+					"request.assertion.*",
+					map[string]string{
+						"source":     "LATENCY",
+						"property":   "max",
+						"comparison": "LESS_THAN",
+						"target":     "500",
+					},
 				),
 			),
 		},
@@ -311,15 +296,15 @@ resource "checkly_icmp_monitor" "test_trigger_incident" {
 	frequency     = 30
 	locations     = ["eu-west-2", "us-east-1"]
 
-	request {
+	request = {
 		hostname = "example.com"
 
-		assertion {
+		assertion = [{
 			source     = "LATENCY"
 			property   = "avg"
 			comparison = "LESS_THAN"
 			target     = "200"
-		}
+		}]
 	}
 
 	trigger_incident = {
@@ -454,7 +439,7 @@ func TestAccICMPMonitorWithSingleRetry(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						hostname = "example.com"
 					}
 					retry_strategy = {
@@ -494,7 +479,7 @@ func TestAccICMPMonitorWithNoRetries(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						hostname = "example.com"
 					}
 					retry_strategy = {
@@ -522,7 +507,7 @@ func TestAccICMPMonitorWithDefaultNoRetries(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						hostname = "example.com"
 					}
 				}
@@ -555,7 +540,7 @@ func TestAccICMPMonitorGroupAssignment(t *testing.T) {
 					frequency = 60
 					locations = ["eu-central-1"]
 					group_id  = checkly_check_group.test1.id
-					request {
+					request = {
 						hostname = "example.com"
 					}
 				}
@@ -565,7 +550,7 @@ func TestAccICMPMonitorGroupAssignment(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						hostname = "example.com"
 					}
 				}
@@ -598,7 +583,7 @@ func TestAccICMPMonitorGroupAssignment(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						hostname = "example.com"
 					}
 				}
@@ -608,7 +593,7 @@ func TestAccICMPMonitorGroupAssignment(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						hostname = "example.com"
 					}
 				}
@@ -638,7 +623,7 @@ func TestAccICMPMonitorFrequencyValidation(t *testing.T) {
 					activated = true
 					frequency = 0
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						hostname = "example.com"
 					}
 				}
@@ -653,7 +638,7 @@ func TestAccICMPMonitorFrequencyValidation(t *testing.T) {
 					frequency        = 0
 					frequency_offset = 10
 					locations        = ["eu-central-1"]
-					request {
+					request = {
 						hostname = "example.com"
 					}
 				}
@@ -679,7 +664,7 @@ func TestAccICMPMonitorFrequencyValidation(t *testing.T) {
 					frequency        = 60
 					frequency_offset = 30
 					locations        = ["eu-central-1"]
-					request {
+					request = {
 						hostname = "example.com"
 					}
 				}
@@ -693,7 +678,7 @@ func TestAccICMPMonitorFrequencyValidation(t *testing.T) {
 					activated = true
 					frequency = 9999
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						hostname = "example.com"
 					}
 				}
@@ -708,7 +693,7 @@ func TestAccICMPMonitorFrequencyValidation(t *testing.T) {
 					frequency        = 60
 					frequency_offset = 0
 					locations        = ["eu-central-1"]
-					request {
+					request = {
 						hostname = "example.com"
 					}
 				}
@@ -738,7 +723,7 @@ func TestAccICMPMonitorFrequencyUpdates(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						hostname = "example.com"
 					}
 				}
@@ -749,7 +734,7 @@ func TestAccICMPMonitorFrequencyUpdates(t *testing.T) {
 					frequency        = 0
 					frequency_offset = 30
 					locations        = ["eu-central-1"]
-					request {
+					request = {
 						hostname = "example.com"
 					}
 				}
@@ -784,7 +769,7 @@ func TestAccICMPMonitorFrequencyUpdates(t *testing.T) {
 					frequency        = 0
 					frequency_offset = 10
 					locations        = ["eu-central-1"]
-					request {
+					request = {
 						hostname = "example.com"
 					}
 				}
@@ -794,7 +779,7 @@ func TestAccICMPMonitorFrequencyUpdates(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						hostname = "example.com"
 					}
 				}
@@ -853,15 +838,15 @@ func TestAccICMPMonitorAlertChannelSubscriptions(t *testing.T) {
 					activated = true
 					locations = ["eu-central-1"]
 
-					request {
+					request = {
 						hostname = "example.com"
 
-						assertion {
+						assertion = [{
 							source     = "LATENCY"
 							property   = "avg"
 							comparison = "LESS_THAN"
 							target     = "200"
-						}
+						}]
 					}
 
 					alert_channel_subscription {
@@ -922,15 +907,15 @@ func TestAccICMPMonitorAlertChannelSubscriptions(t *testing.T) {
 					activated = true
 					locations = ["eu-central-1"]
 
-					request {
+					request = {
 						hostname = "example.com"
 
-						assertion {
+						assertion = [{
 							source     = "LATENCY"
 							property   = "avg"
 							comparison = "LESS_THAN"
 							target     = "200"
-						}
+						}]
 					}
 
 					alert_channel_subscription {
@@ -1002,15 +987,15 @@ func TestAccICMPMonitorAlertChannelSubscriptions(t *testing.T) {
 					activated = true
 					locations = ["eu-central-1"]
 
-					request {
+					request = {
 						hostname = "example.com"
 
-						assertion {
+						assertion = [{
 							source     = "LATENCY"
 							property   = "avg"
 							comparison = "LESS_THAN"
 							target     = "200"
-						}
+						}]
 					}
 				}
 			`,
@@ -1046,7 +1031,7 @@ func TestAccICMPMonitorUnsetSweepBasics(t *testing.T) {
 					degraded_packet_loss_threshold = 35
 					max_packet_loss_threshold      = 70
 					tags                           = ["sweep-a", "sweep-b"]
-					request {
+					request = {
 						hostname = "api.checklyhq.com"
 					}
 				}
@@ -1067,7 +1052,7 @@ func TestAccICMPMonitorUnsetSweepBasics(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						hostname = "api.checklyhq.com"
 					}
 				}
@@ -1098,7 +1083,7 @@ func TestAccICMPMonitorUnsetSweepThresholdZero(t *testing.T) {
 					locations                      = ["eu-central-1"]
 					degraded_packet_loss_threshold = 0
 					max_packet_loss_threshold      = 0
-					request {
+					request = {
 						hostname = "api.checklyhq.com"
 					}
 				}
@@ -1122,7 +1107,7 @@ func TestAccICMPMonitorUnsetSweepThresholdReset(t *testing.T) {
 					locations                      = ["eu-central-1"]
 					degraded_packet_loss_threshold = 5
 					max_packet_loss_threshold      = 15
-					request {
+					request = {
 						hostname = "api.checklyhq.com"
 					}
 				}
@@ -1139,7 +1124,7 @@ func TestAccICMPMonitorUnsetSweepThresholdReset(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						hostname = "api.checklyhq.com"
 					}
 				}
@@ -1163,7 +1148,7 @@ func TestAccICMPMonitorUnsetSweepLocations(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1", "us-east-1"]
-					request {
+					request = {
 						hostname = "api.checklyhq.com"
 					}
 				}
@@ -1178,7 +1163,7 @@ func TestAccICMPMonitorUnsetSweepLocations(t *testing.T) {
 					name      = "icmp-unset-sweep-locations"
 					activated = true
 					frequency = 60
-					request {
+					request = {
 						hostname = "api.checklyhq.com"
 					}
 				}
@@ -1203,23 +1188,23 @@ func TestAccICMPMonitorUnsetSweepRequest(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						hostname   = "api.checklyhq.com"
 						ip_family  = "IPv6"
 						ping_count = 5
-						assertion {
+						assertion = [{
 							source     = "LATENCY"
 							property   = "avg"
 							comparison = "LESS_THAN"
 							target     = "250"
-						}
+						}]
 					}
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "request.0.ip_family", "IPv6"),
-				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "request.0.ping_count", "5"),
-				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "request.0.assertion.#", "1"),
+				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "request.ip_family", "IPv6"),
+				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "request.ping_count", "5"),
+				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "request.assertion.#", "1"),
 			),
 		},
 		{
@@ -1229,22 +1214,22 @@ func TestAccICMPMonitorUnsetSweepRequest(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						hostname = "api.checklyhq.com"
 					}
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "request.0.ip_family", "IPv4"),
-				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "request.0.ping_count", "10"),
-				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "request.0.assertion.#", "0"),
+				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "request.ip_family", "IPv4"),
+				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "request.ping_count", "10"),
+				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "request.assertion.#", "0"),
 			),
 		},
 	})
 }
 
 // TestAccICMPMonitorUnsetSweepTriggerIncident verifies that removing the
-// trigger_incident block clears the incident trigger on the server.
+// trigger_incident attribute clears the incident trigger on the server.
 func TestAccICMPMonitorUnsetSweepTriggerIncident(t *testing.T) {
 	service := `
 		resource "checkly_status_page_service" "icmp_sweep" {
@@ -1259,7 +1244,7 @@ func TestAccICMPMonitorUnsetSweepTriggerIncident(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						hostname = "api.checklyhq.com"
 					}
 					trigger_incident = {
@@ -1282,7 +1267,7 @@ func TestAccICMPMonitorUnsetSweepTriggerIncident(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						hostname = "api.checklyhq.com"
 					}
 				}
@@ -1315,7 +1300,7 @@ func TestAccICMPMonitorUnsetSweepGroup(t *testing.T) {
 					locations   = ["eu-central-1"]
 					group_id    = checkly_check_group.icmp_sweep.id
 					group_order = 2
-					request {
+					request = {
 						hostname = "api.checklyhq.com"
 					}
 				}
@@ -1337,7 +1322,7 @@ func TestAccICMPMonitorUnsetSweepGroup(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						hostname = "api.checklyhq.com"
 					}
 				}
@@ -1361,7 +1346,7 @@ func TestAccICMPMonitorRetryStrategyRemoval(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						hostname = "api.checklyhq.com"
 					}
 					retry_strategy = {
@@ -1384,7 +1369,7 @@ func TestAccICMPMonitorRetryStrategyRemoval(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						hostname = "api.checklyhq.com"
 					}
 				}

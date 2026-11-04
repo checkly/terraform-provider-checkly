@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -37,6 +38,32 @@ func assertionsWithPropertyDefault(ctx context.Context, set types.Set, diags *di
 // with empty strings substituted for a null or unknown property and target.
 func assertionsWithPropertyAndTargetDefaults(ctx context.Context, set types.Set, diags *diag.Diagnostics) types.Set {
 	return assertionsWithDefaults(ctx, set, true, diags)
+}
+
+// objectWithSetDefaults returns a function that applies withDefaults to the
+// set attribute called name of an object value, for use with
+// planNestedDefaults on a single nested attribute holding a set of
+// assertions or similar elements. Null and unknown objects are returned
+// unchanged.
+func objectWithSetDefaults(name string, withDefaults func(context.Context, types.Set, *diag.Diagnostics) types.Set) func(context.Context, types.Object, *diag.Diagnostics) types.Object {
+	return func(ctx context.Context, obj types.Object, diags *diag.Diagnostics) types.Object {
+		if obj.IsNull() || obj.IsUnknown() {
+			return obj
+		}
+
+		attrs := obj.Attributes()
+		set, ok := attrs[name].(types.Set)
+		if !ok {
+			diags.AddError("Unexpected Attribute Type", fmt.Sprintf("Attribute %q is not a set: %T.", name, attrs[name]))
+			return obj
+		}
+		attrs[name] = withDefaults(ctx, set, diags)
+
+		result, d := types.ObjectValue(obj.AttributeTypes(ctx), attrs)
+		diags.Append(d...)
+
+		return result
+	}
 }
 
 // assertionsWithDefaults applies the default values of the optional+computed

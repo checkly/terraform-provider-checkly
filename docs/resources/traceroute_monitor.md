@@ -25,7 +25,7 @@ resource "checkly_traceroute_monitor" "example-traceroute-monitor" {
     "us-west-1"
   ]
 
-  request {
+  request = {
     url = "api.checklyhq.com"
   }
 }
@@ -54,7 +54,7 @@ resource "checkly_traceroute_monitor" "example-traceroute-monitor-2" {
     }
   }
 
-  request {
+  request = {
     url      = "api.checklyhq.com"
     protocol = "ICMP"
     # ICMP probes have no port; the API also derives the default port for the
@@ -66,19 +66,20 @@ resource "checkly_traceroute_monitor" "example-traceroute-monitor-2" {
     ptr_lookup       = true
     timeout          = 10
 
-    assertion {
-      source     = "PACKET_LOSS"
-      property   = ""
-      comparison = "LESS_THAN"
-      target     = "10"
-    }
-
-    assertion {
-      source     = "RESPONSE_TIME"
-      property   = "avg"
-      comparison = "LESS_THAN"
-      target     = "2000"
-    }
+    assertion = [
+      {
+        source     = "PACKET_LOSS"
+        property   = ""
+        comparison = "LESS_THAN"
+        target     = "10"
+      },
+      {
+        source     = "RESPONSE_TIME"
+        property   = "avg"
+        comparison = "LESS_THAN"
+        target     = "2000"
+      },
+    ]
   }
 }
 ```
@@ -91,6 +92,7 @@ resource "checkly_traceroute_monitor" "example-traceroute-monitor-2" {
 - `activated` (Boolean) Determines if the monitor is running or not. Possible values `true`, and `false`.
 - `frequency` (Number) Controls how often the monitor should run. Defined in minutes. The allowed values are `0` (high frequency - use `frequency_offset` to define the actual frequency), `1` (1 minute), `2` (2 minutes), `5` (5 minutes), `10` (10 minutes), `15` (15 minutes), `30` (30 minutes), `60` (1 hour), `120` (2 hours), `180` (3 hours), `360` (6 hours), `720` (12 hours) and `1440` (24 hours).
 - `name` (String) The name of the monitor.
+- `request` (Attributes) The parameters for the traceroute probe. (see [below for nested schema](#nestedatt--request))
 
 ### Optional
 
@@ -104,7 +106,6 @@ resource "checkly_traceroute_monitor" "example-traceroute-monitor-2" {
 - `locations` (Set of String) An array of one or more data center locations where to run this monitor. (Default ["us-east-1"])
 - `max_response_time` (Number) The response time in milliseconds starting from which a monitor should be considered failing. Possible values are between 0 and 30000. (Default `20000`).
 - `muted` (Boolean) Determines if any notifications will be sent out when a monitor fails/degrades/recovers.
-- `request` (Block List) The parameters for the traceroute probe. (see [below for nested schema](#nestedblock--request))
 - `retry_strategy` (Attributes) A strategy for retrying failed check/monitor runs. (see [below for nested schema](#nestedatt--retry_strategy))
 - `run_parallel` (Boolean) Determines if the monitor should run in all selected locations in parallel or round-robin.
 - `runtime_id` (String) The ID of the runtime to use for this monitor.
@@ -116,6 +117,39 @@ resource "checkly_traceroute_monitor" "example-traceroute-monitor-2" {
 ### Read-Only
 
 - `id` (String) The ID of the monitor.
+
+<a id="nestedatt--request"></a>
+### Nested Schema for `request`
+
+Required:
+
+- `url` (String) The host to trace the network path to. Do not include a scheme or a port in this value.
+
+Optional:
+
+- `assertion` (Attributes Set) A request can have multiple assertions. The allowed comparisons, properties, and target formats depend on the assertion source — see the [Assertion Reference](#assertion-reference) below. (see [below for nested schema](#nestedatt--request--assertion))
+- `ip_family` (String) The IP family to use when executing the traceroute. The value can be either `IPv4` or `IPv6`. (Default `IPv4`).
+- `max_hops` (Number) The maximum number of network hops to probe before stopping. Possible values are between 1 and 64. (Default `30`).
+- `max_unknown_hops` (Number) The maximum number of consecutive unresponsive hops to tolerate before stopping the trace. Possible values are between 1 and 30, and the value must not exceed `max_hops`. (Default `min(15, max_hops)`).
+- `port` (Number) The destination port for TCP/UDP/SCTP probes. Possible values are between 1 and 65535. Ignored (and not sent) when `protocol = "ICMP"`. The default depends on the protocol: `443` for `TCP`, `33434` for `UDP` and `SCTP`.
+- `protocol` (String) The probe protocol. `TCP` sends SYN probes (default), `UDP` sends datagrams to a high port, `ICMP` sends Echo Requests, `SCTP` sends INIT chunks. (Default `TCP`).
+- `ptr_lookup` (Boolean) Whether to perform reverse-DNS (PTR) lookups on each hop's IP address. (Default `true`).
+- `timeout` (Number) The number of seconds to wait for the traceroute to complete before timing out. Possible values are between 1 and 30. (Default `10`).
+
+<a id="nestedatt--request--assertion"></a>
+### Nested Schema for `request.assertion`
+
+Required:
+
+- `comparison` (String) The type of comparison to be executed between expected and actual value of the assertion. For `RESPONSE_TIME`, possible values are `EQUALS`, `NOT_EQUALS`, `GREATER_THAN`, and `LESS_THAN`. For `HOP_COUNT` and `PACKET_LOSS`, possible values are `EQUALS`, `GREATER_THAN`, and `LESS_THAN`.
+- `source` (String) The source of the asserted value. Possible values are `RESPONSE_TIME`, `HOP_COUNT`, and `PACKET_LOSS`.
+
+Optional:
+
+- `property` (String) The statistic to assert on. Required for `RESPONSE_TIME`, where possible values are `avg`, `min`, `max`, and `stdDev`. Must be empty for `HOP_COUNT` and `PACKET_LOSS`.
+- `target` (String) The value to compare against. Must be numeric: a non-negative number of milliseconds for `RESPONSE_TIME`, a non-negative integer for `HOP_COUNT`, or a number between 0 and 100 for `PACKET_LOSS`.
+
+
 
 <a id="nestedblock--alert_channel_subscription"></a>
 ### Nested Schema for `alert_channel_subscription`
@@ -172,39 +206,6 @@ Optional:
 
 
 
-<a id="nestedblock--request"></a>
-### Nested Schema for `request`
-
-Required:
-
-- `url` (String) The host to trace the network path to. Do not include a scheme or a port in this value.
-
-Optional:
-
-- `assertion` (Block Set) A request can have multiple assertions. The allowed comparisons, properties, and target formats depend on the assertion source — see the [Assertion Reference](#assertion-reference) below. (see [below for nested schema](#nestedblock--request--assertion))
-- `ip_family` (String) The IP family to use when executing the traceroute. The value can be either `IPv4` or `IPv6`. (Default `IPv4`).
-- `max_hops` (Number) The maximum number of network hops to probe before stopping. Possible values are between 1 and 64. (Default `30`).
-- `max_unknown_hops` (Number) The maximum number of consecutive unresponsive hops to tolerate before stopping the trace. Possible values are between 1 and 30, and the value must not exceed `max_hops`. (Default `min(15, max_hops)`).
-- `port` (Number) The destination port for TCP/UDP/SCTP probes. Possible values are between 1 and 65535. Ignored (and not sent) when `protocol = "ICMP"`. The default depends on the protocol: `443` for `TCP`, `33434` for `UDP` and `SCTP`.
-- `protocol` (String) The probe protocol. `TCP` sends SYN probes (default), `UDP` sends datagrams to a high port, `ICMP` sends Echo Requests, `SCTP` sends INIT chunks. (Default `TCP`).
-- `ptr_lookup` (Boolean) Whether to perform reverse-DNS (PTR) lookups on each hop's IP address. (Default `true`).
-- `timeout` (Number) The number of seconds to wait for the traceroute to complete before timing out. Possible values are between 1 and 30. (Default `10`).
-
-<a id="nestedblock--request--assertion"></a>
-### Nested Schema for `request.assertion`
-
-Required:
-
-- `comparison` (String) The type of comparison to be executed between expected and actual value of the assertion. For `RESPONSE_TIME`, possible values are `EQUALS`, `NOT_EQUALS`, `GREATER_THAN`, and `LESS_THAN`. For `HOP_COUNT` and `PACKET_LOSS`, possible values are `EQUALS`, `GREATER_THAN`, and `LESS_THAN`.
-- `source` (String) The source of the asserted value. Possible values are `RESPONSE_TIME`, `HOP_COUNT`, and `PACKET_LOSS`.
-
-Optional:
-
-- `property` (String) The statistic to assert on. Required for `RESPONSE_TIME`, where possible values are `avg`, `min`, `max`, and `stdDev`. Must be empty for `HOP_COUNT` and `PACKET_LOSS`.
-- `target` (String) The value to compare against. Must be numeric: a non-negative number of milliseconds for `RESPONSE_TIME`, a non-negative integer for `HOP_COUNT`, or a number between 0 and 100 for `PACKET_LOSS`.
-
-
-
 <a id="nestedatt--retry_strategy"></a>
 ### Nested Schema for `retry_strategy`
 
@@ -233,7 +234,7 @@ Required:
 
 ## Assertion Reference
 
-Each `assertion` block has the shape `{ source, property, comparison, target }`. Which comparisons are allowed, and what `target` must contain, depend on `source`. The `comparison`, `target`, and `RESPONSE_TIME` `property` rules are enforced by the Checkly API at apply time; where `property` is marked as ignored, the API accepts any value but does not use it. All traceroute assertion targets are numeric.
+Each element of `request.assertion` has the shape `{ source, property, comparison, target }`. Which comparisons are allowed, and what `target` must contain, depend on `source`. The `comparison`, `target`, and `RESPONSE_TIME` `property` rules are enforced by the Checkly API at apply time; where `property` is marked as ignored, the API accepts any value but does not use it. All traceroute assertion targets are numeric.
 
 | `source` | `property` | Allowed `comparison` values | `target` |
 |---|---|---|---|
@@ -243,26 +244,30 @@ Each `assertion` block has the shape `{ source, property, comparison, target }`.
 
 ### Examples
 
+The following `assertion` list, placed inside `request`, shows one assertion per source.
+
 ```terraform
-# Average round-trip time must stay under 2 seconds.
-assertion {
-  source     = "RESPONSE_TIME"
-  property   = "avg"
-  comparison = "LESS_THAN"
-  target     = "2000"
-}
+assertion = [
+  # Average round-trip time must stay under 2 seconds.
+  {
+    source     = "RESPONSE_TIME"
+    property   = "avg"
+    comparison = "LESS_THAN"
+    target     = "2000"
+  },
 
-# The route must resolve in fewer than 20 hops.
-assertion {
-  source     = "HOP_COUNT"
-  comparison = "LESS_THAN"
-  target     = "20"
-}
+  # The route must resolve in fewer than 20 hops.
+  {
+    source     = "HOP_COUNT"
+    comparison = "LESS_THAN"
+    target     = "20"
+  },
 
-# Packet loss must stay under 10%.
-assertion {
-  source     = "PACKET_LOSS"
-  comparison = "LESS_THAN"
-  target     = "10"
-}
+  # Packet loss must stay under 10%.
+  {
+    source     = "PACKET_LOSS"
+    comparison = "LESS_THAN"
+    target     = "10"
+  },
+]
 ```

@@ -23,12 +23,8 @@ func TestAccTCPCheckRequiredFields(t *testing.T) {
 			ExpectError: regexp.MustCompile(`The argument "frequency" is required, but no definition was found.`),
 		},
 		{
-			Config: `resource "checkly_tcp_check" "test" {
-				name      = "tcp check"
-				activated = true
-				frequency = 60
-			}`,
-			ExpectError: regexp.MustCompile(`Block request must have a configuration value`),
+			Config:      config,
+			ExpectError: regexp.MustCompile(`The argument "request" is required, but no definition was found.`),
 		},
 	})
 }
@@ -58,35 +54,25 @@ func TestAccTCPCheckBasic(t *testing.T) {
 					"locations.*",
 					"us-east-1",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_tcp_check.test",
-					"request.*.hostname",
+					"request.hostname",
 					"api.checklyhq.com",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_tcp_check.test",
-					"request.*.port",
+					"request.port",
 					"80",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_tcp_check.test",
-					"request.*.assertion.*.comparison",
-					"EQUALS",
-				),
-				testCheckResourceAttrExpr(
-					"checkly_tcp_check.test",
-					"request.*.assertion.*.property",
-					"",
-				),
-				testCheckResourceAttrExpr(
-					"checkly_tcp_check.test",
-					"request.*.assertion.*.source",
-					"RESPONSE_DATA",
-				),
-				testCheckResourceAttrExpr(
-					"checkly_tcp_check.test",
-					"request.*.assertion.*.target",
-					"hello",
+					"request.assertion.*",
+					map[string]string{
+						"source":     "RESPONSE_TIME",
+						"property":   "",
+						"comparison": "LESS_THAN",
+						"target":     "2000",
+					},
 				),
 			),
 		},
@@ -113,30 +99,30 @@ func TestAccTCPCheckFull(t *testing.T) {
 					`"locations.#"`,
 					"3",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_tcp_check.test",
-					"request.*.assertion.#",
+					"request.assertion.#",
 					"2",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_tcp_check.test",
-					"request.*.assertion.*.comparison",
-					"LESS_THAN",
+					"request.assertion.*",
+					map[string]string{
+						"source":     "RESPONSE_TIME",
+						"property":   "",
+						"comparison": "LESS_THAN",
+						"target":     "2000",
+					},
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_tcp_check.test",
-					"request.*.assertion.*.comparison",
-					"CONTAINS",
-				),
-				testCheckResourceAttrExpr(
-					"checkly_tcp_check.test",
-					"request.*.assertion.*.target",
-					"2000",
-				),
-				testCheckResourceAttrExpr(
-					"checkly_tcp_check.test",
-					"request.*.assertion.*.target",
-					"Foo",
+					"request.assertion.*",
+					map[string]string{
+						"source":     "RESPONSE_DATA",
+						"property":   "",
+						"comparison": "CONTAINS",
+						"target":     "Foo",
+					},
 				),
 			),
 		},
@@ -160,15 +146,15 @@ func TestAccTCPCheckMovedToTCPMonitor(t *testing.T) {
 				  max_response_time         = 3000
 				  locations                 = [ "us-east-1", "eu-central-1" ]
 				  use_global_alert_settings = true
-				  request {
+				  request = {
 					hostname     = "api.checklyhq.com"
 					port         = 80
-					assertion {
+					assertion = [{
 					  comparison = "LESS_THAN"
 					  property   = ""
 					  source     = "RESPONSE_TIME"
 					  target     = "2000"
-					}
+					}]
 				  }
 				}
 
@@ -202,15 +188,15 @@ const tcpCheck_basic = `
 	  max_response_time         = 3000
 	  locations                 = [ "us-east-1", "eu-central-1" ]
 	  use_global_alert_settings = true
-	  request {
+	  request = {
 		hostname     = "api.checklyhq.com"
 		port         = 80
-		assertion {
+		assertion = [{
 		  comparison = "LESS_THAN"
 		  property   = ""
 		  source     = "RESPONSE_TIME"
 		  target     = "2000"
-		}
+		}]
 	  }
 	}
 `
@@ -228,21 +214,20 @@ const tcpCheck_full = `
 	  "us-east-1",
 	  "ap-northeast-1"
 	]
-	request {
+	request = {
 	  hostname         = "api.checklyhq.com"
 	  port             = 80
-	  assertion {
+	  assertion = [{
 		comparison = "LESS_THAN"
 		property   = ""
 		source     = "RESPONSE_TIME"
 		target     = "2000"
-	  }
-	  assertion {
+	  }, {
 		comparison = "CONTAINS"
 		property   = ""
 		source     = "RESPONSE_DATA"
 		target     = "Foo"
-	  }
+	  }]
 	}
 
 	alert_settings = {

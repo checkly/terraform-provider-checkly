@@ -134,30 +134,6 @@ func makeAPICheckDefaultsAttributeSchema() schema.SingleNestedAttribute {
 	}
 }
 
-// apiCheckDefaultsWithDefaults returns the api_check_defaults attribute value
-// with default values substituted for null and unknown optional+computed
-// attributes nested in the assertion set. It is called from ModifyPlan of the
-// resources using this attribute, because schema defaults cannot be used for
-// attributes nested in set elements (see the schema for details).
-func apiCheckDefaultsWithDefaults(ctx context.Context, obj types.Object, diags *diag.Diagnostics) types.Object {
-	if obj.IsNull() || obj.IsUnknown() {
-		return obj
-	}
-
-	var model apiCheckDefaultsModel
-	diags.Append(obj.As(ctx, &model, basetypes.ObjectAsOptions{})...)
-	if diags.HasError() {
-		return obj
-	}
-
-	model.Assertion = assertionsWithPropertyDefault(ctx, model.Assertion, diags)
-
-	result, d := types.ObjectValueFrom(ctx, apiCheckDefaultsAttrTypes, model)
-	diags.Append(d...)
-
-	return result
-}
-
 // apiCheckDefaultsKeyValuesFromMap converts a map of strings to its API
 // representation. Null and unknown maps convert to nil. The result is sorted
 // by key for determinism.

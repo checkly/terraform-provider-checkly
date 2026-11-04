@@ -10,7 +10,7 @@ resource "checkly_grpc_monitor" "grpc-monitor-1" {
     "us-east-2",
   ]
 
-  request {
+  request = {
     host               = "grpcb.in"
     port               = 9000
     grpc_mode          = "BEHAVIOR"
@@ -19,12 +19,12 @@ resource "checkly_grpc_monitor" "grpc-monitor-1" {
     method             = "grpcbin.GRPCBin/DummyUnary"
     message            = jsonencode({ f_string = "hello" })
 
-    assertion {
+    assertion = [{
       source     = "GRPC_STATUS_CODE"
       property   = ""
       comparison = "EQUALS"
       target     = "0"
-    }
+    }]
   }
 
   use_global_alert_settings = true
@@ -42,17 +42,17 @@ resource "checkly_traceroute_monitor" "traceroute-monitor-1" {
     "us-east-2",
   ]
 
-  request {
+  request = {
     url      = "api.checklyhq.com"
     protocol = "ICMP"
     max_hops = 30
 
-    assertion {
+    assertion = [{
       source     = "PACKET_LOSS"
       property   = ""
       comparison = "LESS_THAN"
       target     = "10"
-    }
+    }]
   }
 
   use_global_alert_settings = true

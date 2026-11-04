@@ -23,12 +23,8 @@ func TestAccTCPMonitorRequiredFields(t *testing.T) {
 			ExpectError: regexp.MustCompile(`The argument "frequency" is required, but no definition was found.`),
 		},
 		{
-			Config: `resource "checkly_tcp_monitor" "test" {
-				name      = "tcp monitor"
-				activated = true
-				frequency = 60
-			}`,
-			ExpectError: regexp.MustCompile(`Block request must have a configuration value`),
+			Config:      config,
+			ExpectError: regexp.MustCompile(`The argument "request" is required, but no definition was found.`),
 		},
 	})
 }
@@ -63,35 +59,25 @@ func TestAccTCPMonitorBasic(t *testing.T) {
 					"locations.*",
 					"us-east-1",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_tcp_monitor.test",
-					"request.*.hostname",
+					"request.hostname",
 					"api.checklyhq.com",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_tcp_monitor.test",
-					"request.*.port",
+					"request.port",
 					"80",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_tcp_monitor.test",
-					"request.*.assertion.*.comparison",
-					"EQUALS",
-				),
-				testCheckResourceAttrExpr(
-					"checkly_tcp_monitor.test",
-					"request.*.assertion.*.property",
-					"",
-				),
-				testCheckResourceAttrExpr(
-					"checkly_tcp_monitor.test",
-					"request.*.assertion.*.source",
-					"RESPONSE_DATA",
-				),
-				testCheckResourceAttrExpr(
-					"checkly_tcp_monitor.test",
-					"request.*.assertion.*.target",
-					"hello",
+					"request.assertion.*",
+					map[string]string{
+						"source":     "RESPONSE_TIME",
+						"property":   "",
+						"comparison": "LESS_THAN",
+						"target":     "2000",
+					},
 				),
 			),
 		},
@@ -139,30 +125,30 @@ func TestAccTCPMonitorFull(t *testing.T) {
 					`"locations.#"`,
 					"3",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_tcp_monitor.test",
-					"request.*.assertion.#",
+					"request.assertion.#",
 					"2",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_tcp_monitor.test",
-					"request.*.assertion.*.comparison",
-					"LESS_THAN",
+					"request.assertion.*",
+					map[string]string{
+						"source":     "RESPONSE_TIME",
+						"property":   "",
+						"comparison": "LESS_THAN",
+						"target":     "2000",
+					},
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_tcp_monitor.test",
-					"request.*.assertion.*.comparison",
-					"CONTAINS",
-				),
-				testCheckResourceAttrExpr(
-					"checkly_tcp_monitor.test",
-					"request.*.assertion.*.target",
-					"2000",
-				),
-				testCheckResourceAttrExpr(
-					"checkly_tcp_monitor.test",
-					"request.*.assertion.*.target",
-					"Foo",
+					"request.assertion.*",
+					map[string]string{
+						"source":     "RESPONSE_DATA",
+						"property":   "",
+						"comparison": "CONTAINS",
+						"target":     "Foo",
+					},
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_tcp_monitor.test",
@@ -191,14 +177,14 @@ resource "checkly_tcp_monitor" "test_trigger_incident" {
 	frequency     = 60
 	locations     = ["us-west-1", "ap-south-1"]
 
-	request {
+	request = {
 		hostname = "example.com"
 		port     = 443
-		assertion {
+		assertion = [{
 			source     = "RESPONSE_TIME"
 			comparison = "LESS_THAN"
 			target     = "3000"
-		}
+		}]
 	}
 
 	trigger_incident = {
@@ -266,15 +252,15 @@ const tcpMonitor_basic = `
 	  max_response_time         = 3000
 	  locations                 = [ "us-east-1", "eu-central-1" ]
 	  use_global_alert_settings = true
-	  request {
+	  request = {
 		hostname     = "api.checklyhq.com"
 		port         = 80
-		assertion {
+		assertion = [{
 		  comparison = "LESS_THAN"
 		  property   = ""
 		  source     = "RESPONSE_TIME"
 		  target     = "2000"
-		}
+		}]
 	  }
 	}
 `
@@ -288,15 +274,15 @@ const tcpMonitor_basic_withoutDescription = `
 	  max_response_time         = 3000
 	  locations                 = [ "us-east-1", "eu-central-1" ]
 	  use_global_alert_settings = true
-	  request {
+	  request = {
 		hostname     = "api.checklyhq.com"
 		port         = 80
-		assertion {
+		assertion = [{
 		  comparison = "LESS_THAN"
 		  property   = ""
 		  source     = "RESPONSE_TIME"
 		  target     = "2000"
-		}
+		}]
 	  }
 	}
 `
@@ -314,21 +300,20 @@ const tcpMonitor_full = `
 	  "us-east-1",
 	  "ap-northeast-1"
 	]
-	request {
+	request = {
 	  hostname         = "api.checklyhq.com"
 	  port             = 80
-	  assertion {
+	  assertion = [{
 		comparison = "LESS_THAN"
 		property   = ""
 		source     = "RESPONSE_TIME"
 		target     = "2000"
-	  }
-	  assertion {
+	  }, {
 		comparison = "CONTAINS"
 		property   = ""
 		source     = "RESPONSE_DATA"
 		target     = "Foo"
-	  }
+	  }]
 	}
 
 	alert_settings = {
@@ -357,7 +342,7 @@ func TestAccTCPMonitorWithSingleRetry(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						port     = 443
 						hostname = "checkly.com"
 					}
@@ -408,7 +393,7 @@ func TestAccTCPMonitorWithNoRetries(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						port     = 443
 						hostname = "checkly.com"
 					}
@@ -457,7 +442,7 @@ func TestAccTCPMonitorWithDefaultNoRetries(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						port     = 443
 						hostname = "checkly.com"
 					}
@@ -499,7 +484,7 @@ func TestAccTCPMonitorWithFixedRetry(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						port     = 443
 						hostname = "checkly.com"
 					}
@@ -552,7 +537,7 @@ func TestAccTCPMonitorWithExponentialRetry(t *testing.T) {
 					activated = true
 					frequency = 720
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						port     = 443
 						hostname = "checkly.com"
 					}
@@ -605,7 +590,7 @@ func TestAccTCPMonitorWithLinearRetry(t *testing.T) {
 					activated = true
 					frequency = 720
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						port     = 443
 						hostname = "checkly.com"
 					}
@@ -658,7 +643,7 @@ func TestAccTCPMonitorRetryStrategyRemoval(t *testing.T) {
 					activated = true
 					frequency = 720
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						port     = 443
 						hostname = "checkly.com"
 					}
@@ -682,7 +667,7 @@ func TestAccTCPMonitorRetryStrategyRemoval(t *testing.T) {
 					activated = true
 					frequency = 720
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						port     = 443
 						hostname = "checkly.com"
 					}
@@ -723,7 +708,7 @@ func TestAccTCPMonitorGroupAssignment(t *testing.T) {
 					frequency = 60
 					locations = ["eu-central-1"]
 					group_id  = checkly_check_group.test1.id
-					request {
+					request = {
 						port     = 443
 						hostname = "checkly.com"
 					}
@@ -734,7 +719,7 @@ func TestAccTCPMonitorGroupAssignment(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						port     = 443
 						hostname = "checkly.com"
 					}
@@ -776,7 +761,7 @@ func TestAccTCPMonitorGroupAssignment(t *testing.T) {
 					frequency = 60
 					locations = ["eu-central-1"]
 					group_id  = checkly_check_group.test2.id
-					request {
+					request = {
 						port     = 443
 						hostname = "checkly.com"
 					}
@@ -788,7 +773,7 @@ func TestAccTCPMonitorGroupAssignment(t *testing.T) {
 					frequency = 60
 					locations = ["eu-central-1"]
 					group_id  = checkly_check_group.test2.id
-					request {
+					request = {
 						port     = 443
 						hostname = "checkly.com"
 					}
@@ -830,7 +815,7 @@ func TestAccTCPMonitorGroupAssignment(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						port     = 443
 						hostname = "checkly.com"
 					}
@@ -841,7 +826,7 @@ func TestAccTCPMonitorGroupAssignment(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						port     = 443
 						hostname = "checkly.com"
 					}
@@ -872,7 +857,7 @@ func TestAccTCPMonitorFrequencyValidation(t *testing.T) {
 					activated = true
 					frequency = 0
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						port     = 443
 						hostname = "checkly.com"
 					}
@@ -888,7 +873,7 @@ func TestAccTCPMonitorFrequencyValidation(t *testing.T) {
 					frequency        = 0
 					frequency_offset = 10
 					locations        = ["eu-central-1"]
-					request {
+					request = {
 						port     = 443
 						hostname = "checkly.com"
 					}
@@ -900,7 +885,7 @@ func TestAccTCPMonitorFrequencyValidation(t *testing.T) {
 					frequency        = 0
 					frequency_offset = 20
 					locations        = ["eu-central-1"]
-					request {
+					request = {
 						port     = 443
 						hostname = "checkly.com"
 					}
@@ -912,7 +897,7 @@ func TestAccTCPMonitorFrequencyValidation(t *testing.T) {
 					frequency        = 0
 					frequency_offset = 30
 					locations        = ["eu-central-1"]
-					request {
+					request = {
 						port     = 443
 						hostname = "checkly.com"
 					}
@@ -959,7 +944,7 @@ func TestAccTCPMonitorFrequencyValidation(t *testing.T) {
 					frequency        = 60
 					frequency_offset = 30
 					locations        = ["eu-central-1"]
-					request {
+					request = {
 						port     = 443
 						hostname = "checkly.com"
 					}
@@ -974,7 +959,7 @@ func TestAccTCPMonitorFrequencyValidation(t *testing.T) {
 					activated = true
 					frequency = 9999
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						port     = 443
 						hostname = "checkly.com"
 					}
@@ -990,7 +975,7 @@ func TestAccTCPMonitorFrequencyValidation(t *testing.T) {
 					frequency        = 60
 					frequency_offset = 99
 					locations        = ["eu-central-1"]
-					request {
+					request = {
 						port     = 443
 						hostname = "checkly.com"
 					}
@@ -1006,7 +991,7 @@ func TestAccTCPMonitorFrequencyValidation(t *testing.T) {
 					frequency        = 60
 					frequency_offset = 0
 					locations        = ["eu-central-1"]
-					request {
+					request = {
 						port     = 443
 						hostname = "checkly.com"
 					}
@@ -1037,7 +1022,7 @@ func TestAccTCPMonitorFrequencyUpdates(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						port     = 443
 						hostname = "checkly.com"
 					}
@@ -1049,7 +1034,7 @@ func TestAccTCPMonitorFrequencyUpdates(t *testing.T) {
 					frequency        = 0
 					frequency_offset = 30
 					locations        = ["eu-central-1"]
-					request {
+					request = {
 						port     = 443
 						hostname = "checkly.com"
 					}
@@ -1085,7 +1070,7 @@ func TestAccTCPMonitorFrequencyUpdates(t *testing.T) {
 					frequency        = 0
 					frequency_offset = 10
 					locations        = ["eu-central-1"]
-					request {
+					request = {
 						port     = 443
 						hostname = "checkly.com"
 					}
@@ -1096,7 +1081,7 @@ func TestAccTCPMonitorFrequencyUpdates(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						port     = 443
 						hostname = "checkly.com"
 					}
@@ -1148,7 +1133,7 @@ func TestAccTCPMonitorUnsetSweepBooleansAndTags(t *testing.T) {
 					run_parallel              = true
 					use_global_alert_settings = true
 					tags                      = ["sweep-a", "sweep-b"]
-					request {
+					request = {
 						hostname = "api.checklyhq.com"
 						port     = 443
 					}
@@ -1189,7 +1174,7 @@ func TestAccTCPMonitorUnsetSweepBooleansAndTags(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						hostname = "api.checklyhq.com"
 						port     = 443
 					}
@@ -1236,7 +1221,7 @@ func TestAccTCPMonitorUnsetSweepResponseTimes(t *testing.T) {
 					locations              = ["eu-central-1"]
 					degraded_response_time = 1000
 					max_response_time      = 2000
-					request {
+					request = {
 						hostname = "api.checklyhq.com"
 						port     = 443
 					}
@@ -1266,7 +1251,7 @@ func TestAccTCPMonitorUnsetSweepResponseTimes(t *testing.T) {
 					locations              = ["eu-central-1"]
 					degraded_response_time = 0
 					max_response_time      = 0
-					request {
+					request = {
 						hostname = "api.checklyhq.com"
 						port     = 443
 					}
@@ -1292,7 +1277,7 @@ func TestAccTCPMonitorUnsetSweepResponseTimes(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						hostname = "api.checklyhq.com"
 						port     = 443
 					}
@@ -1329,7 +1314,7 @@ func TestAccTCPMonitorUnsetSweepLocations(t *testing.T) {
 					frequency         = 60
 					locations         = ["eu-central-1", "eu-west-1"]
 					private_locations = [checkly_private_location.test.slug_name]
-					request {
+					request = {
 						hostname = "api.checklyhq.com"
 						port     = 443
 					}
@@ -1362,7 +1347,7 @@ func TestAccTCPMonitorUnsetSweepLocations(t *testing.T) {
 					activated         = true
 					frequency         = 60
 					private_locations = [checkly_private_location.test.slug_name]
-					request {
+					request = {
 						hostname = "api.checklyhq.com"
 						port     = 443
 					}
@@ -1394,7 +1379,7 @@ func TestAccTCPMonitorUnsetSweepLocations(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						hostname = "api.checklyhq.com"
 						port     = 443
 					}
@@ -1424,36 +1409,31 @@ func TestAccTCPMonitorUnsetSweepRequest(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						hostname  = "api.checklyhq.com"
 						port      = 443
 						data      = "PING"
 						ip_family = "IPv6"
-						assertion {
+						assertion = [{
 							source     = "RESPONSE_TIME"
 							comparison = "LESS_THAN"
 							target     = "2000"
-						}
-						assertion {
+						}, {
 							source     = "RESPONSE_DATA"
 							comparison = "CONTAINS"
 							target     = "PONG"
-						}
+						}]
 					}
 				}
 			`,
-			Check: resource.TestCheckTypeSetElemNestedAttrs(
-				"checkly_tcp_monitor.test",
-				"request.*",
-				map[string]string{
-					"data":        "PING",
-					"ip_family":   "IPv6",
-					"assertion.#": "2",
-				},
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_tcp_monitor.test", "request.data", "PING"),
+				resource.TestCheckResourceAttr("checkly_tcp_monitor.test", "request.ip_family", "IPv6"),
+				resource.TestCheckResourceAttr("checkly_tcp_monitor.test", "request.assertion.#", "2"),
 			),
 		},
 		// Removing ip_family must reset it to the IPv4 default, and removing
-		// all assertion blocks must clear the assertions server-side.
+		// all assertions must clear the assertions server-side.
 		//
 		// data is NOT removed here: the backend cannot clear it. It rejects
 		// an empty string ("request.data is not allowed to be empty") and
@@ -1468,21 +1448,17 @@ func TestAccTCPMonitorUnsetSweepRequest(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						hostname = "api.checklyhq.com"
 						port     = 443
 						data     = "PONG"
 					}
 				}
 			`,
-			Check: resource.TestCheckTypeSetElemNestedAttrs(
-				"checkly_tcp_monitor.test",
-				"request.*",
-				map[string]string{
-					"data":        "PONG",
-					"ip_family":   "IPv4",
-					"assertion.#": "0",
-				},
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_tcp_monitor.test", "request.data", "PONG"),
+				resource.TestCheckResourceAttr("checkly_tcp_monitor.test", "request.ip_family", "IPv4"),
+				resource.TestCheckResourceAttr("checkly_tcp_monitor.test", "request.assertion.#", "0"),
 			),
 		},
 	})
@@ -1501,7 +1477,7 @@ func TestAccTCPMonitorUnsetSweepTriggerIncident(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						hostname = "api.checklyhq.com"
 						port     = 443
 					}
@@ -1531,7 +1507,7 @@ func TestAccTCPMonitorUnsetSweepTriggerIncident(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						hostname = "api.checklyhq.com"
 						port     = 443
 					}
@@ -1563,7 +1539,7 @@ func TestAccTCPMonitorUnsetSweepGroupOrder(t *testing.T) {
 					locations   = ["eu-central-1"]
 					group_id    = checkly_check_group.test.id
 					group_order = 2
-					request {
+					request = {
 						hostname = "api.checklyhq.com"
 						port     = 443
 					}
@@ -1592,7 +1568,7 @@ func TestAccTCPMonitorUnsetSweepGroupOrder(t *testing.T) {
 					frequency = 60
 					locations = ["eu-central-1"]
 					group_id  = checkly_check_group.test.id
-					request {
+					request = {
 						hostname = "api.checklyhq.com"
 						port     = 443
 					}
@@ -1617,7 +1593,7 @@ func TestAccTCPMonitorUnsetSweepRuntimeID(t *testing.T) {
 					frequency  = 60
 					locations  = ["eu-central-1"]
 					runtime_id = "2025.04"
-					request {
+					request = {
 						hostname = "api.checklyhq.com"
 						port     = 443
 					}
@@ -1636,7 +1612,7 @@ func TestAccTCPMonitorUnsetSweepRuntimeID(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						hostname = "api.checklyhq.com"
 						port     = 443
 					}
@@ -1679,15 +1655,15 @@ func TestAccTCPMonitorAlertChannelSubscriptions(t *testing.T) {
 					activated = true
 					locations = ["eu-central-1"]
 
-					request {
+					request = {
 						hostname = "api.checklyhq.com"
 						port     = 80
 
-						assertion {
+						assertion = [{
 							source     = "RESPONSE_TIME"
 							comparison = "LESS_THAN"
 							target     = "2000"
-						}
+						}]
 					}
 
 					alert_channel_subscription {
@@ -1748,15 +1724,15 @@ func TestAccTCPMonitorAlertChannelSubscriptions(t *testing.T) {
 					activated = true
 					locations = ["eu-central-1"]
 
-					request {
+					request = {
 						hostname = "api.checklyhq.com"
 						port     = 80
 
-						assertion {
+						assertion = [{
 							source     = "RESPONSE_TIME"
 							comparison = "LESS_THAN"
 							target     = "2000"
-						}
+						}]
 					}
 
 					alert_channel_subscription {
@@ -1828,15 +1804,15 @@ func TestAccTCPMonitorAlertChannelSubscriptions(t *testing.T) {
 					activated = true
 					locations = ["eu-central-1"]
 
-					request {
+					request = {
 						hostname = "api.checklyhq.com"
 						port     = 80
 
-						assertion {
+						assertion = [{
 							source     = "RESPONSE_TIME"
 							comparison = "LESS_THAN"
 							target     = "2000"
-						}
+						}]
 					}
 				}
 			`,

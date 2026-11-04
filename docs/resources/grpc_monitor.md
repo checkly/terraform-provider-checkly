@@ -25,7 +25,7 @@ resource "checkly_grpc_monitor" "example-grpc-monitor" {
     "us-west-1"
   ]
 
-  request {
+  request = {
     host      = "grpcb.in"
     port      = 9000
     grpc_mode = "HEALTH"
@@ -66,7 +66,7 @@ resource "checkly_grpc_monitor" "example-grpc-monitor-2" {
     same_region          = false
   }
 
-  request {
+  request = {
     host               = "grpcb.in"
     port               = 9000
     grpc_mode          = "BEHAVIOR"
@@ -76,24 +76,25 @@ resource "checkly_grpc_monitor" "example-grpc-monitor-2" {
     method             = "grpcbin.GRPCBin/DummyUnary"
     message            = jsonencode({ f_string = "hello" })
 
-    metadata {
+    metadata = [{
       key   = "x-api-key"
       value = "supersecret"
-    }
+    }]
 
-    assertion {
-      source     = "GRPC_STATUS_CODE"
-      property   = ""
-      comparison = "EQUALS"
-      target     = "0"
-    }
-
-    assertion {
-      source     = "RESPONSE_TIME"
-      property   = ""
-      comparison = "LESS_THAN"
-      target     = "1000"
-    }
+    assertion = [
+      {
+        source     = "GRPC_STATUS_CODE"
+        property   = ""
+        comparison = "EQUALS"
+        target     = "0"
+      },
+      {
+        source     = "RESPONSE_TIME"
+        property   = ""
+        comparison = "LESS_THAN"
+        target     = "1000"
+      },
+    ]
   }
 }
 
@@ -106,7 +107,7 @@ resource "checkly_grpc_monitor" "example-flatbuffers-monitor" {
   frequency   = 5
   locations   = ["us-west-1"]
 
-  request {
+  request = {
     host         = "grpc.example.com"
     port         = 443
     grpc_mode    = "BEHAVIOR"
@@ -127,6 +128,7 @@ resource "checkly_grpc_monitor" "example-flatbuffers-monitor" {
 - `activated` (Boolean) Determines if the monitor is running or not. Possible values `true`, and `false`.
 - `frequency` (Number) Controls how often the monitor should run. Defined in minutes. The allowed values are `0` (high frequency - use `frequency_offset` to define the actual frequency), `1` (1 minute), `2` (2 minutes), `5` (5 minutes), `10` (10 minutes), `15` (15 minutes), `30` (30 minutes), `60` (1 hour), `120` (2 hours), `180` (3 hours), `360` (6 hours), `720` (12 hours) and `1440` (24 hours).
 - `name` (String) The name of the monitor.
+- `request` (Attributes) The parameters for the gRPC connection. (see [below for nested schema](#nestedatt--request))
 
 ### Optional
 
@@ -141,7 +143,6 @@ resource "checkly_grpc_monitor" "example-flatbuffers-monitor" {
 - `max_response_time` (Number) The response time in milliseconds starting from which a monitor should be considered failing. Possible values are between 0 and 180000. (Default `20000`).
 - `muted` (Boolean) Determines if any notifications will be sent out when a monitor fails/degrades/recovers.
 - `private_locations` (Set of String) An array of one or more private locations slugs.
-- `request` (Block List) The parameters for the gRPC connection. (see [below for nested schema](#nestedblock--request))
 - `retry_strategy` (Attributes) A strategy for retrying failed check/monitor runs. (see [below for nested schema](#nestedatt--retry_strategy))
 - `run_parallel` (Boolean) Determines if the monitor should run in all selected locations in parallel or round-robin.
 - `runtime_id` (String) The ID of the runtime to use for this monitor.
@@ -153,6 +154,58 @@ resource "checkly_grpc_monitor" "example-flatbuffers-monitor" {
 ### Read-Only
 
 - `id` (String) The ID of the monitor.
+
+<a id="nestedatt--request"></a>
+### Nested Schema for `request`
+
+Required:
+
+- `host` (String) The host to connect to. Do not include a scheme or a port in this value.
+- `port` (Number) The port number to connect to. Possible values are between 1 and 65535.
+
+Optional:
+
+- `assertion` (Attributes Set) A request can have multiple assertions. The allowed comparisons, properties, and target formats depend on the assertion source — see the [Assertion Reference](#assertion-reference) below. (see [below for nested schema](#nestedatt--request--assertion))
+- `bfbs_content` (String) A base64-encoded binary FlatBuffers schema (`.bfbs`), at most 100 KiB once encoded. Required when `encoding = "FLATBUFFERS"` and forbidden otherwise. Generate it with `flatc -b --schema --bfbs-builtins schema.fbs` and load it with Terraform's `filebase64()` function.
+- `encoding` (String) The wire encoding used in `BEHAVIOR` mode. Possible values are `PROTOBUF` and `FLATBUFFERS`. (Default `PROTOBUF`).
+- `grpc_mode` (String) The gRPC monitoring mode. `BEHAVIOR` invokes a unary method (requires `method`); `HEALTH` queries the standard gRPC health-check service (allows `service`). (Default `BEHAVIOR`).
+- `ip_family` (String) The IP family to use when executing the gRPC check. The value can be either `IPv4` or `IPv6`. (Default `IPv4`).
+- `message` (String) The JSON request message sent as the gRPC call payload in `BEHAVIOR` mode.
+- `metadata` (Attributes Set) gRPC metadata (request headers) sent with the call. (see [below for nested schema](#nestedatt--request--metadata))
+- `method` (String) The fully-qualified gRPC method to invoke in `BEHAVIOR` mode (e.g. `package.Service/Method`). Required in `BEHAVIOR` mode; forbidden in `HEALTH` mode.
+- `proto_content` (String) The inline `.proto` file source used when `service_definition = "PROTO_FILE"` in `BEHAVIOR` mode. Forbidden when `encoding = "FLATBUFFERS"`.
+- `service` (String) The service name to query in `HEALTH` mode. An empty value queries overall server health. Forbidden in `BEHAVIOR` mode.
+- `service_definition` (String) How the service definition is resolved in `BEHAVIOR` mode: `REFLECTION` uses server reflection; `PROTO_FILE` uses the inline `proto_content`. Forbidden when `encoding = "FLATBUFFERS"`. (Default `REFLECTION`).
+- `skip_ssl` (Boolean) Whether to skip SSL certificate validation when `tls` is enabled. (Default `false`).
+- `timeout` (Number) The number of seconds to wait for the gRPC call to complete before timing out. Possible values are between 1 and 180. (Default `60`).
+- `tls` (Boolean) Whether to use a TLS-encrypted connection to the gRPC server. (Default `true`).
+
+<a id="nestedatt--request--assertion"></a>
+### Nested Schema for `request.assertion`
+
+Required:
+
+- `comparison` (String) The type of comparison to be executed between expected and actual value of the assertion. For `GRPC_RESPONSE`, `TEXT_BODY` and `GRPC_METADATA`, possible values are `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL`, and `NOT_NULL`. For `RESPONSE_TIME` and `GRPC_STATUS_CODE`, possible values are `EQUALS`, `NOT_EQUALS`, `GREATER_THAN`, and `LESS_THAN`. For `GRPC_HEALTHCHECK_STATUS`, possible values are `EQUALS` and `NOT_EQUALS`.
+- `source` (String) The source of the asserted value. Possible values are `RESPONSE_TIME`, `GRPC_RESPONSE`, `TEXT_BODY`, `GRPC_METADATA`, `GRPC_HEALTHCHECK_STATUS`, and `GRPC_STATUS_CODE`.
+
+Optional:
+
+- `property` (String) The property selecting the asserted value within the source, e.g. a JSONPath expression for `GRPC_RESPONSE` or a metadata key for `GRPC_METADATA`.
+- `target` (String) The value to compare against. Must be numeric for `RESPONSE_TIME` (milliseconds), `GRPC_STATUS_CODE` (0-16), and `GRPC_HEALTHCHECK_STATUS` (0-3, where 0=UNKNOWN, 1=SERVING, 2=NOT_SERVING, 3=SERVICE_UNKNOWN).
+
+
+<a id="nestedatt--request--metadata"></a>
+### Nested Schema for `request.metadata`
+
+Required:
+
+- `key` (String) The gRPC metadata (header) key.
+
+Optional:
+
+- `value` (String) The gRPC metadata (header) value.
+
+
 
 <a id="nestedblock--alert_channel_subscription"></a>
 ### Nested Schema for `alert_channel_subscription`
@@ -209,58 +262,6 @@ Optional:
 
 
 
-<a id="nestedblock--request"></a>
-### Nested Schema for `request`
-
-Required:
-
-- `host` (String) The host to connect to. Do not include a scheme or a port in this value.
-- `port` (Number) The port number to connect to. Possible values are between 1 and 65535.
-
-Optional:
-
-- `assertion` (Block Set) A request can have multiple assertions. The allowed comparisons, properties, and target formats depend on the assertion source — see the [Assertion Reference](#assertion-reference) below. (see [below for nested schema](#nestedblock--request--assertion))
-- `bfbs_content` (String) A base64-encoded binary FlatBuffers schema (`.bfbs`), at most 100 KiB once encoded. Required when `encoding = "FLATBUFFERS"` and forbidden otherwise. Generate it with `flatc -b --schema --bfbs-builtins schema.fbs` and load it with Terraform's `filebase64()` function.
-- `encoding` (String) The wire encoding used in `BEHAVIOR` mode. Possible values are `PROTOBUF` and `FLATBUFFERS`. (Default `PROTOBUF`).
-- `grpc_mode` (String) The gRPC monitoring mode. `BEHAVIOR` invokes a unary method (requires `method`); `HEALTH` queries the standard gRPC health-check service (allows `service`). (Default `BEHAVIOR`).
-- `ip_family` (String) The IP family to use when executing the gRPC check. The value can be either `IPv4` or `IPv6`. (Default `IPv4`).
-- `message` (String) The JSON request message sent as the gRPC call payload in `BEHAVIOR` mode.
-- `metadata` (Block Set) gRPC metadata (request headers) sent with the call. (see [below for nested schema](#nestedblock--request--metadata))
-- `method` (String) The fully-qualified gRPC method to invoke in `BEHAVIOR` mode (e.g. `package.Service/Method`). Required in `BEHAVIOR` mode; forbidden in `HEALTH` mode.
-- `proto_content` (String) The inline `.proto` file source used when `service_definition = "PROTO_FILE"` in `BEHAVIOR` mode. Forbidden when `encoding = "FLATBUFFERS"`.
-- `service` (String) The service name to query in `HEALTH` mode. An empty value queries overall server health. Forbidden in `BEHAVIOR` mode.
-- `service_definition` (String) How the service definition is resolved in `BEHAVIOR` mode: `REFLECTION` uses server reflection; `PROTO_FILE` uses the inline `proto_content`. Forbidden when `encoding = "FLATBUFFERS"`. (Default `REFLECTION`).
-- `skip_ssl` (Boolean) Whether to skip SSL certificate validation when `tls` is enabled. (Default `false`).
-- `timeout` (Number) The number of seconds to wait for the gRPC call to complete before timing out. Possible values are between 1 and 180. (Default `60`).
-- `tls` (Boolean) Whether to use a TLS-encrypted connection to the gRPC server. (Default `true`).
-
-<a id="nestedblock--request--assertion"></a>
-### Nested Schema for `request.assertion`
-
-Required:
-
-- `comparison` (String) The type of comparison to be executed between expected and actual value of the assertion. For `GRPC_RESPONSE`, `TEXT_BODY` and `GRPC_METADATA`, possible values are `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL`, and `NOT_NULL`. For `RESPONSE_TIME` and `GRPC_STATUS_CODE`, possible values are `EQUALS`, `NOT_EQUALS`, `GREATER_THAN`, and `LESS_THAN`. For `GRPC_HEALTHCHECK_STATUS`, possible values are `EQUALS` and `NOT_EQUALS`.
-- `source` (String) The source of the asserted value. Possible values are `RESPONSE_TIME`, `GRPC_RESPONSE`, `TEXT_BODY`, `GRPC_METADATA`, `GRPC_HEALTHCHECK_STATUS`, and `GRPC_STATUS_CODE`.
-
-Optional:
-
-- `property` (String) The property selecting the asserted value within the source, e.g. a JSONPath expression for `GRPC_RESPONSE` or a metadata key for `GRPC_METADATA`.
-- `target` (String) The value to compare against. Must be numeric for `RESPONSE_TIME` (milliseconds), `GRPC_STATUS_CODE` (0-16), and `GRPC_HEALTHCHECK_STATUS` (0-3, where 0=UNKNOWN, 1=SERVING, 2=NOT_SERVING, 3=SERVICE_UNKNOWN).
-
-
-<a id="nestedblock--request--metadata"></a>
-### Nested Schema for `request.metadata`
-
-Required:
-
-- `key` (String) The gRPC metadata (header) key.
-
-Optional:
-
-- `value` (String) The gRPC metadata (header) value.
-
-
-
 <a id="nestedatt--retry_strategy"></a>
 ### Nested Schema for `retry_strategy`
 
@@ -289,7 +290,7 @@ Required:
 
 ## Assertion Reference
 
-Each `assertion` block has the shape `{ source, property, comparison, target }`. Which comparisons are allowed, and what `target` must contain, depend on `source`. The `comparison` and `target` rules are enforced by the Checkly API at apply time; where `property` is marked as ignored, the API accepts any value but does not use it.
+Each element of `request.assertion` has the shape `{ source, property, comparison, target }`. Which comparisons are allowed, and what `target` must contain, depend on `source`. The `comparison` and `target` rules are enforced by the Checkly API at apply time; where `property` is marked as ignored, the API accepts any value but does not use it.
 
 | `source` | `property` | Allowed `comparison` values | `target` |
 |---|---|---|---|
@@ -302,32 +303,36 @@ Each `assertion` block has the shape `{ source, property, comparison, target }`.
 
 ### Examples
 
+The following `assertion` list, placed inside `request`, shows one assertion per source.
+
 ```terraform
-# The unary call must return gRPC status OK.
-assertion {
-  source     = "GRPC_STATUS_CODE"
-  comparison = "EQUALS"
-  target     = "0"
-}
+assertion = [
+  # The unary call must return gRPC status OK.
+  {
+    source     = "GRPC_STATUS_CODE"
+    comparison = "EQUALS"
+    target     = "0"
+  },
 
-# HEALTH mode: the service must report SERVING (numeric target).
-assertion {
-  source     = "GRPC_HEALTHCHECK_STATUS"
-  comparison = "EQUALS"
-  target     = "1"
-}
+  # HEALTH mode: the service must report SERVING (numeric target).
+  {
+    source     = "GRPC_HEALTHCHECK_STATUS"
+    comparison = "EQUALS"
+    target     = "1"
+  },
 
-# A field selected from the response message via JSONPath.
-assertion {
-  source     = "GRPC_RESPONSE"
-  property   = "$.user.id"
-  comparison = "NOT_NULL"
-}
+  # A field selected from the response message via JSONPath.
+  {
+    source     = "GRPC_RESPONSE"
+    property   = "$.user.id"
+    comparison = "NOT_NULL"
+  },
 
-# A response metadata (header) value.
-assertion {
-  source     = "GRPC_METADATA"
-  property   = "x-request-id"
-  comparison = "NOT_EMPTY"
-}
+  # A response metadata (header) value.
+  {
+    source     = "GRPC_METADATA"
+    property   = "x-request-id"
+    comparison = "NOT_EMPTY"
+  },
+]
 ```

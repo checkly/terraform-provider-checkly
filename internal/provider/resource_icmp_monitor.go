@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
-	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -15,10 +14,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 
 	checkly "github.com/checkly/checkly-go-sdk"
 )
@@ -59,14 +60,14 @@ type ICMPMonitorResourceModel struct {
 	AlertChannelSubscriptions   types.Set    `tfsdk:"alert_channel_subscription"`
 	AlertSettings               types.Object `tfsdk:"alert_settings"`
 	UseGlobalAlertSettings      types.Bool   `tfsdk:"use_global_alert_settings"`
-	Request                     types.List   `tfsdk:"request"`
+	Request                     types.Object `tfsdk:"request"`
 	GroupID                     types.Int64  `tfsdk:"group_id"`
 	GroupOrder                  types.Int64  `tfsdk:"group_order"`
 	RetryStrategy               types.Object `tfsdk:"retry_strategy"`
 	TriggerIncident             types.Object `tfsdk:"trigger_incident"`
 }
 
-// ICMPMonitorRequestModel describes the request block data model.
+// ICMPMonitorRequestModel describes the request attribute data model.
 type ICMPMonitorRequestModel struct {
 	Hostname   types.String `tfsdk:"hostname"`
 	IPFamily   types.String `tfsdk:"ip_family"`
@@ -185,86 +186,82 @@ func (r *ICMPMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 				Description: "The position of the monitor in the check group. It determines in what order checks and monitors are run when a group is triggered from the API or from CI/CD.",
 			},
 			retryStrategyAttributeName: makeRetryStrategyAttributeSchema(RetryStrategyAttributeSchemaOptions{}),
-		},
-		Blocks: map[string]schema.Block{
-			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{
-				Monitor: true,
-			}),
-			"request": schema.ListNestedBlock{
+			"request": schema.SingleNestedAttribute{
+				Required:    true,
 				Description: "The parameters of the ICMP request.",
-				Validators: []validator.List{
-					listvalidator.IsRequired(),
-					listvalidator.SizeAtMost(1),
-				},
-				NestedObject: schema.NestedBlockObject{
-					Attributes: map[string]schema.Attribute{
-						"hostname": schema.StringAttribute{
-							Required:    true,
-							Description: "The hostname to ping.",
-						},
-						"ip_family": schema.StringAttribute{
-							Optional:    true,
-							Computed:    true,
-							Default:     stringdefault.StaticString("IPv4"),
-							Description: "The IP family to use. Possible values are `IPv4` and `IPv6`. (Default `IPv4`).",
-							Validators: []validator.String{
-								stringvalidator.OneOf("IPv4", "IPv6"),
-							},
-						},
-						"ping_count": schema.Int64Attribute{
-							Optional:    true,
-							Computed:    true,
-							Default:     int64default.StaticInt64(10),
-							Description: "The number of ping packets to send. (Default `10`).",
-							Validators: []validator.Int64{
-								int64validator.Between(1, 50),
-							},
+				Attributes: map[string]schema.Attribute{
+					"hostname": schema.StringAttribute{
+						Required:    true,
+						Description: "The hostname to ping.",
+					},
+					"ip_family": schema.StringAttribute{
+						Optional:    true,
+						Computed:    true,
+						Default:     stringdefault.StaticString("IPv4"),
+						Description: "The IP family to use. Possible values are `IPv4` and `IPv6`. (Default `IPv4`).",
+						Validators: []validator.String{
+							stringvalidator.OneOf("IPv4", "IPv6"),
 						},
 					},
-					Blocks: map[string]schema.Block{
-						"assertion": schema.SetNestedBlock{
-							Description: "Assertions to validate the ICMP response.",
-							NestedObject: schema.NestedBlockObject{
-								// Attributes nested in this set block must not
-								// use schema defaults. The framework looks up
-								// configuration values for set elements by full
-								// element value; once computed attributes
-								// resolve, the lookup misses, the configuration
-								// is treated as null, and defaults would
-								// override values the practitioner actually
-								// configured, producing a perpetual diff.
-								// Default values are instead applied in
-								// ModifyPlan.
-								Attributes: map[string]schema.Attribute{
-									"source": schema.StringAttribute{
-										Required:    true,
-										Description: "The source of the asserted value. Possible values are `LATENCY` and `JSON_RESPONSE`.",
-										Validators: []validator.String{
-											stringvalidator.OneOf("LATENCY", "JSON_RESPONSE"),
-										},
+					"ping_count": schema.Int64Attribute{
+						Optional:    true,
+						Computed:    true,
+						Default:     int64default.StaticInt64(10),
+						Description: "The number of ping packets to send. (Default `10`).",
+						Validators: []validator.Int64{
+							int64validator.Between(1, 50),
+						},
+					},
+					"assertion": schema.SetNestedAttribute{
+						Optional:    true,
+						Computed:    true,
+						Default:     setdefault.StaticValue(types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{})),
+						Description: "Assertions to validate the ICMP response.",
+						NestedObject: schema.NestedAttributeObject{
+							// Attributes nested in this set attribute must
+							// not use schema defaults. The framework looks
+							// up configuration values for set elements by
+							// full element value; once computed attributes
+							// resolve, the lookup misses, the configuration
+							// is treated as null, and defaults would
+							// override values the practitioner actually
+							// configured, producing a perpetual diff.
+							// Default values are instead applied in
+							// ModifyPlan.
+							Attributes: map[string]schema.Attribute{
+								"source": schema.StringAttribute{
+									Required:    true,
+									Description: "The source of the asserted value. Possible values are `LATENCY` and `JSON_RESPONSE`.",
+									Validators: []validator.String{
+										stringvalidator.OneOf("LATENCY", "JSON_RESPONSE"),
 									},
-									"property": schema.StringAttribute{
-										Optional:    true,
-										Computed:    true,
-										Description: "The property of the source to assert. For `LATENCY` source, possible values are `avg`, `min`, `max` and `stdDev`.",
+								},
+								"property": schema.StringAttribute{
+									Optional:    true,
+									Computed:    true,
+									Description: "The property of the source to assert. For `LATENCY` source, possible values are `avg`, `min`, `max` and `stdDev`.",
+								},
+								"comparison": schema.StringAttribute{
+									Required:    true,
+									Description: "The type of comparison to be executed between expected and actual value of the assertion. Possible values are `EQUALS`, `NOT_EQUALS`, `GREATER_THAN` and `LESS_THAN`.",
+									Validators: []validator.String{
+										stringvalidator.OneOf("EQUALS", "NOT_EQUALS", "GREATER_THAN", "LESS_THAN"),
 									},
-									"comparison": schema.StringAttribute{
-										Required:    true,
-										Description: "The type of comparison to be executed between expected and actual value of the assertion. Possible values are `EQUALS`, `NOT_EQUALS`, `GREATER_THAN` and `LESS_THAN`.",
-										Validators: []validator.String{
-											stringvalidator.OneOf("EQUALS", "NOT_EQUALS", "GREATER_THAN", "LESS_THAN"),
-										},
-									},
-									"target": schema.StringAttribute{
-										Required:    true,
-										Description: "The target value for the assertion.",
-									},
+								},
+								"target": schema.StringAttribute{
+									Required:    true,
+									Description: "The target value for the assertion.",
 								},
 							},
 						},
 					},
 				},
 			},
+		},
+		Blocks: map[string]schema.Block{
+			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{
+				Monitor: true,
+			}),
 		},
 	}
 }
@@ -285,39 +282,14 @@ func (r *ICMPMonitorResource) Configure(ctx context.Context, req resource.Config
 	r.client = clientFromProviderData(req.ProviderData, &resp.Diagnostics)
 }
 
-// ModifyPlan applies default values to the optional+computed attributes
-// nested in the request.assertion set block. Schema defaults cannot be used
-// for these attributes (see the schema for details), so the plan is adjusted
-// here instead. Substituting static values keeps every set element fully
-// known and stable across plans, which set element correlation requires. The
-// request block itself is a list, so its own attributes can keep using schema
-// defaults.
+// ModifyPlan applies default values to the optional+computed attributes of
+// the request assertions. Schema defaults cannot be used for attributes
+// nested in set elements (see the schema for details), so the plan is
+// adjusted here instead. Substituting static values keeps every set element
+// fully known and stable across plans, which set element correlation
+// requires.
 func (r *ICMPMonitorResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	planNestedDefaults(ctx, req, resp, path.Root("request"), icmpMonitorRequestWithDefaults)
-}
-
-// icmpMonitorRequestWithDefaults returns the request block value with default
-// values substituted for null and unknown optional+computed attributes nested
-// in the assertion set block.
-func icmpMonitorRequestWithDefaults(ctx context.Context, list types.List, diags *diag.Diagnostics) types.List {
-	if list.IsNull() || list.IsUnknown() {
-		return list
-	}
-
-	var models []ICMPMonitorRequestModel
-	diags.Append(list.ElementsAs(ctx, &models, false)...)
-	if diags.HasError() {
-		return list
-	}
-
-	for i, model := range models {
-		models[i].Assertions = assertionsWithPropertyDefault(ctx, model.Assertions, diags)
-	}
-
-	result, d := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: icmpMonitorRequestAttrTypes}, models)
-	diags.Append(d...)
-
-	return result
+	planNestedDefaults(ctx, req, resp, path.Root("request"), objectWithSetDefaults("assertion", assertionsWithPropertyDefault))
 }
 
 func (r *ICMPMonitorResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -476,7 +448,7 @@ func icmpMonitorFromModel(ctx context.Context, model *ICMPMonitorResourceModel, 
 		Tags:                        stringsFromSet(ctx, model.Tags, diags),
 		AlertSettings:               &alertSettings,
 		UseGlobalAlertSettings:      model.UseGlobalAlertSettings.ValueBool(),
-		Request:                     icmpMonitorRequestFromList(ctx, model.Request, diags),
+		Request:                     icmpMonitorRequestFromObject(ctx, model.Request, diags),
 		GroupID:                     model.GroupID.ValueInt64(),
 		GroupOrder:                  int(model.GroupOrder.ValueInt64()),
 		AlertChannelSubscriptions:   alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscriptions, diags),
@@ -527,7 +499,7 @@ func icmpMonitorToModel(ctx context.Context, c *checkly.ICMPMonitor, model *ICMP
 	}
 
 	model.UseGlobalAlertSettings = types.BoolValue(c.UseGlobalAlertSettings)
-	model.Request = icmpMonitorRequestToList(ctx, c.Request, diags)
+	model.Request = icmpMonitorRequestToObject(ctx, c.Request, diags)
 	model.GroupID = types.Int64Value(c.GroupID)
 	model.GroupOrder = types.Int64Value(int64(c.GroupOrder))
 	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, diags)
@@ -535,20 +507,18 @@ func icmpMonitorToModel(ctx context.Context, c *checkly.ICMPMonitor, model *ICMP
 	model.TriggerIncident = triggerIncidentToObject(ctx, c.TriggerIncident, diags)
 }
 
-// icmpMonitorRequestFromList converts the request block value to its API
-// representation.
-func icmpMonitorRequestFromList(ctx context.Context, list types.List, diags *diag.Diagnostics) checkly.ICMPRequest {
-	if list.IsNull() || list.IsUnknown() {
+// icmpMonitorRequestFromObject converts the request attribute value to its
+// API representation.
+func icmpMonitorRequestFromObject(ctx context.Context, obj types.Object, diags *diag.Diagnostics) checkly.ICMPRequest {
+	if obj.IsNull() || obj.IsUnknown() {
 		return checkly.ICMPRequest{}
 	}
 
-	var models []ICMPMonitorRequestModel
-	diags.Append(list.ElementsAs(ctx, &models, false)...)
-	if diags.HasError() || len(models) == 0 {
+	var model ICMPMonitorRequestModel
+	diags.Append(obj.As(ctx, &model, basetypes.ObjectAsOptions{})...)
+	if diags.HasError() {
 		return checkly.ICMPRequest{}
 	}
-
-	model := models[0]
 
 	return checkly.ICMPRequest{
 		Hostname:   model.Hostname.ValueString(),
@@ -558,18 +528,16 @@ func icmpMonitorRequestFromList(ctx context.Context, list types.List, diags *dia
 	}
 }
 
-// icmpMonitorRequestToList converts the API representation of the request to
-// the request block value.
-func icmpMonitorRequestToList(ctx context.Context, r checkly.ICMPRequest, diags *diag.Diagnostics) types.List {
-	list, d := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: icmpMonitorRequestAttrTypes}, []ICMPMonitorRequestModel{
-		{
-			Hostname:   types.StringValue(r.Hostname),
-			IPFamily:   types.StringValue(r.IPFamily),
-			PingCount:  types.Int64Value(int64(r.PingCount)),
-			Assertions: assertionsToSet(ctx, r.Assertions, diags),
-		},
+// icmpMonitorRequestToObject converts the API representation of the request
+// to the request attribute value.
+func icmpMonitorRequestToObject(ctx context.Context, r checkly.ICMPRequest, diags *diag.Diagnostics) types.Object {
+	obj, d := types.ObjectValueFrom(ctx, icmpMonitorRequestAttrTypes, ICMPMonitorRequestModel{
+		Hostname:   types.StringValue(r.Hostname),
+		IPFamily:   types.StringValue(r.IPFamily),
+		PingCount:  types.Int64Value(int64(r.PingCount)),
+		Assertions: assertionsToSet(ctx, r.Assertions, diags),
 	})
 	diags.Append(d...)
 
-	return list
+	return obj
 }

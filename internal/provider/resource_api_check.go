@@ -323,7 +323,7 @@ func (r *APICheckResource) Configure(ctx context.Context, req resource.Configure
 // fully known and stable across plans, which set element correlation
 // requires.
 func (r *APICheckResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	planNestedDefaults(ctx, req, resp, path.Root("request"), apiCheckRequestWithDefaults)
+	planNestedDefaults(ctx, req, resp, path.Root("request"), objectWithSetDefaults("assertion", assertionsWithPropertyAndTargetDefaults))
 }
 
 func (r *APICheckResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {

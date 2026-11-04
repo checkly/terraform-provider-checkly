@@ -8,19 +8,19 @@ resource "checkly_dns_monitor" "example-dns-monitor" {
     "eu-west-1"
   ]
 
-  request {
+  request = {
     record_type = "A"
     query       = "welcome.checklyhq.com"
 
-    name_server {
+    name_server = {
       host = "1.1.1.1"
       port = 53
     }
 
-    assertion {
+    assertion = [{
       source     = "RESPONSE_CODE"
       comparison = "EQUALS"
       target     = "NOERROR"
-    }
+    }]
   }
 }

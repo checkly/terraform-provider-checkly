@@ -664,15 +664,15 @@ resource "checkly_tcp_check" "test" {
   max_response_time      = 5000
   locations              = ["eu-central-1", "us-east-1"]
 
-  request {
+  request = {
     hostname = "api.checklyhq.com"
     port     = 80
-    assertion {
+    assertion = [{
       source     = "RESPONSE_TIME"
       property   = ""
       comparison = "LESS_THAN"
       target     = "2000"
-    }
+    }]
   }
 
   alert_settings = {
@@ -765,22 +765,24 @@ resource "checkly_tcp_monitor" "test" {
   locations              = ["eu-central-1", "us-east-1"]
   tags                   = ["tf-upgrade"]
 
-  request {
+  request = {
     hostname  = "api.checklyhq.com"
     port      = 80
     ip_family = "IPv4"
-    assertion {
-      source     = "RESPONSE_TIME"
-      property   = ""
-      comparison = "LESS_THAN"
-      target     = "2000"
-    }
-    assertion {
-      source     = "RESPONSE_DATA"
-      property   = ""
-      comparison = "CONTAINS"
-      target     = "Foo"
-    }
+    assertion = [
+      {
+        source     = "RESPONSE_TIME"
+        property   = ""
+        comparison = "LESS_THAN"
+        target     = "2000"
+      },
+      {
+        source     = "RESPONSE_DATA"
+        property   = ""
+        comparison = "CONTAINS"
+        target     = "Foo"
+      },
+    ]
   }
 
   alert_settings = {
@@ -1875,23 +1877,25 @@ resource "checkly_url_monitor" "test" {
   tags                      = ["tf-upgrade"]
   use_global_alert_settings = false
 
-  request {
+  request = {
     url              = "https://api.checklyhq.com"
     follow_redirects = true
     skip_ssl         = false
     ip_family        = "IPv6"
-    assertion {
-      source     = "STATUS_CODE"
-      property   = ""
-      comparison = "GREATER_THAN"
-      target     = "199"
-    }
-    assertion {
-      source     = "STATUS_CODE"
-      property   = ""
-      comparison = "LESS_THAN"
-      target     = "300"
-    }
+    assertion = [
+      {
+        source     = "STATUS_CODE"
+        property   = ""
+        comparison = "GREATER_THAN"
+        target     = "199"
+      },
+      {
+        source     = "STATUS_CODE"
+        property   = ""
+        comparison = "LESS_THAN"
+        target     = "300"
+      },
+    ]
   }
 
   alert_settings = {
@@ -1954,7 +1958,7 @@ resource "checkly_url_monitor" "test" {
   activated = true
   locations = ["eu-central-1"]
 
-  request {
+  request = {
     url = "https://api.checklyhq.com"
   }
 }
@@ -2025,22 +2029,22 @@ resource "checkly_dns_monitor" "test" {
   locations              = ["eu-central-1", "us-east-1"]
   tags                   = ["tf-upgrade"]
 
-  request {
+  request = {
     record_type = "AAAA"
     query       = "api.checklyhq.com"
     protocol    = "TCP"
 
-    name_server {
+    name_server = {
       host = "1.1.1.1"
       port = 53
     }
 
-    assertion {
+    assertion = [{
       source     = "RESPONSE_CODE"
       property   = ""
       comparison = "EQUALS"
       target     = "NOERROR"
-    }
+    }]
   }
 
   alert_settings = {
@@ -2122,17 +2126,17 @@ resource "checkly_icmp_monitor" "test" {
   locations                      = ["eu-central-1", "us-east-1"]
   tags                           = ["tf-upgrade"]
 
-  request {
+  request = {
     hostname   = "api.checklyhq.com"
     ip_family  = "IPv4"
     ping_count = 10
 
-    assertion {
+    assertion = [{
       source     = "LATENCY"
       property   = "avg"
       comparison = "LESS_THAN"
       target     = "200"
-    }
+    }]
   }
 
   alert_settings = {
@@ -2220,7 +2224,7 @@ resource "checkly_grpc_monitor" "test" {
   locations              = ["eu-central-1", "us-east-1"]
   tags                   = ["tf-upgrade"]
 
-  request {
+  request = {
     host               = "grpcb.in"
     port               = 9000
     grpc_mode          = "BEHAVIOR"
@@ -2230,17 +2234,17 @@ resource "checkly_grpc_monitor" "test" {
     method             = "grpcbin.GRPCBin/DummyUnary"
     message            = jsonencode({ f_string = "hello" })
 
-    metadata {
+    metadata = [{
       key   = "x-api-key"
       value = "supersecret"
-    }
+    }]
 
-    assertion {
+    assertion = [{
       source     = "GRPC_STATUS_CODE"
       property   = ""
       comparison = "EQUALS"
       target     = "0"
-    }
+    }]
   }
 
   alert_settings = {
@@ -2325,7 +2329,7 @@ resource "checkly_traceroute_monitor" "test" {
   locations              = ["us-east-1", "ap-northeast-1"]
   tags                   = ["tf-upgrade"]
 
-  request {
+  request = {
     url              = "api.checklyhq.com"
     protocol         = "TCP"
     port             = 443
@@ -2335,12 +2339,12 @@ resource "checkly_traceroute_monitor" "test" {
     ptr_lookup       = true
     timeout          = 10
 
-    assertion {
+    assertion = [{
       source     = "PACKET_LOSS"
       property   = ""
       comparison = "LESS_THAN"
       target     = "10"
-    }
+    }]
   }
 
   alert_settings = {
@@ -2784,15 +2788,15 @@ resource "checkly_tcp_monitor" "test" {
   locations                 = ["eu-central-1"]
   use_global_alert_settings = true
 
-  request {
+  request = {
     hostname = "api.checklyhq.com"
     port     = 80
-    assertion {
+    assertion = [{
       source     = "RESPONSE_TIME"
       property   = ""
       comparison = "LESS_THAN"
       target     = "2000"
-    }
+    }]
   }
 
   retry_strategy = {

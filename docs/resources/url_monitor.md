@@ -23,14 +23,14 @@ resource "checkly_url_monitor" "example-url-monitor" {
     "eu-west-1"
   ]
 
-  request {
+  request = {
     url = "https://welcome.checklyhq.com"
 
-    assertion {
+    assertion = [{
       source     = "STATUS_CODE"
       comparison = "EQUALS"
       target     = "200"
-    }
+    }]
   }
 }
 ```
@@ -43,6 +43,7 @@ resource "checkly_url_monitor" "example-url-monitor" {
 - `activated` (Boolean) Determines whether the monitor will run periodically or not after being deployed.
 - `frequency` (Number) Controls how often the monitor should run. Defined in minutes. The allowed values are `0` (high frequency - use `frequency_offset` to define the actual frequency), `1` (1 minute), `2` (2 minutes), `5` (5 minutes), `10` (10 minutes), `15` (15 minutes), `30` (30 minutes), `60` (1 hour), `120` (2 hours), `180` (3 hours), `360` (6 hours), `720` (12 hours) and `1440` (24 hours).
 - `name` (String) The name of the monitor.
+- `request` (Attributes) The parameters of the HTTP request. (see [below for nested schema](#nestedatt--request))
 
 ### Optional
 
@@ -57,7 +58,6 @@ resource "checkly_url_monitor" "example-url-monitor" {
 - `max_response_time` (Number) The response time in milliseconds where the monitor should be considered failing. Possible values are between `0` and `30000`. (Default `5000`).
 - `muted` (Boolean) Determines if any notifications will be sent out when the monitor fails and/or recovers. (Default `false`).
 - `private_locations` (Set of String) An array of one or more private locations slugs.
-- `request` (Block Set) The parameters of the HTTP request. (see [below for nested schema](#nestedblock--request))
 - `retry_strategy` (Attributes) A strategy for retrying failed check/monitor runs. (see [below for nested schema](#nestedatt--retry_strategy))
 - `run_parallel` (Boolean) Determines whether the monitor should run on all selected locations in parallel or round-robin. (Default `false`).
 - `should_fail` (Boolean) Allows to invert the behaviour of when the monitor is considered to fail. (Default `false`).
@@ -68,6 +68,35 @@ resource "checkly_url_monitor" "example-url-monitor" {
 ### Read-Only
 
 - `id` (String) The ID of the monitor.
+
+<a id="nestedatt--request"></a>
+### Nested Schema for `request`
+
+Required:
+
+- `url` (String) The URL to monitor. Must be a valid HTTP or HTTPS URL.
+
+Optional:
+
+- `assertion` (Attributes Set) Assertions to validate the HTTP response. URL monitors only support status code assertions. (see [below for nested schema](#nestedatt--request--assertion))
+- `follow_redirects` (Boolean) Whether to follow HTTP redirects automatically. (Default `true`).
+- `ip_family` (String) IP family version to use for the connection. The value can be either `IPv4` or `IPv6`. (Default `IPv4`).
+- `skip_ssl` (Boolean) Whether to skip SSL certificate verification. (Default `false`).
+
+<a id="nestedatt--request--assertion"></a>
+### Nested Schema for `request.assertion`
+
+Required:
+
+- `comparison` (String) The type of comparison to be executed between expected and actual value of the assertion. Possible values are `EQUALS`, `NOT_EQUALS`, `GREATER_THAN` and `LESS_THAN`.
+- `source` (String) The source of the asserted value. The only allowed value is `STATUS_CODE`.
+- `target` (String) The target value. Typically `200` when the source is `STATUS_CODE`.
+
+Optional:
+
+- `property` (String)
+
+
 
 <a id="nestedblock--alert_channel_subscription"></a>
 ### Nested Schema for `alert_channel_subscription`
@@ -121,35 +150,6 @@ Optional:
 Optional:
 
 - `minutes_failing_threshold` (Number) Send an alert notification after the monitor has been failing for the given amount of time (in minutes). Possible values are `5`, `10`, `15`, and `30`. (Default `5`).
-
-
-
-<a id="nestedblock--request"></a>
-### Nested Schema for `request`
-
-Required:
-
-- `url` (String) The URL to monitor. Must be a valid HTTP or HTTPS URL.
-
-Optional:
-
-- `assertion` (Block Set) Assertions to validate the HTTP response. URL monitors only support status code assertions. (see [below for nested schema](#nestedblock--request--assertion))
-- `follow_redirects` (Boolean) Whether to follow HTTP redirects automatically. (Default `true`).
-- `ip_family` (String) IP family version to use for the connection. The value can be either `IPv4` or `IPv6`. (Default `IPv4`).
-- `skip_ssl` (Boolean) Whether to skip SSL certificate verification. (Default `false`).
-
-<a id="nestedblock--request--assertion"></a>
-### Nested Schema for `request.assertion`
-
-Required:
-
-- `comparison` (String) The type of comparison to be executed between expected and actual value of the assertion. Possible values are `EQUALS`, `NOT_EQUALS`, `GREATER_THAN` and `LESS_THAN`.
-- `source` (String) The source of the asserted value. The only allowed value is `STATUS_CODE`.
-- `target` (String) The target value. Typically `200` when the source is `STATUS_CODE`.
-
-Optional:
-
-- `property` (String)
 
 
 

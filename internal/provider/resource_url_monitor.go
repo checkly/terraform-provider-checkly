@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
-	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -15,10 +14,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 
 	checkly "github.com/checkly/checkly-go-sdk"
 )
@@ -61,14 +62,14 @@ type URLMonitorResourceModel struct {
 	PrivateLocations          types.Set    `tfsdk:"private_locations"`
 	AlertSettings             types.Object `tfsdk:"alert_settings"`
 	UseGlobalAlertSettings    types.Bool   `tfsdk:"use_global_alert_settings"`
-	Request                   types.Set    `tfsdk:"request"`
+	Request                   types.Object `tfsdk:"request"`
 	GroupID                   types.Int64  `tfsdk:"group_id"`
 	GroupOrder                types.Int64  `tfsdk:"group_order"`
 	RetryStrategy             types.Object `tfsdk:"retry_strategy"`
 	TriggerIncident           types.Object `tfsdk:"trigger_incident"`
 }
 
-// URLMonitorRequestModel describes the request block data model.
+// URLMonitorRequestModel describes the request attribute data model.
 type URLMonitorRequestModel struct {
 	URL             types.String `tfsdk:"url"`
 	FollowRedirects types.Bool   `tfsdk:"follow_redirects"`
@@ -198,83 +199,84 @@ func (r *URLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 			retryStrategyAttributeName: makeRetryStrategyAttributeSchema(RetryStrategyAttributeSchemaOptions{
 				SupportsOnlyOnNetworkError: true,
 			}),
-		},
-		Blocks: map[string]schema.Block{
-			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{
-				Monitor: true,
-			}),
-			"request": schema.SetNestedBlock{
+			"request": schema.SingleNestedAttribute{
+				Required:    true,
 				Description: "The parameters of the HTTP request.",
-				Validators: []validator.Set{
-					setvalidator.IsRequired(),
-					setvalidator.SizeAtMost(1),
-				},
-				NestedObject: schema.NestedBlockObject{
-					// Attributes nested in this set block must not use schema
-					// defaults. The framework looks up configuration values
-					// for set elements by full element value; once computed
-					// attributes resolve, the lookup misses, the configuration
-					// is treated as null, and defaults would override values
-					// the practitioner actually configured, producing a
-					// perpetual diff. Default values are instead applied in
-					// ModifyPlan.
-					Attributes: map[string]schema.Attribute{
-						"url": schema.StringAttribute{
-							Required:    true,
-							Description: "The URL to monitor. Must be a valid HTTP or HTTPS URL.",
-						},
-						"follow_redirects": schema.BoolAttribute{
-							Optional:    true,
-							Computed:    true,
-							Description: "Whether to follow HTTP redirects automatically. (Default `true`).",
-						},
-						"skip_ssl": schema.BoolAttribute{
-							Optional:    true,
-							Computed:    true,
-							Description: "Whether to skip SSL certificate verification. (Default `false`).",
-						},
-						"ip_family": schema.StringAttribute{
-							Optional:    true,
-							Computed:    true,
-							Description: "IP family version to use for the connection. The value can be either `IPv4` or `IPv6`. (Default `IPv4`).",
-							Validators: []validator.String{
-								stringvalidator.OneOf("IPv4", "IPv6"),
-							},
+				Attributes: map[string]schema.Attribute{
+					"url": schema.StringAttribute{
+						Required:    true,
+						Description: "The URL to monitor. Must be a valid HTTP or HTTPS URL.",
+					},
+					"follow_redirects": schema.BoolAttribute{
+						Optional:    true,
+						Computed:    true,
+						Default:     booldefault.StaticBool(true),
+						Description: "Whether to follow HTTP redirects automatically. (Default `true`).",
+					},
+					"skip_ssl": schema.BoolAttribute{
+						Optional:    true,
+						Computed:    true,
+						Default:     booldefault.StaticBool(false),
+						Description: "Whether to skip SSL certificate verification. (Default `false`).",
+					},
+					"ip_family": schema.StringAttribute{
+						Optional:    true,
+						Computed:    true,
+						Default:     stringdefault.StaticString("IPv4"),
+						Description: "IP family version to use for the connection. The value can be either `IPv4` or `IPv6`. (Default `IPv4`).",
+						Validators: []validator.String{
+							stringvalidator.OneOf("IPv4", "IPv6"),
 						},
 					},
-					Blocks: map[string]schema.Block{
-						"assertion": schema.SetNestedBlock{
-							Description: "Assertions to validate the HTTP response. URL monitors only support status code assertions.",
-							NestedObject: schema.NestedBlockObject{
-								Attributes: map[string]schema.Attribute{
-									"source": schema.StringAttribute{
-										Required:    true,
-										Description: "The source of the asserted value. The only allowed value is `STATUS_CODE`.",
-										Validators: []validator.String{
-											stringvalidator.OneOf("STATUS_CODE"),
-										},
+					"assertion": schema.SetNestedAttribute{
+						Optional:    true,
+						Computed:    true,
+						Default:     setdefault.StaticValue(types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{})),
+						Description: "Assertions to validate the HTTP response. URL monitors only support status code assertions.",
+						NestedObject: schema.NestedAttributeObject{
+							// Attributes nested in this set attribute must
+							// not use schema defaults. The framework looks
+							// up configuration values for set elements by
+							// full element value; once computed attributes
+							// resolve, the lookup misses, the configuration
+							// is treated as null, and defaults would
+							// override values the practitioner actually
+							// configured, producing a perpetual diff.
+							// Default values are instead applied in
+							// ModifyPlan.
+							Attributes: map[string]schema.Attribute{
+								"source": schema.StringAttribute{
+									Required:    true,
+									Description: "The source of the asserted value. The only allowed value is `STATUS_CODE`.",
+									Validators: []validator.String{
+										stringvalidator.OneOf("STATUS_CODE"),
 									},
-									"property": schema.StringAttribute{
-										Optional: true,
-										Computed: true,
+								},
+								"property": schema.StringAttribute{
+									Optional: true,
+									Computed: true,
+								},
+								"comparison": schema.StringAttribute{
+									Required:    true,
+									Description: "The type of comparison to be executed between expected and actual value of the assertion. Possible values are `EQUALS`, `NOT_EQUALS`, `GREATER_THAN` and `LESS_THAN`.",
+									Validators: []validator.String{
+										stringvalidator.OneOf("EQUALS", "NOT_EQUALS", "GREATER_THAN", "LESS_THAN"),
 									},
-									"comparison": schema.StringAttribute{
-										Required:    true,
-										Description: "The type of comparison to be executed between expected and actual value of the assertion. Possible values are `EQUALS`, `NOT_EQUALS`, `GREATER_THAN` and `LESS_THAN`.",
-										Validators: []validator.String{
-											stringvalidator.OneOf("EQUALS", "NOT_EQUALS", "GREATER_THAN", "LESS_THAN"),
-										},
-									},
-									"target": schema.StringAttribute{
-										Required:    true,
-										Description: "The target value. Typically `200` when the source is `STATUS_CODE`.",
-									},
+								},
+								"target": schema.StringAttribute{
+									Required:    true,
+									Description: "The target value. Typically `200` when the source is `STATUS_CODE`.",
 								},
 							},
 						},
 					},
 				},
 			},
+		},
+		Blocks: map[string]schema.Block{
+			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{
+				Monitor: true,
+			}),
 		},
 	}
 }
@@ -295,39 +297,14 @@ func (r *URLMonitorResource) Configure(ctx context.Context, req resource.Configu
 	r.client = clientFromProviderData(req.ProviderData, &resp.Diagnostics)
 }
 
-// ModifyPlan applies default values to the optional+computed attributes
-// nested in the request set block. Schema defaults cannot be used for these
-// attributes (see the schema for details), so the plan is adjusted here
-// instead. Substituting static values keeps every set element fully known
-// and stable across plans, which set element correlation requires.
+// ModifyPlan applies default values to the optional+computed attributes of
+// the request assertions. Schema defaults cannot be used for attributes
+// nested in set elements (see the schema for details), so the plan is
+// adjusted here instead. Substituting static values keeps every set element
+// fully known and stable across plans, which set element correlation
+// requires.
 func (r *URLMonitorResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	planNestedDefaults(ctx, req, resp, path.Root("request"), urlMonitorRequestWithDefaults)
-}
-
-// urlMonitorRequestWithDefaults returns the request block value with default
-// values substituted for null and unknown optional+computed attributes.
-func urlMonitorRequestWithDefaults(ctx context.Context, set types.Set, diags *diag.Diagnostics) types.Set {
-	if set.IsNull() || set.IsUnknown() {
-		return set
-	}
-
-	var models []URLMonitorRequestModel
-	diags.Append(set.ElementsAs(ctx, &models, false)...)
-	if diags.HasError() {
-		return set
-	}
-
-	for i, model := range models {
-		models[i].FollowRedirects = boolOrDefault(model.FollowRedirects, true)
-		models[i].SkipSSL = boolOrDefault(model.SkipSSL, false)
-		models[i].IPFamily = stringOrDefault(model.IPFamily, "IPv4")
-		models[i].Assertions = assertionsWithPropertyDefault(ctx, model.Assertions, diags)
-	}
-
-	result, d := types.SetValueFrom(ctx, types.ObjectType{AttrTypes: urlMonitorRequestAttrTypes}, models)
-	diags.Append(d...)
-
-	return result
+	planNestedDefaults(ctx, req, resp, path.Root("request"), objectWithSetDefaults("assertion", assertionsWithPropertyDefault))
 }
 
 func (r *URLMonitorResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -489,7 +466,7 @@ func urlMonitorFromModel(ctx context.Context, model *URLMonitorResourceModel, di
 		Tags:                      stringsFromSet(ctx, model.Tags, diags),
 		AlertSettings:             &alertSettings,
 		UseGlobalAlertSettings:    model.UseGlobalAlertSettings.ValueBool(),
-		Request:                   urlMonitorRequestFromSet(ctx, model.Request, diags),
+		Request:                   urlMonitorRequestFromObject(ctx, model.Request, diags),
 		GroupID:                   model.GroupID.ValueInt64(),
 		GroupOrder:                int(model.GroupOrder.ValueInt64()),
 		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscriptions, diags),
@@ -542,7 +519,7 @@ func urlMonitorToModel(ctx context.Context, c *checkly.URLMonitor, model *URLMon
 	}
 
 	model.UseGlobalAlertSettings = types.BoolValue(c.UseGlobalAlertSettings)
-	model.Request = urlMonitorRequestToSet(ctx, c.Request, diags)
+	model.Request = urlMonitorRequestToObject(ctx, c.Request, diags)
 	model.GroupID = types.Int64Value(c.GroupID)
 	model.GroupOrder = types.Int64Value(int64(c.GroupOrder))
 
@@ -557,20 +534,18 @@ func urlMonitorToModel(ctx context.Context, c *checkly.URLMonitor, model *URLMon
 	model.TriggerIncident = triggerIncidentToObject(ctx, c.TriggerIncident, diags)
 }
 
-// urlMonitorRequestFromSet converts the request block value to its API
-// representation.
-func urlMonitorRequestFromSet(ctx context.Context, set types.Set, diags *diag.Diagnostics) checkly.URLRequest {
-	if set.IsNull() || set.IsUnknown() {
+// urlMonitorRequestFromObject converts the request attribute value to its
+// API representation.
+func urlMonitorRequestFromObject(ctx context.Context, obj types.Object, diags *diag.Diagnostics) checkly.URLRequest {
+	if obj.IsNull() || obj.IsUnknown() {
 		return checkly.URLRequest{}
 	}
 
-	var models []URLMonitorRequestModel
-	diags.Append(set.ElementsAs(ctx, &models, false)...)
-	if diags.HasError() || len(models) == 0 {
+	var model URLMonitorRequestModel
+	diags.Append(obj.As(ctx, &model, basetypes.ObjectAsOptions{})...)
+	if diags.HasError() {
 		return checkly.URLRequest{}
 	}
-
-	model := models[0]
 
 	return checkly.URLRequest{
 		URL:             model.URL.ValueString(),
@@ -581,19 +556,17 @@ func urlMonitorRequestFromSet(ctx context.Context, set types.Set, diags *diag.Di
 	}
 }
 
-// urlMonitorRequestToSet converts the API representation of the request to
-// the request block value.
-func urlMonitorRequestToSet(ctx context.Context, r checkly.URLRequest, diags *diag.Diagnostics) types.Set {
-	set, d := types.SetValueFrom(ctx, types.ObjectType{AttrTypes: urlMonitorRequestAttrTypes}, []URLMonitorRequestModel{
-		{
-			URL:             types.StringValue(r.URL),
-			FollowRedirects: types.BoolValue(r.FollowRedirects),
-			SkipSSL:         types.BoolValue(r.SkipSSL),
-			Assertions:      assertionsToSet(ctx, r.Assertions, diags),
-			IPFamily:        types.StringValue(r.IPFamily),
-		},
+// urlMonitorRequestToObject converts the API representation of the request
+// to the request attribute value.
+func urlMonitorRequestToObject(ctx context.Context, r checkly.URLRequest, diags *diag.Diagnostics) types.Object {
+	obj, d := types.ObjectValueFrom(ctx, urlMonitorRequestAttrTypes, URLMonitorRequestModel{
+		URL:             types.StringValue(r.URL),
+		FollowRedirects: types.BoolValue(r.FollowRedirects),
+		SkipSSL:         types.BoolValue(r.SkipSSL),
+		Assertions:      assertionsToSet(ctx, r.Assertions, diags),
+		IPFamily:        types.StringValue(r.IPFamily),
 	})
 	diags.Append(d...)
 
-	return set
+	return obj
 }

@@ -29,16 +29,8 @@ func TestAccDNSMonitorRequiredFields(t *testing.T) {
 			ExpectError: regexp.MustCompile(`The argument "frequency" is required, but no definition was found.`),
 		},
 		{
-			// Terraform only reports the missing request block once all
-			// required attributes are present.
-			Config: `
-				resource "checkly_dns_monitor" "test" {
-					name      = "test-required-fields"
-					activated = true
-					frequency = 60
-				}
-			`,
-			ExpectError: regexp.MustCompile(`Block request must have a configuration value`),
+			Config:      config,
+			ExpectError: regexp.MustCompile(`The argument "request" is required, but no definition was found.`),
 		},
 	})
 }
@@ -57,15 +49,15 @@ func TestAccDNSMonitorBasic(t *testing.T) {
 					locations                 = ["us-east-1", "eu-central-1"]
 					use_global_alert_settings = true
 
-					request {
+					request = {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 
-						assertion {
+						assertion = [{
 							source     = "RESPONSE_CODE"
 							comparison = "EQUALS"
 							target     = "NOERROR"
-						}
+						}]
 					}
 				}
 			`,
@@ -95,35 +87,25 @@ func TestAccDNSMonitorBasic(t *testing.T) {
 					"locations.*",
 					"us-east-1",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_dns_monitor.test",
-					"request.*.record_type",
+					"request.record_type",
 					"A",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_dns_monitor.test",
-					"request.*.query",
+					"request.query",
 					"welcome.checklyhq.com",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_dns_monitor.test",
-					"request.*.assertion.*.comparison",
-					"EQUALS",
-				),
-				testCheckResourceAttrExpr(
-					"checkly_dns_monitor.test",
-					"request.*.assertion.*.property",
-					"",
-				),
-				testCheckResourceAttrExpr(
-					"checkly_dns_monitor.test",
-					"request.*.assertion.*.source",
-					"RESPONSE_CODE",
-				),
-				testCheckResourceAttrExpr(
-					"checkly_dns_monitor.test",
-					"request.*.assertion.*.target",
-					"NOERROR",
+					"request.assertion.*",
+					map[string]string{
+						"source":     "RESPONSE_CODE",
+						"property":   "",
+						"comparison": "EQUALS",
+						"target":     "NOERROR",
+					},
 				),
 			),
 		},
@@ -144,15 +126,15 @@ func TestAccDNSMonitorDescriptionRemoval(t *testing.T) {
 					locations                 = ["us-east-1", "eu-central-1"]
 					use_global_alert_settings = true
 
-					request {
+					request = {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 
-						assertion {
+						assertion = [{
 							source     = "RESPONSE_CODE"
 							comparison = "EQUALS"
 							target     = "NOERROR"
-						}
+						}]
 					}
 				}
 			`,
@@ -173,15 +155,15 @@ func TestAccDNSMonitorDescriptionRemoval(t *testing.T) {
 					locations                 = ["us-east-1", "eu-central-1"]
 					use_global_alert_settings = true
 
-					request {
+					request = {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 
-						assertion {
+						assertion = [{
 							source     = "RESPONSE_CODE"
 							comparison = "EQUALS"
 							target     = "NOERROR"
-						}
+						}]
 					}
 				}
 			`,
@@ -212,27 +194,25 @@ func TestAccDNSMonitorFull(t *testing.T) {
 						"ap-northeast-1"
 					]
 
-					request {
+					request = {
 						record_type  = "AAAA"
 						query        = "api.checklyhq.com"
 						protocol     = "TCP"
 
-						name_server {
+						name_server = {
 							host = "1.1.1.1"
 							port = 53
 						}
 
-						assertion {
+						assertion = [{
 							source     = "RESPONSE_CODE"
 							comparison = "EQUALS"
 							target     = "NOERROR"
-						}
-
-						assertion {
+						}, {
 							source     = "RESPONSE_TIME"
 							comparison = "LESS_THAN"
 							target     = "300"
-						}
+						}]
 					}
 
 					alert_settings = {
@@ -270,55 +250,53 @@ func TestAccDNSMonitorFull(t *testing.T) {
 					`"locations.#"`,
 					"3",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_dns_monitor.test",
-					"request.*.record_type",
+					"request.record_type",
 					"AAAA",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_dns_monitor.test",
-					"request.*.query",
+					"request.query",
 					"api.checklyhq.com",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_dns_monitor.test",
-					"request.*.name_server.*.host",
+					"request.name_server.host",
 					"1.1.1.1",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_dns_monitor.test",
-					"request.*.name_server.*.port",
+					"request.name_server.port",
 					"53",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_dns_monitor.test",
-					"request.*.protocol",
+					"request.protocol",
 					"TCP",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_dns_monitor.test",
-					"request.*.assertion.#",
+					"request.assertion.#",
 					"2",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_dns_monitor.test",
-					"request.*.assertion.*.comparison",
-					"EQUALS",
+					"request.assertion.*",
+					map[string]string{
+						"source":     "RESPONSE_CODE",
+						"comparison": "EQUALS",
+						"target":     "NOERROR",
+					},
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_dns_monitor.test",
-					"request.*.assertion.*.comparison",
-					"LESS_THAN",
-				),
-				testCheckResourceAttrExpr(
-					"checkly_dns_monitor.test",
-					"request.*.assertion.*.target",
-					"NOERROR",
-				),
-				testCheckResourceAttrExpr(
-					"checkly_dns_monitor.test",
-					"request.*.assertion.*.target",
-					"300",
+					"request.assertion.*",
+					map[string]string{
+						"source":     "RESPONSE_TIME",
+						"comparison": "LESS_THAN",
+						"target":     "300",
+					},
 				),
 			),
 		},
@@ -337,15 +315,15 @@ resource "checkly_dns_monitor" "test_trigger_incident" {
 	frequency     = 30
 	locations     = ["eu-west-2", "us-east-1"]
 
-	request {
+	request = {
 		record_type = "A"
 		query       = "welcome.checklyhq.com"
 
-		assertion {
+		assertion = [{
 			source     = "RESPONSE_CODE"
 			comparison = "EQUALS"
 			target     = "NOERROR"
-		}
+		}]
 	}
 
 	trigger_incident = {
@@ -481,7 +459,7 @@ func TestAccDNSMonitorWithSingleRetry(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 					}
@@ -533,7 +511,7 @@ func TestAccDNSMonitorWithNoRetries(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 					}
@@ -582,7 +560,7 @@ func TestAccDNSMonitorWithDefaultNoRetries(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 					}
@@ -624,7 +602,7 @@ func TestAccDNSMonitorWithFixedRetry(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 					}
@@ -677,7 +655,7 @@ func TestAccDNSMonitorWithExponentialRetry(t *testing.T) {
 					activated = true
 					frequency = 720
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 					}
@@ -730,7 +708,7 @@ func TestAccDNSMonitorWithLinearRetry(t *testing.T) {
 					activated = true
 					frequency = 720
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 					}
@@ -787,7 +765,7 @@ func TestAccDNSMonitorWithOnlyOnNetworkErrorIgnored(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 					}
@@ -824,7 +802,7 @@ func TestAccDNSMonitorRetryStrategyRemoval(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 					}
@@ -848,7 +826,7 @@ func TestAccDNSMonitorRetryStrategyRemoval(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 					}
@@ -889,7 +867,7 @@ func TestAccDNSMonitorGroupAssignment(t *testing.T) {
 					frequency = 60
 					locations = ["eu-central-1"]
 					group_id  = checkly_check_group.test1.id
-					request {
+					request = {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 					}
@@ -900,7 +878,7 @@ func TestAccDNSMonitorGroupAssignment(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 					}
@@ -942,7 +920,7 @@ func TestAccDNSMonitorGroupAssignment(t *testing.T) {
 					frequency = 60
 					locations = ["eu-central-1"]
 					group_id  = checkly_check_group.test2.id
-					request {
+					request = {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 					}
@@ -954,7 +932,7 @@ func TestAccDNSMonitorGroupAssignment(t *testing.T) {
 					frequency = 60
 					locations = ["eu-central-1"]
 					group_id  = checkly_check_group.test2.id
-					request {
+					request = {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 					}
@@ -996,7 +974,7 @@ func TestAccDNSMonitorGroupAssignment(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 					}
@@ -1007,7 +985,7 @@ func TestAccDNSMonitorGroupAssignment(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 					}
@@ -1038,11 +1016,11 @@ func TestAccDNSMonitorNameServerRemoval(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 
-						name_server {
+						name_server = {
 							host = "1.1.1.1"
 							port = 53
 						}
@@ -1052,17 +1030,17 @@ func TestAccDNSMonitorNameServerRemoval(t *testing.T) {
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_dns_monitor.test",
-					"request.0.name_server.#",
-					"1",
+					"request.name_server.%",
+					"2",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_dns_monitor.test",
-					"request.0.name_server.0.host",
+					"request.name_server.host",
 					"1.1.1.1",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_dns_monitor.test",
-					"request.0.name_server.0.port",
+					"request.name_server.port",
 					"53",
 				),
 			),
@@ -1074,32 +1052,23 @@ func TestAccDNSMonitorNameServerRemoval(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 					}
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
-					"checkly_dns_monitor.test",
-					"request.0.name_server.#",
-					"0",
-				),
 				resource.TestCheckNoResourceAttr(
 					"checkly_dns_monitor.test",
-					"request.0.name_server.0.host",
-				),
-				resource.TestCheckNoResourceAttr(
-					"checkly_dns_monitor.test",
-					"request.0.name_server.0.port",
+					"request.name_server",
 				),
 			),
 		},
 	})
 }
 
-func TestAccDNSMonitorNameServerEmptyBlock(t *testing.T) {
+func TestAccDNSMonitorNameServerEmptyObject(t *testing.T) {
 	accTestCase(t, []resource.TestStep{
 		{
 			Config: `
@@ -1108,11 +1077,11 @@ func TestAccDNSMonitorNameServerEmptyBlock(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 
-						name_server {}
+						name_server = {}
 					}
 				}
 			`,
@@ -1130,7 +1099,7 @@ func TestAccDNSMonitorFrequencyValidation(t *testing.T) {
 					activated = true
 					frequency = 0
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 					}
@@ -1146,7 +1115,7 @@ func TestAccDNSMonitorFrequencyValidation(t *testing.T) {
 					frequency        = 0
 					frequency_offset = 10
 					locations        = ["eu-central-1"]
-					request {
+					request = {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 					}
@@ -1158,7 +1127,7 @@ func TestAccDNSMonitorFrequencyValidation(t *testing.T) {
 					frequency        = 0
 					frequency_offset = 20
 					locations        = ["eu-central-1"]
-					request {
+					request = {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 					}
@@ -1170,7 +1139,7 @@ func TestAccDNSMonitorFrequencyValidation(t *testing.T) {
 					frequency        = 0
 					frequency_offset = 30
 					locations        = ["eu-central-1"]
-					request {
+					request = {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 					}
@@ -1217,7 +1186,7 @@ func TestAccDNSMonitorFrequencyValidation(t *testing.T) {
 					frequency        = 60
 					frequency_offset = 30
 					locations        = ["eu-central-1"]
-					request {
+					request = {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 					}
@@ -1232,7 +1201,7 @@ func TestAccDNSMonitorFrequencyValidation(t *testing.T) {
 					activated = true
 					frequency = 9999
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 					}
@@ -1248,7 +1217,7 @@ func TestAccDNSMonitorFrequencyValidation(t *testing.T) {
 					frequency        = 60
 					frequency_offset = 99
 					locations        = ["eu-central-1"]
-					request {
+					request = {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 					}
@@ -1264,7 +1233,7 @@ func TestAccDNSMonitorFrequencyValidation(t *testing.T) {
 					frequency        = 60
 					frequency_offset = 0
 					locations        = ["eu-central-1"]
-					request {
+					request = {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 					}
@@ -1295,7 +1264,7 @@ func TestAccDNSMonitorFrequencyUpdates(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 					}
@@ -1307,7 +1276,7 @@ func TestAccDNSMonitorFrequencyUpdates(t *testing.T) {
 					frequency        = 0
 					frequency_offset = 30
 					locations        = ["eu-central-1"]
-					request {
+					request = {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 					}
@@ -1343,7 +1312,7 @@ func TestAccDNSMonitorFrequencyUpdates(t *testing.T) {
 					frequency        = 0
 					frequency_offset = 10
 					locations        = ["eu-central-1"]
-					request {
+					request = {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 					}
@@ -1354,7 +1323,7 @@ func TestAccDNSMonitorFrequencyUpdates(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 					}
@@ -1414,15 +1383,15 @@ func TestAccDNSMonitorAlertChannelSubscriptions(t *testing.T) {
 					activated = true
 					locations = ["eu-central-1"]
 
-					request {
+					request = {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 
-						assertion {
+						assertion = [{
 							source     = "RESPONSE_CODE"
 							comparison = "EQUALS"
 							target     = "NOERROR"
-						}
+						}]
 					}
 
 					alert_channel_subscription {
@@ -1483,15 +1452,15 @@ func TestAccDNSMonitorAlertChannelSubscriptions(t *testing.T) {
 					activated = true
 					locations = ["eu-central-1"]
 
-					request {
+					request = {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 
-						assertion {
+						assertion = [{
 							source     = "RESPONSE_CODE"
 							comparison = "EQUALS"
 							target     = "NOERROR"
-						}
+						}]
 					}
 
 					alert_channel_subscription {
@@ -1563,15 +1532,15 @@ func TestAccDNSMonitorAlertChannelSubscriptions(t *testing.T) {
 					activated = true
 					locations = ["eu-central-1"]
 
-					request {
+					request = {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 
-						assertion {
+						assertion = [{
 							source     = "RESPONSE_CODE"
 							comparison = "EQUALS"
 							target     = "NOERROR"
-						}
+						}]
 					}
 				}
 			`,
@@ -1607,7 +1576,7 @@ func TestAccDNSMonitorUnsetSweepBasics(t *testing.T) {
 					degraded_response_time    = 400
 					max_response_time         = 900
 					tags                      = ["sweep-a", "sweep-b"]
-					request {
+					request = {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 					}
@@ -1629,7 +1598,7 @@ func TestAccDNSMonitorUnsetSweepBasics(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 					}
@@ -1662,7 +1631,7 @@ func TestAccDNSMonitorUnsetSweepResponseTimeZero(t *testing.T) {
 					locations              = ["eu-central-1"]
 					degraded_response_time = 0
 					max_response_time      = 0
-					request {
+					request = {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 					}
@@ -1680,7 +1649,7 @@ func TestAccDNSMonitorUnsetSweepResponseTimeZero(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 					}
@@ -1705,7 +1674,7 @@ func TestAccDNSMonitorUnsetSweepLocations(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1", "us-east-1"]
-					request {
+					request = {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 					}
@@ -1721,7 +1690,7 @@ func TestAccDNSMonitorUnsetSweepLocations(t *testing.T) {
 					name      = "dns-unset-sweep-locations"
 					activated = true
 					frequency = 60
-					request {
+					request = {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 					}
@@ -1737,7 +1706,7 @@ func TestAccDNSMonitorUnsetSweepLocations(t *testing.T) {
 // TestAccDNSMonitorUnsetSweepRequest sets the optional request attributes to
 // non-default values plus an assertion, then removes them, verifying the
 // attributes reset to their defaults and the assertions are cleared on the
-// server. The name_server block removal is covered separately by
+// server. The name_server removal is covered separately by
 // TestAccDNSMonitorNameServerRemoval.
 func TestAccDNSMonitorUnsetSweepRequest(t *testing.T) {
 	accTestCase(t, []resource.TestStep{
@@ -1748,21 +1717,21 @@ func TestAccDNSMonitorUnsetSweepRequest(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 						protocol    = "TCP"
-						assertion {
+						assertion = [{
 							source     = "RESPONSE_CODE"
 							comparison = "EQUALS"
 							target     = "NOERROR"
-						}
+						}]
 					}
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr("checkly_dns_monitor.test", "request.0.protocol", "TCP"),
-				resource.TestCheckResourceAttr("checkly_dns_monitor.test", "request.0.assertion.#", "1"),
+				resource.TestCheckResourceAttr("checkly_dns_monitor.test", "request.protocol", "TCP"),
+				resource.TestCheckResourceAttr("checkly_dns_monitor.test", "request.assertion.#", "1"),
 			),
 		},
 		{
@@ -1772,22 +1741,22 @@ func TestAccDNSMonitorUnsetSweepRequest(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 					}
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr("checkly_dns_monitor.test", "request.0.protocol", "UDP"),
-				resource.TestCheckResourceAttr("checkly_dns_monitor.test", "request.0.assertion.#", "0"),
+				resource.TestCheckResourceAttr("checkly_dns_monitor.test", "request.protocol", "UDP"),
+				resource.TestCheckResourceAttr("checkly_dns_monitor.test", "request.assertion.#", "0"),
 			),
 		},
 	})
 }
 
 // TestAccDNSMonitorUnsetSweepTriggerIncident verifies that removing the
-// trigger_incident block clears the incident trigger on the server.
+// trigger_incident attribute clears the incident trigger on the server.
 func TestAccDNSMonitorUnsetSweepTriggerIncident(t *testing.T) {
 	service := `
 		resource "checkly_status_page_service" "dns_sweep" {
@@ -1802,7 +1771,7 @@ func TestAccDNSMonitorUnsetSweepTriggerIncident(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 					}
@@ -1826,7 +1795,7 @@ func TestAccDNSMonitorUnsetSweepTriggerIncident(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 					}
@@ -1860,7 +1829,7 @@ func TestAccDNSMonitorUnsetSweepGroup(t *testing.T) {
 					locations   = ["eu-central-1"]
 					group_id    = checkly_check_group.dns_sweep.id
 					group_order = 2
-					request {
+					request = {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 					}
@@ -1883,7 +1852,7 @@ func TestAccDNSMonitorUnsetSweepGroup(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 					}

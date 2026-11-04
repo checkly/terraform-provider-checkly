@@ -10,7 +10,7 @@ resource "checkly_tcp_check" "example-tcp-check" {
     "us-west-1"
   ]
 
-  request {
+  request = {
     hostname = "api.checklyhq.com"
     port     = 80
   }
@@ -51,23 +51,24 @@ resource "checkly_tcp_check" "example-tcp-check-2" {
     same_region          = false
   }
 
-  request {
+  request = {
     hostname = "api.checklyhq.com"
     port     = 80
     data     = "hello"
 
-    assertion {
-      source     = "RESPONSE_DATA"
-      property   = ""
-      comparison = "CONTAINS"
-      target     = "welcome"
-    }
-
-    assertion {
-      source     = "RESPONSE_TIME"
-      property   = ""
-      comparison = "LESS_THAN"
-      target     = "2000"
-    }
+    assertion = [
+      {
+        source     = "RESPONSE_DATA"
+        property   = ""
+        comparison = "CONTAINS"
+        target     = "welcome"
+      },
+      {
+        source     = "RESPONSE_TIME"
+        property   = ""
+        comparison = "LESS_THAN"
+        target     = "2000"
+      },
+    ]
   }
 }

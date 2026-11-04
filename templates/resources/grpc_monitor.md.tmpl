@@ -24,7 +24,7 @@ description: |-
 
 ## Assertion Reference
 
-Each `assertion` block has the shape `{ source, property, comparison, target }`. Which comparisons are allowed, and what `target` must contain, depend on `source`. The `comparison` and `target` rules are enforced by the Checkly API at apply time; where `property` is marked as ignored, the API accepts any value but does not use it.
+Each element of `request.assertion` has the shape `{ source, property, comparison, target }`. Which comparisons are allowed, and what `target` must contain, depend on `source`. The `comparison` and `target` rules are enforced by the Checkly API at apply time; where `property` is marked as ignored, the API accepts any value but does not use it.
 
 | `source` | `property` | Allowed `comparison` values | `target` |
 |---|---|---|---|
@@ -37,32 +37,36 @@ Each `assertion` block has the shape `{ source, property, comparison, target }`.
 
 ### Examples
 
+The following `assertion` list, placed inside `request`, shows one assertion per source.
+
 ```terraform
-# The unary call must return gRPC status OK.
-assertion {
-  source     = "GRPC_STATUS_CODE"
-  comparison = "EQUALS"
-  target     = "0"
-}
+assertion = [
+  # The unary call must return gRPC status OK.
+  {
+    source     = "GRPC_STATUS_CODE"
+    comparison = "EQUALS"
+    target     = "0"
+  },
 
-# HEALTH mode: the service must report SERVING (numeric target).
-assertion {
-  source     = "GRPC_HEALTHCHECK_STATUS"
-  comparison = "EQUALS"
-  target     = "1"
-}
+  # HEALTH mode: the service must report SERVING (numeric target).
+  {
+    source     = "GRPC_HEALTHCHECK_STATUS"
+    comparison = "EQUALS"
+    target     = "1"
+  },
 
-# A field selected from the response message via JSONPath.
-assertion {
-  source     = "GRPC_RESPONSE"
-  property   = "$.user.id"
-  comparison = "NOT_NULL"
-}
+  # A field selected from the response message via JSONPath.
+  {
+    source     = "GRPC_RESPONSE"
+    property   = "$.user.id"
+    comparison = "NOT_NULL"
+  },
 
-# A response metadata (header) value.
-assertion {
-  source     = "GRPC_METADATA"
-  property   = "x-request-id"
-  comparison = "NOT_EMPTY"
-}
+  # A response metadata (header) value.
+  {
+    source     = "GRPC_METADATA"
+    property   = "x-request-id"
+    comparison = "NOT_EMPTY"
+  },
+]
 ```

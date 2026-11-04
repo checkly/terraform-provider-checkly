@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
-	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -15,10 +14,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 
 	checkly "github.com/checkly/checkly-go-sdk"
 )
@@ -65,12 +66,12 @@ type TCPMonitorResourceModel struct {
 	GroupID                  types.Int64  `tfsdk:"group_id"`
 	GroupOrder               types.Int64  `tfsdk:"group_order"`
 	RetryStrategy            types.Object `tfsdk:"retry_strategy"`
-	Request                  types.Set    `tfsdk:"request"`
+	Request                  types.Object `tfsdk:"request"`
 	AlertChannelSubscription types.Set    `tfsdk:"alert_channel_subscription"`
 	TriggerIncident          types.Object `tfsdk:"trigger_incident"`
 }
 
-// TCPMonitorRequestModel describes the request block data model.
+// TCPMonitorRequestModel describes the request attribute data model.
 type TCPMonitorRequestModel struct {
 	Hostname  types.String `tfsdk:"hostname"`
 	Port      types.Int64  `tfsdk:"port"`
@@ -204,77 +205,73 @@ func (r *TCPMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 			retryStrategyAttributeName: makeRetryStrategyAttributeSchema(RetryStrategyAttributeSchemaOptions{
 				SupportsOnlyOnNetworkError: false,
 			}),
-		},
-		Blocks: map[string]schema.Block{
-			"request": schema.SetNestedBlock{
+			"request": schema.SingleNestedAttribute{
+				Required:    true,
 				Description: "The parameters for the TCP connection.",
-				Validators: []validator.Set{
-					// Terraform represents an unconfigured nested block set as
-					// an empty set rather than null, so a size check is needed
-					// in addition to IsRequired to enforce presence.
-					setvalidator.IsRequired(),
-					setvalidator.SizeAtLeast(1),
-					setvalidator.SizeAtMost(1),
-				},
-				NestedObject: schema.NestedBlockObject{
-					// Attributes nested in this set block must not use schema
-					// defaults. The framework looks up configuration values
-					// for set elements by full element value; once computed
-					// attributes resolve, the lookup misses, the configuration
-					// is treated as null, and defaults would override values
-					// the practitioner actually configured, producing a
-					// perpetual diff. Default values are instead applied in
-					// ModifyPlan.
-					Attributes: map[string]schema.Attribute{
-						"hostname": schema.StringAttribute{
-							Required:    true,
-							Description: "The hostname or IP to connect to. Do not include a scheme or a port in this value.",
-						},
-						"port": schema.Int64Attribute{
-							Required:    true,
-							Description: "The port number to connect to.",
-						},
-						"data": schema.StringAttribute{
-							Optional:    true,
-							Computed:    true,
-							Description: "The data to send to the target host.",
-						},
-						"ip_family": schema.StringAttribute{
-							Optional:    true,
-							Computed:    true,
-							Description: "The IP family to use when executing the TCP check. The value can be either `IPv4` or `IPv6`. (Default `IPv4`).",
-							Validators: []validator.String{
-								stringvalidator.OneOf("IPv4", "IPv6"),
-							},
+				Attributes: map[string]schema.Attribute{
+					"hostname": schema.StringAttribute{
+						Required:    true,
+						Description: "The hostname or IP to connect to. Do not include a scheme or a port in this value.",
+					},
+					"port": schema.Int64Attribute{
+						Required:    true,
+						Description: "The port number to connect to.",
+					},
+					"data": schema.StringAttribute{
+						Optional:    true,
+						Computed:    true,
+						Default:     stringdefault.StaticString(""),
+						Description: "The data to send to the target host.",
+					},
+					"ip_family": schema.StringAttribute{
+						Optional:    true,
+						Computed:    true,
+						Default:     stringdefault.StaticString("IPv4"),
+						Description: "The IP family to use when executing the TCP check. The value can be either `IPv4` or `IPv6`. (Default `IPv4`).",
+						Validators: []validator.String{
+							stringvalidator.OneOf("IPv4", "IPv6"),
 						},
 					},
-					Blocks: map[string]schema.Block{
-						"assertion": schema.SetNestedBlock{
-							Description: "A request can have multiple assertions.",
-							NestedObject: schema.NestedBlockObject{
-								Attributes: map[string]schema.Attribute{
-									"source": schema.StringAttribute{
-										Required:    true,
-										Description: "The source of the asserted value. Possible values are `RESPONSE_DATA` and `RESPONSE_TIME`.",
-									},
-									"property": schema.StringAttribute{
-										Optional: true,
-										Computed: true,
-									},
-									"comparison": schema.StringAttribute{
-										Required:    true,
-										Description: "The type of comparison to be executed between expected and actual value of the assertion. Possible values are `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL`, and `NOT_NULL`.",
-									},
-									"target": schema.StringAttribute{
-										Optional: true,
-										Computed: true,
-									},
+					"assertion": schema.SetNestedAttribute{
+						Optional:    true,
+						Computed:    true,
+						Default:     setdefault.StaticValue(types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{})),
+						Description: "A request can have multiple assertions.",
+						NestedObject: schema.NestedAttributeObject{
+							// Attributes nested in this set attribute must
+							// not use schema defaults. The framework looks
+							// up configuration values for set elements by
+							// full element value; once computed attributes
+							// resolve, the lookup misses, the configuration
+							// is treated as null, and defaults would
+							// override values the practitioner actually
+							// configured, producing a perpetual diff.
+							// Default values are instead applied in
+							// ModifyPlan.
+							Attributes: map[string]schema.Attribute{
+								"source": schema.StringAttribute{
+									Required:    true,
+									Description: "The source of the asserted value. Possible values are `RESPONSE_DATA` and `RESPONSE_TIME`.",
+								},
+								"property": schema.StringAttribute{
+									Optional: true,
+									Computed: true,
+								},
+								"comparison": schema.StringAttribute{
+									Required:    true,
+									Description: "The type of comparison to be executed between expected and actual value of the assertion. Possible values are `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL`, and `NOT_NULL`.",
+								},
+								"target": schema.StringAttribute{
+									Optional: true,
+									Computed: true,
 								},
 							},
 						},
 					},
 				},
 			},
+		},
+		Blocks: map[string]schema.Block{
 			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{
 				Monitor: true,
 			}),
@@ -298,38 +295,14 @@ func (r *TCPMonitorResource) Configure(ctx context.Context, req resource.Configu
 	r.client = clientFromProviderData(req.ProviderData, &resp.Diagnostics)
 }
 
-// ModifyPlan applies default values to the optional+computed attributes
-// nested in the request set block. Schema defaults cannot be used for these
-// attributes (see the schema for details), so the plan is adjusted here
-// instead. Substituting static values keeps every set element fully known
-// and stable across plans, which set element correlation requires.
+// ModifyPlan applies default values to the optional+computed attributes of
+// the request assertions. Schema defaults cannot be used for attributes
+// nested in set elements (see the schema for details), so the plan is
+// adjusted here instead. Substituting static values keeps every set element
+// fully known and stable across plans, which set element correlation
+// requires.
 func (r *TCPMonitorResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	planNestedDefaults(ctx, req, resp, path.Root("request"), tcpMonitorRequestWithDefaults)
-}
-
-// tcpMonitorRequestWithDefaults returns the request block value with default
-// values substituted for null and unknown optional+computed attributes.
-func tcpMonitorRequestWithDefaults(ctx context.Context, set types.Set, diags *diag.Diagnostics) types.Set {
-	if set.IsNull() || set.IsUnknown() {
-		return set
-	}
-
-	var models []TCPMonitorRequestModel
-	diags.Append(set.ElementsAs(ctx, &models, false)...)
-	if diags.HasError() {
-		return set
-	}
-
-	for i, model := range models {
-		models[i].Data = stringOrDefault(model.Data, "")
-		models[i].IPFamily = stringOrDefault(model.IPFamily, "IPv4")
-		models[i].Assertion = assertionsWithPropertyAndTargetDefaults(ctx, model.Assertion, diags)
-	}
-
-	result, d := types.SetValueFrom(ctx, types.ObjectType{AttrTypes: tcpMonitorRequestAttrTypes}, models)
-	diags.Append(d...)
-
-	return result
+	planNestedDefaults(ctx, req, resp, path.Root("request"), objectWithSetDefaults("assertion", assertionsWithPropertyAndTargetDefaults))
 }
 
 func (r *TCPMonitorResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -490,7 +463,7 @@ func tcpMonitorFromModel(ctx context.Context, model *TCPMonitorResourceModel, di
 		GroupID:                   model.GroupID.ValueInt64(),
 		GroupOrder:                int(model.GroupOrder.ValueInt64()),
 		PrivateLocations:          &privateLocations,
-		Request:                   tcpMonitorRequestFromSet(ctx, model.Request, diags),
+		Request:                   tcpMonitorRequestFromObject(ctx, model.Request, diags),
 		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscription, diags),
 		RetryStrategy:             retryStrategyFromObject(ctx, model.RetryStrategy, diags),
 		TriggerIncident:           triggerIncidentFromObject(ctx, model.TriggerIncident, diags),
@@ -577,25 +550,23 @@ func tcpMonitorToModel(ctx context.Context, c *checkly.TCPMonitor, model *TCPMon
 	model.GroupID = types.Int64Value(c.GroupID)
 	model.GroupOrder = types.Int64Value(int64(c.GroupOrder))
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, model.RetryStrategy, diags)
-	model.Request = tcpMonitorRequestToSet(ctx, c.Request, diags)
+	model.Request = tcpMonitorRequestToObject(ctx, c.Request, diags)
 	model.AlertChannelSubscription = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, diags)
 	model.TriggerIncident = triggerIncidentToObject(ctx, c.TriggerIncident, diags)
 }
 
-// tcpMonitorRequestFromSet converts the request block value to its API
-// representation.
-func tcpMonitorRequestFromSet(ctx context.Context, set types.Set, diags *diag.Diagnostics) checkly.TCPRequest {
-	if set.IsNull() || set.IsUnknown() {
+// tcpMonitorRequestFromObject converts the request attribute value to its
+// API representation.
+func tcpMonitorRequestFromObject(ctx context.Context, obj types.Object, diags *diag.Diagnostics) checkly.TCPRequest {
+	if obj.IsNull() || obj.IsUnknown() {
 		return checkly.TCPRequest{}
 	}
 
-	var models []TCPMonitorRequestModel
-	diags.Append(set.ElementsAs(ctx, &models, false)...)
-	if diags.HasError() || len(models) == 0 {
+	var model TCPMonitorRequestModel
+	diags.Append(obj.As(ctx, &model, basetypes.ObjectAsOptions{})...)
+	if diags.HasError() {
 		return checkly.TCPRequest{}
 	}
-
-	model := models[0]
 
 	return checkly.TCPRequest{
 		Hostname:   model.Hostname.ValueString(),
@@ -606,11 +577,9 @@ func tcpMonitorRequestFromSet(ctx context.Context, set types.Set, diags *diag.Di
 	}
 }
 
-// tcpMonitorRequestToSet converts the API representation of a TCP request to
-// the request block value.
-func tcpMonitorRequestToSet(ctx context.Context, request checkly.TCPRequest, diags *diag.Diagnostics) types.Set {
-	elementType := types.ObjectType{AttrTypes: tcpMonitorRequestAttrTypes}
-
+// tcpMonitorRequestToObject converts the API representation of a TCP request
+// to the request attribute value.
+func tcpMonitorRequestToObject(ctx context.Context, request checkly.TCPRequest, diags *diag.Diagnostics) types.Object {
 	obj, d := types.ObjectValue(tcpMonitorRequestAttrTypes, map[string]attr.Value{
 		"hostname":  types.StringValue(request.Hostname),
 		"port":      types.Int64Value(int64(request.Port)),
@@ -620,8 +589,5 @@ func tcpMonitorRequestToSet(ctx context.Context, request checkly.TCPRequest, dia
 	})
 	diags.Append(d...)
 
-	set, d := types.SetValue(elementType, []attr.Value{obj})
-	diags.Append(d...)
-
-	return set
+	return obj
 }

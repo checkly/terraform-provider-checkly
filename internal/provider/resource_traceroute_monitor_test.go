@@ -81,16 +81,8 @@ func TestAccTracerouteMonitorRequiredFields(t *testing.T) {
 			ExpectError: regexp.MustCompile(`The argument "frequency" is required, but no definition was found.`),
 		},
 		{
-			// Terraform only reports the missing request block once all
-			// required attributes are present.
-			Config: `
-				resource "checkly_traceroute_monitor" "test" {
-					name      = "test-required-fields"
-					activated = true
-					frequency = 5
-				}
-			`,
-			ExpectError: regexp.MustCompile(`Block request must have a configuration value`),
+			Config:      config,
+			ExpectError: regexp.MustCompile(`The argument "request" is required, but no definition was found.`),
 		},
 	})
 }
@@ -106,17 +98,17 @@ func TestAccTracerouteMonitorInvalidAssertionSource(t *testing.T) {
 				  activated = true
 				  frequency = 5
 				  locations = ["us-east-1"]
-				  request {
+				  request = {
 					url = "api.checklyhq.com"
-					assertion {
+					assertion = [{
 					  source     = "PACKETLOSS"
 					  comparison = "LESS_THAN"
 					  target     = "10"
-					}
+					}]
 				  }
 				}
 			`,
-			ExpectError: regexp.MustCompile(`(?s)request\[0\]\.assertion\[.*\]\.source\s+value\s+must\s+be\s+one\s+of`),
+			ExpectError: regexp.MustCompile(`(?s)request\.assertion\[.*\]\.source\s+value\s+must\s+be\s+one\s+of`),
 		},
 	})
 }
@@ -148,7 +140,7 @@ func TestAccTracerouteMonitorBasic(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_traceroute_monitor.test",
-					"request.0.url",
+					"request.url",
 					"api.checklyhq.com",
 				),
 			),
@@ -178,32 +170,32 @@ func TestAccTracerouteMonitorFull(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_traceroute_monitor.test",
-					"request.0.protocol",
+					"request.protocol",
 					"TCP",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_traceroute_monitor.test",
-					"request.0.max_hops",
+					"request.max_hops",
 					"30",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_traceroute_monitor.test",
-					"request.0.max_unknown_hops",
+					"request.max_unknown_hops",
 					"15",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_traceroute_monitor.test",
-					"request.0.ptr_lookup",
+					"request.ptr_lookup",
 					"true",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_traceroute_monitor.test",
-					"request.0.assertion.#",
+					"request.assertion.#",
 					"2",
 				),
 				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_traceroute_monitor.test",
-					"request.0.assertion.*",
+					"request.assertion.*",
 					map[string]string{
 						"source":     "PACKET_LOSS",
 						"property":   "",
@@ -235,12 +227,12 @@ func TestAccTracerouteMonitorServerComputedDefaults(t *testing.T) {
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_traceroute_monitor.test",
-					"request.0.port",
+					"request.port",
 					"443",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_traceroute_monitor.test",
-					"request.0.max_unknown_hops",
+					"request.max_unknown_hops",
 					"15",
 				),
 			),
@@ -250,12 +242,12 @@ func TestAccTracerouteMonitorServerComputedDefaults(t *testing.T) {
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_traceroute_monitor.test",
-					"request.0.port",
+					"request.port",
 					"33434",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_traceroute_monitor.test",
-					"request.0.max_unknown_hops",
+					"request.max_unknown_hops",
 					"10",
 				),
 			),
@@ -297,7 +289,7 @@ const tracerouteMonitor_serverComputedTCP = `
 	  activated = true
 	  frequency = 5
 	  locations = ["us-east-1"]
-	  request {
+	  request = {
 		url      = "api.checklyhq.com"
 		max_hops = 30
 	  }
@@ -310,7 +302,7 @@ const tracerouteMonitor_serverComputedUDP = `
 	  activated = true
 	  frequency = 5
 	  locations = ["us-east-1"]
-	  request {
+	  request = {
 		url      = "api.checklyhq.com"
 		protocol = "UDP"
 		max_hops = 10
@@ -324,7 +316,7 @@ const tracerouteMonitor_serverComputedICMP = `
 	  activated = true
 	  frequency = 5
 	  locations = ["us-east-1"]
-	  request {
+	  request = {
 		url      = "api.checklyhq.com"
 		protocol = "ICMP"
 		max_hops = 10
@@ -338,7 +330,7 @@ const tracerouteMonitor_basic = `
 	  activated = true
 	  frequency = 1
 	  locations = ["us-east-1"]
-	  request {
+	  request = {
 		url = "api.checklyhq.com"
 	  }
 	}
@@ -354,7 +346,7 @@ const tracerouteMonitor_full = `
 		"us-east-1",
 		"ap-northeast-1",
 	  ]
-	  request {
+	  request = {
 		url              = "api.checklyhq.com"
 		protocol         = "TCP"
 		port             = 443
@@ -364,19 +356,17 @@ const tracerouteMonitor_full = `
 		ptr_lookup       = true
 		timeout          = 10
 
-		assertion {
+		assertion = [{
 		  source     = "PACKET_LOSS"
 		  property   = ""
 		  comparison = "LESS_THAN"
 		  target     = "10"
-		}
-
-		assertion {
+		}, {
 		  source     = "RESPONSE_TIME"
 		  property   = "avg"
 		  comparison = "LESS_THAN"
 		  target     = "2000"
-		}
+		}]
 	  }
 
 	  alert_settings = {
@@ -400,7 +390,7 @@ const tracerouteMonitor_minimal = `
 	  activated = true
 	  frequency = 1
 	  locations = ["us-east-1"]
-	  request {
+	  request = {
 		url = "api.checklyhq.com"
 	  }
 	}

@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
-	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -16,10 +15,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 
 	checkly "github.com/checkly/checkly-go-sdk"
 )
@@ -68,12 +69,12 @@ type TracerouteMonitorResourceModel struct {
 	GroupID                  types.Int64  `tfsdk:"group_id"`
 	GroupOrder               types.Int64  `tfsdk:"group_order"`
 	RetryStrategy            types.Object `tfsdk:"retry_strategy"`
-	Request                  types.List   `tfsdk:"request"`
+	Request                  types.Object `tfsdk:"request"`
 	AlertChannelSubscription types.Set    `tfsdk:"alert_channel_subscription"`
 	TriggerIncident          types.Object `tfsdk:"trigger_incident"`
 }
 
-// TracerouteMonitorRequestModel describes the request block data model.
+// TracerouteMonitorRequestModel describes the request attribute data model.
 type TracerouteMonitorRequestModel struct {
 	URL            types.String `tfsdk:"url"`
 	Protocol       types.String `tfsdk:"protocol"`
@@ -210,134 +211,130 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 			retryStrategyAttributeName: makeRetryStrategyAttributeSchema(RetryStrategyAttributeSchemaOptions{
 				SupportsOnlyOnNetworkError: false,
 			}),
-		},
-		Blocks: map[string]schema.Block{
-			"request": schema.ListNestedBlock{
+			"request": schema.SingleNestedAttribute{
+				Required:    true,
 				Description: "The parameters for the traceroute probe.",
-				Validators: []validator.List{
-					listvalidator.IsRequired(),
-					listvalidator.SizeAtMost(1),
-				},
-				NestedObject: schema.NestedBlockObject{
-					Attributes: map[string]schema.Attribute{
-						"url": schema.StringAttribute{
-							Required:    true,
-							Description: "The host to trace the network path to. Do not include a scheme or a port in this value.",
-						},
-						"protocol": schema.StringAttribute{
-							Optional:    true,
-							Computed:    true,
-							Default:     stringdefault.StaticString("TCP"),
-							Description: "The probe protocol. `TCP` sends SYN probes (default), `UDP` sends datagrams to a high port, `ICMP` sends Echo Requests, `SCTP` sends INIT chunks. (Default `TCP`).",
-							Validators: []validator.String{
-								stringvalidator.OneOf("TCP", "ICMP", "UDP", "SCTP"),
-							},
-						},
-						// port and max_unknown_hops are derived by the server
-						// from other attributes when unset, so they are left
-						// unknown in the plan rather than keeping their prior
-						// state value; see tracerouteMonitorRequestFromModel.
-						"port": schema.Int64Attribute{
-							Optional:    true,
-							Computed:    true,
-							Description: "The destination port for TCP/UDP/SCTP probes. Possible values are between 1 and 65535. Ignored (and not sent) when `protocol = \"ICMP\"`. The default depends on the protocol: `443` for `TCP`, `33434` for `UDP` and `SCTP`.",
-							Validators: []validator.Int64{
-								int64validator.Between(1, 65535),
-							},
-						},
-						"ip_family": schema.StringAttribute{
-							Optional:    true,
-							Computed:    true,
-							Default:     stringdefault.StaticString("IPv4"),
-							Description: "The IP family to use when executing the traceroute. The value can be either `IPv4` or `IPv6`. (Default `IPv4`).",
-							Validators: []validator.String{
-								stringvalidator.OneOf("IPv4", "IPv6"),
-							},
-						},
-						"max_hops": schema.Int64Attribute{
-							Optional:    true,
-							Computed:    true,
-							Default:     int64default.StaticInt64(30),
-							Description: "The maximum number of network hops to probe before stopping. Possible values are between 1 and 64. (Default `30`).",
-							Validators: []validator.Int64{
-								int64validator.Between(1, 64),
-							},
-						},
-						"max_unknown_hops": schema.Int64Attribute{
-							Optional:    true,
-							Computed:    true,
-							Description: "The maximum number of consecutive unresponsive hops to tolerate before stopping the trace. Possible values are between 1 and 30, and the value must not exceed `max_hops`. (Default `min(15, max_hops)`).",
-							Validators: []validator.Int64{
-								int64validator.Between(1, 30),
-							},
-						},
-						"ptr_lookup": schema.BoolAttribute{
-							Optional:    true,
-							Computed:    true,
-							Default:     booldefault.StaticBool(true),
-							Description: "Whether to perform reverse-DNS (PTR) lookups on each hop's IP address. (Default `true`).",
-						},
-						"timeout": schema.Int64Attribute{
-							Optional:    true,
-							Computed:    true,
-							Description: "The number of seconds to wait for the traceroute to complete before timing out. Possible values are between 1 and 30. (Default `10`).",
-							Validators: []validator.Int64{
-								int64validator.Between(1, 30),
-							},
-							PlanModifiers: []planmodifier.Int64{
-								int64planmodifier.UseStateForUnknown(),
-							},
+				Attributes: map[string]schema.Attribute{
+					"url": schema.StringAttribute{
+						Required:    true,
+						Description: "The host to trace the network path to. Do not include a scheme or a port in this value.",
+					},
+					"protocol": schema.StringAttribute{
+						Optional:    true,
+						Computed:    true,
+						Default:     stringdefault.StaticString("TCP"),
+						Description: "The probe protocol. `TCP` sends SYN probes (default), `UDP` sends datagrams to a high port, `ICMP` sends Echo Requests, `SCTP` sends INIT chunks. (Default `TCP`).",
+						Validators: []validator.String{
+							stringvalidator.OneOf("TCP", "ICMP", "UDP", "SCTP"),
 						},
 					},
-					Blocks: map[string]schema.Block{
-						// The full per-source assertion rules (allowed
-						// comparisons, property usage, target formats) are
-						// documented in the "Assertion Reference" section of
-						// templates/resources/traceroute_monitor.md.tmpl.
-						// When assertion sources or their rules change here
-						// or in the API, update that template too — it is
-						// not generated from this schema.
-						"assertion": schema.SetNestedBlock{
-							Description: "A request can have multiple assertions. The allowed comparisons, properties, and target formats depend on the assertion source — see the [Assertion Reference](#assertion-reference) below.",
-							NestedObject: schema.NestedBlockObject{
-								// Attributes nested in this set block must not
-								// use schema defaults. The framework looks up
-								// configuration values for set elements by full
-								// element value; once computed attributes
-								// resolve, the lookup misses, the configuration
-								// is treated as null, and defaults would
-								// override values the practitioner actually
-								// configured, producing a perpetual diff.
-								// Default values are instead applied in
-								// ModifyPlan.
-								Attributes: map[string]schema.Attribute{
-									"source": schema.StringAttribute{
-										Required:    true,
-										Description: "The source of the asserted value. Possible values are `RESPONSE_TIME`, `HOP_COUNT`, and `PACKET_LOSS`.",
-										Validators: []validator.String{
-											stringvalidator.OneOf("RESPONSE_TIME", "HOP_COUNT", "PACKET_LOSS"),
-										},
+					// port and max_unknown_hops are derived by the server
+					// from other attributes when unset, so they are left
+					// unknown in the plan rather than keeping their prior
+					// state value; see tracerouteMonitorRequestFromModel.
+					"port": schema.Int64Attribute{
+						Optional:    true,
+						Computed:    true,
+						Description: "The destination port for TCP/UDP/SCTP probes. Possible values are between 1 and 65535. Ignored (and not sent) when `protocol = \"ICMP\"`. The default depends on the protocol: `443` for `TCP`, `33434` for `UDP` and `SCTP`.",
+						Validators: []validator.Int64{
+							int64validator.Between(1, 65535),
+						},
+					},
+					"ip_family": schema.StringAttribute{
+						Optional:    true,
+						Computed:    true,
+						Default:     stringdefault.StaticString("IPv4"),
+						Description: "The IP family to use when executing the traceroute. The value can be either `IPv4` or `IPv6`. (Default `IPv4`).",
+						Validators: []validator.String{
+							stringvalidator.OneOf("IPv4", "IPv6"),
+						},
+					},
+					"max_hops": schema.Int64Attribute{
+						Optional:    true,
+						Computed:    true,
+						Default:     int64default.StaticInt64(30),
+						Description: "The maximum number of network hops to probe before stopping. Possible values are between 1 and 64. (Default `30`).",
+						Validators: []validator.Int64{
+							int64validator.Between(1, 64),
+						},
+					},
+					"max_unknown_hops": schema.Int64Attribute{
+						Optional:    true,
+						Computed:    true,
+						Description: "The maximum number of consecutive unresponsive hops to tolerate before stopping the trace. Possible values are between 1 and 30, and the value must not exceed `max_hops`. (Default `min(15, max_hops)`).",
+						Validators: []validator.Int64{
+							int64validator.Between(1, 30),
+						},
+					},
+					"ptr_lookup": schema.BoolAttribute{
+						Optional:    true,
+						Computed:    true,
+						Default:     booldefault.StaticBool(true),
+						Description: "Whether to perform reverse-DNS (PTR) lookups on each hop's IP address. (Default `true`).",
+					},
+					"timeout": schema.Int64Attribute{
+						Optional:    true,
+						Computed:    true,
+						Description: "The number of seconds to wait for the traceroute to complete before timing out. Possible values are between 1 and 30. (Default `10`).",
+						Validators: []validator.Int64{
+							int64validator.Between(1, 30),
+						},
+						PlanModifiers: []planmodifier.Int64{
+							int64planmodifier.UseStateForUnknown(),
+						},
+					},
+					// The full per-source assertion rules (allowed
+					// comparisons, property usage, target formats) are
+					// documented in the "Assertion Reference" section of
+					// templates/resources/traceroute_monitor.md.tmpl.
+					// When assertion sources or their rules change here
+					// or in the API, update that template too — it is
+					// not generated from this schema.
+					"assertion": schema.SetNestedAttribute{
+						Optional:    true,
+						Computed:    true,
+						Default:     setdefault.StaticValue(types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{})),
+						Description: "A request can have multiple assertions. The allowed comparisons, properties, and target formats depend on the assertion source — see the [Assertion Reference](#assertion-reference) below.",
+						NestedObject: schema.NestedAttributeObject{
+							// Attributes nested in this set attribute must
+							// not use schema defaults. The framework looks
+							// up configuration values for set elements by
+							// full element value; once computed attributes
+							// resolve, the lookup misses, the configuration
+							// is treated as null, and defaults would
+							// override values the practitioner actually
+							// configured, producing a perpetual diff.
+							// Default values are instead applied in
+							// ModifyPlan.
+							Attributes: map[string]schema.Attribute{
+								"source": schema.StringAttribute{
+									Required:    true,
+									Description: "The source of the asserted value. Possible values are `RESPONSE_TIME`, `HOP_COUNT`, and `PACKET_LOSS`.",
+									Validators: []validator.String{
+										stringvalidator.OneOf("RESPONSE_TIME", "HOP_COUNT", "PACKET_LOSS"),
 									},
-									"property": schema.StringAttribute{
-										Optional:    true,
-										Computed:    true,
-										Description: "The statistic to assert on. Required for `RESPONSE_TIME`, where possible values are `avg`, `min`, `max`, and `stdDev`. Must be empty for `HOP_COUNT` and `PACKET_LOSS`.",
-									},
-									"comparison": schema.StringAttribute{
-										Required:    true,
-										Description: "The type of comparison to be executed between expected and actual value of the assertion. For `RESPONSE_TIME`, possible values are `EQUALS`, `NOT_EQUALS`, `GREATER_THAN`, and `LESS_THAN`. For `HOP_COUNT` and `PACKET_LOSS`, possible values are `EQUALS`, `GREATER_THAN`, and `LESS_THAN`.",
-									},
-									"target": schema.StringAttribute{
-										Optional:    true,
-										Computed:    true,
-										Description: "The value to compare against. Must be numeric: a non-negative number of milliseconds for `RESPONSE_TIME`, a non-negative integer for `HOP_COUNT`, or a number between 0 and 100 for `PACKET_LOSS`.",
-									},
+								},
+								"property": schema.StringAttribute{
+									Optional:    true,
+									Computed:    true,
+									Description: "The statistic to assert on. Required for `RESPONSE_TIME`, where possible values are `avg`, `min`, `max`, and `stdDev`. Must be empty for `HOP_COUNT` and `PACKET_LOSS`.",
+								},
+								"comparison": schema.StringAttribute{
+									Required:    true,
+									Description: "The type of comparison to be executed between expected and actual value of the assertion. For `RESPONSE_TIME`, possible values are `EQUALS`, `NOT_EQUALS`, `GREATER_THAN`, and `LESS_THAN`. For `HOP_COUNT` and `PACKET_LOSS`, possible values are `EQUALS`, `GREATER_THAN`, and `LESS_THAN`.",
+								},
+								"target": schema.StringAttribute{
+									Optional:    true,
+									Computed:    true,
+									Description: "The value to compare against. Must be numeric: a non-negative number of milliseconds for `RESPONSE_TIME`, a non-negative integer for `HOP_COUNT`, or a number between 0 and 100 for `PACKET_LOSS`.",
 								},
 							},
 						},
 					},
 				},
 			},
+		},
+		Blocks: map[string]schema.Block{
 			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{
 				Monitor: true,
 			}),
@@ -361,39 +358,14 @@ func (r *TracerouteMonitorResource) Configure(ctx context.Context, req resource.
 	r.client = clientFromProviderData(req.ProviderData, &resp.Diagnostics)
 }
 
-// ModifyPlan applies default values to the optional+computed attributes
-// nested in the request.assertion set block. Schema defaults cannot be used
-// for these attributes (see the schema for details), so the plan is adjusted
-// here instead. Substituting static values keeps every set element fully
-// known and stable across plans, which set element correlation requires. The
-// request block itself is a list, so its own attributes can keep using schema
-// defaults.
+// ModifyPlan applies default values to the optional+computed attributes of
+// the request assertions. Schema defaults cannot be used for attributes
+// nested in set elements (see the schema for details), so the plan is
+// adjusted here instead. Substituting static values keeps every set element
+// fully known and stable across plans, which set element correlation
+// requires.
 func (r *TracerouteMonitorResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	planNestedDefaults(ctx, req, resp, path.Root("request"), tracerouteMonitorRequestWithDefaults)
-}
-
-// tracerouteMonitorRequestWithDefaults returns the request block value with
-// default values substituted for null and unknown optional+computed
-// attributes nested in the assertion set block.
-func tracerouteMonitorRequestWithDefaults(ctx context.Context, list types.List, diags *diag.Diagnostics) types.List {
-	if list.IsNull() || list.IsUnknown() {
-		return list
-	}
-
-	var models []TracerouteMonitorRequestModel
-	diags.Append(list.ElementsAs(ctx, &models, false)...)
-	if diags.HasError() {
-		return list
-	}
-
-	for i, model := range models {
-		models[i].Assertion = assertionsWithPropertyAndTargetDefaults(ctx, model.Assertion, diags)
-	}
-
-	result, d := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: tracerouteMonitorRequestAttrTypes}, models)
-	diags.Append(d...)
-
-	return result
+	planNestedDefaults(ctx, req, resp, path.Root("request"), objectWithSetDefaults("assertion", assertionsWithPropertyAndTargetDefaults))
 }
 
 func (r *TracerouteMonitorResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -547,7 +519,7 @@ func tracerouteMonitorFromModel(ctx context.Context, model *TracerouteMonitorRes
 		UseGlobalAlertSettings:    model.UseGlobalAlertSettings.ValueBool(),
 		GroupID:                   model.GroupID.ValueInt64(),
 		GroupOrder:                int(model.GroupOrder.ValueInt64()),
-		Request:                   tracerouteMonitorRequestFromList(ctx, model.Request, diags),
+		Request:                   tracerouteMonitorRequestFromObject(ctx, model.Request, diags),
 		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscription, diags),
 		RetryStrategy:             retryStrategyFromObject(ctx, model.RetryStrategy, diags),
 		TriggerIncident:           triggerIncidentFromObject(ctx, model.TriggerIncident, diags),
@@ -621,29 +593,29 @@ func tracerouteMonitorToModel(ctx context.Context, c *checkly.TracerouteMonitor,
 	model.GroupID = types.Int64Value(c.GroupID)
 	model.GroupOrder = types.Int64Value(int64(c.GroupOrder))
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, model.RetryStrategy, diags)
-	model.Request = tracerouteMonitorRequestToList(ctx, c.Request, diags)
+	model.Request = tracerouteMonitorRequestToObject(ctx, c.Request, diags)
 	model.AlertChannelSubscription = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, diags)
 	model.TriggerIncident = triggerIncidentToObject(ctx, c.TriggerIncident, diags)
 }
 
-// tracerouteMonitorRequestFromList converts the request block value to its
-// API representation.
-func tracerouteMonitorRequestFromList(ctx context.Context, list types.List, diags *diag.Diagnostics) checkly.TracerouteRequest {
-	if list.IsNull() || list.IsUnknown() {
+// tracerouteMonitorRequestFromObject converts the request attribute value to
+// its API representation.
+func tracerouteMonitorRequestFromObject(ctx context.Context, obj types.Object, diags *diag.Diagnostics) checkly.TracerouteRequest {
+	if obj.IsNull() || obj.IsUnknown() {
 		return checkly.TracerouteRequest{}
 	}
 
-	var models []TracerouteMonitorRequestModel
-	diags.Append(list.ElementsAs(ctx, &models, false)...)
-	if diags.HasError() || len(models) == 0 {
+	var model TracerouteMonitorRequestModel
+	diags.Append(obj.As(ctx, &model, basetypes.ObjectAsOptions{})...)
+	if diags.HasError() {
 		return checkly.TracerouteRequest{}
 	}
 
-	return tracerouteMonitorRequestFromModel(ctx, models[0], diags)
+	return tracerouteMonitorRequestFromModel(ctx, model, diags)
 }
 
-// tracerouteMonitorRequestFromModel converts a request block element to its
-// API representation.
+// tracerouteMonitorRequestFromModel converts the request attribute model to
+// its API representation.
 //
 // port and max_unknown_hops are server-derived when the configuration does
 // not set them: the API derives port from protocol (443 for TCP, 33434 for
@@ -693,29 +665,27 @@ func tracerouteMonitorRequestFromModel(ctx context.Context, model TracerouteMoni
 	return request
 }
 
-// tracerouteMonitorRequestToList converts the API representation of a
-// traceroute request to the request block value.
-func tracerouteMonitorRequestToList(ctx context.Context, r checkly.TracerouteRequest, diags *diag.Diagnostics) types.List {
+// tracerouteMonitorRequestToObject converts the API representation of a
+// traceroute request to the request attribute value.
+func tracerouteMonitorRequestToObject(ctx context.Context, r checkly.TracerouteRequest, diags *diag.Diagnostics) types.Object {
 	// The API defaults ptrLookup to true, so a missing value reads as true.
 	ptrLookup := true
 	if r.PtrLookup != nil {
 		ptrLookup = *r.PtrLookup
 	}
 
-	list, d := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: tracerouteMonitorRequestAttrTypes}, []TracerouteMonitorRequestModel{
-		{
-			URL:            types.StringValue(r.URL),
-			Protocol:       types.StringValue(r.Protocol),
-			Port:           types.Int64Value(int64(r.Port)),
-			IPFamily:       types.StringValue(r.IPFamily),
-			MaxHops:        types.Int64Value(int64(r.MaxHops)),
-			MaxUnknownHops: types.Int64Value(int64(r.MaxUnknownHops)),
-			PtrLookup:      types.BoolValue(ptrLookup),
-			Timeout:        types.Int64Value(int64(r.Timeout)),
-			Assertion:      assertionsToSet(ctx, r.Assertions, diags),
-		},
+	obj, d := types.ObjectValueFrom(ctx, tracerouteMonitorRequestAttrTypes, TracerouteMonitorRequestModel{
+		URL:            types.StringValue(r.URL),
+		Protocol:       types.StringValue(r.Protocol),
+		Port:           types.Int64Value(int64(r.Port)),
+		IPFamily:       types.StringValue(r.IPFamily),
+		MaxHops:        types.Int64Value(int64(r.MaxHops)),
+		MaxUnknownHops: types.Int64Value(int64(r.MaxUnknownHops)),
+		PtrLookup:      types.BoolValue(ptrLookup),
+		Timeout:        types.Int64Value(int64(r.Timeout)),
+		Assertion:      assertionsToSet(ctx, r.Assertions, diags),
 	})
 	diags.Append(d...)
 
-	return list
+	return obj
 }

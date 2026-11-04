@@ -200,7 +200,7 @@ func (r *CheckGroupResource) Configure(ctx context.Context, req resource.Configu
 // element fully known and stable across plans, which set element correlation
 // requires.
 func (r *CheckGroupResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	planNestedDefaults(ctx, req, resp, path.Root(apiCheckDefaultsAttributeName), apiCheckDefaultsWithDefaults)
+	planNestedDefaults(ctx, req, resp, path.Root(apiCheckDefaultsAttributeName), objectWithSetDefaults("assertion", assertionsWithPropertyDefault))
 }
 
 func (r *CheckGroupResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {

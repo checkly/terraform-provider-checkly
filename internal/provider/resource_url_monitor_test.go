@@ -29,16 +29,8 @@ func TestAccURLMonitorRequiredFields(t *testing.T) {
 			ExpectError: regexp.MustCompile(`The argument "frequency" is required, but no definition was found.`),
 		},
 		{
-			// Terraform only reports the missing request block once all
-			// required attributes are present.
-			Config: `
-				resource "checkly_url_monitor" "test" {
-					name      = "test-required-fields"
-					activated = true
-					frequency = 60
-				}
-			`,
-			ExpectError: regexp.MustCompile(`Block request must have a configuration value`),
+			Config:      config,
+			ExpectError: regexp.MustCompile(`The argument "request" is required, but no definition was found.`),
 		},
 	})
 }
@@ -73,30 +65,20 @@ func TestAccURLMonitorBasic(t *testing.T) {
 					"locations.*",
 					"us-east-1",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_url_monitor.test",
-					"request.*.url",
+					"request.url",
 					"https://api.checklyhq.com",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_url_monitor.test",
-					"request.*.assertion.*.comparison",
-					"EQUALS",
-				),
-				testCheckResourceAttrExpr(
-					"checkly_url_monitor.test",
-					"request.*.assertion.*.property",
-					"",
-				),
-				testCheckResourceAttrExpr(
-					"checkly_url_monitor.test",
-					"request.*.assertion.*.source",
-					"STATUS_CODE",
-				),
-				testCheckResourceAttrExpr(
-					"checkly_url_monitor.test",
-					"request.*.assertion.*.target",
-					"200",
+					"request.assertion.*",
+					map[string]string{
+						"source":     "STATUS_CODE",
+						"property":   "",
+						"comparison": "EQUALS",
+						"target":     "200",
+					},
 				),
 			),
 		},
@@ -146,45 +128,45 @@ func TestAccURLMonitorFull(t *testing.T) {
 					`"locations.#"`,
 					"3",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_url_monitor.test",
-					"request.*.follow_redirects",
+					"request.follow_redirects",
 					"true",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_url_monitor.test",
-					"request.*.skip_ssl",
+					"request.skip_ssl",
 					"false",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_url_monitor.test",
-					"request.*.ip_family",
+					"request.ip_family",
 					"IPv6",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_url_monitor.test",
-					"request.*.assertion.#",
+					"request.assertion.#",
 					"2",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_url_monitor.test",
-					"request.*.assertion.*.comparison",
-					"LESS_THAN",
+					"request.assertion.*",
+					map[string]string{
+						"source":     "STATUS_CODE",
+						"property":   "",
+						"comparison": "GREATER_THAN",
+						"target":     "199",
+					},
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_url_monitor.test",
-					"request.*.assertion.*.comparison",
-					"GREATER_THAN",
-				),
-				testCheckResourceAttrExpr(
-					"checkly_url_monitor.test",
-					"request.*.assertion.*.target",
-					"199",
-				),
-				testCheckResourceAttrExpr(
-					"checkly_url_monitor.test",
-					"request.*.assertion.*.target",
-					"300",
+					"request.assertion.*",
+					map[string]string{
+						"source":     "STATUS_CODE",
+						"property":   "",
+						"comparison": "LESS_THAN",
+						"target":     "300",
+					},
 				),
 			),
 		},
@@ -203,14 +185,14 @@ resource "checkly_url_monitor" "test_trigger_incident" {
 	frequency     = 30
 	locations     = ["eu-west-2", "us-east-1"]
 
-	request {
+	request = {
 		url = "https://status.example.com/health"
 		follow_redirects = false
-		assertion {
+		assertion = [{
 			source     = "STATUS_CODE"
 			comparison = "EQUALS"
 			target     = "200"
-		}
+		}]
 	}
 
 	trigger_incident = {
@@ -348,14 +330,14 @@ resource "checkly_url_monitor" "test" {
   max_response_time         = 3000
   locations                 = ["us-east-1", "eu-central-1"]
   use_global_alert_settings = true
-  request {
+  request = {
     url = "https://api.checklyhq.com"
-    assertion {
+    assertion = [{
       comparison = "EQUALS"
       property   = ""
       source     = "STATUS_CODE"
       target     = "200"
-    }
+    }]
   }
 }
 `
@@ -369,14 +351,14 @@ resource "checkly_url_monitor" "test" {
   max_response_time         = 3000
   locations                 = ["us-east-1", "eu-central-1"]
   use_global_alert_settings = true
-  request {
+  request = {
     url = "https://api.checklyhq.com"
-    assertion {
+    assertion = [{
       comparison = "EQUALS"
       property   = ""
       source     = "STATUS_CODE"
       target     = "200"
-    }
+    }]
   }
 }
 `
@@ -394,23 +376,22 @@ resource "checkly_url_monitor" "test" {
     "us-east-1",
     "ap-northeast-1"
   ]
-  request {
+  request = {
     url              = "https://api.checklyhq.com"
     follow_redirects = true
     skip_ssl         = false
     ip_family        = "IPv6"
-    assertion {
+    assertion = [{
       comparison = "GREATER_THAN"
       property   = ""
       source     = "STATUS_CODE"
       target     = "199"
-    }
-    assertion {
+    }, {
       comparison = "LESS_THAN"
       property   = ""
       source     = "STATUS_CODE"
       target     = "300"
-    }
+    }]
   }
 
   alert_settings = {
@@ -439,7 +420,7 @@ func TestAccURLMonitorWithSingleRetry(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://checkly.com"
 					}
 					retry_strategy = {
@@ -494,7 +475,7 @@ func TestAccURLMonitorWithSingleRetryOnlyOnNetworkError(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://checkly.com"
 					}
 					retry_strategy = {
@@ -521,7 +502,7 @@ func TestAccURLMonitorWithSingleRetryOnlyOnNetworkError(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://checkly.com"
 					}
 					retry_strategy = {
@@ -548,7 +529,7 @@ func TestAccURLMonitorWithNoRetries(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://checkly.com"
 					}
 					retry_strategy = {
@@ -600,7 +581,7 @@ func TestAccURLMonitorWithNoRetriesOnlyOnNetworkError(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://checkly.com"
 					}
 					retry_strategy = {
@@ -639,7 +620,7 @@ func TestAccURLMonitorWithDefaultNoRetries(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://checkly.com"
 					}
 				}
@@ -684,7 +665,7 @@ func TestAccURLMonitorWithFixedRetry(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://checkly.com"
 					}
 					retry_strategy = {
@@ -740,7 +721,7 @@ func TestAccURLMonitorWithFixedRetryOnlyOnNetworkError(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://checkly.com"
 					}
 					retry_strategy = {
@@ -767,7 +748,7 @@ func TestAccURLMonitorWithFixedRetryOnlyOnNetworkError(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://checkly.com"
 					}
 					retry_strategy = {
@@ -794,7 +775,7 @@ func TestAccURLMonitorWithExponentialRetry(t *testing.T) {
 					activated = true
 					frequency = 720
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://checkly.com"
 					}
 					retry_strategy = {
@@ -850,7 +831,7 @@ func TestAccURLMonitorWithExponentialRetryOnlyOnNetworkError(t *testing.T) {
 					activated = true
 					frequency = 720
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://checkly.com"
 					}
 					retry_strategy = {
@@ -877,7 +858,7 @@ func TestAccURLMonitorWithExponentialRetryOnlyOnNetworkError(t *testing.T) {
 					activated = true
 					frequency = 720
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://checkly.com"
 					}
 					retry_strategy = {
@@ -904,7 +885,7 @@ func TestAccURLMonitorWithLinearRetry(t *testing.T) {
 					activated = true
 					frequency = 720
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://checkly.com"
 					}
 					retry_strategy = {
@@ -960,7 +941,7 @@ func TestAccURLMonitorWithLinearRetryOnlyOnNetworkError(t *testing.T) {
 					activated = true
 					frequency = 720
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://checkly.com"
 					}
 					retry_strategy = {
@@ -987,7 +968,7 @@ func TestAccURLMonitorWithLinearRetryOnlyOnNetworkError(t *testing.T) {
 					activated = true
 					frequency = 720
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://checkly.com"
 					}
 					retry_strategy = {
@@ -1014,7 +995,7 @@ func TestAccURLMonitorRetryStrategyRemoval(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://checkly.com"
 					}
 					retry_strategy = {
@@ -1037,7 +1018,7 @@ func TestAccURLMonitorRetryStrategyRemoval(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://checkly.com"
 					}
 				}
@@ -1077,7 +1058,7 @@ func TestAccURLMonitorGroupAssignment(t *testing.T) {
 					frequency = 60
 					locations = ["eu-central-1"]
 					group_id  = checkly_check_group.test1.id
-					request {
+					request = {
 						url = "https://checkly.com"
 					}
 				}
@@ -1087,7 +1068,7 @@ func TestAccURLMonitorGroupAssignment(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://checkly.com"
 					}
 				}
@@ -1128,7 +1109,7 @@ func TestAccURLMonitorGroupAssignment(t *testing.T) {
 					frequency = 60
 					locations = ["eu-central-1"]
 					group_id  = checkly_check_group.test2.id
-					request {
+					request = {
 						url = "https://checkly.com"
 					}
 				}
@@ -1139,7 +1120,7 @@ func TestAccURLMonitorGroupAssignment(t *testing.T) {
 					frequency = 60
 					locations = ["eu-central-1"]
 					group_id  = checkly_check_group.test2.id
-					request {
+					request = {
 						url = "https://checkly.com"
 					}
 				}
@@ -1180,7 +1161,7 @@ func TestAccURLMonitorGroupAssignment(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://checkly.com"
 					}
 				}
@@ -1190,7 +1171,7 @@ func TestAccURLMonitorGroupAssignment(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://checkly.com"
 					}
 				}
@@ -1220,7 +1201,7 @@ func TestAccURLMonitorFrequencyValidation(t *testing.T) {
 					activated = true
 					frequency = 0
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://checkly.com"
 					}
 				}
@@ -1235,7 +1216,7 @@ func TestAccURLMonitorFrequencyValidation(t *testing.T) {
 					frequency        = 0
 					frequency_offset = 10
 					locations        = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://checkly.com"
 					}
 				}
@@ -1246,7 +1227,7 @@ func TestAccURLMonitorFrequencyValidation(t *testing.T) {
 					frequency        = 0
 					frequency_offset = 20
 					locations        = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://checkly.com"
 					}
 				}
@@ -1257,7 +1238,7 @@ func TestAccURLMonitorFrequencyValidation(t *testing.T) {
 					frequency        = 0
 					frequency_offset = 30
 					locations        = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://checkly.com"
 					}
 				}
@@ -1303,7 +1284,7 @@ func TestAccURLMonitorFrequencyValidation(t *testing.T) {
 					frequency        = 60
 					frequency_offset = 30
 					locations        = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://checkly.com"
 					}
 				}
@@ -1317,7 +1298,7 @@ func TestAccURLMonitorFrequencyValidation(t *testing.T) {
 					activated = true
 					frequency = 9999
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://checkly.com"
 					}
 				}
@@ -1332,7 +1313,7 @@ func TestAccURLMonitorFrequencyValidation(t *testing.T) {
 					frequency        = 60
 					frequency_offset = 99
 					locations        = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://checkly.com"
 					}
 				}
@@ -1347,7 +1328,7 @@ func TestAccURLMonitorFrequencyValidation(t *testing.T) {
 					frequency        = 60
 					frequency_offset = 0
 					locations        = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://checkly.com"
 					}
 				}
@@ -1377,7 +1358,7 @@ func TestAccURLMonitorFrequencyUpdates(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://checkly.com"
 					}
 				}
@@ -1388,7 +1369,7 @@ func TestAccURLMonitorFrequencyUpdates(t *testing.T) {
 					frequency        = 0
 					frequency_offset = 30
 					locations        = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://checkly.com"
 					}
 				}
@@ -1423,7 +1404,7 @@ func TestAccURLMonitorFrequencyUpdates(t *testing.T) {
 					frequency        = 0
 					frequency_offset = 10
 					locations        = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://checkly.com"
 					}
 				}
@@ -1433,7 +1414,7 @@ func TestAccURLMonitorFrequencyUpdates(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://checkly.com"
 					}
 				}
@@ -1492,14 +1473,14 @@ func TestAccURLMonitorAlertChannelSubscriptions(t *testing.T) {
 					activated = true
 					locations = ["eu-central-1"]
 
-					request {
+					request = {
 						url = "https://api.checklyhq.com"
 
-						assertion {
+						assertion = [{
 							source     = "STATUS_CODE"
 							comparison = "EQUALS"
 							target     = "200"
-						}
+						}]
 					}
 
 					alert_channel_subscription {
@@ -1560,14 +1541,14 @@ func TestAccURLMonitorAlertChannelSubscriptions(t *testing.T) {
 					activated = true
 					locations = ["eu-central-1"]
 
-					request {
+					request = {
 						url = "https://api.checklyhq.com"
 
-						assertion {
+						assertion = [{
 							source     = "STATUS_CODE"
 							comparison = "EQUALS"
 							target     = "200"
-						}
+						}]
 					}
 
 					alert_channel_subscription {
@@ -1639,14 +1620,14 @@ func TestAccURLMonitorAlertChannelSubscriptions(t *testing.T) {
 					activated = true
 					locations = ["eu-central-1"]
 
-					request {
+					request = {
 						url = "https://api.checklyhq.com"
 
-						assertion {
+						assertion = [{
 							source     = "STATUS_CODE"
 							comparison = "EQUALS"
 							target     = "200"
-						}
+						}]
 					}
 				}
 			`,
@@ -1683,7 +1664,7 @@ func TestAccURLMonitorUnsetSweepBasics(t *testing.T) {
 					degraded_response_time    = 2500
 					max_response_time         = 9000
 					tags                      = ["sweep-a", "sweep-b"]
-					request {
+					request = {
 						url = "https://api.checklyhq.com"
 					}
 				}
@@ -1705,7 +1686,7 @@ func TestAccURLMonitorUnsetSweepBasics(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://api.checklyhq.com"
 					}
 				}
@@ -1738,7 +1719,7 @@ func TestAccURLMonitorUnsetSweepResponseTimeZero(t *testing.T) {
 					locations              = ["eu-central-1"]
 					degraded_response_time = 0
 					max_response_time      = 0
-					request {
+					request = {
 						url = "https://api.checklyhq.com"
 					}
 				}
@@ -1755,7 +1736,7 @@ func TestAccURLMonitorUnsetSweepResponseTimeZero(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://api.checklyhq.com"
 					}
 				}
@@ -1779,7 +1760,7 @@ func TestAccURLMonitorUnsetSweepLocations(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1", "us-east-1"]
-					request {
+					request = {
 						url = "https://api.checklyhq.com"
 					}
 				}
@@ -1794,7 +1775,7 @@ func TestAccURLMonitorUnsetSweepLocations(t *testing.T) {
 					name      = "url-unset-sweep-locations"
 					activated = true
 					frequency = 60
-					request {
+					request = {
 						url = "https://api.checklyhq.com"
 					}
 				}
@@ -1824,7 +1805,7 @@ func TestAccURLMonitorUnsetSweepPrivateLocations(t *testing.T) {
 					frequency         = 60
 					locations         = ["eu-central-1"]
 					private_locations = [checkly_private_location.url_sweep.slug_name]
-					request {
+					request = {
 						url = "https://api.checklyhq.com"
 					}
 				}
@@ -1840,7 +1821,7 @@ func TestAccURLMonitorUnsetSweepPrivateLocations(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://api.checklyhq.com"
 					}
 				}
@@ -1865,16 +1846,16 @@ func TestAccURLMonitorUnsetSweepRequest(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						url              = "https://api.checklyhq.com"
 						follow_redirects = false
 						skip_ssl         = true
 						ip_family        = "IPv6"
-						assertion {
+						assertion = [{
 							source     = "STATUS_CODE"
 							comparison = "EQUALS"
 							target     = "200"
-						}
+						}]
 					}
 				}
 			`,
@@ -1892,7 +1873,7 @@ func TestAccURLMonitorUnsetSweepRequest(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://api.checklyhq.com"
 					}
 				}
@@ -1908,7 +1889,7 @@ func TestAccURLMonitorUnsetSweepRequest(t *testing.T) {
 }
 
 // TestAccURLMonitorUnsetSweepTriggerIncident verifies that removing the
-// trigger_incident block clears the incident trigger on the server.
+// trigger_incident attribute clears the incident trigger on the server.
 func TestAccURLMonitorUnsetSweepTriggerIncident(t *testing.T) {
 	service := `
 		resource "checkly_status_page_service" "url_sweep" {
@@ -1923,7 +1904,7 @@ func TestAccURLMonitorUnsetSweepTriggerIncident(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://api.checklyhq.com"
 					}
 					trigger_incident = {
@@ -1946,7 +1927,7 @@ func TestAccURLMonitorUnsetSweepTriggerIncident(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://api.checklyhq.com"
 					}
 				}
@@ -1979,7 +1960,7 @@ func TestAccURLMonitorUnsetSweepGroup(t *testing.T) {
 					locations   = ["eu-central-1"]
 					group_id    = checkly_check_group.url_sweep.id
 					group_order = 2
-					request {
+					request = {
 						url = "https://api.checklyhq.com"
 					}
 				}
@@ -2001,7 +1982,7 @@ func TestAccURLMonitorUnsetSweepGroup(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://api.checklyhq.com"
 					}
 				}

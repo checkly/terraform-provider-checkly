@@ -23,17 +23,17 @@ resource "checkly_icmp_monitor" "example-icmp-monitor" {
     "eu-west-1"
   ]
 
-  request {
+  request = {
     hostname   = "example.com"
     ip_family  = "IPv4"
     ping_count = 10
 
-    assertion {
+    assertion = [{
       source     = "LATENCY"
       property   = "avg"
       comparison = "LESS_THAN"
       target     = "200"
-    }
+    }]
   }
 }
 ```
@@ -46,6 +46,7 @@ resource "checkly_icmp_monitor" "example-icmp-monitor" {
 - `activated` (Boolean) Determines whether the monitor will run periodically or not after being deployed.
 - `frequency` (Number) Controls how often the monitor should run. Defined in minutes. The allowed values are `0` (high frequency - use `frequency_offset` to define the actual frequency), `1` (1 minute), `2` (2 minutes), `5` (5 minutes), `10` (10 minutes), `15` (15 minutes), `30` (30 minutes), `60` (1 hour), `120` (2 hours), `180` (3 hours), `360` (6 hours), `720` (12 hours) and `1440` (24 hours).
 - `name` (String) The name of the monitor.
+- `request` (Attributes) The parameters of the ICMP request. (see [below for nested schema](#nestedatt--request))
 
 ### Optional
 
@@ -59,7 +60,6 @@ resource "checkly_icmp_monitor" "example-icmp-monitor" {
 - `locations` (Set of String) An array of one or more data center locations where to run this monitor.
 - `max_packet_loss_threshold` (Number) The packet loss percentage where the monitor should be considered failing. Possible values are between `1` and `100`. (Default `20`).
 - `muted` (Boolean) Determines if any notifications will be sent out when the monitor fails and/or recovers. (Default `false`).
-- `request` (Block List) The parameters of the ICMP request. (see [below for nested schema](#nestedblock--request))
 - `retry_strategy` (Attributes) A strategy for retrying failed check/monitor runs. (see [below for nested schema](#nestedatt--retry_strategy))
 - `run_parallel` (Boolean) Determines whether the monitor should run on all selected locations in parallel or round-robin. (Default `false`).
 - `tags` (Set of String) A list of tags for organizing and filtering checks and monitors.
@@ -69,6 +69,34 @@ resource "checkly_icmp_monitor" "example-icmp-monitor" {
 ### Read-Only
 
 - `id` (String) The ID of the monitor.
+
+<a id="nestedatt--request"></a>
+### Nested Schema for `request`
+
+Required:
+
+- `hostname` (String) The hostname to ping.
+
+Optional:
+
+- `assertion` (Attributes Set) Assertions to validate the ICMP response. (see [below for nested schema](#nestedatt--request--assertion))
+- `ip_family` (String) The IP family to use. Possible values are `IPv4` and `IPv6`. (Default `IPv4`).
+- `ping_count` (Number) The number of ping packets to send. (Default `10`).
+
+<a id="nestedatt--request--assertion"></a>
+### Nested Schema for `request.assertion`
+
+Required:
+
+- `comparison` (String) The type of comparison to be executed between expected and actual value of the assertion. Possible values are `EQUALS`, `NOT_EQUALS`, `GREATER_THAN` and `LESS_THAN`.
+- `source` (String) The source of the asserted value. Possible values are `LATENCY` and `JSON_RESPONSE`.
+- `target` (String) The target value for the assertion.
+
+Optional:
+
+- `property` (String) The property of the source to assert. For `LATENCY` source, possible values are `avg`, `min`, `max` and `stdDev`.
+
+
 
 <a id="nestedblock--alert_channel_subscription"></a>
 ### Nested Schema for `alert_channel_subscription`
@@ -122,34 +150,6 @@ Optional:
 Optional:
 
 - `minutes_failing_threshold` (Number) Send an alert notification after the monitor has been failing for the given amount of time (in minutes). Possible values are `5`, `10`, `15`, and `30`. (Default `5`).
-
-
-
-<a id="nestedblock--request"></a>
-### Nested Schema for `request`
-
-Required:
-
-- `hostname` (String) The hostname to ping.
-
-Optional:
-
-- `assertion` (Block Set) Assertions to validate the ICMP response. (see [below for nested schema](#nestedblock--request--assertion))
-- `ip_family` (String) The IP family to use. Possible values are `IPv4` and `IPv6`. (Default `IPv4`).
-- `ping_count` (Number) The number of ping packets to send. (Default `10`).
-
-<a id="nestedblock--request--assertion"></a>
-### Nested Schema for `request.assertion`
-
-Required:
-
-- `comparison` (String) The type of comparison to be executed between expected and actual value of the assertion. Possible values are `EQUALS`, `NOT_EQUALS`, `GREATER_THAN` and `LESS_THAN`.
-- `source` (String) The source of the asserted value. Possible values are `LATENCY` and `JSON_RESPONSE`.
-- `target` (String) The target value for the assertion.
-
-Optional:
-
-- `property` (String) The property of the source to assert. For `LATENCY` source, possible values are `avg`, `min`, `max` and `stdDev`.
 
 
 

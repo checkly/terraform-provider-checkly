@@ -85,11 +85,26 @@ func TestUpgradeSDKv2State(t *testing.T) {
 		requireStateNull(t, state, path.Root("alert_settings").AtName("time_based_escalation"))
 		requireStateValue(t, state, path.Root("retry_strategy").AtName("base_backoff_seconds"), types.Int64Value(30))
 		requireStateValue(t, state, path.Root("retry_strategy").AtName("only_on").AtName("network_error"), types.BoolValue(true))
+		// The one-element request list is unwrapped into an object; its
+		// assertion list becomes a set of objects.
+		requireStateValue(t, state, path.Root("request").AtName("url"), types.StringValue("https://example.com"))
+		requireStateValue(t, state, path.Root("request").AtName("assertion"), types.SetValueMust(
+			types.ObjectType{AttrTypes: assertionAttrTypes},
+			[]attr.Value{types.ObjectValueMust(assertionAttrTypes, map[string]attr.Value{
+				"source":     types.StringValue("STATUS_CODE"),
+				"property":   types.StringValue(""),
+				"comparison": types.StringValue("EQUALS"),
+				"target":     types.StringValue("200"),
+			})},
+		))
 	})
 
 	t.Run("url_monitor without optional blocks", func(t *testing.T) {
 		state := upgradeSDKv2Fixture(t, NewURLMonitorResource(), "url_monitor_minimal")
 		requireStateNull(t, state, path.Root("alert_settings"))
+		// SDK v2 stores no assertions as an empty list, which upgrades to
+		// the empty set the attribute defaults to.
+		requireStateValue(t, state, path.Root("request").AtName("assertion"), types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{}))
 	})
 
 	t.Run("ssl_monitor", func(t *testing.T) {
@@ -178,6 +193,26 @@ func TestUpgradeSDKv2State(t *testing.T) {
 		requireStateNull(t, state, path.Root("webhook").AtName("webhook_secret"))
 	})
 
+	t.Run("dns_monitor", func(t *testing.T) {
+		// SDK v2 stored request and its name_server as lists, empty for an
+		// unconfigured name server.
+		upgrade := func(nameServer string) tfsdk.State {
+			raw := `{"id":"1","request":[{"record_type":"A","query":"example.com","protocol":"UDP",` +
+				`"name_server":` + nameServer + `,"assertion":[]}]}`
+			var schemaResp resource.SchemaResponse
+			NewDNSMonitorResource().Schema(context.Background(), resource.SchemaRequest{}, &schemaResp)
+			value, err := upgradeSDKv2RawState(context.Background(), &tfprotov6.RawState{JSON: []byte(raw)}, schemaResp.Schema)
+			if err != nil {
+				t.Fatal(err)
+			}
+			return tfsdk.State{Schema: schemaResp.Schema, Raw: value}
+		}
+		state := upgrade(`[{"host":"1.1.1.1","port":53}]`)
+		requireStateValue(t, state, path.Root("request").AtName("query"), types.StringValue("example.com"))
+		requireStateValue(t, state, path.Root("request").AtName("name_server").AtName("port"), types.Int64Value(53))
+		requireStateNull(t, upgrade(`[]`), path.Root("request").AtName("name_server"))
+	})
+
 	t.Run("ssl_monitor after refresh", func(t *testing.T) {
 		state := upgradeSDKv2Fixture(t, NewSSLMonitorResource(), "ssl_monitor_read")
 		requireStateNull(t, state, path.Root("request").AtListIndex(0).AtName("client_certificate").AtName("client_certificate_id"))
@@ -262,6 +297,9 @@ func TestMoveSDKv2State(t *testing.T) {
 			fixture:    "tcp_monitor",
 			attr:       path.Root("retry_strategy").AtName("type"),
 			want:       types.StringValue("FIXED"),
+			check: func(t *testing.T, state tfsdk.State) {
+				requireStateValue(t, state, path.Root("request").AtName("hostname"), types.StringValue("example.com"))
+			},
 		},
 		"checkly_heartbeat to checkly_heartbeat_monitor": {
 			target:     NewHeartbeatMonitorResource(),

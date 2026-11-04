@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
-	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -15,10 +14,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 
 	checkly "github.com/checkly/checkly-go-sdk"
 )
@@ -59,24 +60,24 @@ type DNSMonitorResourceModel struct {
 	AlertChannelSubscriptions types.Set    `tfsdk:"alert_channel_subscription"`
 	AlertSettings             types.Object `tfsdk:"alert_settings"`
 	UseGlobalAlertSettings    types.Bool   `tfsdk:"use_global_alert_settings"`
-	Request                   types.List   `tfsdk:"request"`
+	Request                   types.Object `tfsdk:"request"`
 	GroupID                   types.Int64  `tfsdk:"group_id"`
 	GroupOrder                types.Int64  `tfsdk:"group_order"`
 	RetryStrategy             types.Object `tfsdk:"retry_strategy"`
 	TriggerIncident           types.Object `tfsdk:"trigger_incident"`
 }
 
-// DNSMonitorRequestModel describes the request block data model.
+// DNSMonitorRequestModel describes the request attribute data model.
 type DNSMonitorRequestModel struct {
 	RecordType types.String `tfsdk:"record_type"`
 	Query      types.String `tfsdk:"query"`
 	Protocol   types.String `tfsdk:"protocol"`
-	NameServer types.List   `tfsdk:"name_server"`
+	NameServer types.Object `tfsdk:"name_server"`
 	Assertions types.Set    `tfsdk:"assertion"`
 }
 
-// DNSMonitorNameServerModel describes the request.name_server block data
-// model.
+// DNSMonitorNameServerModel describes the request.name_server attribute
+// data model.
 type DNSMonitorNameServerModel struct {
 	Host types.String `tfsdk:"host"`
 	Port types.Int64  `tfsdk:"port"`
@@ -91,7 +92,7 @@ var dnsMonitorRequestAttrTypes = map[string]attr.Type{
 	"record_type": types.StringType,
 	"query":       types.StringType,
 	"protocol":    types.StringType,
-	"name_server": types.ListType{ElemType: types.ObjectType{AttrTypes: dnsMonitorNameServerAttrTypes}},
+	"name_server": types.ObjectType{AttrTypes: dnsMonitorNameServerAttrTypes},
 	"assertion":   types.SetType{ElemType: types.ObjectType{AttrTypes: assertionAttrTypes}},
 }
 
@@ -195,114 +196,104 @@ func (r *DNSMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 				Description: "The position of the monitor in the check group. It determines in what order checks and monitors are run when a group is triggered from the API or from CI/CD.",
 			},
 			retryStrategyAttributeName: makeRetryStrategyAttributeSchema(RetryStrategyAttributeSchemaOptions{}),
-		},
-		Blocks: map[string]schema.Block{
-			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{
-				Monitor: true,
-			}),
-			"request": schema.ListNestedBlock{
+			"request": schema.SingleNestedAttribute{
+				Required:    true,
 				Description: "The parameters of the DNS request.",
-				Validators: []validator.List{
-					listvalidator.IsRequired(),
-					listvalidator.SizeAtMost(1),
-				},
-				NestedObject: schema.NestedBlockObject{
-					Attributes: map[string]schema.Attribute{
-						"record_type": schema.StringAttribute{
-							Required:    true,
-							Description: "The DNS record type. Possible values are `A`, `AAAA`, `CNAME`, `MX`, `NS`, `TXT` and `SOA`.",
-							Validators: []validator.String{
-								stringvalidator.OneOf("A", "AAAA", "CNAME", "MX", "NS", "TXT", "SOA"),
+				Attributes: map[string]schema.Attribute{
+					"record_type": schema.StringAttribute{
+						Required:    true,
+						Description: "The DNS record type. Possible values are `A`, `AAAA`, `CNAME`, `MX`, `NS`, `TXT` and `SOA`.",
+						Validators: []validator.String{
+							stringvalidator.OneOf("A", "AAAA", "CNAME", "MX", "NS", "TXT", "SOA"),
+						},
+					},
+					"query": schema.StringAttribute{
+						Required:    true,
+						Description: "The DNS record to query.",
+					},
+					"protocol": schema.StringAttribute{
+						Optional:    true,
+						Computed:    true,
+						Default:     stringdefault.StaticString("UDP"),
+						Description: "The protocol used to communicate with the name server. Possible values are `UDP` and `TCP`. (Default `UDP`).",
+						Validators: []validator.String{
+							stringvalidator.OneOf("UDP", "TCP"),
+						},
+					},
+					"name_server": schema.SingleNestedAttribute{
+						Optional:    true,
+						Description: "The name server to use.",
+						Validators: []validator.Object{
+							dnsMonitorNameServerValidator{},
+						},
+						Attributes: map[string]schema.Attribute{
+							"host": schema.StringAttribute{
+								Optional:    true,
+								Description: "The name server host.",
+								Validators: []validator.String{
+									stringvalidator.AlsoRequires(
+										path.MatchRelative().AtParent().AtName("port"),
+									),
+								},
 							},
-						},
-						"query": schema.StringAttribute{
-							Required:    true,
-							Description: "The DNS record to query.",
-						},
-						"protocol": schema.StringAttribute{
-							Optional:    true,
-							Computed:    true,
-							Default:     stringdefault.StaticString("UDP"),
-							Description: "The protocol used to communicate with the name server. Possible values are `UDP` and `TCP`. (Default `UDP`).",
-							Validators: []validator.String{
-								stringvalidator.OneOf("UDP", "TCP"),
+							"port": schema.Int64Attribute{
+								Optional:    true,
+								Description: "The name server port.",
+								Validators: []validator.Int64{
+									int64validator.AlsoRequires(
+										path.MatchRelative().AtParent().AtName("host"),
+									),
+								},
 							},
 						},
 					},
-					Blocks: map[string]schema.Block{
-						"name_server": schema.ListNestedBlock{
-							Description: "The name server to use.",
-							Validators: []validator.List{
-								listvalidator.SizeAtMost(1),
-							},
-							NestedObject: schema.NestedBlockObject{
-								Validators: []validator.Object{
-									dnsMonitorNameServerValidator{},
-								},
-								Attributes: map[string]schema.Attribute{
-									"host": schema.StringAttribute{
-										Optional:    true,
-										Description: "The name server host.",
-										Validators: []validator.String{
-											stringvalidator.AlsoRequires(
-												path.MatchRelative().AtParent().AtName("port"),
-											),
-										},
-									},
-									"port": schema.Int64Attribute{
-										Optional:    true,
-										Description: "The name server port.",
-										Validators: []validator.Int64{
-											int64validator.AlsoRequires(
-												path.MatchRelative().AtParent().AtName("host"),
-											),
-										},
+					"assertion": schema.SetNestedAttribute{
+						Optional:    true,
+						Computed:    true,
+						Default:     setdefault.StaticValue(types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{})),
+						Description: "Assertions to validate the DNS response.",
+						NestedObject: schema.NestedAttributeObject{
+							// Attributes nested in this set attribute must not use
+							// schema defaults. The framework looks up configuration
+							// values for set elements by full element value; once
+							// computed attributes resolve, the lookup misses, the
+							// configuration is treated as null, and defaults would
+							// override values the practitioner actually configured,
+							// producing a perpetual diff. Default values are instead
+							// applied in ModifyPlan.
+							Attributes: map[string]schema.Attribute{
+								"source": schema.StringAttribute{
+									Required:    true,
+									Description: "The source of the asserted value. Possible values are `RESPONSE_CODE`, `RESPONSE_TIME`, `TEXT_ANSWER` and `JSON_ANSWER`.",
+									Validators: []validator.String{
+										stringvalidator.OneOf("RESPONSE_CODE", "RESPONSE_TIME", "TEXT_ANSWER", "JSON_ANSWER"),
 									},
 								},
-							},
-						},
-						"assertion": schema.SetNestedBlock{
-							Description: "Assertions to validate the DNS response.",
-							NestedObject: schema.NestedBlockObject{
-								// Attributes nested in this set block must not
-								// use schema defaults. The framework looks up
-								// configuration values for set elements by full
-								// element value; once computed attributes
-								// resolve, the lookup misses, the configuration
-								// is treated as null, and defaults would
-								// override values the practitioner actually
-								// configured, producing a perpetual diff.
-								// Default values are instead applied in
-								// ModifyPlan.
-								Attributes: map[string]schema.Attribute{
-									"source": schema.StringAttribute{
-										Required:    true,
-										Description: "The source of the asserted value. Possible values are `RESPONSE_CODE`, `RESPONSE_TIME`, `TEXT_ANSWER` and `JSON_ANSWER`.",
-										Validators: []validator.String{
-											stringvalidator.OneOf("RESPONSE_CODE", "RESPONSE_TIME", "TEXT_ANSWER", "JSON_ANSWER"),
-										},
+								"property": schema.StringAttribute{
+									Optional: true,
+									Computed: true,
+								},
+								"comparison": schema.StringAttribute{
+									Required:    true,
+									Description: "The type of comparison to be executed between expected and actual value of the assertion. Possible values are `EQUALS`, `NOT_EQUALS`, `GREATER_THAN` and `LESS_THAN`.",
+									Validators: []validator.String{
+										stringvalidator.OneOf("EQUALS", "NOT_EQUALS", "GREATER_THAN", "LESS_THAN"),
 									},
-									"property": schema.StringAttribute{
-										Optional: true,
-										Computed: true,
-									},
-									"comparison": schema.StringAttribute{
-										Required:    true,
-										Description: "The type of comparison to be executed between expected and actual value of the assertion. Possible values are `EQUALS`, `NOT_EQUALS`, `GREATER_THAN` and `LESS_THAN`.",
-										Validators: []validator.String{
-											stringvalidator.OneOf("EQUALS", "NOT_EQUALS", "GREATER_THAN", "LESS_THAN"),
-										},
-									},
-									"target": schema.StringAttribute{
-										Required:    true,
-										Description: "The target value. Typically `NOERROR` when the source is `RESPONSE_CODE`.",
-									},
+								},
+								"target": schema.StringAttribute{
+									Required:    true,
+									Description: "The target value. Typically `NOERROR` when the source is `RESPONSE_CODE`.",
 								},
 							},
 						},
 					},
 				},
 			},
+		},
+		Blocks: map[string]schema.Block{
+			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{
+				Monitor: true,
+			}),
 		},
 	}
 }
@@ -323,39 +314,14 @@ func (r *DNSMonitorResource) Configure(ctx context.Context, req resource.Configu
 	r.client = clientFromProviderData(req.ProviderData, &resp.Diagnostics)
 }
 
-// ModifyPlan applies default values to the optional+computed attributes
-// nested in the request.assertion set block. Schema defaults cannot be used
-// for these attributes (see the schema for details), so the plan is adjusted
-// here instead. Substituting static values keeps every set element fully
-// known and stable across plans, which set element correlation requires. The
-// request block itself is a list, so its own attributes can keep using schema
-// defaults.
+// ModifyPlan applies default values to the optional+computed attributes of
+// the request assertions. Schema defaults cannot be used for attributes
+// nested in set elements (see the schema for details), so the plan is
+// adjusted here instead. Substituting static values keeps every set element
+// fully known and stable across plans, which set element correlation
+// requires.
 func (r *DNSMonitorResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	planNestedDefaults(ctx, req, resp, path.Root("request"), dnsMonitorRequestWithDefaults)
-}
-
-// dnsMonitorRequestWithDefaults returns the request block value with default
-// values substituted for null and unknown optional+computed attributes nested
-// in the assertion set block.
-func dnsMonitorRequestWithDefaults(ctx context.Context, list types.List, diags *diag.Diagnostics) types.List {
-	if list.IsNull() || list.IsUnknown() {
-		return list
-	}
-
-	var models []DNSMonitorRequestModel
-	diags.Append(list.ElementsAs(ctx, &models, false)...)
-	if diags.HasError() {
-		return list
-	}
-
-	for i, model := range models {
-		models[i].Assertions = assertionsWithPropertyDefault(ctx, model.Assertions, diags)
-	}
-
-	result, d := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: dnsMonitorRequestAttrTypes}, models)
-	diags.Append(d...)
-
-	return result
+	planNestedDefaults(ctx, req, resp, path.Root("request"), objectWithSetDefaults("assertion", assertionsWithPropertyDefault))
 }
 
 func (r *DNSMonitorResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -514,7 +480,7 @@ func dnsMonitorFromModel(ctx context.Context, model *DNSMonitorResourceModel, di
 		Tags:                      stringsFromSet(ctx, model.Tags, diags),
 		AlertSettings:             &alertSettings,
 		UseGlobalAlertSettings:    model.UseGlobalAlertSettings.ValueBool(),
-		Request:                   dnsMonitorRequestFromList(ctx, model.Request, diags),
+		Request:                   dnsMonitorRequestFromObject(ctx, model.Request, diags),
 		GroupID:                   model.GroupID.ValueInt64(),
 		GroupOrder:                int(model.GroupOrder.ValueInt64()),
 		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscriptions, diags),
@@ -565,7 +531,7 @@ func dnsMonitorToModel(ctx context.Context, c *checkly.DNSMonitor, model *DNSMon
 	}
 
 	model.UseGlobalAlertSettings = types.BoolValue(c.UseGlobalAlertSettings)
-	model.Request = dnsMonitorRequestToList(ctx, c.Request, diags)
+	model.Request = dnsMonitorRequestToObject(ctx, c.Request, diags)
 	model.GroupID = types.Int64Value(c.GroupID)
 	model.GroupOrder = types.Int64Value(int64(c.GroupOrder))
 	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, diags)
@@ -573,22 +539,20 @@ func dnsMonitorToModel(ctx context.Context, c *checkly.DNSMonitor, model *DNSMon
 	model.TriggerIncident = triggerIncidentToObject(ctx, c.TriggerIncident, diags)
 }
 
-// dnsMonitorRequestFromList converts the request block value to its API
-// representation.
-func dnsMonitorRequestFromList(ctx context.Context, list types.List, diags *diag.Diagnostics) checkly.DNSRequest {
-	if list.IsNull() || list.IsUnknown() {
+// dnsMonitorRequestFromObject converts the request attribute value to its
+// API representation.
+func dnsMonitorRequestFromObject(ctx context.Context, obj types.Object, diags *diag.Diagnostics) checkly.DNSRequest {
+	if obj.IsNull() || obj.IsUnknown() {
 		return checkly.DNSRequest{}
 	}
 
-	var models []DNSMonitorRequestModel
-	diags.Append(list.ElementsAs(ctx, &models, false)...)
-	if diags.HasError() || len(models) == 0 {
+	var model DNSMonitorRequestModel
+	diags.Append(obj.As(ctx, &model, basetypes.ObjectAsOptions{})...)
+	if diags.HasError() {
 		return checkly.DNSRequest{}
 	}
 
-	model := models[0]
-
-	nameServer := dnsMonitorNameServerFromList(ctx, model.NameServer, diags)
+	nameServer := dnsMonitorNameServerFromObject(ctx, model.NameServer, diags)
 
 	return checkly.DNSRequest{
 		RecordType: model.RecordType.ValueString(),
@@ -600,66 +564,61 @@ func dnsMonitorRequestFromList(ctx context.Context, list types.List, diags *diag
 	}
 }
 
-// dnsMonitorRequestToList converts the API representation of the request to
-// the request block value.
-func dnsMonitorRequestToList(ctx context.Context, r checkly.DNSRequest, diags *diag.Diagnostics) types.List {
-	list, d := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: dnsMonitorRequestAttrTypes}, []DNSMonitorRequestModel{
-		{
-			RecordType: types.StringValue(r.RecordType),
-			Query:      types.StringValue(r.Query),
-			Protocol:   types.StringValue(r.Protocol),
-			NameServer: dnsMonitorNameServerToList(ctx, r.NameServer, r.Port, diags),
-			Assertions: assertionsToSet(ctx, r.Assertions, diags),
-		},
+// dnsMonitorRequestToObject converts the API representation of the request
+// to the request attribute value.
+func dnsMonitorRequestToObject(ctx context.Context, r checkly.DNSRequest, diags *diag.Diagnostics) types.Object {
+	obj, d := types.ObjectValueFrom(ctx, dnsMonitorRequestAttrTypes, DNSMonitorRequestModel{
+		RecordType: types.StringValue(r.RecordType),
+		Query:      types.StringValue(r.Query),
+		Protocol:   types.StringValue(r.Protocol),
+		NameServer: dnsMonitorNameServerToObject(ctx, r.NameServer, r.Port, diags),
+		Assertions: assertionsToSet(ctx, r.Assertions, diags),
 	})
 	diags.Append(d...)
 
-	return list
+	return obj
 }
 
-// dnsMonitorNameServerFromList converts the request.name_server block value
-// to its host and port components. An absent block converts to zero values.
-func dnsMonitorNameServerFromList(ctx context.Context, list types.List, diags *diag.Diagnostics) DNSMonitorNameServerModel {
-	if list.IsNull() || list.IsUnknown() {
+// dnsMonitorNameServerFromObject converts the request.name_server attribute
+// value to its host and port components. An unset name server converts to
+// zero values.
+func dnsMonitorNameServerFromObject(ctx context.Context, obj types.Object, diags *diag.Diagnostics) DNSMonitorNameServerModel {
+	if obj.IsNull() || obj.IsUnknown() {
 		return DNSMonitorNameServerModel{}
 	}
 
-	var models []DNSMonitorNameServerModel
-	diags.Append(list.ElementsAs(ctx, &models, false)...)
-	if diags.HasError() || len(models) == 0 {
+	var model DNSMonitorNameServerModel
+	diags.Append(obj.As(ctx, &model, basetypes.ObjectAsOptions{})...)
+	if diags.HasError() {
 		return DNSMonitorNameServerModel{}
 	}
 
-	return models[0]
+	return model
 }
 
-// dnsMonitorNameServerToList converts the API representation of the name
-// server to the request.name_server block value. An unconfigured name server
-// converts to an empty list.
-func dnsMonitorNameServerToList(ctx context.Context, host string, port int, diags *diag.Diagnostics) types.List {
-	elementType := types.ObjectType{AttrTypes: dnsMonitorNameServerAttrTypes}
-
+// dnsMonitorNameServerToObject converts the API representation of the name
+// server to the request.name_server attribute value. An unconfigured name
+// server converts to a null object.
+func dnsMonitorNameServerToObject(ctx context.Context, host string, port int, diags *diag.Diagnostics) types.Object {
 	if host == "" && port == 0 {
-		return types.ListValueMust(elementType, []attr.Value{})
+		return types.ObjectNull(dnsMonitorNameServerAttrTypes)
 	}
 
-	list, d := types.ListValueFrom(ctx, elementType, []DNSMonitorNameServerModel{
-		{
-			Host: types.StringValue(host),
-			Port: types.Int64Value(int64(port)),
-		},
+	obj, d := types.ObjectValueFrom(ctx, dnsMonitorNameServerAttrTypes, DNSMonitorNameServerModel{
+		Host: types.StringValue(host),
+		Port: types.Int64Value(int64(port)),
 	})
 	diags.Append(d...)
 
-	return list
+	return obj
 }
 
 var _ validator.Object = dnsMonitorNameServerValidator{}
 
-// dnsMonitorNameServerValidator rejects an empty name_server block. An empty
-// block would plan a single element with a null host and port, but the
-// Checkly API does not track such a name server and would report an empty
-// list back, resulting in an inconsistent result after apply.
+// dnsMonitorNameServerValidator rejects an empty name_server object. An empty
+// object would plan a name server with a null host and port, but the Checkly
+// API does not track such a name server and would report none back,
+// resulting in an inconsistent result after apply.
 type dnsMonitorNameServerValidator struct{}
 
 func (v dnsMonitorNameServerValidator) Description(ctx context.Context) string {
@@ -687,8 +646,8 @@ func (v dnsMonitorNameServerValidator) ValidateObject(ctx context.Context, req v
 		resp.Diagnostics.AddAttributeError(
 			req.Path,
 			"Invalid Name Server",
-			"The name_server block must configure the host and port attributes. "+
-				"Remove the empty block to use the default name server.",
+			"The name_server attribute must configure the host and port attributes. "+
+				"Remove the empty name_server object to use the default name server.",
 		)
 	}
 }

@@ -7,7 +7,6 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
-	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -17,10 +16,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 
 	checkly "github.com/checkly/checkly-go-sdk"
 )
@@ -67,12 +68,12 @@ type GRPCMonitorResourceModel struct {
 	GroupID                  types.Int64  `tfsdk:"group_id"`
 	GroupOrder               types.Int64  `tfsdk:"group_order"`
 	RetryStrategy            types.Object `tfsdk:"retry_strategy"`
-	Request                  types.List   `tfsdk:"request"`
+	Request                  types.Object `tfsdk:"request"`
 	AlertChannelSubscription types.Set    `tfsdk:"alert_channel_subscription"`
 	TriggerIncident          types.Object `tfsdk:"trigger_incident"`
 }
 
-// GRPCMonitorRequestModel describes the request block data model.
+// GRPCMonitorRequestModel describes the request attribute data model.
 type GRPCMonitorRequestModel struct {
 	Host              types.String `tfsdk:"host"`
 	Port              types.Int64  `tfsdk:"port"`
@@ -92,7 +93,8 @@ type GRPCMonitorRequestModel struct {
 	Assertion         types.Set    `tfsdk:"assertion"`
 }
 
-// GRPCMonitorMetadataModel describes the request.metadata block data model.
+// GRPCMonitorMetadataModel describes the data model of a request.metadata
+// element.
 type GRPCMonitorMetadataModel struct {
 	Key   types.String `tfsdk:"key"`
 	Value types.String `tfsdk:"value"`
@@ -239,198 +241,197 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 			retryStrategyAttributeName: makeRetryStrategyAttributeSchema(RetryStrategyAttributeSchemaOptions{
 				SupportsOnlyOnNetworkError: false,
 			}),
-		},
-		Blocks: map[string]schema.Block{
-			"request": schema.ListNestedBlock{
+			"request": schema.SingleNestedAttribute{
+				Required:    true,
 				Description: "The parameters for the gRPC connection.",
-				Validators: []validator.List{
-					listvalidator.IsRequired(),
-					listvalidator.SizeAtMost(1),
-				},
-				NestedObject: schema.NestedBlockObject{
-					Attributes: map[string]schema.Attribute{
-						"host": schema.StringAttribute{
-							Required:    true,
-							Description: "The host to connect to. Do not include a scheme or a port in this value.",
-						},
-						"port": schema.Int64Attribute{
-							Required:    true,
-							Description: "The port number to connect to. Possible values are between 1 and 65535.",
-							Validators: []validator.Int64{
-								int64validator.Between(1, 65535),
-							},
-						},
-						"ip_family": schema.StringAttribute{
-							Optional:    true,
-							Computed:    true,
-							Default:     stringdefault.StaticString("IPv4"),
-							Description: "The IP family to use when executing the gRPC check. The value can be either `IPv4` or `IPv6`. (Default `IPv4`).",
-							Validators: []validator.String{
-								stringvalidator.OneOf("IPv4", "IPv6"),
-							},
-						},
-						"grpc_mode": schema.StringAttribute{
-							Optional:    true,
-							Computed:    true,
-							Default:     stringdefault.StaticString("BEHAVIOR"),
-							Description: "The gRPC monitoring mode. `BEHAVIOR` invokes a unary method (requires `method`); `HEALTH` queries the standard gRPC health-check service (allows `service`). (Default `BEHAVIOR`).",
-							Validators: []validator.String{
-								stringvalidator.OneOf("BEHAVIOR", "HEALTH"),
-							},
-						},
-						"tls": schema.BoolAttribute{
-							Optional:    true,
-							Computed:    true,
-							Default:     booldefault.StaticBool(true),
-							Description: "Whether to use a TLS-encrypted connection to the gRPC server. (Default `true`).",
-						},
-						"skip_ssl": schema.BoolAttribute{
-							Optional:    true,
-							Computed:    true,
-							Default:     booldefault.StaticBool(false),
-							Description: "Whether to skip SSL certificate validation when `tls` is enabled. (Default `false`).",
-						},
-						// timeout has the API's default rather than keeping
-						// its prior state value: the update endpoint keeps the
-						// stored value of an omitted field, so removing
-						// timeout from the configuration must send the
-						// default explicitly.
-						"timeout": schema.Int64Attribute{
-							Optional:    true,
-							Computed:    true,
-							Default:     int64default.StaticInt64(60),
-							Description: "The number of seconds to wait for the gRPC call to complete before timing out. Possible values are between 1 and 180. (Default `60`).",
-							Validators: []validator.Int64{
-								int64validator.Between(1, 180),
-							},
-						},
-						"service": schema.StringAttribute{
-							Optional:    true,
-							Computed:    true,
-							Default:     stringdefault.StaticString(""),
-							Description: "The service name to query in `HEALTH` mode. An empty value queries overall server health. Forbidden in `BEHAVIOR` mode.",
-						},
-						// encoding and service_definition have schema
-						// defaults rather than keeping their prior state
-						// value: the update endpoint keeps stored values for
-						// omitted fields, so removing either from the
-						// configuration must send the default explicitly to
-						// switch the monitor back.
-						"encoding": schema.StringAttribute{
-							Optional:    true,
-							Computed:    true,
-							Default:     stringdefault.StaticString("PROTOBUF"),
-							Description: "The wire encoding used in `BEHAVIOR` mode. Possible values are `PROTOBUF` and `FLATBUFFERS`. (Default `PROTOBUF`).",
-							Validators: []validator.String{
-								stringvalidator.OneOf("PROTOBUF", "FLATBUFFERS"),
-							},
-						},
-						"service_definition": schema.StringAttribute{
-							Optional:    true,
-							Computed:    true,
-							Default:     stringdefault.StaticString("REFLECTION"),
-							Description: "How the service definition is resolved in `BEHAVIOR` mode: `REFLECTION` uses server reflection; `PROTO_FILE` uses the inline `proto_content`. Forbidden when `encoding = \"FLATBUFFERS\"`. (Default `REFLECTION`).",
-							Validators: []validator.String{
-								stringvalidator.OneOf("REFLECTION", "PROTO_FILE"),
-							},
-						},
-						"proto_content": schema.StringAttribute{
-							Optional:    true,
-							Computed:    true,
-							Default:     stringdefault.StaticString(""),
-							Description: "The inline `.proto` file source used when `service_definition = \"PROTO_FILE\"` in `BEHAVIOR` mode. Forbidden when `encoding = \"FLATBUFFERS\"`.",
-						},
-						"bfbs_content": schema.StringAttribute{
-							Optional:    true,
-							Computed:    true,
-							Default:     stringdefault.StaticString(""),
-							Description: "A base64-encoded binary FlatBuffers schema (`.bfbs`), at most 100 KiB once encoded. Required when `encoding = \"FLATBUFFERS\"` and forbidden otherwise. Generate it with `flatc -b --schema --bfbs-builtins schema.fbs` and load it with Terraform's `filebase64()` function.",
-							Validators: []validator.String{
-								grpcMonitorBfbsContentValidator{},
-							},
-						},
-						"method": schema.StringAttribute{
-							Optional:    true,
-							Computed:    true,
-							Default:     stringdefault.StaticString(""),
-							Description: "The fully-qualified gRPC method to invoke in `BEHAVIOR` mode (e.g. `package.Service/Method`). Required in `BEHAVIOR` mode; forbidden in `HEALTH` mode.",
-						},
-						"message": schema.StringAttribute{
-							Optional:    true,
-							Computed:    true,
-							Default:     stringdefault.StaticString(""),
-							Description: "The JSON request message sent as the gRPC call payload in `BEHAVIOR` mode.",
+				Attributes: map[string]schema.Attribute{
+					"host": schema.StringAttribute{
+						Required:    true,
+						Description: "The host to connect to. Do not include a scheme or a port in this value.",
+					},
+					"port": schema.Int64Attribute{
+						Required:    true,
+						Description: "The port number to connect to. Possible values are between 1 and 65535.",
+						Validators: []validator.Int64{
+							int64validator.Between(1, 65535),
 						},
 					},
-					Blocks: map[string]schema.Block{
-						"metadata": schema.SetNestedBlock{
-							Description: "gRPC metadata (request headers) sent with the call.",
-							NestedObject: schema.NestedBlockObject{
-								// Attributes nested in this set block must not
-								// use schema defaults. The framework looks up
-								// configuration values for set elements by full
-								// element value; once computed attributes
-								// resolve, the lookup misses, the configuration
-								// is treated as null, and defaults would
-								// override values the practitioner actually
-								// configured, producing a perpetual diff.
-								// Default values are instead applied in
-								// ModifyPlan.
-								Attributes: map[string]schema.Attribute{
-									"key": schema.StringAttribute{
-										Required:    true,
-										Description: "The gRPC metadata (header) key.",
-									},
-									"value": schema.StringAttribute{
-										Optional:    true,
-										Computed:    true,
-										Description: "The gRPC metadata (header) value.",
-									},
+					"ip_family": schema.StringAttribute{
+						Optional:    true,
+						Computed:    true,
+						Default:     stringdefault.StaticString("IPv4"),
+						Description: "The IP family to use when executing the gRPC check. The value can be either `IPv4` or `IPv6`. (Default `IPv4`).",
+						Validators: []validator.String{
+							stringvalidator.OneOf("IPv4", "IPv6"),
+						},
+					},
+					"grpc_mode": schema.StringAttribute{
+						Optional:    true,
+						Computed:    true,
+						Default:     stringdefault.StaticString("BEHAVIOR"),
+						Description: "The gRPC monitoring mode. `BEHAVIOR` invokes a unary method (requires `method`); `HEALTH` queries the standard gRPC health-check service (allows `service`). (Default `BEHAVIOR`).",
+						Validators: []validator.String{
+							stringvalidator.OneOf("BEHAVIOR", "HEALTH"),
+						},
+					},
+					"tls": schema.BoolAttribute{
+						Optional:    true,
+						Computed:    true,
+						Default:     booldefault.StaticBool(true),
+						Description: "Whether to use a TLS-encrypted connection to the gRPC server. (Default `true`).",
+					},
+					"skip_ssl": schema.BoolAttribute{
+						Optional:    true,
+						Computed:    true,
+						Default:     booldefault.StaticBool(false),
+						Description: "Whether to skip SSL certificate validation when `tls` is enabled. (Default `false`).",
+					},
+					// timeout has the API's default rather than keeping
+					// its prior state value: the update endpoint keeps the
+					// stored value of an omitted field, so removing
+					// timeout from the configuration must send the
+					// default explicitly.
+					"timeout": schema.Int64Attribute{
+						Optional:    true,
+						Computed:    true,
+						Default:     int64default.StaticInt64(60),
+						Description: "The number of seconds to wait for the gRPC call to complete before timing out. Possible values are between 1 and 180. (Default `60`).",
+						Validators: []validator.Int64{
+							int64validator.Between(1, 180),
+						},
+					},
+					"service": schema.StringAttribute{
+						Optional:    true,
+						Computed:    true,
+						Default:     stringdefault.StaticString(""),
+						Description: "The service name to query in `HEALTH` mode. An empty value queries overall server health. Forbidden in `BEHAVIOR` mode.",
+					},
+					// encoding and service_definition have schema
+					// defaults rather than keeping their prior state
+					// value: the update endpoint keeps stored values for
+					// omitted fields, so removing either from the
+					// configuration must send the default explicitly to
+					// switch the monitor back.
+					"encoding": schema.StringAttribute{
+						Optional:    true,
+						Computed:    true,
+						Default:     stringdefault.StaticString("PROTOBUF"),
+						Description: "The wire encoding used in `BEHAVIOR` mode. Possible values are `PROTOBUF` and `FLATBUFFERS`. (Default `PROTOBUF`).",
+						Validators: []validator.String{
+							stringvalidator.OneOf("PROTOBUF", "FLATBUFFERS"),
+						},
+					},
+					"service_definition": schema.StringAttribute{
+						Optional:    true,
+						Computed:    true,
+						Default:     stringdefault.StaticString("REFLECTION"),
+						Description: "How the service definition is resolved in `BEHAVIOR` mode: `REFLECTION` uses server reflection; `PROTO_FILE` uses the inline `proto_content`. Forbidden when `encoding = \"FLATBUFFERS\"`. (Default `REFLECTION`).",
+						Validators: []validator.String{
+							stringvalidator.OneOf("REFLECTION", "PROTO_FILE"),
+						},
+					},
+					"proto_content": schema.StringAttribute{
+						Optional:    true,
+						Computed:    true,
+						Default:     stringdefault.StaticString(""),
+						Description: "The inline `.proto` file source used when `service_definition = \"PROTO_FILE\"` in `BEHAVIOR` mode. Forbidden when `encoding = \"FLATBUFFERS\"`.",
+					},
+					"bfbs_content": schema.StringAttribute{
+						Optional:    true,
+						Computed:    true,
+						Default:     stringdefault.StaticString(""),
+						Description: "A base64-encoded binary FlatBuffers schema (`.bfbs`), at most 100 KiB once encoded. Required when `encoding = \"FLATBUFFERS\"` and forbidden otherwise. Generate it with `flatc -b --schema --bfbs-builtins schema.fbs` and load it with Terraform's `filebase64()` function.",
+						Validators: []validator.String{
+							grpcMonitorBfbsContentValidator{},
+						},
+					},
+					"method": schema.StringAttribute{
+						Optional:    true,
+						Computed:    true,
+						Default:     stringdefault.StaticString(""),
+						Description: "The fully-qualified gRPC method to invoke in `BEHAVIOR` mode (e.g. `package.Service/Method`). Required in `BEHAVIOR` mode; forbidden in `HEALTH` mode.",
+					},
+					"message": schema.StringAttribute{
+						Optional:    true,
+						Computed:    true,
+						Default:     stringdefault.StaticString(""),
+						Description: "The JSON request message sent as the gRPC call payload in `BEHAVIOR` mode.",
+					},
+					"metadata": schema.SetNestedAttribute{
+						Optional:    true,
+						Computed:    true,
+						Default:     setdefault.StaticValue(types.SetValueMust(types.ObjectType{AttrTypes: grpcMonitorMetadataAttrTypes}, []attr.Value{})),
+						Description: "gRPC metadata (request headers) sent with the call.",
+						NestedObject: schema.NestedAttributeObject{
+							// Attributes nested in this set attribute must
+							// not use schema defaults. The framework looks
+							// up configuration values for set elements by
+							// full element value; once computed attributes
+							// resolve, the lookup misses, the configuration
+							// is treated as null, and defaults would
+							// override values the practitioner actually
+							// configured, producing a perpetual diff.
+							// Default values are instead applied in
+							// ModifyPlan.
+							Attributes: map[string]schema.Attribute{
+								"key": schema.StringAttribute{
+									Required:    true,
+									Description: "The gRPC metadata (header) key.",
+								},
+								"value": schema.StringAttribute{
+									Optional:    true,
+									Computed:    true,
+									Description: "The gRPC metadata (header) value.",
 								},
 							},
 						},
-						// The full per-source assertion rules (allowed
-						// comparisons, property usage, target formats) are
-						// documented in the "Assertion Reference" section of
-						// templates/resources/grpc_monitor.md.tmpl. When
-						// assertion sources or their rules change here or in
-						// the API, update that template too — it is not
-						// generated from this schema.
-						"assertion": schema.SetNestedBlock{
-							Description: "A request can have multiple assertions. The allowed comparisons, properties, and target formats depend on the assertion source — see the [Assertion Reference](#assertion-reference) below.",
-							NestedObject: schema.NestedBlockObject{
-								// Attributes nested in this set block must not
-								// use schema defaults (see the metadata block).
-								// Default values are instead applied in
-								// ModifyPlan.
-								Attributes: map[string]schema.Attribute{
-									"source": schema.StringAttribute{
-										Required:    true,
-										Description: "The source of the asserted value. Possible values are `RESPONSE_TIME`, `GRPC_RESPONSE`, `TEXT_BODY`, `GRPC_METADATA`, `GRPC_HEALTHCHECK_STATUS`, and `GRPC_STATUS_CODE`.",
-										Validators: []validator.String{
-											stringvalidator.OneOf("RESPONSE_TIME", "GRPC_RESPONSE", "TEXT_BODY", "GRPC_METADATA", "GRPC_HEALTHCHECK_STATUS", "GRPC_STATUS_CODE"),
-										},
+					},
+					// The full per-source assertion rules (allowed
+					// comparisons, property usage, target formats) are
+					// documented in the "Assertion Reference" section of
+					// templates/resources/grpc_monitor.md.tmpl. When
+					// assertion sources or their rules change here or in
+					// the API, update that template too — it is not
+					// generated from this schema.
+					"assertion": schema.SetNestedAttribute{
+						Optional:    true,
+						Computed:    true,
+						Default:     setdefault.StaticValue(types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{})),
+						Description: "A request can have multiple assertions. The allowed comparisons, properties, and target formats depend on the assertion source — see the [Assertion Reference](#assertion-reference) below.",
+						NestedObject: schema.NestedAttributeObject{
+							// Attributes nested in this set attribute must
+							// not use schema defaults (see metadata).
+							// Default values are instead applied in
+							// ModifyPlan.
+							Attributes: map[string]schema.Attribute{
+								"source": schema.StringAttribute{
+									Required:    true,
+									Description: "The source of the asserted value. Possible values are `RESPONSE_TIME`, `GRPC_RESPONSE`, `TEXT_BODY`, `GRPC_METADATA`, `GRPC_HEALTHCHECK_STATUS`, and `GRPC_STATUS_CODE`.",
+									Validators: []validator.String{
+										stringvalidator.OneOf("RESPONSE_TIME", "GRPC_RESPONSE", "TEXT_BODY", "GRPC_METADATA", "GRPC_HEALTHCHECK_STATUS", "GRPC_STATUS_CODE"),
 									},
-									"property": schema.StringAttribute{
-										Optional:    true,
-										Computed:    true,
-										Description: "The property selecting the asserted value within the source, e.g. a JSONPath expression for `GRPC_RESPONSE` or a metadata key for `GRPC_METADATA`.",
-									},
-									"comparison": schema.StringAttribute{
-										Required:    true,
-										Description: "The type of comparison to be executed between expected and actual value of the assertion. For `GRPC_RESPONSE`, `TEXT_BODY` and `GRPC_METADATA`, possible values are `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL`, and `NOT_NULL`. For `RESPONSE_TIME` and `GRPC_STATUS_CODE`, possible values are `EQUALS`, `NOT_EQUALS`, `GREATER_THAN`, and `LESS_THAN`. For `GRPC_HEALTHCHECK_STATUS`, possible values are `EQUALS` and `NOT_EQUALS`.",
-									},
-									"target": schema.StringAttribute{
-										Optional:    true,
-										Computed:    true,
-										Description: "The value to compare against. Must be numeric for `RESPONSE_TIME` (milliseconds), `GRPC_STATUS_CODE` (0-16), and `GRPC_HEALTHCHECK_STATUS` (0-3, where 0=UNKNOWN, 1=SERVING, 2=NOT_SERVING, 3=SERVICE_UNKNOWN).",
-									},
+								},
+								"property": schema.StringAttribute{
+									Optional:    true,
+									Computed:    true,
+									Description: "The property selecting the asserted value within the source, e.g. a JSONPath expression for `GRPC_RESPONSE` or a metadata key for `GRPC_METADATA`.",
+								},
+								"comparison": schema.StringAttribute{
+									Required:    true,
+									Description: "The type of comparison to be executed between expected and actual value of the assertion. For `GRPC_RESPONSE`, `TEXT_BODY` and `GRPC_METADATA`, possible values are `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL`, and `NOT_NULL`. For `RESPONSE_TIME` and `GRPC_STATUS_CODE`, possible values are `EQUALS`, `NOT_EQUALS`, `GREATER_THAN`, and `LESS_THAN`. For `GRPC_HEALTHCHECK_STATUS`, possible values are `EQUALS` and `NOT_EQUALS`.",
+								},
+								"target": schema.StringAttribute{
+									Optional:    true,
+									Computed:    true,
+									Description: "The value to compare against. Must be numeric for `RESPONSE_TIME` (milliseconds), `GRPC_STATUS_CODE` (0-16), and `GRPC_HEALTHCHECK_STATUS` (0-3, where 0=UNKNOWN, 1=SERVING, 2=NOT_SERVING, 3=SERVICE_UNKNOWN).",
 								},
 							},
 						},
 					},
 				},
 			},
+		},
+		Blocks: map[string]schema.Block{
 			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{
 				Monitor: true,
 			}),
@@ -450,19 +451,18 @@ func (r *GRPCMonitorResource) ConfigValidators(ctx context.Context) []resource.C
 // `REFLECTION` even on FLATBUFFERS monitors, so only an explicitly configured
 // value is a conflict.
 func (r *GRPCMonitorResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
-	var requests types.List
-	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("request"), &requests)...)
-	if resp.Diagnostics.HasError() || requests.IsNull() || requests.IsUnknown() || len(requests.Elements()) == 0 {
+	var obj types.Object
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("request"), &obj)...)
+	if resp.Diagnostics.HasError() || obj.IsNull() || obj.IsUnknown() {
 		return
 	}
 
-	var models []GRPCMonitorRequestModel
-	resp.Diagnostics.Append(requests.ElementsAs(ctx, &models, false)...)
+	var request GRPCMonitorRequestModel
+	resp.Diagnostics.Append(obj.As(ctx, &request, basetypes.ObjectAsOptions{})...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	request := models[0]
 	err := validateGRPCEncoding(grpcEncodingConfig{
 		mode:              configuredString(request.GRPCMode, "BEHAVIOR"),
 		encoding:          configuredString(request.Encoding, "PROTOBUF"),
@@ -472,7 +472,7 @@ func (r *GRPCMonitorResource) ValidateConfig(ctx context.Context, req resource.V
 	})
 	if err != nil {
 		resp.Diagnostics.AddAttributeError(
-			path.Root("request").AtListIndex(0),
+			path.Root("request"),
 			"Invalid gRPC Encoding Configuration",
 			err.Error(),
 		)
@@ -588,43 +588,25 @@ func (r *GRPCMonitorResource) Configure(ctx context.Context, req resource.Config
 	r.client = clientFromProviderData(req.ProviderData, &resp.Diagnostics)
 }
 
-// ModifyPlan applies default values to the optional+computed attributes
-// nested in the request.metadata and request.assertion set blocks. Schema
-// defaults cannot be used for these attributes (see the schema for details),
-// so the plan is adjusted here instead. Substituting static values keeps
-// every set element fully known and stable across plans, which set element
-// correlation requires. The request block itself is a list, so its own
-// attributes can keep using schema defaults.
+// ModifyPlan applies default values to the optional+computed attributes of
+// the request metadata and assertions. Schema defaults cannot be used for
+// attributes nested in set elements (see the schema for details), so the
+// plan is adjusted here instead. Substituting static values keeps every set
+// element fully known and stable across plans, which set element correlation
+// requires.
 func (r *GRPCMonitorResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
 	planNestedDefaults(ctx, req, resp, path.Root("request"), grpcMonitorRequestWithDefaults)
 }
 
-// grpcMonitorRequestWithDefaults returns the request block value with default
-// values substituted for null and unknown optional+computed attributes nested
-// in the metadata and assertion set blocks.
-func grpcMonitorRequestWithDefaults(ctx context.Context, list types.List, diags *diag.Diagnostics) types.List {
-	if list.IsNull() || list.IsUnknown() {
-		return list
-	}
-
-	var models []GRPCMonitorRequestModel
-	diags.Append(list.ElementsAs(ctx, &models, false)...)
-	if diags.HasError() {
-		return list
-	}
-
-	for i, model := range models {
-		models[i].Metadata = grpcMonitorMetadataWithDefaults(ctx, model.Metadata, diags)
-		models[i].Assertion = assertionsWithPropertyAndTargetDefaults(ctx, model.Assertion, diags)
-	}
-
-	result, d := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: grpcMonitorRequestAttrTypes}, models)
-	diags.Append(d...)
-
-	return result
+// grpcMonitorRequestWithDefaults returns the request attribute value with
+// default values substituted for null and unknown optional+computed
+// attributes nested in the metadata and assertion sets.
+func grpcMonitorRequestWithDefaults(ctx context.Context, obj types.Object, diags *diag.Diagnostics) types.Object {
+	obj = objectWithSetDefaults("metadata", grpcMonitorMetadataWithDefaults)(ctx, obj, diags)
+	return objectWithSetDefaults("assertion", assertionsWithPropertyAndTargetDefaults)(ctx, obj, diags)
 }
 
-// grpcMonitorMetadataWithDefaults returns the request.metadata block value
+// grpcMonitorMetadataWithDefaults returns the request.metadata set value
 // with default values substituted for null and unknown optional+computed
 // attributes.
 func grpcMonitorMetadataWithDefaults(ctx context.Context, set types.Set, diags *diag.Diagnostics) types.Set {
@@ -799,7 +781,7 @@ func grpcMonitorFromModel(ctx context.Context, model *GRPCMonitorResourceModel, 
 		GroupID:                   model.GroupID.ValueInt64(),
 		GroupOrder:                int(model.GroupOrder.ValueInt64()),
 		PrivateLocations:          &privateLocations,
-		Request:                   grpcMonitorRequestFromList(ctx, model.Request, diags),
+		Request:                   grpcMonitorRequestFromObject(ctx, model.Request, diags),
 		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscription, diags),
 		RetryStrategy:             retryStrategyFromObject(ctx, model.RetryStrategy, diags),
 		TriggerIncident:           triggerIncidentFromObject(ctx, model.TriggerIncident, diags),
@@ -879,29 +861,29 @@ func grpcMonitorToModel(ctx context.Context, c *checkly.GRPCMonitor, model *GRPC
 	model.GroupID = types.Int64Value(c.GroupID)
 	model.GroupOrder = types.Int64Value(int64(c.GroupOrder))
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, model.RetryStrategy, diags)
-	model.Request = grpcMonitorRequestToList(ctx, c.Request, diags)
+	model.Request = grpcMonitorRequestToObject(ctx, c.Request, diags)
 	model.AlertChannelSubscription = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, diags)
 	model.TriggerIncident = triggerIncidentToObject(ctx, c.TriggerIncident, diags)
 }
 
-// grpcMonitorRequestFromList converts the request block value to its API
-// representation.
-func grpcMonitorRequestFromList(ctx context.Context, list types.List, diags *diag.Diagnostics) checkly.GRPCRequest {
-	if list.IsNull() || list.IsUnknown() {
+// grpcMonitorRequestFromObject converts the request attribute value to its
+// API representation.
+func grpcMonitorRequestFromObject(ctx context.Context, obj types.Object, diags *diag.Diagnostics) checkly.GRPCRequest {
+	if obj.IsNull() || obj.IsUnknown() {
 		return checkly.GRPCRequest{}
 	}
 
-	var models []GRPCMonitorRequestModel
-	diags.Append(list.ElementsAs(ctx, &models, false)...)
-	if diags.HasError() || len(models) == 0 {
+	var model GRPCMonitorRequestModel
+	diags.Append(obj.As(ctx, &model, basetypes.ObjectAsOptions{})...)
+	if diags.HasError() {
 		return checkly.GRPCRequest{}
 	}
 
-	return grpcMonitorRequestFromModel(ctx, models[0], diags)
+	return grpcMonitorRequestFromModel(ctx, model, diags)
 }
 
-// grpcMonitorRequestFromModel converts a request block element to its API
-// representation.
+// grpcMonitorRequestFromModel converts the request attribute model to its
+// API representation.
 func grpcMonitorRequestFromModel(ctx context.Context, model GRPCMonitorRequestModel, diags *diag.Diagnostics) checkly.GRPCRequest {
 	config := checkly.GRPCConfig{
 		Mode:              model.GRPCMode.ValueString(),
@@ -937,32 +919,30 @@ func grpcMonitorRequestFromModel(ctx context.Context, model GRPCMonitorRequestMo
 	}
 }
 
-// grpcMonitorRequestToList converts the API representation of a gRPC request
-// to the request block value.
-func grpcMonitorRequestToList(ctx context.Context, r checkly.GRPCRequest, diags *diag.Diagnostics) types.List {
-	list, d := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: grpcMonitorRequestAttrTypes}, []GRPCMonitorRequestModel{
-		{
-			Host:              types.StringValue(r.URL),
-			Port:              types.Int64Value(int64(grpcPortToInt(r.Port))),
-			IPFamily:          types.StringValue(r.IPFamily),
-			GRPCMode:          types.StringValue(r.GRPCConfig.Mode),
-			TLS:               types.BoolValue(r.GRPCConfig.TLS),
-			SkipSSL:           types.BoolValue(r.SkipSSL),
-			Timeout:           types.Int64Value(int64(r.Timeout)),
-			Encoding:          types.StringValue(r.GRPCConfig.Encoding),
-			Service:           types.StringValue(r.GRPCConfig.Service),
-			ServiceDefinition: types.StringValue(r.GRPCConfig.ServiceDefinition),
-			ProtoContent:      types.StringValue(r.GRPCConfig.ProtoContent),
-			BfbsContent:       types.StringValue(r.GRPCConfig.BfbsContent),
-			Method:            types.StringValue(r.GRPCConfig.Method),
-			Message:           types.StringValue(r.GRPCConfig.Message),
-			Metadata:          grpcMonitorMetadataToSet(ctx, r.GRPCConfig.Metadata, diags),
-			Assertion:         assertionsToSet(ctx, r.Assertions, diags),
-		},
+// grpcMonitorRequestToObject converts the API representation of a gRPC
+// request to the request attribute value.
+func grpcMonitorRequestToObject(ctx context.Context, r checkly.GRPCRequest, diags *diag.Diagnostics) types.Object {
+	obj, d := types.ObjectValueFrom(ctx, grpcMonitorRequestAttrTypes, GRPCMonitorRequestModel{
+		Host:              types.StringValue(r.URL),
+		Port:              types.Int64Value(int64(grpcPortToInt(r.Port))),
+		IPFamily:          types.StringValue(r.IPFamily),
+		GRPCMode:          types.StringValue(r.GRPCConfig.Mode),
+		TLS:               types.BoolValue(r.GRPCConfig.TLS),
+		SkipSSL:           types.BoolValue(r.SkipSSL),
+		Timeout:           types.Int64Value(int64(r.Timeout)),
+		Encoding:          types.StringValue(r.GRPCConfig.Encoding),
+		Service:           types.StringValue(r.GRPCConfig.Service),
+		ServiceDefinition: types.StringValue(r.GRPCConfig.ServiceDefinition),
+		ProtoContent:      types.StringValue(r.GRPCConfig.ProtoContent),
+		BfbsContent:       types.StringValue(r.GRPCConfig.BfbsContent),
+		Method:            types.StringValue(r.GRPCConfig.Method),
+		Message:           types.StringValue(r.GRPCConfig.Message),
+		Metadata:          grpcMonitorMetadataToSet(ctx, r.GRPCConfig.Metadata, diags),
+		Assertion:         assertionsToSet(ctx, r.Assertions, diags),
 	})
 	diags.Append(d...)
 
-	return list
+	return obj
 }
 
 // grpcPortToInt coerces the SDK's open `interface{}` port (a JSON number
@@ -980,7 +960,7 @@ func grpcPortToInt(p any) int {
 	return 0
 }
 
-// grpcMonitorMetadataFromSet converts the request.metadata block value to its
+// grpcMonitorMetadataFromSet converts the request.metadata set value to its
 // API representation.
 func grpcMonitorMetadataFromSet(ctx context.Context, set types.Set, diags *diag.Diagnostics) []checkly.GRPCMetadata {
 	metadata := []checkly.GRPCMetadata{}
@@ -1006,7 +986,7 @@ func grpcMonitorMetadataFromSet(ctx context.Context, set types.Set, diags *diag.
 }
 
 // grpcMonitorMetadataToSet converts the API representation of gRPC metadata
-// to the request.metadata block value.
+// to the request.metadata set value.
 func grpcMonitorMetadataToSet(ctx context.Context, metadata []checkly.GRPCMetadata, diags *diag.Diagnostics) types.Set {
 	models := make([]GRPCMonitorMetadataModel, len(metadata))
 	for i, m := range metadata {

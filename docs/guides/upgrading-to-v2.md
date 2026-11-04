@@ -73,12 +73,14 @@ This affects:
 | `checkly_check_group` | `alert_settings` (and nested objects as above), `api_check_defaults` (and its `basic_auth` and `assertion`), `retry_strategy` (and its `only_on`) |
 | `checkly_check_group_v2` | `api_check_defaults` (and its `basic_auth` and `assertion`), `enforce_alert_settings` (and its `alert_settings` and `alert_channel_subscription`), `enforce_locations`, `enforce_retry_strategy` (and its `retry_strategy`), `enforce_scheduling_strategy` |
 | `checkly_heartbeat`, `checkly_heartbeat_monitor` | `alert_settings` (and nested objects as above), `trigger_incident` |
-| `checkly_url_monitor` | `alert_settings` (and nested objects as above), `retry_strategy` (and its `only_on`), `trigger_incident` |
-| `checkly_dns_monitor`, `checkly_grpc_monitor`, `checkly_icmp_monitor`, `checkly_tcp_check`, `checkly_tcp_monitor`, `checkly_traceroute_monitor` | `alert_settings` (and nested objects as above), `retry_strategy`, `trigger_incident` |
+| `checkly_url_monitor` | `alert_settings` (and nested objects as above), `request` (and its `assertion`), `retry_strategy` (and its `only_on`), `trigger_incident` |
+| `checkly_dns_monitor` | `alert_settings` (and nested objects as above), `request` (and its `assertion` and `name_server`), `retry_strategy`, `trigger_incident` |
+| `checkly_grpc_monitor` | `alert_settings` (and nested objects as above), `request` (and its `assertion` and `metadata`), `retry_strategy`, `trigger_incident` |
+| `checkly_icmp_monitor`, `checkly_tcp_check`, `checkly_tcp_monitor`, `checkly_traceroute_monitor` | `alert_settings` (and nested objects as above), `request` (and its `assertion`), `retry_strategy`, `trigger_incident` |
 | `checkly_ssl_monitor` | `alert_settings` (and nested objects as above), `request.client_certificate`, `retry_strategy`, `trigger_incident` |
 | `checkly_playwright_check_suite` | `alert_settings` (and nested objects as above), `runtime` (and its `engine`, `playwright`, `steps`), `trigger_incident` |
 
-The table lists every such attribute. All other blocks, such as `request` and its `assertion` in `checkly_tcp_check` and the monitor resource types, `alert_channel_subscription` and `heartbeat`, keep their block syntax.
+The table lists every such attribute. All other blocks, such as `request` and its `assertion` in `checkly_ssl_monitor`, `alert_channel_subscription` and `heartbeat`, keep their block syntax.
 
 ### Removed attributes
 

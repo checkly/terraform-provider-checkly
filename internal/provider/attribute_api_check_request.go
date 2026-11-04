@@ -133,7 +133,7 @@ func apiCheckRequestAttributeSchema(opts apiCheckRequestAttributeSchemaOptions) 
 					// configuration is treated as null, and defaults would
 					// override values the practitioner actually configured,
 					// producing a perpetual diff. Default values are instead
-					// applied in ModifyPlan (see apiCheckRequestWithDefaults).
+					// applied in ModifyPlan.
 					Attributes: map[string]schema.Attribute{
 						"source": schema.StringAttribute{
 							Required:    true,
@@ -178,30 +178,6 @@ func apiCheckRequestAttributeSchema(opts apiCheckRequestAttributeSchemaOptions) 
 			},
 		},
 	}
-}
-
-// apiCheckRequestWithDefaults returns the request attribute value with
-// empty strings substituted for null and unknown assertion properties and
-// targets. It is called from ModifyPlan of the resources using the
-// attribute, because schema defaults cannot be used for attributes nested
-// in set elements (see the schema for details).
-func apiCheckRequestWithDefaults(ctx context.Context, obj types.Object, diags *diag.Diagnostics) types.Object {
-	if obj.IsNull() || obj.IsUnknown() {
-		return obj
-	}
-
-	var model apiCheckRequestModel
-	diags.Append(obj.As(ctx, &model, basetypes.ObjectAsOptions{})...)
-	if diags.HasError() {
-		return obj
-	}
-
-	model.Assertion = assertionsWithPropertyAndTargetDefaults(ctx, model.Assertion, diags)
-
-	result, d := types.ObjectValueFrom(ctx, apiCheckRequestAttrTypes, model)
-	diags.Append(d...)
-
-	return result
 }
 
 // apiCheckRequestFromObject converts the request attribute value to its API

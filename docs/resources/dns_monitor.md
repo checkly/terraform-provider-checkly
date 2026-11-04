@@ -23,20 +23,20 @@ resource "checkly_dns_monitor" "example-dns-monitor" {
     "eu-west-1"
   ]
 
-  request {
+  request = {
     record_type = "A"
     query       = "welcome.checklyhq.com"
 
-    name_server {
+    name_server = {
       host = "1.1.1.1"
       port = 53
     }
 
-    assertion {
+    assertion = [{
       source     = "RESPONSE_CODE"
       comparison = "EQUALS"
       target     = "NOERROR"
-    }
+    }]
   }
 }
 ```
@@ -49,6 +49,7 @@ resource "checkly_dns_monitor" "example-dns-monitor" {
 - `activated` (Boolean) Determines whether the monitor will run periodically or not after being deployed.
 - `frequency` (Number) Controls how often the monitor should run. Defined in minutes. The allowed values are `0` (high frequency - use `frequency_offset` to define the actual frequency), `1` (1 minute), `2` (2 minutes), `5` (5 minutes), `10` (10 minutes), `15` (15 minutes), `30` (30 minutes), `60` (1 hour), `120` (2 hours), `180` (3 hours), `360` (6 hours), `720` (12 hours) and `1440` (24 hours).
 - `name` (String) The name of the monitor.
+- `request` (Attributes) The parameters of the DNS request. (see [below for nested schema](#nestedatt--request))
 
 ### Optional
 
@@ -62,7 +63,6 @@ resource "checkly_dns_monitor" "example-dns-monitor" {
 - `locations` (Set of String) An array of one or more data center locations where to run the this monitor.
 - `max_response_time` (Number) The response time in milliseconds where the monitor should be considered failing. Possible values are between `0` and `5000`. (Default `1000`).
 - `muted` (Boolean) Determines if any notifications will be sent out when the monitor fails and/or recovers. (Default `false`).
-- `request` (Block List) The parameters of the DNS request. (see [below for nested schema](#nestedblock--request))
 - `retry_strategy` (Attributes) A strategy for retrying failed check/monitor runs. (see [below for nested schema](#nestedatt--retry_strategy))
 - `run_parallel` (Boolean) Determines whether the monitor should run on all selected locations in parallel or round-robin. (Default `false`).
 - `tags` (Set of String) A list of tags for organizing and filtering checks and monitors.
@@ -72,6 +72,44 @@ resource "checkly_dns_monitor" "example-dns-monitor" {
 ### Read-Only
 
 - `id` (String) The ID of the monitor.
+
+<a id="nestedatt--request"></a>
+### Nested Schema for `request`
+
+Required:
+
+- `query` (String) The DNS record to query.
+- `record_type` (String) The DNS record type. Possible values are `A`, `AAAA`, `CNAME`, `MX`, `NS`, `TXT` and `SOA`.
+
+Optional:
+
+- `assertion` (Attributes Set) Assertions to validate the DNS response. (see [below for nested schema](#nestedatt--request--assertion))
+- `name_server` (Attributes) The name server to use. (see [below for nested schema](#nestedatt--request--name_server))
+- `protocol` (String) The protocol used to communicate with the name server. Possible values are `UDP` and `TCP`. (Default `UDP`).
+
+<a id="nestedatt--request--assertion"></a>
+### Nested Schema for `request.assertion`
+
+Required:
+
+- `comparison` (String) The type of comparison to be executed between expected and actual value of the assertion. Possible values are `EQUALS`, `NOT_EQUALS`, `GREATER_THAN` and `LESS_THAN`.
+- `source` (String) The source of the asserted value. Possible values are `RESPONSE_CODE`, `RESPONSE_TIME`, `TEXT_ANSWER` and `JSON_ANSWER`.
+- `target` (String) The target value. Typically `NOERROR` when the source is `RESPONSE_CODE`.
+
+Optional:
+
+- `property` (String)
+
+
+<a id="nestedatt--request--name_server"></a>
+### Nested Schema for `request.name_server`
+
+Optional:
+
+- `host` (String) The name server host.
+- `port` (Number) The name server port.
+
+
 
 <a id="nestedblock--alert_channel_subscription"></a>
 ### Nested Schema for `alert_channel_subscription`
@@ -125,44 +163,6 @@ Optional:
 Optional:
 
 - `minutes_failing_threshold` (Number) Send an alert notification after the monitor has been failing for the given amount of time (in minutes). Possible values are `5`, `10`, `15`, and `30`. (Default `5`).
-
-
-
-<a id="nestedblock--request"></a>
-### Nested Schema for `request`
-
-Required:
-
-- `query` (String) The DNS record to query.
-- `record_type` (String) The DNS record type. Possible values are `A`, `AAAA`, `CNAME`, `MX`, `NS`, `TXT` and `SOA`.
-
-Optional:
-
-- `assertion` (Block Set) Assertions to validate the DNS response. (see [below for nested schema](#nestedblock--request--assertion))
-- `name_server` (Block List) The name server to use. (see [below for nested schema](#nestedblock--request--name_server))
-- `protocol` (String) The protocol used to communicate with the name server. Possible values are `UDP` and `TCP`. (Default `UDP`).
-
-<a id="nestedblock--request--assertion"></a>
-### Nested Schema for `request.assertion`
-
-Required:
-
-- `comparison` (String) The type of comparison to be executed between expected and actual value of the assertion. Possible values are `EQUALS`, `NOT_EQUALS`, `GREATER_THAN` and `LESS_THAN`.
-- `source` (String) The source of the asserted value. Possible values are `RESPONSE_CODE`, `RESPONSE_TIME`, `TEXT_ANSWER` and `JSON_ANSWER`.
-- `target` (String) The target value. Typically `NOERROR` when the source is `RESPONSE_CODE`.
-
-Optional:
-
-- `property` (String)
-
-
-<a id="nestedblock--request--name_server"></a>
-### Nested Schema for `request.name_server`
-
-Optional:
-
-- `host` (String) The name server host.
-- `port` (Number) The name server port.
 
 
 

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -93,7 +94,7 @@ func TestBfbsContentValidation(t *testing.T) {
 		{strings.Repeat("A", maxGRPCSchemaContentLength+4), false},
 	} {
 		req := validator.StringRequest{
-			Path:        path.Root("request").AtListIndex(0).AtName("bfbs_content"),
+			Path:        path.Root("request").AtName("bfbs_content"),
 			ConfigValue: types.StringValue(test.value),
 		}
 		var resp validator.StringResponse
@@ -167,16 +168,8 @@ func TestAccGRPCMonitorRequiredFields(t *testing.T) {
 			ExpectError: regexp.MustCompile(`The argument "frequency" is required, but no definition was found.`),
 		},
 		{
-			// Terraform only reports the missing request block once all
-			// required attributes are present.
-			Config: `
-				resource "checkly_grpc_monitor" "test" {
-					name      = "test-required-fields"
-					activated = true
-					frequency = 5
-				}
-			`,
-			ExpectError: regexp.MustCompile(`Block request must have a configuration value`),
+			Config:      config,
+			ExpectError: regexp.MustCompile(`The argument "request" is required, but no definition was found.`),
 		},
 	})
 }
@@ -192,18 +185,18 @@ func TestAccGRPCMonitorInvalidAssertionSource(t *testing.T) {
 				  activated = true
 				  frequency = 5
 				  locations = ["us-east-1"]
-				  request {
+				  request = {
 					host = "grpc.example.com"
 					port = 443
-					assertion {
+					assertion = [{
 					  source     = "GRPC_STATUSCODE"
 					  comparison = "EQUALS"
 					  target     = "0"
-					}
+					}]
 				  }
 				}
 			`,
-			ExpectError: regexp.MustCompile(`(?s)request\[0\]\.assertion\[.*\]\.source\s+value\s+must\s+be\s+one\s+of`),
+			ExpectError: regexp.MustCompile(`(?s)request\.assertion\[.*\]\.source\s+value\s+must\s+be\s+one\s+of`),
 		},
 	})
 }
@@ -235,22 +228,22 @@ func TestAccGRPCMonitorBasic(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_grpc_monitor.test",
-					"request.0.host",
+					"request.host",
 					"grpcb.in",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_grpc_monitor.test",
-					"request.0.port",
+					"request.port",
 					"9000",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_grpc_monitor.test",
-					"request.0.grpc_mode",
+					"request.grpc_mode",
 					"HEALTH",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_grpc_monitor.test",
-					"request.0.service",
+					"request.service",
 					"grpcbin.GRPCBin",
 				),
 			),
@@ -290,27 +283,27 @@ func TestAccGRPCMonitorFull(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_grpc_monitor.test",
-					"request.0.grpc_mode",
+					"request.grpc_mode",
 					"BEHAVIOR",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_grpc_monitor.test",
-					"request.0.method",
+					"request.method",
 					"grpcbin.GRPCBin/DummyUnary",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_grpc_monitor.test",
-					"request.0.service_definition",
+					"request.service_definition",
 					"REFLECTION",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_grpc_monitor.test",
-					"request.0.assertion.#",
+					"request.assertion.#",
 					"2",
 				),
 				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_grpc_monitor.test",
-					"request.0.assertion.*",
+					"request.assertion.*",
 					map[string]string{
 						"source":     "GRPC_STATUS_CODE",
 						"comparison": "EQUALS",
@@ -319,7 +312,7 @@ func TestAccGRPCMonitorFull(t *testing.T) {
 				),
 				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_grpc_monitor.test",
-					"request.0.metadata.*",
+					"request.metadata.*",
 					map[string]string{
 						"key":   "x-api-key",
 						"value": "supersecret",
@@ -352,8 +345,8 @@ func TestAccGRPCMonitorFlatBuffers(t *testing.T) {
 				method       = "example.Greeter/Greet"
 			`),
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(name, "request.0.encoding", "FLATBUFFERS"),
-				resource.TestCheckResourceAttr(name, "request.0.bfbs_content", schema1),
+				resource.TestCheckResourceAttr(name, "request.encoding", "FLATBUFFERS"),
+				resource.TestCheckResourceAttr(name, "request.bfbs_content", schema1),
 			),
 		},
 		{
@@ -362,7 +355,7 @@ func TestAccGRPCMonitorFlatBuffers(t *testing.T) {
 				bfbs_content = base64encode("schema-2")
 				method       = "example.Greeter/Greet"
 			`),
-			Check: resource.TestCheckResourceAttr(name, "request.0.bfbs_content", schema2),
+			Check: resource.TestCheckResourceAttr(name, "request.bfbs_content", schema2),
 		},
 		{
 			// Unset encoding and bfbs_content.
@@ -370,9 +363,9 @@ func TestAccGRPCMonitorFlatBuffers(t *testing.T) {
 				method = "example.Greeter/Greet"
 			`),
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(name, "request.0.encoding", "PROTOBUF"),
-				resource.TestCheckResourceAttr(name, "request.0.bfbs_content", ""),
-				resource.TestCheckResourceAttr(name, "request.0.service_definition", "REFLECTION"),
+				resource.TestCheckResourceAttr(name, "request.encoding", "PROTOBUF"),
+				resource.TestCheckResourceAttr(name, "request.bfbs_content", ""),
+				resource.TestCheckResourceAttr(name, "request.service_definition", "REFLECTION"),
 			),
 		},
 		{
@@ -382,8 +375,8 @@ func TestAccGRPCMonitorFlatBuffers(t *testing.T) {
 				method             = "example.Greeter/Greet"
 			`),
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(name, "request.0.encoding", "PROTOBUF"),
-				resource.TestCheckResourceAttr(name, "request.0.service_definition", "PROTO_FILE"),
+				resource.TestCheckResourceAttr(name, "request.encoding", "PROTOBUF"),
+				resource.TestCheckResourceAttr(name, "request.service_definition", "PROTO_FILE"),
 			),
 		},
 		{
@@ -392,8 +385,8 @@ func TestAccGRPCMonitorFlatBuffers(t *testing.T) {
 				method = "example.Greeter/Greet"
 			`),
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(name, "request.0.service_definition", "REFLECTION"),
-				resource.TestCheckResourceAttr(name, "request.0.proto_content", ""),
+				resource.TestCheckResourceAttr(name, "request.service_definition", "REFLECTION"),
+				resource.TestCheckResourceAttr(name, "request.proto_content", ""),
 			),
 		},
 		{
@@ -402,7 +395,7 @@ func TestAccGRPCMonitorFlatBuffers(t *testing.T) {
 				proto_content      = "syntax = \"proto3\";"
 				method             = "example.Greeter/Greet"
 			`),
-			Check: resource.TestCheckResourceAttr(name, "request.0.service_definition", "PROTO_FILE"),
+			Check: resource.TestCheckResourceAttr(name, "request.service_definition", "PROTO_FILE"),
 		},
 		{
 			// Switch from a proto file straight to FlatBuffers, unsetting
@@ -413,9 +406,9 @@ func TestAccGRPCMonitorFlatBuffers(t *testing.T) {
 				method       = "example.Greeter/Greet"
 			`),
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(name, "request.0.encoding", "FLATBUFFERS"),
-				resource.TestCheckResourceAttr(name, "request.0.bfbs_content", schema1),
-				resource.TestCheckResourceAttr(name, "request.0.proto_content", ""),
+				resource.TestCheckResourceAttr(name, "request.encoding", "FLATBUFFERS"),
+				resource.TestCheckResourceAttr(name, "request.bfbs_content", schema1),
+				resource.TestCheckResourceAttr(name, "request.proto_content", ""),
 			),
 		},
 		{
@@ -424,10 +417,10 @@ func TestAccGRPCMonitorFlatBuffers(t *testing.T) {
 				grpc_mode = "HEALTH"
 			`),
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(name, "request.0.grpc_mode", "HEALTH"),
-				resource.TestCheckResourceAttr(name, "request.0.encoding", "PROTOBUF"),
-				resource.TestCheckResourceAttr(name, "request.0.bfbs_content", ""),
-				resource.TestCheckResourceAttr(name, "request.0.method", ""),
+				resource.TestCheckResourceAttr(name, "request.grpc_mode", "HEALTH"),
+				resource.TestCheckResourceAttr(name, "request.encoding", "PROTOBUF"),
+				resource.TestCheckResourceAttr(name, "request.bfbs_content", ""),
+				resource.TestCheckResourceAttr(name, "request.method", ""),
 			),
 		},
 		{
@@ -437,9 +430,9 @@ func TestAccGRPCMonitorFlatBuffers(t *testing.T) {
 				method       = "example.Greeter/Greet"
 			`),
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(name, "request.0.grpc_mode", "BEHAVIOR"),
-				resource.TestCheckResourceAttr(name, "request.0.encoding", "FLATBUFFERS"),
-				resource.TestCheckResourceAttr(name, "request.0.bfbs_content", schema2),
+				resource.TestCheckResourceAttr(name, "request.grpc_mode", "BEHAVIOR"),
+				resource.TestCheckResourceAttr(name, "request.encoding", "FLATBUFFERS"),
+				resource.TestCheckResourceAttr(name, "request.bfbs_content", schema2),
 			),
 		},
 		{
@@ -478,7 +471,7 @@ func TestAccGRPCMonitorFlatBuffersInvalidConfig(t *testing.T) {
 			encoding     = "FLATBUFFERS"
 			bfbs_content = "not base64!"
 			method       = "example.Greeter/Greet"
-		`, `(?s)request\[0\]\.bfbs_content must be\s+a\s+base64\s+string`},
+		`, `(?s)request\.bfbs_content\s+must\s+be\s+a\s+base64\s+string`},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -549,16 +542,16 @@ func TestAccGRPCMonitorUnsetAllAttributes(t *testing.T) {
 				timeout   = 30
 				message   = jsonencode({ name = "Checkly" })
 
-				metadata {
+				metadata = [{
 					key   = "x-key"
 					value = "value"
-				}
+				}]
 
-				assertion {
+				assertion = [{
 					source     = "GRPC_STATUS_CODE"
 					comparison = "EQUALS"
 					target     = "0"
-				}
+				}]
 			`),
 			Check: resource.ComposeAggregateTestCheckFunc(
 				resource.TestCheckResourceAttr(name, "description", "description"),
@@ -566,9 +559,9 @@ func TestAccGRPCMonitorUnsetAllAttributes(t *testing.T) {
 				resource.TestCheckResourceAttr(name, "trigger_incident.%", "5"),
 				resource.TestCheckResourceAttr(name, "private_locations.#", "1"),
 				resource.TestCheckResourceAttr(name, "runtime_id", "2023.09"),
-				resource.TestCheckResourceAttr(name, "request.0.timeout", "30"),
-				resource.TestCheckResourceAttr(name, "request.0.metadata.#", "1"),
-				resource.TestCheckResourceAttr(name, "request.0.assertion.#", "1"),
+				resource.TestCheckResourceAttr(name, "request.timeout", "30"),
+				resource.TestCheckResourceAttr(name, "request.metadata.#", "1"),
+				resource.TestCheckResourceAttr(name, "request.assertion.#", "1"),
 			),
 		},
 		{
@@ -587,33 +580,33 @@ func TestAccGRPCMonitorUnsetAllAttributes(t *testing.T) {
 				resource.TestCheckNoResourceAttr(name, "trigger_incident"),
 				resource.TestCheckNoResourceAttr(name, "private_locations.#"),
 				resource.TestCheckNoResourceAttr(name, "runtime_id"),
-				resource.TestCheckResourceAttr(name, "request.0.ip_family", "IPv4"),
-				resource.TestCheckResourceAttr(name, "request.0.tls", "true"),
-				resource.TestCheckResourceAttr(name, "request.0.skip_ssl", "false"),
-				resource.TestCheckResourceAttr(name, "request.0.timeout", "60"),
-				resource.TestCheckResourceAttr(name, "request.0.message", ""),
-				resource.TestCheckResourceAttr(name, "request.0.metadata.#", "0"),
-				resource.TestCheckResourceAttr(name, "request.0.assertion.#", "0"),
+				resource.TestCheckResourceAttr(name, "request.ip_family", "IPv4"),
+				resource.TestCheckResourceAttr(name, "request.tls", "true"),
+				resource.TestCheckResourceAttr(name, "request.skip_ssl", "false"),
+				resource.TestCheckResourceAttr(name, "request.timeout", "60"),
+				resource.TestCheckResourceAttr(name, "request.message", ""),
+				resource.TestCheckResourceAttr(name, "request.metadata.#", "0"),
+				resource.TestCheckResourceAttr(name, "request.assertion.#", "0"),
 			),
 		},
 		{
 			Config: config("", grpcUnsetHealthService),
-			Check:  resource.TestCheckResourceAttr(name, "request.0.service", "grpc.health.v1.Health"),
+			Check:  resource.TestCheckResourceAttr(name, "request.service", "grpc.health.v1.Health"),
 		},
 		{
 			Config: config("", `grpc_mode = "HEALTH"`),
-			Check:  resource.TestCheckResourceAttr(name, "request.0.service", ""),
+			Check:  resource.TestCheckResourceAttr(name, "request.service", ""),
 		},
 		{
 			Config: config("", grpcUnsetHealthService),
-			Check:  resource.TestCheckResourceAttr(name, "request.0.service", "grpc.health.v1.Health"),
+			Check:  resource.TestCheckResourceAttr(name, "request.service", "grpc.health.v1.Health"),
 		},
 		{
 			// Unset grpc_mode, switching back to BEHAVIOR, which has no service.
 			Config: config("", grpcUnsetMethod),
 			Check: resource.ComposeAggregateTestCheckFunc(
-				resource.TestCheckResourceAttr(name, "request.0.grpc_mode", "BEHAVIOR"),
-				resource.TestCheckResourceAttr(name, "request.0.service", ""),
+				resource.TestCheckResourceAttr(name, "request.grpc_mode", "BEHAVIOR"),
+				resource.TestCheckResourceAttr(name, "request.service", ""),
 			),
 		},
 	})
@@ -634,7 +627,7 @@ func TestAccGRPCMonitorUnsetFrequencyOffset(t *testing.T) {
 			  locations = ["us-east-1"]
 			  %s
 
-			  request {
+			  request = {
 				host   = "grpc.example.com"
 				port   = 443
 				method = "example.Greeter/Greet"
@@ -701,7 +694,7 @@ func grpcMonitorUnsetConfig(slug, monitor, request string) string {
 		  locations = ["us-east-1"]
 		  %s
 
-		  request {
+		  request = {
 			host = "grpc.example.com"
 			port = 443
 			%s
@@ -731,7 +724,7 @@ const grpcMonitor_basic = `
 	  activated = true
 	  frequency = 1
 	  locations = ["us-east-1"]
-	  request {
+	  request = {
 		host      = "grpcb.in"
 		port      = 9000
 		grpc_mode = "HEALTH"
@@ -752,7 +745,7 @@ const grpcMonitor_full = `
 		"us-east-1",
 		"eu-central-1",
 	  ]
-	  request {
+	  request = {
 		host               = "grpcb.in"
 		port               = 9000
 		grpc_mode          = "BEHAVIOR"
@@ -762,24 +755,22 @@ const grpcMonitor_full = `
 		method             = "grpcbin.GRPCBin/DummyUnary"
 		message            = jsonencode({ f_string = "hello" })
 
-		metadata {
+		metadata = [{
 		  key   = "x-api-key"
 		  value = "supersecret"
-		}
+		}]
 
-		assertion {
+		assertion = [{
 		  source     = "GRPC_STATUS_CODE"
 		  property   = ""
 		  comparison = "EQUALS"
 		  target     = "0"
-		}
-
-		assertion {
+		}, {
 		  source     = "RESPONSE_TIME"
 		  property   = ""
 		  comparison = "LESS_THAN"
 		  target     = "1000"
-		}
+		}]
 	  }
 
 	  alert_settings = {
@@ -796,7 +787,7 @@ const grpcMonitor_full = `
 `
 
 // grpcMonitorFlatBuffersConfig renders a deactivated monitor whose request
-// block holds the common connection settings plus the given attributes.
+// attribute holds the common connection settings plus the given attributes.
 func grpcMonitorFlatBuffersConfig(request string) string {
 	return fmt.Sprintf(`
 		resource "checkly_grpc_monitor" "test" {
@@ -805,7 +796,7 @@ func grpcMonitorFlatBuffersConfig(request string) string {
 		  frequency = 5
 		  locations = ["us-east-1"]
 
-		  request {
+		  request = {
 			host = "grpc.example.com"
 			port = 443
 			%s
@@ -823,10 +814,62 @@ const grpcMonitor_minimal = `
 	  activated = true
 	  frequency = 1
 	  locations = ["us-east-1"]
-	  request {
+	  request = {
 		host   = "grpcb.in"
 		port   = 9000
 		method = "grpcbin.GRPCBin/DummyUnary"
 	  }
 	}
 `
+
+// TestGRPCMonitorRequestWithDefaults asserts the plan defaults reach both
+// sets nested in the request: metadata values and assertion properties and
+// targets.
+func TestGRPCMonitorRequestWithDefaults(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	metadataType := types.ObjectType{AttrTypes: grpcMonitorMetadataAttrTypes}
+	assertionType := types.ObjectType{AttrTypes: assertionAttrTypes}
+	request := func(value, property, target types.String) types.Object {
+		return types.ObjectValueMust(grpcMonitorRequestAttrTypes, map[string]attr.Value{
+			"host":               types.StringValue("grpc.example.com"),
+			"port":               types.Int64Value(443),
+			"ip_family":          types.StringValue("IPv4"),
+			"grpc_mode":          types.StringValue("BEHAVIOR"),
+			"tls":                types.BoolValue(true),
+			"skip_ssl":           types.BoolValue(false),
+			"timeout":            types.Int64Value(60),
+			"encoding":           types.StringValue("PROTOBUF"),
+			"service":            types.StringValue(""),
+			"service_definition": types.StringValue("REFLECTION"),
+			"proto_content":      types.StringValue(""),
+			"bfbs_content":       types.StringValue(""),
+			"method":             types.StringValue("a.B/C"),
+			"message":            types.StringValue(""),
+			"metadata": types.SetValueMust(metadataType, []attr.Value{
+				types.ObjectValueMust(grpcMonitorMetadataAttrTypes, map[string]attr.Value{
+					"key":   types.StringValue("x-key"),
+					"value": value,
+				}),
+			}),
+			"assertion": types.SetValueMust(assertionType, []attr.Value{
+				types.ObjectValueMust(assertionAttrTypes, map[string]attr.Value{
+					"source":     types.StringValue("GRPC_STATUS_CODE"),
+					"property":   property,
+					"comparison": types.StringValue("EQUALS"),
+					"target":     target,
+				}),
+			}),
+		})
+	}
+
+	var diags diag.Diagnostics
+	got := grpcMonitorRequestWithDefaults(ctx, request(types.StringNull(), types.StringNull(), types.StringUnknown()), &diags)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+	empty := types.StringValue("")
+	if want := request(empty, empty, empty); !got.Equal(want) {
+		t.Errorf("got %s, want %s", got, want)
+	}
+}

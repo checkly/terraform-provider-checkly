@@ -24,7 +24,7 @@ description: |-
 
 ## Assertion Reference
 
-Each `assertion` block has the shape `{ source, property, comparison, target }`. Which comparisons are allowed, and what `target` must contain, depend on `source`. The `comparison`, `target`, and `RESPONSE_TIME` `property` rules are enforced by the Checkly API at apply time; where `property` is marked as ignored, the API accepts any value but does not use it. All traceroute assertion targets are numeric.
+Each element of `request.assertion` has the shape `{ source, property, comparison, target }`. Which comparisons are allowed, and what `target` must contain, depend on `source`. The `comparison`, `target`, and `RESPONSE_TIME` `property` rules are enforced by the Checkly API at apply time; where `property` is marked as ignored, the API accepts any value but does not use it. All traceroute assertion targets are numeric.
 
 | `source` | `property` | Allowed `comparison` values | `target` |
 |---|---|---|---|
@@ -34,26 +34,30 @@ Each `assertion` block has the shape `{ source, property, comparison, target }`.
 
 ### Examples
 
+The following `assertion` list, placed inside `request`, shows one assertion per source.
+
 ```terraform
-# Average round-trip time must stay under 2 seconds.
-assertion {
-  source     = "RESPONSE_TIME"
-  property   = "avg"
-  comparison = "LESS_THAN"
-  target     = "2000"
-}
+assertion = [
+  # Average round-trip time must stay under 2 seconds.
+  {
+    source     = "RESPONSE_TIME"
+    property   = "avg"
+    comparison = "LESS_THAN"
+    target     = "2000"
+  },
 
-# The route must resolve in fewer than 20 hops.
-assertion {
-  source     = "HOP_COUNT"
-  comparison = "LESS_THAN"
-  target     = "20"
-}
+  # The route must resolve in fewer than 20 hops.
+  {
+    source     = "HOP_COUNT"
+    comparison = "LESS_THAN"
+    target     = "20"
+  },
 
-# Packet loss must stay under 10%.
-assertion {
-  source     = "PACKET_LOSS"
-  comparison = "LESS_THAN"
-  target     = "10"
-}
+  # Packet loss must stay under 10%.
+  {
+    source     = "PACKET_LOSS"
+    comparison = "LESS_THAN"
+    target     = "10"
+  },
+]
 ```
