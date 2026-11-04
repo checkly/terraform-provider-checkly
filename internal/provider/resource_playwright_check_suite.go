@@ -73,7 +73,7 @@ type PlaywrightCheckSuiteResourceModel struct {
 	Runtime                  types.Object `tfsdk:"runtime"`
 	GroupID                  types.Int64  `tfsdk:"group_id"`
 	GroupOrder               types.Int64  `tfsdk:"group_order"`
-	TriggerIncident          types.Set    `tfsdk:"trigger_incident"`
+	TriggerIncident          types.Object `tfsdk:"trigger_incident"`
 }
 
 // PlaywrightCheckSuiteBundleModel describes the bundle block data model.
@@ -226,6 +226,7 @@ func (r *PlaywrightCheckSuiteResource) Schema(ctx context.Context, req resource.
 				ElementType: types.StringType,
 				Description: "An array of one or more private locations slugs.",
 			},
+			triggerIncidentAttributeName: makeTriggerIncidentSchema(),
 			alertSettingsAttributeName: makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{
 				Monitor: false,
 			}),
@@ -392,7 +393,6 @@ func (r *PlaywrightCheckSuiteResource) Schema(ctx context.Context, req resource.
 					},
 				},
 			},
-			triggerIncidentAttributeName: makeTriggerIncidentSchema(),
 		},
 	}
 }
@@ -555,7 +555,7 @@ func playwrightCheckSuiteFromModel(
 		GroupID:                   model.GroupID.ValueInt64(),
 		GroupOrder:                int(model.GroupOrder.ValueInt64()),
 		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscription, diags),
-		TriggerIncident:           triggerIncidentFromSet(ctx, model.TriggerIncident, diags),
+		TriggerIncident:           triggerIncidentFromObject(ctx, model.TriggerIncident, diags),
 		EnvironmentVariables:      environmentVariablesFromList(ctx, model.EnvironmentVariable, diags),
 	}
 
@@ -760,11 +760,7 @@ func playwrightCheckSuiteToModel(
 		model.AlertChannelSubscription = alertChannelSubscriptionsToSet(ctx, check.AlertChannelSubscriptions, diags)
 	}
 
-	if check.TriggerIncident == nil && model.TriggerIncident.IsNull() {
-		// Keep null; an absent block list stays absent.
-	} else {
-		model.TriggerIncident = triggerIncidentToSet(ctx, check.TriggerIncident, diags)
-	}
+	model.TriggerIncident = triggerIncidentToObject(ctx, check.TriggerIncident, diags)
 
 	alertSettings := check.AlertSettings
 	if alertSettings == nil {

@@ -583,7 +583,7 @@ resource "checkly_heartbeat_monitor" "test" {
     }
   }
 
-  trigger_incident {
+  trigger_incident = {
     service_id         = checkly_status_page_service.test.id
     severity           = "MEDIUM"
     name               = "tf-upgrade-{{id}} heartbeat incident"
@@ -1793,7 +1793,7 @@ resource "checkly_url_monitor" "test" {
     }
   }
 
-  trigger_incident {
+  trigger_incident = {
     service_id         = checkly_status_page_service.test.id
     severity           = "MAJOR"
     name               = "tf-upgrade-{{id}} URL incident"

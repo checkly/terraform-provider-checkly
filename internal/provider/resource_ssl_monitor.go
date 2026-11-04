@@ -68,7 +68,7 @@ type SSLMonitorResourceModel struct {
 	RetryStrategy            types.Object `tfsdk:"retry_strategy"`
 	Request                  types.List   `tfsdk:"request"`
 	AlertChannelSubscription types.Set    `tfsdk:"alert_channel_subscription"`
-	TriggerIncident          types.Set    `tfsdk:"trigger_incident"`
+	TriggerIncident          types.Object `tfsdk:"trigger_incident"`
 }
 
 // SSLMonitorRequestModel describes the request block data model.
@@ -342,6 +342,7 @@ func (r *SSLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 				ElementType: types.StringType,
 				Description: "An array of one or more private locations slugs.",
 			},
+			triggerIncidentAttributeName: makeTriggerIncidentSchema(),
 			alertSettingsAttributeName: makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{
 				Monitor: true,
 			}),
@@ -535,7 +536,6 @@ func (r *SSLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{
 				Monitor: true,
 			}),
-			triggerIncidentAttributeName: makeTriggerIncidentSchema(),
 		},
 	}
 }
@@ -745,7 +745,7 @@ func sslMonitorFromModel(ctx context.Context, model *SSLMonitorResourceModel, di
 		Request:                   sslMonitorRequestFromList(ctx, model.Request, diags),
 		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscription, diags),
 		RetryStrategy:             retryStrategyFromObject(ctx, model.RetryStrategy, diags),
-		TriggerIncident:           triggerIncidentFromSet(ctx, model.TriggerIncident, diags),
+		TriggerIncident:           triggerIncidentFromObject(ctx, model.TriggerIncident, diags),
 	}
 
 	// An empty description is not tracked by the Checkly API; it is
@@ -824,7 +824,7 @@ func sslMonitorToModel(ctx context.Context, c *checkly.SSLMonitor, model *SSLMon
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, model.RetryStrategy, diags)
 	model.Request = sslMonitorRequestToList(ctx, c.Request, model.Request, diags)
 	model.AlertChannelSubscription = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, diags)
-	model.TriggerIncident = triggerIncidentToSet(ctx, c.TriggerIncident, diags)
+	model.TriggerIncident = triggerIncidentToObject(ctx, c.TriggerIncident, diags)
 }
 
 // sslMonitorRequestFromList converts the request block value to its API

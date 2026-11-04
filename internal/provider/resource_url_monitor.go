@@ -65,7 +65,7 @@ type URLMonitorResourceModel struct {
 	GroupID                   types.Int64  `tfsdk:"group_id"`
 	GroupOrder                types.Int64  `tfsdk:"group_order"`
 	RetryStrategy             types.Object `tfsdk:"retry_strategy"`
-	TriggerIncident           types.Set    `tfsdk:"trigger_incident"`
+	TriggerIncident           types.Object `tfsdk:"trigger_incident"`
 }
 
 // URLMonitorRequestModel describes the request block data model.
@@ -173,6 +173,7 @@ func (r *URLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 				ElementType: types.StringType,
 				Description: "An array of one or more private locations slugs.",
 			},
+			triggerIncidentAttributeName: makeTriggerIncidentSchema(),
 			alertSettingsAttributeName: makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{
 				Monitor: true,
 			}),
@@ -274,7 +275,6 @@ func (r *URLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 					},
 				},
 			},
-			triggerIncidentAttributeName: makeTriggerIncidentSchema(),
 		},
 	}
 }
@@ -495,7 +495,7 @@ func urlMonitorFromModel(ctx context.Context, model *URLMonitorResourceModel, di
 		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscriptions, diags),
 		PrivateLocations:          &privateLocations,
 		RetryStrategy:             retryStrategyFromObject(ctx, model.RetryStrategy, diags),
-		TriggerIncident:           triggerIncidentFromSet(ctx, model.TriggerIncident, diags),
+		TriggerIncident:           triggerIncidentFromObject(ctx, model.TriggerIncident, diags),
 	}
 }
 
@@ -554,7 +554,7 @@ func urlMonitorToModel(ctx context.Context, c *checkly.URLMonitor, model *URLMon
 
 	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, diags)
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, model.RetryStrategy, diags)
-	model.TriggerIncident = triggerIncidentToSet(ctx, c.TriggerIncident, diags)
+	model.TriggerIncident = triggerIncidentToObject(ctx, c.TriggerIncident, diags)
 }
 
 // urlMonitorRequestFromSet converts the request block value to its API

@@ -70,7 +70,7 @@ type TracerouteMonitorResourceModel struct {
 	RetryStrategy            types.Object `tfsdk:"retry_strategy"`
 	Request                  types.List   `tfsdk:"request"`
 	AlertChannelSubscription types.Set    `tfsdk:"alert_channel_subscription"`
-	TriggerIncident          types.Set    `tfsdk:"trigger_incident"`
+	TriggerIncident          types.Object `tfsdk:"trigger_incident"`
 }
 
 // TracerouteMonitorRequestModel describes the request block data model.
@@ -185,6 +185,7 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 				Optional:    true,
 				Description: "The ID of the runtime to use for this monitor.",
 			},
+			triggerIncidentAttributeName: makeTriggerIncidentSchema(),
 			alertSettingsAttributeName: makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{
 				Monitor: true,
 			}),
@@ -340,7 +341,6 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{
 				Monitor: true,
 			}),
-			triggerIncidentAttributeName: makeTriggerIncidentSchema(),
 		},
 	}
 }
@@ -550,7 +550,7 @@ func tracerouteMonitorFromModel(ctx context.Context, model *TracerouteMonitorRes
 		Request:                   tracerouteMonitorRequestFromList(ctx, model.Request, diags),
 		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscription, diags),
 		RetryStrategy:             retryStrategyFromObject(ctx, model.RetryStrategy, diags),
-		TriggerIncident:           triggerIncidentFromSet(ctx, model.TriggerIncident, diags),
+		TriggerIncident:           triggerIncidentFromObject(ctx, model.TriggerIncident, diags),
 	}
 
 	// An empty description is not tracked by the Checkly API; it is
@@ -623,7 +623,7 @@ func tracerouteMonitorToModel(ctx context.Context, c *checkly.TracerouteMonitor,
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, model.RetryStrategy, diags)
 	model.Request = tracerouteMonitorRequestToList(ctx, c.Request, diags)
 	model.AlertChannelSubscription = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, diags)
-	model.TriggerIncident = triggerIncidentToSet(ctx, c.TriggerIncident, diags)
+	model.TriggerIncident = triggerIncidentToObject(ctx, c.TriggerIncident, diags)
 }
 
 // tracerouteMonitorRequestFromList converts the request block value to its

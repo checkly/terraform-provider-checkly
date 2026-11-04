@@ -61,7 +61,7 @@ type MultistepCheckResourceModel struct {
 	GroupID                  types.Int64  `tfsdk:"group_id"`
 	GroupOrder               types.Int64  `tfsdk:"group_order"`
 	RetryStrategy            types.Object `tfsdk:"retry_strategy"`
-	TriggerIncident          types.Set    `tfsdk:"trigger_incident"`
+	TriggerIncident          types.Object `tfsdk:"trigger_incident"`
 }
 
 func (r *MultistepCheckResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -156,7 +156,8 @@ func (r *MultistepCheckResource) Schema(ctx context.Context, req resource.Schema
 				Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})),
 				Description: "An array of one or more private locations slugs.",
 			},
-			alertSettingsAttributeName: makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{}),
+			triggerIncidentAttributeName: makeTriggerIncidentSchema(),
+			alertSettingsAttributeName:   makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{}),
 			"use_global_alert_settings": schema.BoolAttribute{
 				Optional:    true,
 				Computed:    true,
@@ -199,7 +200,6 @@ func (r *MultistepCheckResource) Schema(ctx context.Context, req resource.Schema
 				Description: "Insert environment variables into the runtime environment. Use global environment variables whenever possible.",
 			}),
 			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{}),
-			triggerIncidentAttributeName:          makeTriggerIncidentSchema(),
 		},
 	}
 }
@@ -440,7 +440,7 @@ func multistepCheckFromModel(ctx context.Context, model *MultistepCheckResourceM
 		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscription, diags),
 		PrivateLocations:          &privateLocations,
 		RetryStrategy:             retryStrategyFromObject(ctx, model.RetryStrategy, diags),
-		TriggerIncident:           triggerIncidentFromSet(ctx, model.TriggerIncident, diags),
+		TriggerIncident:           triggerIncidentFromObject(ctx, model.TriggerIncident, diags),
 	}
 
 	if runtimeID := model.RuntimeID.ValueString(); runtimeID != "" {
@@ -533,5 +533,5 @@ func multistepCheckToModel(ctx context.Context, c *checkly.MultiStepCheck, model
 	model.GroupID = types.Int64Value(c.GroupID)
 	model.GroupOrder = types.Int64Value(int64(c.GroupOrder))
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, prior.RetryStrategy, diags)
-	model.TriggerIncident = triggerIncidentToSet(ctx, c.TriggerIncident, diags)
+	model.TriggerIncident = triggerIncidentToObject(ctx, c.TriggerIncident, diags)
 }

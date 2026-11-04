@@ -494,7 +494,7 @@ resource "checkly_check" "test_trigger_incident" {
 	frequency    = 10
 	locations    = ["us-east-1"]
 
-	trigger_incident {
+	trigger_incident = {
 		service_id         = checkly_status_page_service.test_service.id
 		severity           = "MAJOR"
 		name               = "API Check Failure Incident"
@@ -531,22 +531,22 @@ resource "checkly_check" "test_trigger_incident" {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_check.test_trigger_incident",
-					"trigger_incident.0.severity",
+					"trigger_incident.severity",
 					"MAJOR",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_check.test_trigger_incident",
-					"trigger_incident.0.name",
+					"trigger_incident.name",
 					"API Check Failure Incident",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_check.test_trigger_incident",
-					"trigger_incident.0.description",
+					"trigger_incident.description",
 					"The API health check has failed",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_check.test_trigger_incident",
-					"trigger_incident.0.notify_subscribers",
+					"trigger_incident.notify_subscribers",
 					"true",
 				),
 			),
@@ -567,7 +567,7 @@ resource "checkly_check" "test_browser_trigger" {
 	frequency    = 15
 	locations    = ["eu-west-1"]
 
-	trigger_incident {
+	trigger_incident = {
 		service_id         = checkly_status_page_service.test_browser_service.id
 		severity           = "CRITICAL"
 		name               = "Browser Check Critical Failure"
@@ -604,22 +604,22 @@ EOT
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_check.test_browser_trigger",
-					"trigger_incident.0.severity",
+					"trigger_incident.severity",
 					"CRITICAL",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_check.test_browser_trigger",
-					"trigger_incident.0.name",
+					"trigger_incident.name",
 					"Browser Check Critical Failure",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_check.test_browser_trigger",
-					"trigger_incident.0.description",
+					"trigger_incident.description",
 					"The browser check has detected a critical failure",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_check.test_browser_trigger",
-					"trigger_incident.0.notify_subscribers",
+					"trigger_incident.notify_subscribers",
 					"false",
 				),
 			),

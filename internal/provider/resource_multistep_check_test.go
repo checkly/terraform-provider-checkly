@@ -550,7 +550,7 @@ func TestAccMultistepCheckUnsetSweepGroupAndAlerts(t *testing.T) {
 						activated  = true
 					}
 
-					trigger_incident {
+					trigger_incident = {
 						service_id         = checkly_status_page_service.sweep.id
 						severity           = "MAJOR"
 						name               = "Multistep check down"
@@ -583,8 +583,8 @@ func TestAccMultistepCheckUnsetSweepGroupAndAlerts(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_multistep_check.test",
-					"trigger_incident.#",
-					"1",
+					"trigger_incident.%",
+					"5",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_multistep_check.test",
@@ -610,7 +610,7 @@ func TestAccMultistepCheckUnsetSweepGroupAndAlerts(t *testing.T) {
 						activated  = true
 					}
 
-					trigger_incident {
+					trigger_incident = {
 						service_id         = checkly_status_page_service.sweep.id
 						severity           = "MAJOR"
 						name               = "Multistep check down"
@@ -667,10 +667,9 @@ func TestAccMultistepCheckUnsetSweepGroupAndAlerts(t *testing.T) {
 					"alert_channel_subscription.#",
 					"0",
 				),
-				resource.TestCheckResourceAttr(
+				resource.TestCheckNoResourceAttr(
 					"checkly_multistep_check.test",
-					"trigger_incident.#",
-					"0",
+					"trigger_incident",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_multistep_check.test",

@@ -213,7 +213,7 @@ resource "checkly_url_monitor" "test_trigger_incident" {
 		}
 	}
 
-	trigger_incident {
+	trigger_incident = {
 		service_id         = checkly_status_page_service.test_url_service.id
 		severity           = "CRITICAL"
 		name               = "URL Monitor Service Down"
@@ -245,22 +245,22 @@ resource "checkly_url_monitor" "test_trigger_incident" {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_url_monitor.test_trigger_incident",
-					"trigger_incident.0.severity",
+					"trigger_incident.severity",
 					"CRITICAL",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_url_monitor.test_trigger_incident",
-					"trigger_incident.0.name",
+					"trigger_incident.name",
 					"URL Monitor Service Down",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_url_monitor.test_trigger_incident",
-					"trigger_incident.0.description",
+					"trigger_incident.description",
 					"The URL monitor has detected that the service is unreachable",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_url_monitor.test_trigger_incident",
-					"trigger_incident.0.notify_subscribers",
+					"trigger_incident.notify_subscribers",
 					"true",
 				),
 			),
@@ -1926,7 +1926,7 @@ func TestAccURLMonitorUnsetSweepTriggerIncident(t *testing.T) {
 					request {
 						url = "https://api.checklyhq.com"
 					}
-					trigger_incident {
+					trigger_incident = {
 						service_id         = checkly_status_page_service.url_sweep.id
 						severity           = "MEDIUM"
 						name               = "URL sweep incident"
@@ -1936,7 +1936,7 @@ func TestAccURLMonitorUnsetSweepTriggerIncident(t *testing.T) {
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr("checkly_url_monitor.test", "trigger_incident.#", "1"),
+				resource.TestCheckResourceAttr("checkly_url_monitor.test", "trigger_incident.%", "5"),
 			),
 		},
 		{
@@ -1952,7 +1952,7 @@ func TestAccURLMonitorUnsetSweepTriggerIncident(t *testing.T) {
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr("checkly_url_monitor.test", "trigger_incident.#", "0"),
+				resource.TestCheckNoResourceAttr("checkly_url_monitor.test", "trigger_incident"),
 			),
 		},
 	})

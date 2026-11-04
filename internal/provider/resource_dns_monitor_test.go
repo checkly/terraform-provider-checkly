@@ -348,7 +348,7 @@ resource "checkly_dns_monitor" "test_trigger_incident" {
 		}
 	}
 
-	trigger_incident {
+	trigger_incident = {
 		service_id         = checkly_status_page_service.test_dns_service.id
 		severity           = "CRITICAL"
 		name               = "Missing DNS Record"
@@ -380,22 +380,22 @@ resource "checkly_dns_monitor" "test_trigger_incident" {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_dns_monitor.test_trigger_incident",
-					"trigger_incident.0.severity",
+					"trigger_incident.severity",
 					"CRITICAL",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_dns_monitor.test_trigger_incident",
-					"trigger_incident.0.name",
+					"trigger_incident.name",
 					"Missing DNS Record",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_dns_monitor.test_trigger_incident",
-					"trigger_incident.0.description",
+					"trigger_incident.description",
 					"The DNS monitor has detected that a record may be missing",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_dns_monitor.test_trigger_incident",
-					"trigger_incident.0.notify_subscribers",
+					"trigger_incident.notify_subscribers",
 					"true",
 				),
 			),
@@ -1806,7 +1806,7 @@ func TestAccDNSMonitorUnsetSweepTriggerIncident(t *testing.T) {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 					}
-					trigger_incident {
+					trigger_incident = {
 						service_id         = checkly_status_page_service.dns_sweep.id
 						severity           = "MEDIUM"
 						name               = "DNS sweep incident"
@@ -1816,7 +1816,7 @@ func TestAccDNSMonitorUnsetSweepTriggerIncident(t *testing.T) {
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr("checkly_dns_monitor.test", "trigger_incident.#", "1"),
+				resource.TestCheckResourceAttr("checkly_dns_monitor.test", "trigger_incident.%", "5"),
 			),
 		},
 		{
@@ -1833,7 +1833,7 @@ func TestAccDNSMonitorUnsetSweepTriggerIncident(t *testing.T) {
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr("checkly_dns_monitor.test", "trigger_incident.#", "0"),
+				resource.TestCheckNoResourceAttr("checkly_dns_monitor.test", "trigger_incident"),
 			),
 		},
 	})

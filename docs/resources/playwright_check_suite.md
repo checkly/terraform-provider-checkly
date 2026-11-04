@@ -140,7 +140,7 @@ resource "checkly_playwright_check_suite" "example-playwright-check-custom" {
 - `run_parallel` (Boolean) Determines whether the check should run on all selected locations in parallel or round-robin. (Default `false`).
 - `runtime` (Attributes) Configure the runtime environment of the Playwright check. (see [below for nested schema](#nestedatt--runtime))
 - `tags` (Set of String) A list of tags for organizing and filtering checks and monitors.
-- `trigger_incident` (Block Set) Create and resolve an incident based on the alert configuration. Useful for status page automation. (see [below for nested schema](#nestedblock--trigger_incident))
+- `trigger_incident` (Attributes) Create and resolve an incident based on the alert configuration. Useful for status page automation. (see [below for nested schema](#nestedatt--trigger_incident))
 - `use_global_alert_settings` (Boolean) When true, the account level alert settings will be used, not the alert setting defined on this check. (Default `true`).
 
 ### Read-Only
@@ -288,7 +288,7 @@ Optional:
 
 
 
-<a id="nestedblock--trigger_incident"></a>
+<a id="nestedatt--trigger_incident"></a>
 ### Nested Schema for `trigger_incident`
 
 Required:

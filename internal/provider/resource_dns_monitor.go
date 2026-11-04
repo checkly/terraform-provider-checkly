@@ -63,7 +63,7 @@ type DNSMonitorResourceModel struct {
 	GroupID                   types.Int64  `tfsdk:"group_id"`
 	GroupOrder                types.Int64  `tfsdk:"group_order"`
 	RetryStrategy             types.Object `tfsdk:"retry_strategy"`
-	TriggerIncident           types.Set    `tfsdk:"trigger_incident"`
+	TriggerIncident           types.Object `tfsdk:"trigger_incident"`
 }
 
 // DNSMonitorRequestModel describes the request block data model.
@@ -172,6 +172,7 @@ func (r *DNSMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 				ElementType: types.StringType,
 				Description: "A list of tags for organizing and filtering checks and monitors.",
 			},
+			triggerIncidentAttributeName: makeTriggerIncidentSchema(),
 			alertSettingsAttributeName: makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{
 				Monitor: true,
 			}),
@@ -302,7 +303,6 @@ func (r *DNSMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 					},
 				},
 			},
-			triggerIncidentAttributeName: makeTriggerIncidentSchema(),
 		},
 	}
 }
@@ -519,7 +519,7 @@ func dnsMonitorFromModel(ctx context.Context, model *DNSMonitorResourceModel, di
 		GroupOrder:                int(model.GroupOrder.ValueInt64()),
 		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscriptions, diags),
 		RetryStrategy:             retryStrategyFromObject(ctx, model.RetryStrategy, diags),
-		TriggerIncident:           triggerIncidentFromSet(ctx, model.TriggerIncident, diags),
+		TriggerIncident:           triggerIncidentFromObject(ctx, model.TriggerIncident, diags),
 	}
 }
 
@@ -570,7 +570,7 @@ func dnsMonitorToModel(ctx context.Context, c *checkly.DNSMonitor, model *DNSMon
 	model.GroupOrder = types.Int64Value(int64(c.GroupOrder))
 	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, diags)
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, model.RetryStrategy, diags)
-	model.TriggerIncident = triggerIncidentToSet(ctx, c.TriggerIncident, diags)
+	model.TriggerIncident = triggerIncidentToObject(ctx, c.TriggerIncident, diags)
 }
 
 // dnsMonitorRequestFromList converts the request block value to its API

@@ -76,7 +76,7 @@ type CheckResourceModel struct {
 	GroupID                  types.Int64  `tfsdk:"group_id"`
 	GroupOrder               types.Int64  `tfsdk:"group_order"`
 	RetryStrategy            types.Object `tfsdk:"retry_strategy"`
-	TriggerIncident          types.Set    `tfsdk:"trigger_incident"`
+	TriggerIncident          types.Object `tfsdk:"trigger_incident"`
 }
 
 func (r *CheckResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -222,7 +222,8 @@ func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 				Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})),
 				Description: "An array of one or more private locations slugs.",
 			},
-			alertSettingsAttributeName: makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{}),
+			triggerIncidentAttributeName: makeTriggerIncidentSchema(),
+			alertSettingsAttributeName:   makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{}),
 			"use_global_alert_settings": schema.BoolAttribute{
 				Optional:    true,
 				Computed:    true,
@@ -255,7 +256,6 @@ func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 			"request": apiCheckRequestBlockSchema(apiCheckRequestBlockSchemaOptions{
 				Description: "An API check might have one request config.",
 			}),
-			triggerIncidentAttributeName: makeTriggerIncidentSchema(),
 		},
 	}
 }
@@ -596,7 +596,7 @@ func checkFromModel(ctx context.Context, model *CheckResourceModel, diags *diag.
 		GroupOrder:                int(model.GroupOrder.ValueInt64()),
 		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscription, diags),
 		RetryStrategy:             retryStrategyFromObject(ctx, model.RetryStrategy, diags),
-		TriggerIncident:           triggerIncidentFromSet(ctx, model.TriggerIncident, diags),
+		TriggerIncident:           triggerIncidentFromObject(ctx, model.TriggerIncident, diags),
 	}
 
 	// The locations property is serialized even when empty.
@@ -699,7 +699,7 @@ func checkToModel(ctx context.Context, c *checkly.Check, model *CheckResourceMod
 	model.GroupID = types.Int64Value(c.GroupID)
 	model.GroupOrder = types.Int64Value(int64(c.GroupOrder))
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, prior.RetryStrategy, diags)
-	model.TriggerIncident = triggerIncidentToSet(ctx, c.TriggerIncident, diags)
+	model.TriggerIncident = triggerIncidentToObject(ctx, c.TriggerIncident, diags)
 }
 
 // stringOrDefault returns the given value, or the given default value when

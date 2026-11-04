@@ -535,7 +535,7 @@ func TestAccGRPCMonitorUnsetAllAttributes(t *testing.T) {
 					type = "LINEAR"
 				}
 
-				trigger_incident {
+				trigger_incident = {
 					service_id         = checkly_status_page_service.test.id
 					severity           = "MINOR"
 					name               = "incident"
@@ -563,7 +563,7 @@ func TestAccGRPCMonitorUnsetAllAttributes(t *testing.T) {
 			Check: resource.ComposeAggregateTestCheckFunc(
 				resource.TestCheckResourceAttr(name, "description", "description"),
 				resource.TestCheckResourceAttr(name, "alert_channel_subscription.#", "1"),
-				resource.TestCheckResourceAttr(name, "trigger_incident.#", "1"),
+				resource.TestCheckResourceAttr(name, "trigger_incident.%", "5"),
 				resource.TestCheckResourceAttr(name, "private_locations.#", "1"),
 				resource.TestCheckResourceAttr(name, "runtime_id", "2023.09"),
 				resource.TestCheckResourceAttr(name, "request.0.timeout", "30"),
@@ -584,7 +584,7 @@ func TestAccGRPCMonitorUnsetAllAttributes(t *testing.T) {
 				resource.TestCheckResourceAttr(name, "use_global_alert_settings", "false"),
 				resource.TestCheckResourceAttr(name, "alert_channel_subscription.#", "0"),
 				resource.TestCheckResourceAttr(name, "retry_strategy.type", "NO_RETRIES"),
-				resource.TestCheckResourceAttr(name, "trigger_incident.#", "0"),
+				resource.TestCheckNoResourceAttr(name, "trigger_incident"),
 				resource.TestCheckNoResourceAttr(name, "private_locations.#"),
 				resource.TestCheckNoResourceAttr(name, "runtime_id"),
 				resource.TestCheckResourceAttr(name, "request.0.ip_family", "IPv4"),

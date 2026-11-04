@@ -54,7 +54,7 @@ type HeartbeatMonitorResourceModel struct {
 	UseGlobalAlertSettings   types.Bool   `tfsdk:"use_global_alert_settings"`
 	Heartbeat                types.Object `tfsdk:"heartbeat"`
 	AlertChannelSubscription types.Set    `tfsdk:"alert_channel_subscription"`
-	TriggerIncident          types.Set    `tfsdk:"trigger_incident"`
+	TriggerIncident          types.Object `tfsdk:"trigger_incident"`
 }
 
 // HeartbeatMonitorHeartbeatModel describes the heartbeat block data model.
@@ -115,6 +115,7 @@ func (r *HeartbeatMonitorResource) Schema(ctx context.Context, req resource.Sche
 				ElementType: types.StringType,
 				Description: "A list of tags for organizing and filtering checks.",
 			},
+			triggerIncidentAttributeName: makeTriggerIncidentSchema(),
 			alertSettingsAttributeName: makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{
 				Monitor: true,
 			}),
@@ -169,7 +170,6 @@ func (r *HeartbeatMonitorResource) Schema(ctx context.Context, req resource.Sche
 			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{
 				Monitor: true,
 			}),
-			triggerIncidentAttributeName: makeTriggerIncidentSchema(),
 		},
 	}
 }
@@ -331,7 +331,7 @@ func heartbeatMonitorFromModel(ctx context.Context, model *HeartbeatMonitorResou
 		UseGlobalAlertSettings:    model.UseGlobalAlertSettings.ValueBool(),
 		Heartbeat:                 heartbeatMonitorHeartbeatFromObject(ctx, model.Heartbeat, diags),
 		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscription, diags),
-		TriggerIncident:           triggerIncidentFromSet(ctx, model.TriggerIncident, diags),
+		TriggerIncident:           triggerIncidentFromObject(ctx, model.TriggerIncident, diags),
 	}
 
 	// An empty description is not tracked by the Checkly API; it is
@@ -367,7 +367,7 @@ func heartbeatMonitorToModel(ctx context.Context, c *checkly.HeartbeatMonitor, m
 	model.UseGlobalAlertSettings = types.BoolValue(c.UseGlobalAlertSettings)
 	model.Heartbeat = heartbeatMonitorHeartbeatToObject(ctx, c.Heartbeat, diags)
 	model.AlertChannelSubscription = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, diags)
-	model.TriggerIncident = triggerIncidentToSet(ctx, c.TriggerIncident, diags)
+	model.TriggerIncident = triggerIncidentToObject(ctx, c.TriggerIncident, diags)
 }
 
 // heartbeatMonitorHeartbeatFromObject converts the heartbeat block value to

@@ -126,7 +126,7 @@ moved {
 - `script_path` (String) The path of the check's script file when using editor-style multi-file scripts (e.g. `entrypoint.spec.ts`).
 - `should_fail` (Boolean) Allows to invert the behaviour of when a check is considered to fail. (Default `false`).
 - `tags` (Set of String) A list of tags for organizing and filtering checks.
-- `trigger_incident` (Block Set) Create and resolve an incident based on the alert configuration. Useful for status page automation. (see [below for nested schema](#nestedblock--trigger_incident))
+- `trigger_incident` (Attributes) Create and resolve an incident based on the alert configuration. Useful for status page automation. (see [below for nested schema](#nestedatt--trigger_incident))
 - `use_global_alert_settings` (Boolean) When true, the account level alert settings will be used, not the alert setting defined on this check. (Default `false`).
 
 ### Read-Only
@@ -235,7 +235,7 @@ Optional:
 
 
 
-<a id="nestedblock--trigger_incident"></a>
+<a id="nestedatt--trigger_incident"></a>
 ### Nested Schema for `trigger_incident`
 
 Required:

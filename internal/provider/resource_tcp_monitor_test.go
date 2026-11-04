@@ -201,7 +201,7 @@ resource "checkly_tcp_monitor" "test_trigger_incident" {
 		}
 	}
 
-	trigger_incident {
+	trigger_incident = {
 		service_id         = checkly_status_page_service.test_tcp_service.id
 		severity           = "MINOR"
 		name               = "TCP Monitor Connection Issue"
@@ -233,22 +233,22 @@ resource "checkly_tcp_monitor" "test_trigger_incident" {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_tcp_monitor.test_trigger_incident",
-					"trigger_incident.0.severity",
+					"trigger_incident.severity",
 					"MINOR",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_tcp_monitor.test_trigger_incident",
-					"trigger_incident.0.name",
+					"trigger_incident.name",
 					"TCP Monitor Connection Issue",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_tcp_monitor.test_trigger_incident",
-					"trigger_incident.0.description",
+					"trigger_incident.description",
 					"The TCP monitor has detected connectivity issues",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_tcp_monitor.test_trigger_incident",
-					"trigger_incident.0.notify_subscribers",
+					"trigger_incident.notify_subscribers",
 					"false",
 				),
 			),
@@ -1505,7 +1505,7 @@ func TestAccTCPMonitorUnsetSweepTriggerIncident(t *testing.T) {
 						hostname = "api.checklyhq.com"
 						port     = 443
 					}
-					trigger_incident {
+					trigger_incident = {
 						service_id         = checkly_status_page_service.test.id
 						severity           = "MINOR"
 						name               = "TCP sweep incident"
@@ -1516,8 +1516,8 @@ func TestAccTCPMonitorUnsetSweepTriggerIncident(t *testing.T) {
 			`,
 			Check: resource.TestCheckResourceAttr(
 				"checkly_tcp_monitor.test",
-				"trigger_incident.#",
-				"1",
+				"trigger_incident.%",
+				"5",
 			),
 		},
 		{
@@ -1537,10 +1537,9 @@ func TestAccTCPMonitorUnsetSweepTriggerIncident(t *testing.T) {
 					}
 				}
 			`,
-			Check: resource.TestCheckResourceAttr(
+			Check: resource.TestCheckNoResourceAttr(
 				"checkly_tcp_monitor.test",
-				"trigger_incident.#",
-				"0",
+				"trigger_incident",
 			),
 		},
 	})

@@ -69,7 +69,7 @@ type APICheckResourceModel struct {
 	GroupID                  types.Int64  `tfsdk:"group_id"`
 	GroupOrder               types.Int64  `tfsdk:"group_order"`
 	RetryStrategy            types.Object `tfsdk:"retry_strategy"`
-	TriggerIncident          types.Set    `tfsdk:"trigger_incident"`
+	TriggerIncident          types.Object `tfsdk:"trigger_incident"`
 }
 
 func (r *APICheckResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -271,7 +271,8 @@ func (r *APICheckResource) Schema(ctx context.Context, req resource.SchemaReques
 				Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})),
 				Description: "An array of one or more private locations slugs.",
 			},
-			alertSettingsAttributeName: makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{}),
+			triggerIncidentAttributeName: makeTriggerIncidentSchema(),
+			alertSettingsAttributeName:   makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{}),
 			"use_global_alert_settings": schema.BoolAttribute{
 				Optional:    true,
 				Computed:    true,
@@ -301,7 +302,6 @@ func (r *APICheckResource) Schema(ctx context.Context, req resource.SchemaReques
 				URLDescription: "The URL to call.",
 				Required:       true,
 			}),
-			triggerIncidentAttributeName: makeTriggerIncidentSchema(),
 		},
 	}
 }
@@ -623,7 +623,7 @@ func apiCheckFromModel(ctx context.Context, model *APICheckResourceModel, diags 
 		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscription, diags),
 		PrivateLocations:          &privateLocations,
 		RetryStrategy:             retryStrategyFromObject(ctx, model.RetryStrategy, diags),
-		TriggerIncident:           triggerIncidentFromSet(ctx, model.TriggerIncident, diags),
+		TriggerIncident:           triggerIncidentFromObject(ctx, model.TriggerIncident, diags),
 	}
 
 	if runtimeID := model.RuntimeID.ValueString(); runtimeID != "" {
@@ -723,5 +723,5 @@ func apiCheckToModel(ctx context.Context, c *checkly.APICheck, model *APICheckRe
 	model.GroupID = types.Int64Value(c.GroupID)
 	model.GroupOrder = types.Int64Value(int64(c.GroupOrder))
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, prior.RetryStrategy, diags)
-	model.TriggerIncident = triggerIncidentToSet(ctx, c.TriggerIncident, diags)
+	model.TriggerIncident = triggerIncidentToObject(ctx, c.TriggerIncident, diags)
 }

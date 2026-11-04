@@ -322,7 +322,7 @@ resource "checkly_icmp_monitor" "test_trigger_incident" {
 		}
 	}
 
-	trigger_incident {
+	trigger_incident = {
 		service_id         = checkly_status_page_service.test_icmp_service.id
 		severity           = "CRITICAL"
 		name               = "Host Unreachable"
@@ -354,22 +354,22 @@ resource "checkly_icmp_monitor" "test_trigger_incident" {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_icmp_monitor.test_trigger_incident",
-					"trigger_incident.0.severity",
+					"trigger_incident.severity",
 					"CRITICAL",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_icmp_monitor.test_trigger_incident",
-					"trigger_incident.0.name",
+					"trigger_incident.name",
 					"Host Unreachable",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_icmp_monitor.test_trigger_incident",
-					"trigger_incident.0.description",
+					"trigger_incident.description",
 					"The ICMP monitor has detected that the host may be unreachable",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_icmp_monitor.test_trigger_incident",
-					"trigger_incident.0.notify_subscribers",
+					"trigger_incident.notify_subscribers",
 					"true",
 				),
 			),
@@ -1262,7 +1262,7 @@ func TestAccICMPMonitorUnsetSweepTriggerIncident(t *testing.T) {
 					request {
 						hostname = "api.checklyhq.com"
 					}
-					trigger_incident {
+					trigger_incident = {
 						service_id         = checkly_status_page_service.icmp_sweep.id
 						severity           = "MEDIUM"
 						name               = "ICMP sweep incident"
@@ -1272,7 +1272,7 @@ func TestAccICMPMonitorUnsetSweepTriggerIncident(t *testing.T) {
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "trigger_incident.#", "1"),
+				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "trigger_incident.%", "5"),
 			),
 		},
 		{
@@ -1288,7 +1288,7 @@ func TestAccICMPMonitorUnsetSweepTriggerIncident(t *testing.T) {
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "trigger_incident.#", "0"),
+				resource.TestCheckNoResourceAttr("checkly_icmp_monitor.test", "trigger_incident"),
 			),
 		},
 	})

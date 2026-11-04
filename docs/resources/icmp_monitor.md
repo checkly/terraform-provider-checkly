@@ -63,7 +63,7 @@ resource "checkly_icmp_monitor" "example-icmp-monitor" {
 - `retry_strategy` (Attributes) A strategy for retrying failed check/monitor runs. (see [below for nested schema](#nestedatt--retry_strategy))
 - `run_parallel` (Boolean) Determines whether the monitor should run on all selected locations in parallel or round-robin. (Default `false`).
 - `tags` (Set of String) A list of tags for organizing and filtering checks and monitors.
-- `trigger_incident` (Block Set) Create and resolve an incident based on the alert configuration. Useful for status page automation. (see [below for nested schema](#nestedblock--trigger_incident))
+- `trigger_incident` (Attributes) Create and resolve an incident based on the alert configuration. Useful for status page automation. (see [below for nested schema](#nestedatt--trigger_incident))
 - `use_global_alert_settings` (Boolean) When true, the account level alert settings will be used, not the alert setting defined on this monitor. (Default `true`).
 
 ### Read-Only
@@ -168,7 +168,7 @@ Optional:
 - `same_region` (Boolean) Whether retries should be run in the same region as the initial check/monitor run. Not available when `type` is `NO_RETRIES`. (Default `true`).
 
 
-<a id="nestedblock--trigger_incident"></a>
+<a id="nestedatt--trigger_incident"></a>
 ### Nested Schema for `trigger_incident`
 
 Required:

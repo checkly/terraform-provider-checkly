@@ -1029,7 +1029,7 @@ func TestAccApiCheckUnsetSweepGroupAndAlerts(t *testing.T) {
 						activated  = true
 					}
 
-					trigger_incident {
+					trigger_incident = {
 						service_id         = checkly_status_page_service.sweep.id
 						severity           = "MAJOR"
 						name               = "API check down"
@@ -1061,8 +1061,8 @@ func TestAccApiCheckUnsetSweepGroupAndAlerts(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_api_check.test",
-					"trigger_incident.#",
-					"1",
+					"trigger_incident.%",
+					"5",
 				),
 			),
 		},
@@ -1082,7 +1082,7 @@ func TestAccApiCheckUnsetSweepGroupAndAlerts(t *testing.T) {
 						activated  = true
 					}
 
-					trigger_incident {
+					trigger_incident = {
 						service_id         = checkly_status_page_service.sweep.id
 						severity           = "MAJOR"
 						name               = "API check down"
@@ -1139,10 +1139,9 @@ func TestAccApiCheckUnsetSweepGroupAndAlerts(t *testing.T) {
 					"alert_channel_subscription.#",
 					"0",
 				),
-				resource.TestCheckResourceAttr(
+				resource.TestCheckNoResourceAttr(
 					"checkly_api_check.test",
-					"trigger_incident.#",
-					"0",
+					"trigger_incident",
 				),
 			),
 		},

@@ -63,7 +63,7 @@ type ICMPMonitorResourceModel struct {
 	GroupID                     types.Int64  `tfsdk:"group_id"`
 	GroupOrder                  types.Int64  `tfsdk:"group_order"`
 	RetryStrategy               types.Object `tfsdk:"retry_strategy"`
-	TriggerIncident             types.Set    `tfsdk:"trigger_incident"`
+	TriggerIncident             types.Object `tfsdk:"trigger_incident"`
 }
 
 // ICMPMonitorRequestModel describes the request block data model.
@@ -162,6 +162,7 @@ func (r *ICMPMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 				ElementType: types.StringType,
 				Description: "A list of tags for organizing and filtering checks and monitors.",
 			},
+			triggerIncidentAttributeName: makeTriggerIncidentSchema(),
 			alertSettingsAttributeName: makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{
 				Monitor: true,
 			}),
@@ -264,7 +265,6 @@ func (r *ICMPMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 					},
 				},
 			},
-			triggerIncidentAttributeName: makeTriggerIncidentSchema(),
 		},
 	}
 }
@@ -481,7 +481,7 @@ func icmpMonitorFromModel(ctx context.Context, model *ICMPMonitorResourceModel, 
 		GroupOrder:                  int(model.GroupOrder.ValueInt64()),
 		AlertChannelSubscriptions:   alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscriptions, diags),
 		RetryStrategy:               retryStrategyFromObject(ctx, model.RetryStrategy, diags),
-		TriggerIncident:             triggerIncidentFromSet(ctx, model.TriggerIncident, diags),
+		TriggerIncident:             triggerIncidentFromObject(ctx, model.TriggerIncident, diags),
 	}
 }
 
@@ -532,7 +532,7 @@ func icmpMonitorToModel(ctx context.Context, c *checkly.ICMPMonitor, model *ICMP
 	model.GroupOrder = types.Int64Value(int64(c.GroupOrder))
 	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, diags)
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, model.RetryStrategy, diags)
-	model.TriggerIncident = triggerIncidentToSet(ctx, c.TriggerIncident, diags)
+	model.TriggerIncident = triggerIncidentToObject(ctx, c.TriggerIncident, diags)
 }
 
 // icmpMonitorRequestFromList converts the request block value to its API

@@ -277,7 +277,7 @@ resource "checkly_heartbeat_monitor" "test_trigger_incident" {
 		grace_unit  = "minutes"
 	}
 
-	trigger_incident {
+	trigger_incident = {
 		service_id         = checkly_status_page_service.test_heartbeat_service.id
 		severity           = "MEDIUM"
 		name               = "Heartbeat Monitor Failure"
@@ -304,22 +304,22 @@ resource "checkly_heartbeat_monitor" "test_trigger_incident" {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_heartbeat_monitor.test_trigger_incident",
-					"trigger_incident.0.severity",
+					"trigger_incident.severity",
 					"MEDIUM",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_heartbeat_monitor.test_trigger_incident",
-					"trigger_incident.0.name",
+					"trigger_incident.name",
 					"Heartbeat Monitor Failure",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_heartbeat_monitor.test_trigger_incident",
-					"trigger_incident.0.description",
+					"trigger_incident.description",
 					"The heartbeat monitor has not received a ping within the grace period",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_heartbeat_monitor.test_trigger_incident",
-					"trigger_incident.0.notify_subscribers",
+					"trigger_incident.notify_subscribers",
 					"true",
 				),
 			),
@@ -438,7 +438,7 @@ func TestAccHeartbeatMonitorUnsetSweepTriggerIncident(t *testing.T) {
 						grace       = 0
 						grace_unit  = "seconds"
 					}
-					trigger_incident {
+					trigger_incident = {
 						service_id         = checkly_status_page_service.test.id
 						severity           = "MINOR"
 						name               = "Heartbeat sweep incident"
@@ -449,8 +449,8 @@ func TestAccHeartbeatMonitorUnsetSweepTriggerIncident(t *testing.T) {
 			`,
 			Check: resource.TestCheckResourceAttr(
 				"checkly_heartbeat_monitor.test",
-				"trigger_incident.#",
-				"1",
+				"trigger_incident.%",
+				"5",
 			),
 		},
 		{
@@ -470,10 +470,9 @@ func TestAccHeartbeatMonitorUnsetSweepTriggerIncident(t *testing.T) {
 					}
 				}
 			`,
-			Check: resource.TestCheckResourceAttr(
+			Check: resource.TestCheckNoResourceAttr(
 				"checkly_heartbeat_monitor.test",
-				"trigger_incident.#",
-				"0",
+				"trigger_incident",
 			),
 		},
 	})

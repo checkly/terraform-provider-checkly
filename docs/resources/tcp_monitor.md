@@ -116,7 +116,7 @@ resource "checkly_tcp_monitor" "example-tcp-monitor-2" {
 - `runtime_id` (String) The ID of the runtime to use for this check.
 - `should_fail` (Boolean) Allows to invert the behaviour of when a check is considered to fail.
 - `tags` (Set of String) A list of tags for organizing and filtering checks.
-- `trigger_incident` (Block Set) Create and resolve an incident based on the alert configuration. Useful for status page automation. (see [below for nested schema](#nestedblock--trigger_incident))
+- `trigger_incident` (Attributes) Create and resolve an incident based on the alert configuration. Useful for status page automation. (see [below for nested schema](#nestedatt--trigger_incident))
 - `use_global_alert_settings` (Boolean) When true, the account level alert settings will be used, not the alert setting defined on this check.
 
 ### Read-Only
@@ -222,7 +222,7 @@ Optional:
 - `same_region` (Boolean) Whether retries should be run in the same region as the initial check/monitor run. Not available when `type` is `NO_RETRIES`. (Default `true`).
 
 
-<a id="nestedblock--trigger_incident"></a>
+<a id="nestedatt--trigger_incident"></a>
 ### Nested Schema for `trigger_incident`
 
 Required:

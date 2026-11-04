@@ -67,7 +67,7 @@ type TCPMonitorResourceModel struct {
 	RetryStrategy            types.Object `tfsdk:"retry_strategy"`
 	Request                  types.Set    `tfsdk:"request"`
 	AlertChannelSubscription types.Set    `tfsdk:"alert_channel_subscription"`
-	TriggerIncident          types.Set    `tfsdk:"trigger_incident"`
+	TriggerIncident          types.Object `tfsdk:"trigger_incident"`
 }
 
 // TCPMonitorRequestModel describes the request block data model.
@@ -179,6 +179,7 @@ func (r *TCPMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 				ElementType: types.StringType,
 				Description: "An array of one or more private locations slugs.",
 			},
+			triggerIncidentAttributeName: makeTriggerIncidentSchema(),
 			alertSettingsAttributeName: makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{
 				Monitor: true,
 			}),
@@ -277,7 +278,6 @@ func (r *TCPMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{
 				Monitor: true,
 			}),
-			triggerIncidentAttributeName: makeTriggerIncidentSchema(),
 		},
 	}
 }
@@ -493,7 +493,7 @@ func tcpMonitorFromModel(ctx context.Context, model *TCPMonitorResourceModel, di
 		Request:                   tcpMonitorRequestFromSet(ctx, model.Request, diags),
 		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscription, diags),
 		RetryStrategy:             retryStrategyFromObject(ctx, model.RetryStrategy, diags),
-		TriggerIncident:           triggerIncidentFromSet(ctx, model.TriggerIncident, diags),
+		TriggerIncident:           triggerIncidentFromObject(ctx, model.TriggerIncident, diags),
 	}
 
 	// An empty description is not tracked by the Checkly API; it is
@@ -579,7 +579,7 @@ func tcpMonitorToModel(ctx context.Context, c *checkly.TCPMonitor, model *TCPMon
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, model.RetryStrategy, diags)
 	model.Request = tcpMonitorRequestToSet(ctx, c.Request, diags)
 	model.AlertChannelSubscription = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, diags)
-	model.TriggerIncident = triggerIncidentToSet(ctx, c.TriggerIncident, diags)
+	model.TriggerIncident = triggerIncidentToObject(ctx, c.TriggerIncident, diags)
 }
 
 // tcpMonitorRequestFromSet converts the request block value to its API

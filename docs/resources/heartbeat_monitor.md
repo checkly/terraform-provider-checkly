@@ -42,7 +42,7 @@ resource "checkly_heartbeat_monitor" "example-heartbeat-monitor" {
 - `heartbeat` (Block, Optional) The heartbeat schedule and grace period. (see [below for nested schema](#nestedblock--heartbeat))
 - `muted` (Boolean) Determines if any notifications will be sent out when a check fails/degrades/recovers.
 - `tags` (Set of String) A list of tags for organizing and filtering checks.
-- `trigger_incident` (Block Set) Create and resolve an incident based on the alert configuration. Useful for status page automation. (see [below for nested schema](#nestedblock--trigger_incident))
+- `trigger_incident` (Attributes) Create and resolve an incident based on the alert configuration. Useful for status page automation. (see [below for nested schema](#nestedatt--trigger_incident))
 - `use_global_alert_settings` (Boolean) When true, the account level alert settings will be used, not the alert setting defined on this check.
 
 ### Read-Only
@@ -119,7 +119,7 @@ Optional:
 - `ping_token` (String, Sensitive) Custom token to generate your ping URL. Checkly will expect a ping to `https://ping.checklyhq.com/[PING_TOKEN]`.
 
 
-<a id="nestedblock--trigger_incident"></a>
+<a id="nestedatt--trigger_incident"></a>
 ### Nested Schema for `trigger_incident`
 
 Required:
