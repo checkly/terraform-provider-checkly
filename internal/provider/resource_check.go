@@ -72,7 +72,7 @@ type CheckResourceModel struct {
 	AlertSettings            types.Object `tfsdk:"alert_settings"`
 	UseGlobalAlertSettings   types.Bool   `tfsdk:"use_global_alert_settings"`
 	DoubleCheck              types.Bool   `tfsdk:"double_check"`
-	Request                  types.Set    `tfsdk:"request"`
+	Request                  types.Object `tfsdk:"request"`
 	GroupID                  types.Int64  `tfsdk:"group_id"`
 	GroupOrder               types.Int64  `tfsdk:"group_order"`
 	RetryStrategy            types.Object `tfsdk:"retry_strategy"`
@@ -247,15 +247,15 @@ func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 				DoubleCheck:                true,
 			}),
 			doubleCheckAttributeName: doubleCheckAttributeSchema(),
+			"request": apiCheckRequestAttributeSchema(apiCheckRequestAttributeSchemaOptions{
+				Description: "An API check might have one request config.",
+			}),
 		},
 		Blocks: map[string]schema.Block{
 			environmentVariableAttributeName: makeEnvironmentVariableSchema(EnvironmentVariableAttributeSchemaOptions{
 				Description: "Insert environment variables into the runtime environment. Only relevant for browser checks. Use global environment variables whenever possible.",
 			}),
 			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{}),
-			"request": apiCheckRequestBlockSchema(apiCheckRequestBlockSchemaOptions{
-				Description: "An API check might have one request config.",
-			}),
 		},
 	}
 }
@@ -330,11 +330,12 @@ func (r *CheckResource) Configure(ctx context.Context, req resource.ConfigureReq
 	r.client = clientFromProviderData(req.ProviderData, &resp.Diagnostics)
 }
 
-// ModifyPlan applies default values to the optional+computed attributes
-// nested in the request set block. Schema defaults cannot be used for these
-// attributes (see the schema for details), so the plan is adjusted here
-// instead. Substituting static values keeps every set element fully known
-// and stable across plans, which set element correlation requires.
+// ModifyPlan applies default values to the optional+computed attributes of
+// the request assertions. Schema defaults cannot be used for attributes
+// nested in set elements (see the schema for details), so the plan is
+// adjusted here instead. Substituting static values keeps every set element
+// fully known and stable across plans, which set element correlation
+// requires.
 func (r *CheckResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
 	planNestedDefaults(ctx, req, resp, path.Root("request"), apiCheckRequestWithDefaults)
 }
@@ -615,7 +616,7 @@ func checkFromModel(ctx context.Context, model *CheckResourceModel, diags *diag.
 	// Leaving them out for other check types prevents them from causing
 	// configuration drift.
 	if check.Type == checkly.TypeAPI {
-		check.Request = apiCheckRequestFromSet(ctx, model.Request, diags)
+		check.Request = apiCheckRequestFromObject(ctx, model.Request, diags)
 		check.FrequencyOffset = int(model.FrequencyOffset.ValueInt64())
 	}
 
@@ -625,7 +626,7 @@ func checkFromModel(ctx context.Context, model *CheckResourceModel, diags *diag.
 // checkResolveComputedValues finalizes a planned model after a successful
 // create or update API call. All practitioner-configurable values are already
 // known at plan time (defaults included; the attributes nested in the request
-// block are defaulted in ModifyPlan) and must be kept as planned; only the
+// assertions are defaulted in ModifyPlan) and must be kept as planned; only the
 // values that may still be unknown in the plan (the ID and the
 // optional+computed alert_settings and retry_strategy objects) are resolved
 // from the API response.
@@ -691,10 +692,10 @@ func checkToModel(ctx context.Context, c *checkly.Check, model *CheckResourceMod
 	model.DoubleCheck = types.BoolValue(c.DoubleCheck)
 	// The request property only applies to API checks; the API reports a
 	// zero-valued request config for other check types. For non-API checks
-	// the prior value is preserved: a configured request block is ignored by
-	// the API, and overwriting it here would cause drift.
+	// the prior value is preserved: a configured request is ignored by the
+	// API, and overwriting it here would cause drift.
 	if c.Type == checkly.TypeAPI {
-		model.Request = apiCheckRequestToSet(ctx, c.Request, prior.Request, diags)
+		model.Request = apiCheckRequestToObject(ctx, c.Request, prior.Request, diags)
 	}
 	model.GroupID = types.Int64Value(c.GroupID)
 	model.GroupOrder = types.Int64Value(int64(c.GroupOrder))
@@ -704,7 +705,7 @@ func checkToModel(ctx context.Context, c *checkly.Check, model *CheckResourceMod
 
 // stringOrDefault returns the given value, or the given default value when
 // the value is null or unknown. It is used to apply default values during
-// plan modification to attributes nested in set blocks, where schema
+// plan modification to attributes nested in set elements, where schema
 // defaults cannot be used.
 func stringOrDefault(value types.String, defaultValue string) types.String {
 	if value.IsNull() || value.IsUnknown() {
@@ -715,7 +716,7 @@ func stringOrDefault(value types.String, defaultValue string) types.String {
 
 // boolOrDefault returns the given value, or the given default value when the
 // value is null or unknown. It is used to apply default values during plan
-// modification to attributes nested in set blocks, where schema defaults
+// modification to attributes nested in set elements, where schema defaults
 // cannot be used.
 func boolOrDefault(value types.Bool, defaultValue bool) types.Bool {
 	if value.IsNull() || value.IsUnknown() {

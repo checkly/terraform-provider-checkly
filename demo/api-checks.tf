@@ -10,16 +10,16 @@ resource "checkly_api_check" "api-check-1" {
     "us-east-2",
   ]
 
-  request {
+  request = {
     method = "GET"
     url    = "https://api.checklyhq.com/public-stats"
 
-    assertion {
+    assertion = [{
       comparison = "EQUALS"
       property   = ""
       source     = "STATUS_CODE"
       target     = "200"
-    }
+    }]
   }
 
   use_global_alert_settings = true
@@ -42,7 +42,7 @@ resource "checkly_api_check" "api-check-2" {
 
   tags = ["checks", "api"]
 
-  request {
+  request = {
     method           = "GET"
     url              = "https://api.checklyhq.com/public-stats"
     follow_redirects = true
@@ -68,26 +68,26 @@ resource "checkly_api_check" "api-check-2" {
       # another alternative is using git encrypted secret files
     }
 
-    assertion {
-      comparison = "EQUALS"
-      property   = ""
-      source     = "STATUS_CODE"
-      target     = "200"
-    }
-
-    assertion {
-      comparison = "EQUALS"
-      property   = "cache-control"
-      source     = "HEADERS"
-      target     = "no-cache"
-    }
-
-    assertion {
-      comparison = "GREATER_THAN"
-      property   = "$.apiCheckResults"
-      source     = "JSON_BODY"
-      target     = "100"
-    }
+    assertion = [
+      {
+        comparison = "EQUALS"
+        property   = ""
+        source     = "STATUS_CODE"
+        target     = "200"
+      },
+      {
+        comparison = "EQUALS"
+        property   = "cache-control"
+        source     = "HEADERS"
+        target     = "no-cache"
+      },
+      {
+        comparison = "GREATER_THAN"
+        property   = "$.apiCheckResults"
+        source     = "JSON_BODY"
+        target     = "100"
+      },
+    ]
   }
 
   alert_settings = {
@@ -117,7 +117,7 @@ resource "checkly_api_check" "api-check-3" {
   max_response_time = 18000
   muted             = true
 
-  request {
+  request = {
     method           = "POST"
     url              = "https://jsonplaceholder.typicode.com/posts"
     follow_redirects = true
@@ -130,26 +130,26 @@ resource "checkly_api_check" "api-check-3" {
     body      = "{\"message\":\"hello checkly\",\"messageId\":1}"
     body_type = "JSON"
 
-    assertion {
-      comparison = "EQUALS"
-      property   = ""
-      source     = "STATUS_CODE"
-      target     = "201"
-    }
-
-    assertion {
-      comparison = "EQUALS"
-      source     = "JSON_BODY"
-      property   = "$.message"
-      target     = "hello checkly"
-    }
-
-    assertion {
-      comparison = "EQUALS"
-      source     = "JSON_BODY"
-      property   = "$.messageId"
-      target     = 1
-    }
+    assertion = [
+      {
+        comparison = "EQUALS"
+        property   = ""
+        source     = "STATUS_CODE"
+        target     = "201"
+      },
+      {
+        comparison = "EQUALS"
+        source     = "JSON_BODY"
+        property   = "$.message"
+        target     = "hello checkly"
+      },
+      {
+        comparison = "EQUALS"
+        source     = "JSON_BODY"
+        property   = "$.messageId"
+        target     = 1
+      },
+    ]
 
   }
 
@@ -173,7 +173,7 @@ resource "checkly_api_check" "api-check-4" {
     "eu-central-1"
   ]
 
-  request {
+  request = {
     follow_redirects = false
     skip_ssl         = true
     url              = "https://api.checklyhq.com/public-stats"
@@ -183,12 +183,12 @@ resource "checkly_api_check" "api-check-4" {
       password = ""
     }
 
-    assertion {
+    assertion = [{
       source     = "STATUS_CODE"
       property   = ""
       comparison = "EQUALS"
       target     = "200"
-    }
+    }]
   }
 }
 
@@ -202,7 +202,7 @@ resource "checkly_api_check" "api-check-group-1_1" {
     "eu-central-1",
     "us-east-2",
   ]
-  request {
+  request = {
     method           = "GET"
     url              = "https://api.checklyhq.com/public-stats"
     follow_redirects = true
@@ -222,7 +222,7 @@ resource "checkly_api_check" "api-check-group-1_2" {
     "eu-central-1",
     "us-east-2",
   ]
-  request {
+  request = {
     method           = "GET"
     url              = "https://api.checklyhq.com/public-stats"
     follow_redirects = true
@@ -242,16 +242,16 @@ resource "checkly_api_check" "check-with-alert-channels" {
   max_response_time = 18000
   locations         = ["us-east-1"]
 
-  request {
+  request = {
     method = "GET"
     url    = "https://api.checklyhq.com/public-stats"
 
-    assertion {
+    assertion = [{
       comparison = "EQUALS"
       property   = ""
       source     = "STATUS_CODE"
       target     = "200"
-    }
+    }]
   }
 
   alert_channel_subscription {

@@ -3,11 +3,13 @@ package provider
 import (
 	"context"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
@@ -15,7 +17,7 @@ import (
 	checkly "github.com/checkly/checkly-go-sdk"
 )
 
-// apiCheckRequestModel describes the request block data model.
+// apiCheckRequestModel describes the request attribute data model.
 type apiCheckRequestModel struct {
 	Method          types.String `tfsdk:"method"`
 	URL             types.String `tfsdk:"url"`
@@ -56,172 +58,164 @@ var apiCheckRequestAttrTypes = map[string]attr.Type{
 	"ip_family":        types.StringType,
 }
 
-// apiCheckRequestBlockSchemaOptions holds the settings that differ between
-// the resources sharing the API check request block.
-type apiCheckRequestBlockSchemaOptions struct {
-	// Description is the description of the request block.
+// apiCheckRequestAttributeSchemaOptions holds the settings that differ
+// between the resources sharing the API check request attribute.
+type apiCheckRequestAttributeSchemaOptions struct {
+	// Description is the description of the request attribute.
 	Description string
 	// URLDescription is the description of the request.url attribute.
 	URLDescription string
-	// Required makes the request block mandatory.
+	// Required makes the request attribute mandatory.
 	Required bool
 }
 
-// apiCheckRequestBlockSchema returns the schema for the request block of an
-// API check, which holds at most one request config.
-func apiCheckRequestBlockSchema(opts apiCheckRequestBlockSchemaOptions) schema.SetNestedBlock {
-	var validators []validator.Set
-	if opts.Required {
-		validators = append(validators, setvalidator.IsRequired())
-	}
-	validators = append(validators, setvalidator.SizeAtMost(1))
-
-	return schema.SetNestedBlock{
+// apiCheckRequestAttributeSchema returns the schema for the request
+// attribute of an API check.
+func apiCheckRequestAttributeSchema(opts apiCheckRequestAttributeSchemaOptions) schema.SingleNestedAttribute {
+	return schema.SingleNestedAttribute{
+		Required:    opts.Required,
+		Optional:    !opts.Required,
 		Description: opts.Description,
-		Validators:  validators,
-		NestedObject: schema.NestedBlockObject{
-			// Attributes nested in this set block must not use schema
-			// defaults. The framework looks up configuration values
-			// for set elements by full element value; once computed
-			// attributes resolve, the lookup misses, the configuration
-			// is treated as null, and defaults would override values
-			// the practitioner actually configured, producing a
-			// perpetual diff. Default values are instead applied in
-			// ModifyPlan.
-			Attributes: map[string]schema.Attribute{
-				"method": schema.StringAttribute{
-					Optional:    true,
-					Computed:    true,
-					Description: "The HTTP method to use for this API check. Possible values are `GET`, `POST`, `PUT`, `HEAD`, `DELETE`, `PATCH`. (Default `GET`).",
+		Attributes: map[string]schema.Attribute{
+			"method": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Default:     stringdefault.StaticString("GET"),
+				Description: "The HTTP method to use for this API check. Possible values are `GET`, `POST`, `PUT`, `HEAD`, `DELETE`, `PATCH`. (Default `GET`).",
+			},
+			"url": schema.StringAttribute{
+				Required:    true,
+				Description: opts.URLDescription,
+			},
+			"follow_redirects": schema.BoolAttribute{
+				Optional: true,
+				Computed: true,
+				Default:  booldefault.StaticBool(false),
+			},
+			"skip_ssl": schema.BoolAttribute{
+				Optional: true,
+				Computed: true,
+				Default:  booldefault.StaticBool(false),
+			},
+			"headers": schema.MapAttribute{
+				Optional:    true,
+				ElementType: types.StringType,
+			},
+			"query_parameters": schema.MapAttribute{
+				Optional:    true,
+				ElementType: types.StringType,
+			},
+			"body": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Default:     stringdefault.StaticString(""),
+				Description: "The body of the request.",
+			},
+			"body_type": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Default:     stringdefault.StaticString("NONE"),
+				Description: "The `Content-Type` header of the request. Possible values `NONE`, `JSON`, `FORM`, `RAW`, and `GRAPHQL`. (Default `NONE`).",
+				Validators: []validator.String{
+					stringvalidator.OneOf("NONE", "JSON", "FORM", "RAW", "GRAPHQL"),
 				},
-				"url": schema.StringAttribute{
-					Required:    true,
-					Description: opts.URLDescription,
-				},
-				"follow_redirects": schema.BoolAttribute{
-					Optional: true,
-					Computed: true,
-				},
-				"skip_ssl": schema.BoolAttribute{
-					Optional: true,
-					Computed: true,
-				},
-				"headers": schema.MapAttribute{
-					Optional:    true,
-					ElementType: types.StringType,
-				},
-				"query_parameters": schema.MapAttribute{
-					Optional:    true,
-					ElementType: types.StringType,
-				},
-				"body": schema.StringAttribute{
-					Optional:    true,
-					Computed:    true,
-					Description: "The body of the request.",
-				},
-				"body_type": schema.StringAttribute{
-					Optional:    true,
-					Computed:    true,
-					Description: "The `Content-Type` header of the request. Possible values `NONE`, `JSON`, `FORM`, `RAW`, and `GRAPHQL`. (Default `NONE`).",
-					Validators: []validator.String{
-						stringvalidator.OneOf("NONE", "JSON", "FORM", "RAW", "GRAPHQL"),
-					},
-				},
-				"basic_auth": schema.SingleNestedAttribute{
-					Optional:    true,
-					Description: "Set up HTTP basic authentication (username & password).",
+			},
+			"assertion": schema.SetNestedAttribute{
+				Optional:    true,
+				Computed:    true,
+				Default:     setdefault.StaticValue(types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{})),
+				Description: "A request can have multiple assertions.",
+				NestedObject: schema.NestedAttributeObject{
+					// Attributes nested in this set attribute must not use
+					// schema defaults. The framework looks up configuration
+					// values for set elements by full element value; once
+					// computed attributes resolve, the lookup misses, the
+					// configuration is treated as null, and defaults would
+					// override values the practitioner actually configured,
+					// producing a perpetual diff. Default values are instead
+					// applied in ModifyPlan (see apiCheckRequestWithDefaults).
 					Attributes: map[string]schema.Attribute{
-						"username": schema.StringAttribute{
-							Required: true,
+						"source": schema.StringAttribute{
+							Required:    true,
+							Description: "The source of the asserted value. Possible values `STATUS_CODE`, `JSON_BODY`, `HEADERS`, `TEXT_BODY`, and `RESPONSE_TIME`.",
 						},
-						"password": schema.StringAttribute{
-							Required:  true,
-							Sensitive: true,
+						"property": schema.StringAttribute{
+							Optional: true,
+							Computed: true,
 						},
-					},
-				},
-				"ip_family": schema.StringAttribute{
-					Optional:    true,
-					Computed:    true,
-					Description: "IP Family to be used when executing the api check. The value can be either IPv4 or IPv6. (Default `IPv4`).",
-					Validators: []validator.String{
-						stringvalidator.OneOf("IPv4", "IPv6"),
+						"comparison": schema.StringAttribute{
+							Required:    true,
+							Description: "The type of comparison to be executed between expected and actual value of the assertion. Possible values `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL`, and `NOT_NULL`.",
+						},
+						"target": schema.StringAttribute{
+							Optional: true,
+							Computed: true,
+						},
 					},
 				},
 			},
-			Blocks: map[string]schema.Block{
-				"assertion": schema.SetNestedBlock{
-					Description: "A request can have multiple assertions.",
-					NestedObject: schema.NestedBlockObject{
-						Attributes: map[string]schema.Attribute{
-							"source": schema.StringAttribute{
-								Required:    true,
-								Description: "The source of the asserted value. Possible values `STATUS_CODE`, `JSON_BODY`, `HEADERS`, `TEXT_BODY`, and `RESPONSE_TIME`.",
-							},
-							"property": schema.StringAttribute{
-								Optional: true,
-								Computed: true,
-							},
-							"comparison": schema.StringAttribute{
-								Required:    true,
-								Description: "The type of comparison to be executed between expected and actual value of the assertion. Possible values `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL`, and `NOT_NULL`.",
-							},
-							"target": schema.StringAttribute{
-								Optional: true,
-								Computed: true,
-							},
-						},
+			"basic_auth": schema.SingleNestedAttribute{
+				Optional:    true,
+				Description: "Set up HTTP basic authentication (username & password).",
+				Attributes: map[string]schema.Attribute{
+					"username": schema.StringAttribute{
+						Required: true,
 					},
+					"password": schema.StringAttribute{
+						Required:  true,
+						Sensitive: true,
+					},
+				},
+			},
+			"ip_family": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Default:     stringdefault.StaticString("IPv4"),
+				Description: "IP Family to be used when executing the api check. The value can be either IPv4 or IPv6. (Default `IPv4`).",
+				Validators: []validator.String{
+					stringvalidator.OneOf("IPv4", "IPv6"),
 				},
 			},
 		},
 	}
 }
 
-// apiCheckRequestWithDefaults returns the request block value with default
-// values substituted for null and unknown optional+computed attributes.
-func apiCheckRequestWithDefaults(ctx context.Context, set types.Set, diags *diag.Diagnostics) types.Set {
-	if set.IsNull() || set.IsUnknown() {
-		return set
+// apiCheckRequestWithDefaults returns the request attribute value with
+// empty strings substituted for null and unknown assertion properties and
+// targets. It is called from ModifyPlan of the resources using the
+// attribute, because schema defaults cannot be used for attributes nested
+// in set elements (see the schema for details).
+func apiCheckRequestWithDefaults(ctx context.Context, obj types.Object, diags *diag.Diagnostics) types.Object {
+	if obj.IsNull() || obj.IsUnknown() {
+		return obj
 	}
 
-	var models []apiCheckRequestModel
-	diags.Append(set.ElementsAs(ctx, &models, false)...)
+	var model apiCheckRequestModel
+	diags.Append(obj.As(ctx, &model, basetypes.ObjectAsOptions{})...)
 	if diags.HasError() {
-		return set
+		return obj
 	}
 
-	for i, model := range models {
-		models[i].Method = stringOrDefault(model.Method, "GET")
-		models[i].FollowRedirects = boolOrDefault(model.FollowRedirects, false)
-		models[i].SkipSSL = boolOrDefault(model.SkipSSL, false)
-		models[i].Body = stringOrDefault(model.Body, "")
-		models[i].BodyType = stringOrDefault(model.BodyType, "NONE")
-		models[i].IPFamily = stringOrDefault(model.IPFamily, "IPv4")
-		models[i].Assertion = assertionsWithPropertyAndTargetDefaults(ctx, model.Assertion, diags)
-	}
+	model.Assertion = assertionsWithPropertyAndTargetDefaults(ctx, model.Assertion, diags)
 
-	result, d := types.SetValueFrom(ctx, types.ObjectType{AttrTypes: apiCheckRequestAttrTypes}, models)
+	result, d := types.ObjectValueFrom(ctx, apiCheckRequestAttrTypes, model)
 	diags.Append(d...)
 
 	return result
 }
 
-// apiCheckRequestFromSet converts the request block value to its API
-// representation. An empty, null or unknown value converts to a zero-valued
-// request.
-func apiCheckRequestFromSet(ctx context.Context, set types.Set, diags *diag.Diagnostics) checkly.Request {
-	if set.IsNull() || set.IsUnknown() {
+// apiCheckRequestFromObject converts the request attribute value to its API
+// representation. A null or unknown value converts to a zero-valued request.
+func apiCheckRequestFromObject(ctx context.Context, obj types.Object, diags *diag.Diagnostics) checkly.Request {
+	if obj.IsNull() || obj.IsUnknown() {
 		return checkly.Request{}
 	}
 
-	var models []apiCheckRequestModel
-	diags.Append(set.ElementsAs(ctx, &models, false)...)
-	if diags.HasError() || len(models) == 0 {
+	var model apiCheckRequestModel
+	diags.Append(obj.As(ctx, &model, basetypes.ObjectAsOptions{})...)
+	if diags.HasError() {
 		return checkly.Request{}
 	}
-
-	model := models[0]
 
 	return checkly.Request{
 		Method:          model.Method.ValueString(),
@@ -238,29 +232,24 @@ func apiCheckRequestFromSet(ctx context.Context, set types.Set, diags *diag.Diag
 	}
 }
 
-// apiCheckRequestToSet converts the API representation of an API check
-// request config to the request block value. The prior block value (the
-// previously stored state) is consulted so that collections omitted from the
-// configuration stay null instead of drifting to empty values.
-func apiCheckRequestToSet(ctx context.Context, r checkly.Request, prior types.Set, diags *diag.Diagnostics) types.Set {
-	elementType := types.ObjectType{AttrTypes: apiCheckRequestAttrTypes}
-
+// apiCheckRequestToObject converts the API representation of an API check
+// request config to the request attribute value. The prior attribute value
+// (the previously stored state) is consulted so that headers and query
+// parameters omitted from the configuration stay null instead of drifting
+// to empty maps.
+func apiCheckRequestToObject(ctx context.Context, r checkly.Request, prior types.Object, diags *diag.Diagnostics) types.Object {
 	priorModel := apiCheckRequestModel{
 		Headers:         types.MapNull(types.StringType),
 		QueryParameters: types.MapNull(types.StringType),
 	}
 	if !prior.IsNull() && !prior.IsUnknown() {
-		var priorModels []apiCheckRequestModel
-		diags.Append(prior.ElementsAs(ctx, &priorModels, false)...)
+		diags.Append(prior.As(ctx, &priorModel, basetypes.ObjectAsOptions{})...)
 		if diags.HasError() {
-			return types.SetNull(elementType)
-		}
-		if len(priorModels) > 0 {
-			priorModel = priorModels[0]
+			return types.ObjectNull(apiCheckRequestAttrTypes)
 		}
 	}
 
-	model := apiCheckRequestModel{
+	obj, d := types.ObjectValueFrom(ctx, apiCheckRequestAttrTypes, apiCheckRequestModel{
 		Method:          types.StringValue(r.Method),
 		URL:             types.StringValue(r.URL),
 		FollowRedirects: types.BoolValue(r.FollowRedirects),
@@ -272,12 +261,10 @@ func apiCheckRequestToSet(ctx context.Context, r checkly.Request, prior types.Se
 		Assertion:       assertionsToSet(ctx, r.Assertions, diags),
 		BasicAuth:       apiCheckBasicAuthToObject(ctx, r.BasicAuth, diags),
 		IPFamily:        types.StringValue(r.IPFamily),
-	}
-
-	set, d := types.SetValueFrom(ctx, elementType, []apiCheckRequestModel{model})
+	})
 	diags.Append(d...)
 
-	return set
+	return obj
 }
 
 // apiCheckKeyValuesFromMap converts a map of strings to the API's key-value

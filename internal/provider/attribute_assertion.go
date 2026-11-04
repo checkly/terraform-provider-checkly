@@ -10,7 +10,7 @@ import (
 	checkly "github.com/checkly/checkly-go-sdk"
 )
 
-// assertionModel describes the data model of an assertion block. Checks,
+// assertionModel describes the data model of an assertion. Checks,
 // monitors and API check defaults share this model; each resource defines
 // its own schema and validators for it.
 type assertionModel struct {
@@ -27,13 +27,13 @@ var assertionAttrTypes = map[string]attr.Type{
 	"target":     types.StringType,
 }
 
-// assertionsWithPropertyDefault returns the assertion block value with an
+// assertionsWithPropertyDefault returns the assertion set value with an
 // empty string substituted for a null or unknown property.
 func assertionsWithPropertyDefault(ctx context.Context, set types.Set, diags *diag.Diagnostics) types.Set {
 	return assertionsWithDefaults(ctx, set, false, diags)
 }
 
-// assertionsWithPropertyAndTargetDefaults returns the assertion block value
+// assertionsWithPropertyAndTargetDefaults returns the assertion set value
 // with empty strings substituted for a null or unknown property and target.
 func assertionsWithPropertyAndTargetDefaults(ctx context.Context, set types.Set, diags *diag.Diagnostics) types.Set {
 	return assertionsWithDefaults(ctx, set, true, diags)
@@ -68,7 +68,7 @@ func assertionsWithDefaults(ctx context.Context, set types.Set, defaultTarget bo
 	return result
 }
 
-// assertionsFromSet converts an assertion block value to its API
+// assertionsFromSet converts an assertion set value to its API
 // representation. Null and unknown values convert to an empty (non-nil)
 // slice.
 func assertionsFromSet(ctx context.Context, set types.Set, diags *diag.Diagnostics) []checkly.Assertion {
@@ -97,7 +97,7 @@ func assertionsFromSet(ctx context.Context, set types.Set, diags *diag.Diagnosti
 }
 
 // assertionsToSet converts the API representation of assertions to an
-// assertion block value.
+// assertion set value.
 func assertionsToSet(ctx context.Context, assertions []checkly.Assertion, diags *diag.Diagnostics) types.Set {
 	models := make([]assertionModel, len(assertions))
 	for i, assertion := range assertions {

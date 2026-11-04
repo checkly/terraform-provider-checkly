@@ -217,7 +217,7 @@ resource "checkly_check" "test" {
   local_setup_script        = "console.log('setup')"
   local_teardown_script     = "console.log('teardown')"
 
-  request {
+  request = {
     method           = "GET"
     url              = "https://api.checklyhq.com/public-stats"
     follow_redirects = true
@@ -233,18 +233,20 @@ resource "checkly_check" "test" {
       username = "user"
       password = "pass"
     }
-    assertion {
-      source     = "STATUS_CODE"
-      property   = ""
-      comparison = "EQUALS"
-      target     = "200"
-    }
-    assertion {
-      source     = "JSON_BODY"
-      property   = "$.apiCheckResults"
-      comparison = "GREATER_THAN"
-      target     = "100"
-    }
+    assertion = [
+      {
+        source     = "STATUS_CODE"
+        property   = ""
+        comparison = "EQUALS"
+        target     = "200"
+      },
+      {
+        source     = "JSON_BODY"
+        property   = "$.apiCheckResults"
+        comparison = "GREATER_THAN"
+        target     = "100"
+      },
+    ]
   }
 
   alert_settings = {
@@ -304,7 +306,7 @@ resource "checkly_check" "test" {
   locations                 = ["eu-central-1"]
   use_global_alert_settings = true
 
-  request {
+  request = {
     url = "https://api.checklyhq.com/public-stats"
   }
 }
@@ -336,7 +338,7 @@ resource "checkly_check" "test" {
   use_global_alert_settings = true
   double_check              = true
 
-  request {
+  request = {
     url = "https://api.checklyhq.com/public-stats"
   }
 }
@@ -2718,13 +2720,13 @@ resource "checkly_api_check" "test" {
   max_response_time      = 30000
   locations              = ["eu-central-1"]
 
-  request {
+  request = {
     url = "https://api.checklyhq.com/public-stats"
-    assertion {
+    assertion = [{
       source     = "STATUS_CODE"
       comparison = "EQUALS"
       target     = "200"
-    }
+    }]
   }
 
   alert_settings = {

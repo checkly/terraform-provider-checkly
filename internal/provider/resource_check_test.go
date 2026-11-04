@@ -140,10 +140,9 @@ func TestAccBrowserCheckBasic(t *testing.T) {
 					"tags.*",
 					"e2e",
 				),
-				resource.TestCheckResourceAttr(
+				resource.TestCheckNoResourceAttr(
 					"checkly_check.test",
-					"request.#",
-					"0",
+					"request",
 				),
 			),
 		},
@@ -172,20 +171,20 @@ func TestAccApiCheckRequestUnknownValues(t *testing.T) {
 
 					locations = ["eu-central-1"]
 
-					request {
+					request = {
 						url = "https://api.checklyhq.com/public-stats?marker=${checkly_snippet.test.id}"
-						assertion {
+						assertion = [{
 							source     = "STATUS_CODE"
 							comparison = "EQUALS"
 							target     = checkly_snippet.test.id
-						}
+						}]
 					}
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_check.test",
-					"request.*.method",
+					"request.method",
 					"GET",
 				),
 			),
@@ -223,35 +222,25 @@ func TestAccApiCheckBasic(t *testing.T) {
 					"locations.*",
 					"us-east-1",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_check.test",
-					"request.*.method",
+					"request.method",
 					"GET",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_check.test",
-					"request.*.url",
+					"request.url",
 					"https://api.checklyhq.com/public-stats",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_check.test",
-					"request.*.assertion.*.comparison",
-					"EQUALS",
-				),
-				testCheckResourceAttrExpr(
-					"checkly_check.test",
-					"request.*.assertion.*.property",
-					"",
-				),
-				testCheckResourceAttrExpr(
-					"checkly_check.test",
-					"request.*.assertion.*.source",
-					"STATUS_CODE",
-				),
-				testCheckResourceAttrExpr(
-					"checkly_check.test",
-					"request.*.assertion.*.target",
-					"200",
+					"request.assertion.*",
+					map[string]string{
+						"source":     "STATUS_CODE",
+						"property":   "",
+						"comparison": "EQUALS",
+						"target":     "200",
+					},
 				),
 			),
 		},
@@ -351,10 +340,9 @@ func TestAccMultiStepCheckBasic(t *testing.T) {
 					"tags.*",
 					"multi-step",
 				),
-				resource.TestCheckResourceAttr(
+				resource.TestCheckNoResourceAttr(
 					"checkly_check.test",
-					"request.#",
-					"0",
+					"request",
 				),
 			),
 		},
@@ -381,65 +369,70 @@ func TestAccApiCheckFull(t *testing.T) {
 					`"locations.#"`,
 					"3",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_check.test",
-					`"request.*.headers.X-CUSTOM-1"`,
+					"request.headers.X-CUSTOM-1",
 					"1",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_check.test",
-					"request.*.headers.X-CUSTOM-2",
-					"FOO",
+					"request.headers.X-CUSTOM-2",
+					"foo",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_check.test",
-					"request.*.query_parameters.param1",
+					"request.query_parameters.param1",
 					"123",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_check.test",
-					"request.*.query_parameters.param2",
+					"request.query_parameters.param2",
 					"bar",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_check.test",
-					"request.*.basic_auth.username",
+					"request.basic_auth.username",
 					"user",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_check.test",
-					"request.*.basic_auth.password",
+					"request.basic_auth.password",
 					"pass",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_check.test",
-					"request.*.assertion.#",
+					"request.assertion.#",
 					"3",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_check.test",
-					"request.*.assertion.*.comparison",
-					"EQUALS",
+					"request.assertion.*",
+					map[string]string{
+						"source":     "STATUS_CODE",
+						"property":   "",
+						"comparison": "EQUALS",
+						"target":     "200",
+					},
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_check.test",
-					"request.*.assertion.*.comparison",
-					"GREATER_THAN",
+					"request.assertion.*",
+					map[string]string{
+						"source":     "HEADERS",
+						"property":   "cache-control",
+						"comparison": "EQUALS",
+						"target":     "no-cache",
+					},
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_check.test",
-					"request.*.assertion.*.target",
-					"200",
-				),
-				testCheckResourceAttrExpr(
-					"checkly_check.test",
-					"request.*.assertion.*.target",
-					"no-cache",
-				),
-				testCheckResourceAttrExpr(
-					"checkly_check.test",
-					"request.*.assertion.*.target",
-					"100",
+					"request.assertion.*",
+					map[string]string{
+						"source":     "JSON_BODY",
+						"property":   "$.apiCheckResults",
+						"comparison": "GREATER_THAN",
+						"target":     "100",
+					},
 				),
 			),
 		},
@@ -451,19 +444,19 @@ func TestAccApiCheckMore(t *testing.T) {
 		{
 			Config: apiCheck_post,
 			Check: resource.ComposeTestCheckFunc(
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_check.test",
-					"request.*.method",
+					"request.method",
 					"POST",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_check.test",
-					"request.*.body",
-					`{\"message\":\"hello checkly\",\"messageId\":1}`,
+					"request.body",
+					`{"message":"hello checkly","messageId":1}`,
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_check.test",
-					"request.*.body_type",
+					"request.body_type",
 					"JSON",
 				),
 			),
@@ -502,14 +495,14 @@ resource "checkly_check" "test_trigger_incident" {
 		notify_subscribers = true
 	}
 
-	request {
+	request = {
 		url    = "https://api.example.com/health"
 		method = "GET"
-		assertion {
+		assertion = [{
 			source     = "STATUS_CODE"
 			comparison = "EQUALS"
 			target     = "200"
-		}
+		}]
 	}
 
 	use_global_alert_settings = true
@@ -637,7 +630,7 @@ func TestAccCheckWithSingleRetry(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						method = "GET"
 						url    = "https://api.checklyhq.com/public-stats"
 					}
@@ -693,7 +686,7 @@ func TestAccCheckWithSingleRetryOnlyOnNetworkError(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						method = "GET"
 						url    = "https://api.checklyhq.com/public-stats"
 					}
@@ -722,7 +715,7 @@ func TestAccCheckWithSingleRetryOnlyOnNetworkError(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						method = "GET"
 						url    = "https://api.checklyhq.com/public-stats"
 					}
@@ -751,7 +744,7 @@ func TestAccCheckWithNoRetries(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						method = "GET"
 						url    = "https://api.checklyhq.com/public-stats"
 					}
@@ -805,7 +798,7 @@ func TestAccCheckWithNoRetriesOnlyOnNetworkError(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						method = "GET"
 						url    = "https://api.checklyhq.com/public-stats"
 					}
@@ -841,7 +834,7 @@ func TestAccCheckWithDefaultNoRetries(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						method = "GET"
 						url    = "https://api.checklyhq.com/public-stats"
 					}
@@ -884,7 +877,7 @@ func TestAccCheckWithFixedRetry(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						method = "GET"
 						url    = "https://api.checklyhq.com/public-stats"
 					}
@@ -942,7 +935,7 @@ func TestAccCheckWithFixedRetryOnlyOnNetworkError(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						method = "GET"
 						url    = "https://api.checklyhq.com/public-stats"
 					}
@@ -971,7 +964,7 @@ func TestAccCheckWithFixedRetryOnlyOnNetworkError(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						method = "GET"
 						url    = "https://api.checklyhq.com/public-stats"
 					}
@@ -1316,15 +1309,15 @@ const apiCheck_basic = `
 	  max_response_time         = 18000
 	  locations                 = [ "us-east-1", "eu-central-1" ]
 	  use_global_alert_settings = true
-	  request {
+	  request = {
 		method     = "GET"
 		url        = "https://api.checklyhq.com/public-stats"
-		assertion {
+		assertion = [{
 		  comparison = "EQUALS"
 		  property   = ""
 		  source     = "STATUS_CODE"
 		  target     = "200"
-		}
+		}]
 	  }
 	}
 `
@@ -1339,15 +1332,15 @@ const apiCheck_basic_withoutDescription = `
 	  max_response_time         = 18000
 	  locations                 = [ "us-east-1", "eu-central-1" ]
 	  use_global_alert_settings = true
-	  request {
+	  request = {
 		method     = "GET"
 		url        = "https://api.checklyhq.com/public-stats"
-		assertion {
+		assertion = [{
 		  comparison = "EQUALS"
 		  property   = ""
 		  source     = "STATUS_CODE"
 		  target     = "200"
-		}
+		}]
 	  }
 	}
 `
@@ -1366,7 +1359,7 @@ const apiCheck_full = `
 	  "us-east-1",
 	  "ap-northeast-1"
 	]
-	request {
+	request = {
 	  method           = "GET"
 	  url              = "https://api.checklyhq.com/public-stats"
 	  follow_redirects = true
@@ -1382,24 +1375,22 @@ const apiCheck_full = `
 		username = "user"
 		password = "pass"
 	  }
-	  assertion {
+	  assertion = [{
 		comparison = "EQUALS"
 		property   = ""
 		source     = "STATUS_CODE"
 		target     = "200"
-	  }
-	  assertion {
+	  }, {
 		comparison = "EQUALS"
 		property   = "cache-control"
 		source     = "HEADERS"
 		target     = "no-cache"
-	  }
-	  assertion {
+	  }, {
 		comparison = "GREATER_THAN"
 		property   = "$.apiCheckResults"
 		source     = "JSON_BODY"
 		target     = "100"
-	  }
+	  }]
 	}
 
 	alert_settings = {
@@ -1428,7 +1419,7 @@ const apiCheck_post = `
 	locations = [ "eu-central-1", "us-east-2" ]
 	max_response_time     = 18000
 	muted                 = true
-	request {
+	request = {
 	  method           = "POST"
 	  url              = "https://jsonplaceholder.typicode.com/posts"
 	  headers = {
@@ -1455,19 +1446,19 @@ const apiCheck_withEmptyBasicAuth = `
 	  "bug"
 	]
 	locations = [ "eu-central-1" ]
-	request {
+	request = {
 	  follow_redirects = false
 	  url              = "https://api.checklyhq.com/public-stats"
 	  basic_auth = {
 		username = ""
 		password = ""
 	  }
-	  assertion {
+	  assertion = [{
 		source     = "STATUS_CODE"
 		property   = ""
 		comparison = "EQUALS"
 		target     = "200"
-	  }
+	  }]
 	}
   }
 `
@@ -1497,7 +1488,7 @@ func TestAccCheckGroupAssignment(t *testing.T) {
 					frequency = 60
 					locations = ["eu-central-1"]
 					group_id  = checkly_check_group.test1.id
-					request {
+					request = {
 						method = "GET"
 						url    = "https://welcome.checklyhq.com"
 					}
@@ -1509,7 +1500,7 @@ func TestAccCheckGroupAssignment(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						method = "GET"
 						url    = "https://welcome.checklyhq.com"
 					}
@@ -1552,7 +1543,7 @@ func TestAccCheckGroupAssignment(t *testing.T) {
 					frequency = 60
 					locations = ["eu-central-1"]
 					group_id  = checkly_check_group.test2.id
-					request {
+					request = {
 						method = "GET"
 						url    = "https://welcome.checklyhq.com"
 					}
@@ -1565,7 +1556,7 @@ func TestAccCheckGroupAssignment(t *testing.T) {
 					frequency = 60
 					locations = ["eu-central-1"]
 					group_id  = checkly_check_group.test2.id
-					request {
+					request = {
 						method = "GET"
 						url    = "https://welcome.checklyhq.com"
 					}
@@ -1608,7 +1599,7 @@ func TestAccCheckGroupAssignment(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						method = "GET"
 						url    = "https://welcome.checklyhq.com"
 					}
@@ -1620,7 +1611,7 @@ func TestAccCheckGroupAssignment(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						method = "GET"
 						url    = "https://welcome.checklyhq.com"
 					}
@@ -1769,7 +1760,7 @@ func TestAccCheckFrequencyValidation(t *testing.T) {
 					activated = true
 					frequency = 0
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						method = "GET"
 						url    = "https://welcome.checklyhq.com"
 					}
@@ -1786,7 +1777,7 @@ func TestAccCheckFrequencyValidation(t *testing.T) {
 					frequency        = 0
 					frequency_offset = 10
 					locations        = ["eu-central-1"]
-					request {
+					request = {
 						method = "GET"
 						url    = "https://welcome.checklyhq.com"
 					}
@@ -1799,7 +1790,7 @@ func TestAccCheckFrequencyValidation(t *testing.T) {
 					frequency        = 0
 					frequency_offset = 20
 					locations        = ["eu-central-1"]
-					request {
+					request = {
 						method = "GET"
 						url    = "https://welcome.checklyhq.com"
 					}
@@ -1812,7 +1803,7 @@ func TestAccCheckFrequencyValidation(t *testing.T) {
 					frequency        = 0
 					frequency_offset = 30
 					locations        = ["eu-central-1"]
-					request {
+					request = {
 						method = "GET"
 						url    = "https://welcome.checklyhq.com"
 					}
@@ -1860,7 +1851,7 @@ func TestAccCheckFrequencyValidation(t *testing.T) {
 					frequency        = 60
 					frequency_offset = 30
 					locations        = ["eu-central-1"]
-					request {
+					request = {
 						method = "GET"
 						url    = "https://welcome.checklyhq.com"
 					}
@@ -1876,7 +1867,7 @@ func TestAccCheckFrequencyValidation(t *testing.T) {
 					activated = true
 					frequency = 9999
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						method = "GET"
 						url    = "https://welcome.checklyhq.com"
 					}
@@ -1893,7 +1884,7 @@ func TestAccCheckFrequencyValidation(t *testing.T) {
 					frequency        = 60
 					frequency_offset = 99
 					locations        = ["eu-central-1"]
-					request {
+					request = {
 						method = "GET"
 						url    = "https://welcome.checklyhq.com"
 					}
@@ -1910,7 +1901,7 @@ func TestAccCheckFrequencyValidation(t *testing.T) {
 					frequency        = 60
 					frequency_offset = 0
 					locations        = ["eu-central-1"]
-					request {
+					request = {
 						method = "GET"
 						url    = "https://welcome.checklyhq.com"
 					}
@@ -1942,7 +1933,7 @@ func TestAccCheckFrequencyUpdates(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						method = "GET"
 						url    = "https://welcome.checklyhq.com"
 					}
@@ -1955,7 +1946,7 @@ func TestAccCheckFrequencyUpdates(t *testing.T) {
 					frequency        = 0
 					frequency_offset = 30
 					locations        = ["eu-central-1"]
-					request {
+					request = {
 						method = "GET"
 						url    = "https://welcome.checklyhq.com"
 					}
@@ -1992,7 +1983,7 @@ func TestAccCheckFrequencyUpdates(t *testing.T) {
 					frequency        = 0
 					frequency_offset = 10
 					locations        = ["eu-central-1"]
-					request {
+					request = {
 						method = "GET"
 						url    = "https://welcome.checklyhq.com"
 					}
@@ -2004,7 +1995,7 @@ func TestAccCheckFrequencyUpdates(t *testing.T) {
 					activated = true
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						method = "GET"
 						url    = "https://welcome.checklyhq.com"
 					}
@@ -2065,7 +2056,7 @@ func TestAccCheckAlertChannelSubscriptions(t *testing.T) {
 					activated = true
 					locations = ["eu-central-1"]
 
-					request {
+					request = {
 						method = "GET"
 						url    = "https://api.checklyhq.com/public-stats"
 					}
@@ -2129,7 +2120,7 @@ func TestAccCheckAlertChannelSubscriptions(t *testing.T) {
 					activated = true
 					locations = ["eu-central-1"]
 
-					request {
+					request = {
 						method = "GET"
 						url    = "https://api.checklyhq.com/public-stats"
 					}
@@ -2204,7 +2195,7 @@ func TestAccCheckAlertChannelSubscriptions(t *testing.T) {
 					activated = true
 					locations = ["eu-central-1"]
 
-					request {
+					request = {
 						method = "GET"
 						url    = "https://api.checklyhq.com/public-stats"
 					}
@@ -2236,7 +2227,7 @@ func TestAccCheckDoubleCheck(t *testing.T) {
 				use_global_alert_settings = true
 				%s
 
-				request {
+				request = {
 					url = "https://api.checklyhq.com/public-stats"
 				}
 			}

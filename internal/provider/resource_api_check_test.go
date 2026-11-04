@@ -47,35 +47,25 @@ func TestAccApiCheckResourceBasic(t *testing.T) {
 					"locations.*",
 					"us-east-1",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_api_check.test",
-					"request.*.method",
+					"request.method",
 					"GET",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_api_check.test",
-					"request.*.url",
+					"request.url",
 					"https://api.checklyhq.com/public-stats",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_api_check.test",
-					"request.*.assertion.*.comparison",
-					"EQUALS",
-				),
-				testCheckResourceAttrExpr(
-					"checkly_api_check.test",
-					"request.*.assertion.*.property",
-					"",
-				),
-				testCheckResourceAttrExpr(
-					"checkly_api_check.test",
-					"request.*.assertion.*.source",
-					"STATUS_CODE",
-				),
-				testCheckResourceAttrExpr(
-					"checkly_api_check.test",
-					"request.*.assertion.*.target",
-					"200",
+					"request.assertion.*",
+					map[string]string{
+						"source":     "STATUS_CODE",
+						"property":   "",
+						"comparison": "EQUALS",
+						"target":     "200",
+					},
 				),
 			),
 		},
@@ -98,7 +88,7 @@ func TestAccApiCheckResourceDefaults(t *testing.T) {
 				resource "checkly_api_check" "test" {
 					name      = "API Check Resource Defaults"
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://api.checklyhq.com/public-stats"
 					}
 				}
@@ -134,19 +124,19 @@ func TestAccApiCheckResourceDefaults(t *testing.T) {
 					"description",
 					"",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_api_check.test",
-					"request.*.method",
+					"request.method",
 					"GET",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_api_check.test",
-					"request.*.body_type",
+					"request.body_type",
 					"NONE",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_api_check.test",
-					"request.*.ip_family",
+					"request.ip_family",
 					"IPv4",
 				),
 			),
@@ -159,7 +149,7 @@ func TestAccApiCheckResourceDefaults(t *testing.T) {
 					name                   = "API Check Resource Defaults"
 					degraded_response_time = 0
 					locations              = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://api.checklyhq.com/public-stats"
 					}
 				}
@@ -203,7 +193,7 @@ func TestAccApiCheckResourceSnippetsAndScripts(t *testing.T) {
 					local_setup_script    = "console.log('setup')"
 					local_teardown_script = "console.log('teardown')"
 
-					request {
+					request = {
 						url = "https://api.checklyhq.com/public-stats"
 					}
 				}
@@ -246,7 +236,7 @@ func TestAccApiCheckResourceSnippetsAndScripts(t *testing.T) {
 					frequency = 60
 					locations = ["eu-central-1"]
 
-					request {
+					request = {
 						url = "https://api.checklyhq.com/public-stats"
 					}
 				}
@@ -297,65 +287,70 @@ func TestAccApiCheckResourceFull(t *testing.T) {
 					`"locations.#"`,
 					"3",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_api_check.test",
-					`"request.*.headers.X-CUSTOM-1"`,
+					"request.headers.X-CUSTOM-1",
 					"1",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_api_check.test",
-					"request.*.headers.X-CUSTOM-2",
-					"FOO",
+					"request.headers.X-CUSTOM-2",
+					"foo",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_api_check.test",
-					"request.*.query_parameters.param1",
+					"request.query_parameters.param1",
 					"123",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_api_check.test",
-					"request.*.query_parameters.param2",
+					"request.query_parameters.param2",
 					"bar",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_api_check.test",
-					"request.*.basic_auth.username",
+					"request.basic_auth.username",
 					"user",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_api_check.test",
-					"request.*.basic_auth.password",
+					"request.basic_auth.password",
 					"pass",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_api_check.test",
-					"request.*.assertion.#",
+					"request.assertion.#",
 					"3",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_api_check.test",
-					"request.*.assertion.*.comparison",
-					"EQUALS",
+					"request.assertion.*",
+					map[string]string{
+						"source":     "STATUS_CODE",
+						"property":   "",
+						"comparison": "EQUALS",
+						"target":     "200",
+					},
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_api_check.test",
-					"request.*.assertion.*.comparison",
-					"GREATER_THAN",
+					"request.assertion.*",
+					map[string]string{
+						"source":     "HEADERS",
+						"property":   "cache-control",
+						"comparison": "EQUALS",
+						"target":     "no-cache",
+					},
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_api_check.test",
-					"request.*.assertion.*.target",
-					"200",
-				),
-				testCheckResourceAttrExpr(
-					"checkly_api_check.test",
-					"request.*.assertion.*.target",
-					"no-cache",
-				),
-				testCheckResourceAttrExpr(
-					"checkly_api_check.test",
-					"request.*.assertion.*.target",
-					"100",
+					"request.assertion.*",
+					map[string]string{
+						"source":     "JSON_BODY",
+						"property":   "$.apiCheckResults",
+						"comparison": "GREATER_THAN",
+						"target":     "100",
+					},
 				),
 			),
 		},
@@ -367,19 +362,19 @@ func TestAccApiCheckResourceMore(t *testing.T) {
 		{
 			Config: apiCheckResource_post,
 			Check: resource.ComposeTestCheckFunc(
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_api_check.test",
-					"request.*.method",
+					"request.method",
 					"POST",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_api_check.test",
-					"request.*.body",
-					`{\"message\":\"hello checkly\",\"messageId\":1}`,
+					"request.body",
+					`{"message":"hello checkly","messageId":1}`,
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_api_check.test",
-					"request.*.body_type",
+					"request.body_type",
 					"JSON",
 				),
 			),
@@ -426,7 +421,7 @@ func TestAccApiCheckResourceRetryStrategies(t *testing.T) {
 					name      = "api-check-resource-retries"
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						method = "GET"
 						url    = "https://api.checklyhq.com/public-stats"
 					}
@@ -465,7 +460,7 @@ func TestAccApiCheckResourceRetryStrategies(t *testing.T) {
 					name      = "api-check-resource-retries"
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						method = "GET"
 						url    = "https://api.checklyhq.com/public-stats"
 					}
@@ -516,7 +511,7 @@ func TestAccApiCheckResourceRetryStrategies(t *testing.T) {
 					name      = "api-check-resource-retries"
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						method = "GET"
 						url    = "https://api.checklyhq.com/public-stats"
 					}
@@ -546,7 +541,7 @@ func TestAccApiCheckResourceFrequencyValidation(t *testing.T) {
 					activated = false
 					frequency = 9999
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://welcome.checklyhq.com"
 					}
 				}
@@ -560,7 +555,7 @@ func TestAccApiCheckResourceFrequencyValidation(t *testing.T) {
 					activated = false
 					frequency = 0
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://welcome.checklyhq.com"
 					}
 				}
@@ -575,7 +570,7 @@ func TestAccApiCheckResourceFrequencyValidation(t *testing.T) {
 					frequency        = 0
 					frequency_offset = 15
 					locations        = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://welcome.checklyhq.com"
 					}
 				}
@@ -590,7 +585,7 @@ func TestAccApiCheckResourceFrequencyValidation(t *testing.T) {
 					frequency        = 10
 					frequency_offset = 0
 					locations        = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://welcome.checklyhq.com"
 					}
 				}
@@ -605,7 +600,7 @@ func TestAccApiCheckResourceFrequencyValidation(t *testing.T) {
 					frequency        = 10
 					frequency_offset = 101
 					locations        = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://welcome.checklyhq.com"
 					}
 				}
@@ -620,7 +615,7 @@ func TestAccApiCheckResourceFrequencyValidation(t *testing.T) {
 					frequency        = 120
 					frequency_offset = 25
 					locations        = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://welcome.checklyhq.com"
 					}
 				}
@@ -635,7 +630,7 @@ func TestAccApiCheckResourceFrequencyValidation(t *testing.T) {
 					frequency        = 0
 					frequency_offset = 20
 					locations        = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://welcome.checklyhq.com"
 					}
 				}
@@ -646,7 +641,7 @@ func TestAccApiCheckResourceFrequencyValidation(t *testing.T) {
 					frequency        = 10
 					frequency_offset = 100
 					locations        = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://welcome.checklyhq.com"
 					}
 				}
@@ -657,7 +652,7 @@ func TestAccApiCheckResourceFrequencyValidation(t *testing.T) {
 					frequency        = 120
 					frequency_offset = 24
 					locations        = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://welcome.checklyhq.com"
 					}
 				}
@@ -715,15 +710,15 @@ func TestAccApiCheckResourceMovedFromCheck(t *testing.T) {
 				  max_response_time         = 18000
 				  locations                 = [ "us-east-1", "eu-central-1" ]
 				  use_global_alert_settings = true
-				  request {
+				  request = {
 					method     = "GET"
 					url        = "https://api.checklyhq.com/public-stats"
-					assertion {
+					assertion = [{
 					  comparison = "EQUALS"
 					  property   = ""
 					  source     = "STATUS_CODE"
 					  target     = "200"
-					}
+					}]
 				  }
 				}
 			`,
@@ -739,15 +734,15 @@ func TestAccApiCheckResourceMovedFromCheck(t *testing.T) {
 				  max_response_time         = 18000
 				  locations                 = [ "us-east-1", "eu-central-1" ]
 				  use_global_alert_settings = true
-				  request {
+				  request = {
 					method     = "GET"
 					url        = "https://api.checklyhq.com/public-stats"
-					assertion {
+					assertion = [{
 					  comparison = "EQUALS"
 					  property   = ""
 					  source     = "STATUS_CODE"
 					  target     = "200"
-					}
+					}]
 				  }
 				}
 
@@ -800,7 +795,7 @@ func TestAccApiCheckUnsetSweepScalars(t *testing.T) {
 					use_global_alert_settings = true
 					runtime_id                = "2023.09"
 					locations                 = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://api.checklyhq.com/public-stats"
 					}
 				}
@@ -844,7 +839,7 @@ func TestAccApiCheckUnsetSweepScalars(t *testing.T) {
 					name      = "api-check-unset-sweep-scalars"
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://api.checklyhq.com/public-stats"
 					}
 				}
@@ -906,7 +901,7 @@ func TestAccApiCheckUnsetSweepCollections(t *testing.T) {
 					locations         = ["eu-central-1", "eu-west-1"]
 					private_locations = [checkly_private_location.sweep.slug_name]
 					tags              = ["sweep-a", "sweep-b"]
-					request {
+					request = {
 						url = "https://api.checklyhq.com/public-stats"
 					}
 				}
@@ -938,7 +933,7 @@ func TestAccApiCheckUnsetSweepCollections(t *testing.T) {
 					activated         = false
 					frequency         = 60
 					private_locations = [checkly_private_location.sweep.slug_name]
-					request {
+					request = {
 						url = "https://api.checklyhq.com/public-stats"
 					}
 				}
@@ -968,7 +963,7 @@ func TestAccApiCheckUnsetSweepCollections(t *testing.T) {
 					activated = false
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://api.checklyhq.com/public-stats"
 					}
 				}
@@ -1037,7 +1032,7 @@ func TestAccApiCheckUnsetSweepGroupAndAlerts(t *testing.T) {
 						notify_subscribers = false
 					}
 
-					request {
+					request = {
 						url = "https://api.checklyhq.com/public-stats"
 					}
 				}
@@ -1090,7 +1085,7 @@ func TestAccApiCheckUnsetSweepGroupAndAlerts(t *testing.T) {
 						notify_subscribers = false
 					}
 
-					request {
+					request = {
 						url = "https://api.checklyhq.com/public-stats"
 					}
 				}
@@ -1118,7 +1113,7 @@ func TestAccApiCheckUnsetSweepGroupAndAlerts(t *testing.T) {
 					activated = false
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://api.checklyhq.com/public-stats"
 					}
 				}
@@ -1161,7 +1156,7 @@ func TestAccApiCheckUnsetSweepRequest(t *testing.T) {
 					activated = false
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						method = "POST"
 						url    = "https://api.checklyhq.com/public-stats"
 						headers = {
@@ -1178,43 +1173,42 @@ func TestAccApiCheckUnsetSweepRequest(t *testing.T) {
 							username = "user"
 							password = "pass"
 						}
-						assertion {
+						assertion = [{
 							source     = "STATUS_CODE"
 							comparison = "EQUALS"
 							target     = "200"
-						}
-						assertion {
+						}, {
 							source     = "RESPONSE_TIME"
 							comparison = "LESS_THAN"
 							target     = "5000"
-						}
+						}]
 					}
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_api_check.test",
-					`request\.\d+\.method":"POST"`,
+					"request.method",
 					"POST",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_api_check.test",
-					`request\.\d+\.headers\.%":"2"`,
+					"request.headers.%",
 					"2",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_api_check.test",
-					`request\.\d+\.query_parameters\.%":"2"`,
+					"request.query_parameters.%",
 					"2",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_api_check.test",
-					`request\.\d+\.basic_auth\.username":"user"`,
+					"request.basic_auth.username",
 					"user",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_api_check.test",
-					`request\.\d+\.assertion\.#":"2"`,
+					"request.assertion.#",
 					"2",
 				),
 			),
@@ -1226,35 +1220,35 @@ func TestAccApiCheckUnsetSweepRequest(t *testing.T) {
 					activated = false
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://api.checklyhq.com/public-stats"
-						assertion {
+						assertion = [{
 							source     = "STATUS_CODE"
 							comparison = "EQUALS"
 							target     = "200"
-						}
+						}]
 					}
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_api_check.test",
-					`request\.\d+\.method":"GET"`,
+					"request.method",
 					"GET",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_api_check.test",
-					`request\.\d+\.body":""`,
+					"request.body",
 					"",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_api_check.test",
-					`request\.\d+\.body_type":"NONE"`,
+					"request.body_type",
 					"NONE",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_api_check.test",
-					`request\.\d+\.assertion\.#":"1"`,
+					"request.assertion.#",
 					"1",
 				),
 			),
@@ -1275,7 +1269,7 @@ func TestAccApiCheckUnsetSweepAlertSettingsReset(t *testing.T) {
 					activated = false
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://api.checklyhq.com/public-stats"
 					}
 					alert_settings = {
@@ -1306,7 +1300,7 @@ func TestAccApiCheckUnsetSweepAlertSettingsReset(t *testing.T) {
 					activated = false
 					frequency = 60
 					locations = ["eu-central-1"]
-					request {
+					request = {
 						url = "https://api.checklyhq.com/public-stats"
 					}
 					alert_settings = {
@@ -1343,15 +1337,15 @@ const apiCheckResource_basic = `
 	  max_response_time         = 18000
 	  locations                 = [ "us-east-1", "eu-central-1" ]
 	  use_global_alert_settings = true
-	  request {
+	  request = {
 		method     = "GET"
 		url        = "https://api.checklyhq.com/public-stats"
-		assertion {
+		assertion = [{
 		  comparison = "EQUALS"
 		  property   = ""
 		  source     = "STATUS_CODE"
 		  target     = "200"
-		}
+		}]
 	  }
 	}
 `
@@ -1365,15 +1359,15 @@ const apiCheckResource_basicWithoutDescription = `
 	  max_response_time         = 18000
 	  locations                 = [ "us-east-1", "eu-central-1" ]
 	  use_global_alert_settings = true
-	  request {
+	  request = {
 		method     = "GET"
 		url        = "https://api.checklyhq.com/public-stats"
-		assertion {
+		assertion = [{
 		  comparison = "EQUALS"
 		  property   = ""
 		  source     = "STATUS_CODE"
 		  target     = "200"
-		}
+		}]
 	  }
 	}
 `
@@ -1391,7 +1385,7 @@ const apiCheckResource_full = `
 	  "us-east-1",
 	  "ap-northeast-1"
 	]
-	request {
+	request = {
 	  method           = "GET"
 	  url              = "https://api.checklyhq.com/public-stats"
 	  follow_redirects = true
@@ -1407,24 +1401,22 @@ const apiCheckResource_full = `
 		username = "user"
 		password = "pass"
 	  }
-	  assertion {
+	  assertion = [{
 		comparison = "EQUALS"
 		property   = ""
 		source     = "STATUS_CODE"
 		target     = "200"
-	  }
-	  assertion {
+	  }, {
 		comparison = "EQUALS"
 		property   = "cache-control"
 		source     = "HEADERS"
 		target     = "no-cache"
-	  }
-	  assertion {
+	  }, {
 		comparison = "GREATER_THAN"
 		property   = "$.apiCheckResults"
 		source     = "JSON_BODY"
 		target     = "100"
-	  }
+	  }]
 	}
 
 	alert_settings = {
@@ -1452,7 +1444,7 @@ const apiCheckResource_post = `
 	locations = [ "eu-central-1", "us-east-2" ]
 	max_response_time     = 18000
 	muted                 = true
-	request {
+	request = {
 	  method           = "POST"
 	  url              = "https://jsonplaceholder.typicode.com/posts"
 	  headers = {
@@ -1478,19 +1470,19 @@ const apiCheckResource_withEmptyBasicAuth = `
 	  "bug"
 	]
 	locations = [ "eu-central-1" ]
-	request {
+	request = {
 	  follow_redirects = false
 	  url              = "https://api.checklyhq.com/public-stats"
 	  basic_auth = {
 		username = ""
 		password = ""
 	  }
-	  assertion {
+	  assertion = [{
 		source     = "STATUS_CODE"
 		property   = ""
 		comparison = "EQUALS"
 		target     = "200"
-	  }
+	  }]
 	}
   }
 `

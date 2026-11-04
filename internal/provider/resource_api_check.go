@@ -65,7 +65,7 @@ type APICheckResourceModel struct {
 	PrivateLocations         types.Set    `tfsdk:"private_locations"`
 	AlertSettings            types.Object `tfsdk:"alert_settings"`
 	UseGlobalAlertSettings   types.Bool   `tfsdk:"use_global_alert_settings"`
-	Request                  types.Set    `tfsdk:"request"`
+	Request                  types.Object `tfsdk:"request"`
 	GroupID                  types.Int64  `tfsdk:"group_id"`
 	GroupOrder               types.Int64  `tfsdk:"group_order"`
 	RetryStrategy            types.Object `tfsdk:"retry_strategy"`
@@ -294,14 +294,14 @@ func (r *APICheckResource) Schema(ctx context.Context, req resource.SchemaReques
 			retryStrategyAttributeName: makeRetryStrategyAttributeSchema(RetryStrategyAttributeSchemaOptions{
 				SupportsOnlyOnNetworkError: true,
 			}),
-		},
-		Blocks: map[string]schema.Block{
-			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{}),
-			"request": apiCheckRequestBlockSchema(apiCheckRequestBlockSchemaOptions{
+			"request": apiCheckRequestAttributeSchema(apiCheckRequestAttributeSchemaOptions{
 				Description:    "The parameters of the HTTP request.",
 				URLDescription: "The URL to call.",
 				Required:       true,
 			}),
+		},
+		Blocks: map[string]schema.Block{
+			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{}),
 		},
 	}
 }
@@ -316,11 +316,12 @@ func (r *APICheckResource) Configure(ctx context.Context, req resource.Configure
 	r.client = clientFromProviderData(req.ProviderData, &resp.Diagnostics)
 }
 
-// ModifyPlan applies default values to the optional+computed attributes
-// nested in the request set block. Schema defaults cannot be used for these
-// attributes (see the schema for details), so the plan is adjusted here
-// instead. Substituting static values keeps every set element fully known
-// and stable across plans, which set element correlation requires.
+// ModifyPlan applies default values to the optional+computed attributes of
+// the request assertions. Schema defaults cannot be used for attributes
+// nested in set elements (see the schema for details), so the plan is
+// adjusted here instead. Substituting static values keeps every set element
+// fully known and stable across plans, which set element correlation
+// requires.
 func (r *APICheckResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
 	planNestedDefaults(ctx, req, resp, path.Root("request"), apiCheckRequestWithDefaults)
 }
@@ -613,7 +614,7 @@ func apiCheckFromModel(ctx context.Context, model *APICheckResourceModel, diags 
 		Tags:                      stringsFromSet(ctx, model.Tags, diags),
 		AlertSettings:             &alertSettings,
 		UseGlobalAlertSettings:    model.UseGlobalAlertSettings.ValueBool(),
-		Request:                   apiCheckRequestFromSet(ctx, model.Request, diags),
+		Request:                   apiCheckRequestFromObject(ctx, model.Request, diags),
 		SetupSnippetID:            model.SetupSnippetID.ValueInt64(),
 		TearDownSnippetID:         model.TeardownSnippetID.ValueInt64(),
 		LocalSetupScript:          localSetupScript,
@@ -636,7 +637,7 @@ func apiCheckFromModel(ctx context.Context, model *APICheckResourceModel, diags 
 // apiCheckResolveComputedValues finalizes a planned model after a successful
 // create or update API call. All practitioner-configurable values are already
 // known at plan time (defaults included; the attributes nested in the request
-// block are defaulted in ModifyPlan) and must be kept as planned; only the
+// assertions are defaulted in ModifyPlan) and must be kept as planned; only the
 // values that may still be unknown in the plan (the ID and the
 // optional+computed alert_settings and retry_strategy objects) are resolved
 // from the API response.
@@ -719,7 +720,7 @@ func apiCheckToModel(ctx context.Context, c *checkly.APICheck, model *APICheckRe
 		model.AlertSettings = types.ObjectNull(alertSettingsAttrTypes)
 	}
 	model.UseGlobalAlertSettings = types.BoolValue(c.UseGlobalAlertSettings)
-	model.Request = apiCheckRequestToSet(ctx, c.Request, prior.Request, diags)
+	model.Request = apiCheckRequestToObject(ctx, c.Request, prior.Request, diags)
 	model.GroupID = types.Int64Value(c.GroupID)
 	model.GroupOrder = types.Int64Value(int64(c.GroupOrder))
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, prior.RetryStrategy, diags)

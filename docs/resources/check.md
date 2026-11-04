@@ -26,15 +26,15 @@ resource "checkly_check" "example_check" {
     "us-west-1"
   ]
 
-  request {
+  request = {
     url              = "https://api.example.com/"
     follow_redirects = true
     skip_ssl         = false
-    assertion {
+    assertion = [{
       source     = "STATUS_CODE"
       comparison = "EQUALS"
       target     = "200"
-    }
+    }]
   }
 }
 
@@ -74,7 +74,7 @@ resource "checkly_check" "example_check_2" {
     same_region          = false
   }
 
-  request {
+  request = {
     follow_redirects = true
     skip_ssl         = false
     url              = "http://api.example.com/"
@@ -87,19 +87,20 @@ resource "checkly_check" "example_check_2" {
       X-Bogus = "bogus"
     }
 
-    assertion {
-      source     = "JSON_BODY"
-      property   = "code"
-      comparison = "HAS_VALUE"
-      target     = "authentication.failed"
-    }
-
-    assertion {
-      source     = "STATUS_CODE"
-      property   = ""
-      comparison = "EQUALS"
-      target     = "401"
-    }
+    assertion = [
+      {
+        source     = "JSON_BODY"
+        property   = "code"
+        comparison = "HAS_VALUE"
+        target     = "authentication.failed"
+      },
+      {
+        source     = "STATUS_CODE"
+        property   = ""
+        comparison = "EQUALS"
+        target     = "401"
+      },
+    ]
 
     basic_auth = {
       username = ""
@@ -211,7 +212,7 @@ resource "checkly_check" "example_check" {
 - `max_response_time` (Number) The response time in milliseconds starting from which a check should be considered failing. Possible values are between 0 and 30000. (Default `30000`).
 - `muted` (Boolean) Determines if any notifications will be sent out when a check fails/degrades/recovers.
 - `private_locations` (Set of String) An array of one or more private locations slugs.
-- `request` (Block Set) An API check might have one request config. (see [below for nested schema](#nestedblock--request))
+- `request` (Attributes) An API check might have one request config. (see [below for nested schema](#nestedatt--request))
 - `retry_strategy` (Attributes) A strategy for retrying failed check/monitor runs. (see [below for nested schema](#nestedatt--retry_strategy))
 - `run_parallel` (Boolean) Determines if the check should run in all selected locations in parallel or round-robin.
 - `runtime_id` (String) The id of the runtime to use for this check.
@@ -297,7 +298,7 @@ Optional:
 - `secret` (Boolean) If true, the value will never be visible. The API never returns secret values, so Terraform keeps the last applied value and does not detect changes made outside Terraform. (Default `false`).
 
 
-<a id="nestedblock--request"></a>
+<a id="nestedatt--request"></a>
 ### Nested Schema for `request`
 
 Required:
@@ -306,7 +307,7 @@ Required:
 
 Optional:
 
-- `assertion` (Block Set) A request can have multiple assertions. (see [below for nested schema](#nestedblock--request--assertion))
+- `assertion` (Attributes Set) A request can have multiple assertions. (see [below for nested schema](#nestedatt--request--assertion))
 - `basic_auth` (Attributes) Set up HTTP basic authentication (username & password). (see [below for nested schema](#nestedatt--request--basic_auth))
 - `body` (String) The body of the request.
 - `body_type` (String) The `Content-Type` header of the request. Possible values `NONE`, `JSON`, `FORM`, `RAW`, and `GRAPHQL`. (Default `NONE`).
@@ -317,7 +318,7 @@ Optional:
 - `query_parameters` (Map of String)
 - `skip_ssl` (Boolean)
 
-<a id="nestedblock--request--assertion"></a>
+<a id="nestedatt--request--assertion"></a>
 ### Nested Schema for `request.assertion`
 
 Required:

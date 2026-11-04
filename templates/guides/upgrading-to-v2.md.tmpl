@@ -66,7 +66,7 @@ This affects:
 
 | Resource type | Attributes |
 |---|---|
-| `checkly_check` | `alert_settings` (and its `parallel_run_failure_threshold`, `reminders`, `run_based_escalation`, `time_based_escalation`), `request.basic_auth`, `retry_strategy` (and its `only_on`), `trigger_incident` |
+| `checkly_check` | `alert_settings` (and its `parallel_run_failure_threshold`, `reminders`, `run_based_escalation`, `time_based_escalation`), `request` (and its `assertion` and `basic_auth`), `retry_strategy` (and its `only_on`), `trigger_incident` |
 | `checkly_check_group` | `alert_settings` (and nested objects as above), `api_check_defaults` (and its `basic_auth` and `assertion`), `retry_strategy` (and its `only_on`) |
 | `checkly_check_group_v2` | `api_check_defaults` (and its `basic_auth` and `assertion`), `enforce_alert_settings` (and its `alert_settings` and `alert_channel_subscription`), `enforce_locations`, `enforce_retry_strategy` (and its `retry_strategy`), `enforce_scheduling_strategy` |
 | `checkly_heartbeat`, `checkly_heartbeat_monitor` | `alert_settings` (and nested objects as above), `trigger_incident` |
@@ -75,7 +75,7 @@ This affects:
 | `checkly_ssl_monitor` | `alert_settings` (and nested objects as above), `request.client_certificate`, `retry_strategy`, `trigger_incident` |
 | `checkly_playwright_check_suite` | `alert_settings` (and nested objects as above), `runtime` (and its `engine`, `playwright`, `steps`), `trigger_incident` |
 
-The table lists every such attribute. All other blocks, such as `request`, `assertion`, `alert_channel_subscription` and `heartbeat`, keep their block syntax.
+The table lists every such attribute. All other blocks, such as `request` and its `assertion` in `checkly_tcp_check` and the monitor resource types, `alert_channel_subscription` and `heartbeat`, keep their block syntax.
 
 ### Removed attributes
 

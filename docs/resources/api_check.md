@@ -25,15 +25,15 @@ resource "checkly_api_check" "example_check" {
     "us-west-1"
   ]
 
-  request {
+  request = {
     url              = "https://api.example.com/"
     follow_redirects = true
     skip_ssl         = false
-    assertion {
+    assertion = [{
       source     = "STATUS_CODE"
       comparison = "EQUALS"
       target     = "200"
-    }
+    }]
   }
 }
 
@@ -72,7 +72,7 @@ resource "checkly_api_check" "example_check_2" {
     same_region          = false
   }
 
-  request {
+  request = {
     follow_redirects = true
     skip_ssl         = false
     url              = "http://api.example.com/"
@@ -85,19 +85,20 @@ resource "checkly_api_check" "example_check_2" {
       X-Bogus = "bogus"
     }
 
-    assertion {
-      source     = "JSON_BODY"
-      property   = "code"
-      comparison = "HAS_VALUE"
-      target     = "authentication.failed"
-    }
-
-    assertion {
-      source     = "STATUS_CODE"
-      property   = ""
-      comparison = "EQUALS"
-      target     = "401"
-    }
+    assertion = [
+      {
+        source     = "JSON_BODY"
+        property   = "code"
+        comparison = "HAS_VALUE"
+        target     = "authentication.failed"
+      },
+      {
+        source     = "STATUS_CODE"
+        property   = ""
+        comparison = "EQUALS"
+        target     = "401"
+      },
+    ]
 
     basic_auth = {
       username = ""
@@ -117,13 +118,13 @@ resource "checkly_api_check" "high_frequency_check" {
     "us-west-1"
   ]
 
-  request {
+  request = {
     url = "https://api.example.com/health"
-    assertion {
+    assertion = [{
       source     = "STATUS_CODE"
       comparison = "EQUALS"
       target     = "200"
-    }
+    }]
   }
 }
 
@@ -144,7 +145,7 @@ resource "checkly_api_check" "example_check_3" {
   name = "Example check"
   # ...
 
-  request {
+  request = {
     url = "https://api.example.com/"
   }
 
@@ -169,7 +170,7 @@ resource "checkly_api_check" "migrated_check" {
     "us-west-1"
   ]
 
-  request {
+  request = {
     url = "https://api.example.com/"
   }
 }
@@ -186,6 +187,7 @@ moved {
 ### Required
 
 - `name` (String) The name of the check.
+- `request` (Attributes) The parameters of the HTTP request. (see [below for nested schema](#nestedatt--request))
 
 ### Optional
 
@@ -204,7 +206,6 @@ moved {
 - `max_response_time` (Number) The response time in milliseconds starting from which a check should be considered failing. Possible values are between 0 and 30000. (Default `20000`).
 - `muted` (Boolean) Determines if any notifications will be sent out when a check fails/degrades/recovers.
 - `private_locations` (Set of String) An array of one or more private locations slugs.
-- `request` (Block Set) The parameters of the HTTP request. (see [below for nested schema](#nestedblock--request))
 - `retry_strategy` (Attributes) A strategy for retrying failed check/monitor runs. (see [below for nested schema](#nestedatt--retry_strategy))
 - `run_parallel` (Boolean) Determines if the check should run in all selected locations in parallel or round-robin.
 - `runtime_id` (String) The id of the runtime to use for this check.
@@ -218,6 +219,50 @@ moved {
 ### Read-Only
 
 - `id` (String) The ID of the check.
+
+<a id="nestedatt--request"></a>
+### Nested Schema for `request`
+
+Required:
+
+- `url` (String) The URL to call.
+
+Optional:
+
+- `assertion` (Attributes Set) A request can have multiple assertions. (see [below for nested schema](#nestedatt--request--assertion))
+- `basic_auth` (Attributes) Set up HTTP basic authentication (username & password). (see [below for nested schema](#nestedatt--request--basic_auth))
+- `body` (String) The body of the request.
+- `body_type` (String) The `Content-Type` header of the request. Possible values `NONE`, `JSON`, `FORM`, `RAW`, and `GRAPHQL`. (Default `NONE`).
+- `follow_redirects` (Boolean)
+- `headers` (Map of String)
+- `ip_family` (String) IP Family to be used when executing the api check. The value can be either IPv4 or IPv6. (Default `IPv4`).
+- `method` (String) The HTTP method to use for this API check. Possible values are `GET`, `POST`, `PUT`, `HEAD`, `DELETE`, `PATCH`. (Default `GET`).
+- `query_parameters` (Map of String)
+- `skip_ssl` (Boolean)
+
+<a id="nestedatt--request--assertion"></a>
+### Nested Schema for `request.assertion`
+
+Required:
+
+- `comparison` (String) The type of comparison to be executed between expected and actual value of the assertion. Possible values `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL`, and `NOT_NULL`.
+- `source` (String) The source of the asserted value. Possible values `STATUS_CODE`, `JSON_BODY`, `HEADERS`, `TEXT_BODY`, and `RESPONSE_TIME`.
+
+Optional:
+
+- `property` (String)
+- `target` (String)
+
+
+<a id="nestedatt--request--basic_auth"></a>
+### Nested Schema for `request.basic_auth`
+
+Required:
+
+- `password` (String, Sensitive)
+- `username` (String)
+
+
 
 <a id="nestedblock--alert_channel_subscription"></a>
 ### Nested Schema for `alert_channel_subscription`
@@ -271,50 +316,6 @@ Optional:
 Optional:
 
 - `minutes_failing_threshold` (Number) Send an alert notification after the check has been failing for the given amount of time (in minutes). Possible values are `5`, `10`, `15`, and `30`. (Default `5`).
-
-
-
-<a id="nestedblock--request"></a>
-### Nested Schema for `request`
-
-Required:
-
-- `url` (String) The URL to call.
-
-Optional:
-
-- `assertion` (Block Set) A request can have multiple assertions. (see [below for nested schema](#nestedblock--request--assertion))
-- `basic_auth` (Attributes) Set up HTTP basic authentication (username & password). (see [below for nested schema](#nestedatt--request--basic_auth))
-- `body` (String) The body of the request.
-- `body_type` (String) The `Content-Type` header of the request. Possible values `NONE`, `JSON`, `FORM`, `RAW`, and `GRAPHQL`. (Default `NONE`).
-- `follow_redirects` (Boolean)
-- `headers` (Map of String)
-- `ip_family` (String) IP Family to be used when executing the api check. The value can be either IPv4 or IPv6. (Default `IPv4`).
-- `method` (String) The HTTP method to use for this API check. Possible values are `GET`, `POST`, `PUT`, `HEAD`, `DELETE`, `PATCH`. (Default `GET`).
-- `query_parameters` (Map of String)
-- `skip_ssl` (Boolean)
-
-<a id="nestedblock--request--assertion"></a>
-### Nested Schema for `request.assertion`
-
-Required:
-
-- `comparison` (String) The type of comparison to be executed between expected and actual value of the assertion. Possible values `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL`, and `NOT_NULL`.
-- `source` (String) The source of the asserted value. Possible values `STATUS_CODE`, `JSON_BODY`, `HEADERS`, `TEXT_BODY`, and `RESPONSE_TIME`.
-
-Optional:
-
-- `property` (String)
-- `target` (String)
-
-
-<a id="nestedatt--request--basic_auth"></a>
-### Nested Schema for `request.basic_auth`
-
-Required:
-
-- `password` (String, Sensitive)
-- `username` (String)
 
 
 

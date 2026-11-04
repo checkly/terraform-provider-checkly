@@ -176,7 +176,27 @@ func TestUpgradeSDKv2State(t *testing.T) {
 		requireStateValue(t, state, path.Root("type"), types.StringValue("API"))
 		requireStateValue(t, state, path.Root("double_check"), types.BoolValue(true))
 		requireStateValue(t, state, path.Root("retry_strategy").AtName("type"), types.StringValue("FIXED"))
+		requireSDKv2CheckRequest(t, state)
 	})
+
+	t.Run("check_browser", func(t *testing.T) {
+		// SDK v2 stores the absent request of a browser check as an empty
+		// list, which upgrades to a null object.
+		state := upgradeSDKv2Fixture(t, NewCheckResource(), "check_browser")
+		requireStateNull(t, state, path.Root("request"))
+	})
+}
+
+// requireSDKv2CheckRequest asserts the request upgraded from the "check"
+// fixture: the empty headers and query_parameters maps SDK v2 stored for the
+// unset optional maps are null, and the one-element basic_auth list is
+// unwrapped into an object.
+func requireSDKv2CheckRequest(t *testing.T, state tfsdk.State) {
+	t.Helper()
+	request := path.Root("request")
+	requireStateNull(t, state, request.AtName("headers"))
+	requireStateNull(t, state, request.AtName("query_parameters"))
+	requireStateValue(t, state, request.AtName("basic_auth").AtName("username"), types.StringValue("u"))
 }
 
 // A `moved` block can move a resource whose state the SDK v2 implementation
@@ -190,6 +210,8 @@ func TestMoveSDKv2State(t *testing.T) {
 		fixture    string
 		attr       path.Path
 		want       attr.Value
+		// check optionally asserts more of the moved state.
+		check func(t *testing.T, state tfsdk.State)
 	}{
 		"checkly_check to checkly_api_check": {
 			target:     NewAPICheckResource(),
@@ -197,6 +219,7 @@ func TestMoveSDKv2State(t *testing.T) {
 			fixture:    "check",
 			attr:       path.Root("retry_strategy").AtName("type"),
 			want:       types.StringValue("FIXED"),
+			check:      requireSDKv2CheckRequest,
 		},
 		"checkly_check to checkly_browser_check": {
 			target:     NewBrowserCheckResource(),
@@ -257,6 +280,9 @@ func TestMoveSDKv2State(t *testing.T) {
 			}
 			requireStateValue(t, resp.TargetState, path.Root("id"), types.StringValue("123"))
 			requireStateValue(t, resp.TargetState, c.attr, c.want)
+			if c.check != nil {
+				c.check(t, resp.TargetState)
+			}
 		})
 	}
 }

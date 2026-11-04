@@ -11,15 +11,15 @@ resource "checkly_check" "example_check" {
     "us-west-1"
   ]
 
-  request {
+  request = {
     url              = "https://api.example.com/"
     follow_redirects = true
     skip_ssl         = false
-    assertion {
+    assertion = [{
       source     = "STATUS_CODE"
       comparison = "EQUALS"
       target     = "200"
-    }
+    }]
   }
 }
 
@@ -59,7 +59,7 @@ resource "checkly_check" "example_check_2" {
     same_region          = false
   }
 
-  request {
+  request = {
     follow_redirects = true
     skip_ssl         = false
     url              = "http://api.example.com/"
@@ -72,19 +72,20 @@ resource "checkly_check" "example_check_2" {
       X-Bogus = "bogus"
     }
 
-    assertion {
-      source     = "JSON_BODY"
-      property   = "code"
-      comparison = "HAS_VALUE"
-      target     = "authentication.failed"
-    }
-
-    assertion {
-      source     = "STATUS_CODE"
-      property   = ""
-      comparison = "EQUALS"
-      target     = "401"
-    }
+    assertion = [
+      {
+        source     = "JSON_BODY"
+        property   = "code"
+        comparison = "HAS_VALUE"
+        target     = "authentication.failed"
+      },
+      {
+        source     = "STATUS_CODE"
+        property   = ""
+        comparison = "EQUALS"
+        target     = "401"
+      },
+    ]
 
     basic_auth = {
       username = ""

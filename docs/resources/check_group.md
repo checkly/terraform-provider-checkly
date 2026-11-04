@@ -100,7 +100,7 @@ resource "checkly_check" "test_check1" {
     "us-west-1"
   ]
 
-  request {
+  request = {
     url = "https://api.example.com/"
   }
   group_id    = checkly_check_group.test_group1.id
