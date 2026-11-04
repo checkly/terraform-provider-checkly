@@ -159,6 +159,8 @@ These attributes were deprecated in v1.x. Remove them from your configuration:
 
 ### Deprecated attributes
 
+`slack` on `checkly_alert_channel` is deprecated in favor of `slack_app`. It uses the legacy Slack incoming webhook integration, still works in v2, and will be removed in a future major release.
+
 `double_check` on `checkly_check` and `checkly_check_group` is still deprecated and still works as in v1.x: without a `retry_strategy`, it retries a failed run once in another region. To replace it, remove it and set the equivalent retry strategy:
 
 ```terraform

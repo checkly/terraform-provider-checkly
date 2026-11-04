@@ -4,6 +4,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+Releases from v1.6.7 through v1.32.0 are described in their
+[GitHub release notes](https://github.com/checkly/terraform-provider-checkly/releases)
+instead of this file.
+
+## [v2.0.0] - Unreleased
+
+The provider moves from the Terraform Plugin SDK v2 to the Terraform Plugin
+Framework. State written by v1.x is upgraded automatically; configurations
+need changes. Follow the [upgrade guide](docs/guides/upgrading-to-v2.md).
+
+### Changed
+- **Breaking:** single nested objects that were blocks are attributes (`alert_settings = { ... }` instead of `alert_settings { ... }`).
+- **Breaking:** the provider serves plugin protocol 6 only and requires Terraform 1.0 or later.
+- **Breaking:** credentials are sensitive, including nested ones, so Terraform redacts them in plan output. An output that exposes one, such as a heartbeat ping URL built from `ping_token`, must set `sensitive = true`.
+- An invalid `API_CALL_TIMEOUT` is reported as a configuration error instead of crashing the provider.
+
+### Added
+- `checkly_api_check`, `checkly_browser_check` and `checkly_multistep_check`, which replace `checkly_check`.
+- `checkly_maintenance_window`, which replaces `checkly_maintenance_windows`.
+- Import instructions on every importable resource's documentation page.
+
+### Deprecated
+- `checkly_check`, in favor of the per-type check resources.
+- `checkly_heartbeat`, `checkly_tcp_check` and `checkly_maintenance_windows`, in favor of `checkly_heartbeat_monitor`, `checkly_tcp_monitor` and `checkly_maintenance_window`. They keep working, and `moved` blocks (Terraform 1.8 or later) switch them without recreating them.
+- `checkly_check_group`, in favor of `checkly_check_group_v2`.
+- `checkly_status_page` and `checkly_status_page_service`, in favor of the v3 status page resources.
+- `slack` on `checkly_alert_channel`, in favor of `slack_app`.
+
+### Removed
+- **Breaking:** `checkly_trigger_check` and `checkly_trigger_group`. Use the Checkly CLI (`checkly trigger`) or `POST /v1/check-sessions/trigger`.
+- **Breaking:** `environment_variables` (the map) on `checkly_check` and `checkly_check_group`; use `environment_variable` blocks.
+- **Breaking:** attributes the API ignored: `ssl_check` on `checkly_check`, `alert_settings.ssl_certificates` on every resource that had it, and `retry_strategy.only_on` on the monitors that had no conditions to set.
+- **Breaking:** the `CHECKLY_DEBUG_LOG` request dump. Use an HTTPS proxy through `HTTPS_PROXY` to inspect requests.
+
+### Fixed
+- Only real 404 responses remove a resource from state.
+- A dashboard's `key` no longer shows as changing on every update.
+
 ## [v1.6.6](https://github.com/checkly/terraform-provider-checkly/releases/tag/v1.6.6) - 2023-06-06
 ### Added
 - Support new private dashboards [#ba48b60](https://github.com/checkly/terraform-provider-checkly/commit/ba48b60)
