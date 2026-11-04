@@ -996,13 +996,12 @@ func sslMonitorSeverityRuleFromObject(ctx context.Context, obj types.Object, dia
 func sslMonitorSecurityBaselineToObject(ctx context.Context, remote *checkly.SecurityBaseline, prior types.Object, diags *diag.Diagnostics) types.Object {
 	null := types.ObjectNull(sslMonitorSecurityBaselineAttrTypes)
 
-	if remote == nil || prior.IsNull() || prior.IsUnknown() {
+	if remote == nil {
 		return null
 	}
 
-	var priorModel SSLMonitorSecurityBaselineModel
-	diags.Append(prior.As(ctx, &priorModel, basetypes.ObjectAsOptions{})...)
-	if diags.HasError() {
+	priorModel := objectAs[SSLMonitorSecurityBaselineModel](ctx, prior, diags)
+	if priorModel == nil {
 		return null
 	}
 

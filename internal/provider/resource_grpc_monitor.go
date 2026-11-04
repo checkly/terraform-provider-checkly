@@ -21,7 +21,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 
 	checkly "github.com/checkly/checkly-go-sdk"
 )
@@ -453,13 +452,12 @@ func (r *GRPCMonitorResource) ConfigValidators(ctx context.Context) []resource.C
 func (r *GRPCMonitorResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
 	var obj types.Object
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("request"), &obj)...)
-	if resp.Diagnostics.HasError() || obj.IsNull() || obj.IsUnknown() {
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	var request GRPCMonitorRequestModel
-	resp.Diagnostics.Append(obj.As(ctx, &request, basetypes.ObjectAsOptions{})...)
-	if resp.Diagnostics.HasError() {
+	request := objectAs[GRPCMonitorRequestModel](ctx, obj, &resp.Diagnostics)
+	if request == nil {
 		return
 	}
 

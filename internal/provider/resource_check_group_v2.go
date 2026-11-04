@@ -656,9 +656,8 @@ func checkGroupV2ScriptFromObject(obj types.Object) (snippetID *int64, inlineScr
 		}
 	}
 
-	if v, ok := attrs["inline_script"].(types.String); ok && !v.IsNull() && !v.IsUnknown() {
-		val := v.ValueString()
-		inlineScript = &val
+	if v, ok := attrs["inline_script"].(types.String); ok {
+		inlineScript = optionalStringPointer(v)
 	}
 
 	return snippetID, inlineScript
@@ -737,9 +736,8 @@ func checkGroupV2FromModel(ctx context.Context, model *CheckGroupV2ResourceModel
 	}
 
 	if runtime := model.DefaultRuntime; !runtime.IsNull() && !runtime.IsUnknown() {
-		if v, ok := runtime.Attributes()["runtime_id"].(types.String); ok && !v.IsNull() && !v.IsUnknown() {
-			val := v.ValueString()
-			group.RuntimeID = &val
+		if v, ok := runtime.Attributes()["runtime_id"].(types.String); ok {
+			group.RuntimeID = optionalStringPointer(v)
 		}
 	}
 
@@ -833,19 +831,9 @@ func checkGroupV2ScriptToObject(snippetID *int64, inlineScript *string) types.Ob
 		return types.ObjectNull(checkGroupV2ScriptAttrTypes)
 	}
 
-	snippetValue := types.Int64Null()
-	if snippetID != nil {
-		snippetValue = types.Int64Value(*snippetID)
-	}
-
-	inlineValue := types.StringNull()
-	if inlineScript != nil {
-		inlineValue = types.StringValue(*inlineScript)
-	}
-
 	return types.ObjectValueMust(checkGroupV2ScriptAttrTypes, map[string]attr.Value{
-		"snippet_id":    snippetValue,
-		"inline_script": inlineValue,
+		"snippet_id":    types.Int64PointerValue(snippetID),
+		"inline_script": types.StringPointerValue(inlineScript),
 	})
 }
 
@@ -858,7 +846,7 @@ func checkGroupV2DefaultRuntimeToObject(runtimeID *string) types.Object {
 	}
 
 	return types.ObjectValueMust(checkGroupV2DefaultRuntimeAttrTypes, map[string]attr.Value{
-		"runtime_id": types.StringValue(*runtimeID),
+		"runtime_id": types.StringPointerValue(runtimeID),
 	})
 }
 

@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	datasourceschema "github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -49,17 +50,19 @@ var repeatedBlocks = map[string]bool{
 }
 
 // singleElementLimit matches the description of a size validator that caps a
-// block at one element, such as listvalidator.SizeAtMost(1), which would make
-// the block a single nested object in disguise.
+// block or a nested list or set attribute at one element, such as
+// listvalidator.SizeAtMost(1), which would make it a single nested object in
+// disguise.
 var singleElementLimit = regexp.MustCompile(`at most 1 elements?\b`)
 
-// checkBlockValidators fails when a block's validators cap it at one element.
-func checkBlockValidators[V validator.Describer](t *testing.T, where string, validators []V) {
+// checkSizeValidators fails when the validators of a block or nested
+// collection attribute cap it at one element.
+func checkSizeValidators[V validator.Describer](t *testing.T, where string, validators []V) {
 	t.Helper()
 
 	for _, v := range validators {
 		if description := v.Description(context.Background()); singleElementLimit.MatchString(description) {
-			t.Errorf("%s: block is limited to one element (%q); make it a single nested attribute", where, description)
+			t.Errorf("%s: limited to one element (%q); make it a single nested attribute", where, description)
 		}
 	}
 }
@@ -84,10 +87,12 @@ func walkResourceBlocks(t *testing.T, where string, seen map[string]bool, blocks
 
 		switch block := block.(type) {
 		case schema.ListNestedBlock:
-			checkBlockValidators(t, path, block.Validators)
+			checkSizeValidators(t, path, block.Validators)
+			walkResourceAttributes(t, path, block.NestedObject.Attributes)
 			walkResourceBlocks(t, path, seen, block.NestedObject.Blocks)
 		case schema.SetNestedBlock:
-			checkBlockValidators(t, path, block.Validators)
+			checkSizeValidators(t, path, block.Validators)
+			walkResourceAttributes(t, path, block.NestedObject.Attributes)
 			walkResourceBlocks(t, path, seen, block.NestedObject.Blocks)
 		default:
 			t.Errorf("%s: block of type %T; only list and set nested blocks may remain", path, block)
@@ -95,13 +100,60 @@ func walkResourceBlocks(t *testing.T, where string, seen map[string]bool, blocks
 	}
 }
 
+// walkResourceAttributes checks the nested list and set attributes among
+// attrs, at any depth, for a one-element cap.
+func walkResourceAttributes(t *testing.T, where string, attrs map[string]schema.Attribute) {
+	t.Helper()
+
+	for name, a := range attrs {
+		path := where + "." + name
+
+		switch a := a.(type) {
+		case schema.SingleNestedAttribute:
+			walkResourceAttributes(t, path, a.Attributes)
+		case schema.ListNestedAttribute:
+			checkSizeValidators(t, path, a.Validators)
+			walkResourceAttributes(t, path, a.NestedObject.Attributes)
+		case schema.SetNestedAttribute:
+			checkSizeValidators(t, path, a.Validators)
+			walkResourceAttributes(t, path, a.NestedObject.Attributes)
+		case schema.MapNestedAttribute:
+			walkResourceAttributes(t, path, a.NestedObject.Attributes)
+		}
+	}
+}
+
+// walkDataSourceAttributes is walkResourceAttributes for data source schemas.
+func walkDataSourceAttributes(t *testing.T, where string, attrs map[string]datasourceschema.Attribute) {
+	t.Helper()
+
+	for name, a := range attrs {
+		path := where + "." + name
+
+		switch a := a.(type) {
+		case datasourceschema.SingleNestedAttribute:
+			walkDataSourceAttributes(t, path, a.Attributes)
+		case datasourceschema.ListNestedAttribute:
+			checkSizeValidators(t, path, a.Validators)
+			walkDataSourceAttributes(t, path, a.NestedObject.Attributes)
+		case datasourceschema.SetNestedAttribute:
+			checkSizeValidators(t, path, a.Validators)
+			walkDataSourceAttributes(t, path, a.NestedObject.Attributes)
+		case datasourceschema.MapNestedAttribute:
+			walkDataSourceAttributes(t, path, a.NestedObject.Attributes)
+		}
+	}
+}
+
 // TestOnlyRepeatedBlocks keeps every object that a resource or data source
 // can hold at most one of a single nested attribute: blocks are reserved for
-// repeated objects such as alert_channel_subscription.
+// repeated objects such as alert_channel_subscription, and no block or nested
+// list or set attribute, at any depth, is capped at one element.
 func TestOnlyRepeatedBlocks(t *testing.T) {
 	seen := make(map[string]bool)
 
 	for name, s := range resourceSchemas(t) {
+		walkResourceAttributes(t, name, s.Attributes)
 		walkResourceBlocks(t, name, seen, s.Blocks)
 	}
 
@@ -122,6 +174,8 @@ func TestOnlyRepeatedBlocks(t *testing.T) {
 		if resp.Diagnostics.HasError() {
 			t.Fatalf("%s: schema diagnostics: %v", metadata.TypeName, resp.Diagnostics)
 		}
+
+		walkDataSourceAttributes(t, metadata.TypeName, resp.Schema.Attributes)
 
 		// No data source has blocks; nested attributes cover every shape.
 		if len(resp.Schema.Blocks) > 0 {

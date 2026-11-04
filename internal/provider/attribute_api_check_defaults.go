@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 
 	checkly "github.com/checkly/checkly-go-sdk"
 )
@@ -190,13 +189,8 @@ func apiCheckDefaultsFromObject(ctx context.Context, obj types.Object, diags *di
 		Assertions:      assertionsFromSet(ctx, model.Assertion, diags),
 	}
 
-	if !model.BasicAuth.IsNull() && !model.BasicAuth.IsUnknown() {
-		var basicAuth apiCheckBasicAuthModel
-		diags.Append(model.BasicAuth.As(ctx, &basicAuth, basetypes.ObjectAsOptions{})...)
-		defaults.BasicAuth = checkly.BasicAuth{
-			Username: basicAuth.Username.ValueString(),
-			Password: basicAuth.Password.ValueString(),
-		}
+	if basicAuth := apiCheckBasicAuthFromObject(ctx, model.BasicAuth, diags); basicAuth != nil {
+		defaults.BasicAuth = *basicAuth
 	}
 
 	return defaults
