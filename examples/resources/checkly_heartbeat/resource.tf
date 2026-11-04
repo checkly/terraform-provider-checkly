@@ -1,7 +1,7 @@
 resource "checkly_heartbeat" "example-heartbeat" {
   name      = "Example heartbeat"
   activated = true
-  heartbeat {
+  heartbeat = {
     period      = 7
     period_unit = "days"
     grace       = 1

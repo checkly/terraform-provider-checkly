@@ -123,8 +123,8 @@ func TestUpgradeSDKv2State(t *testing.T) {
 	})
 
 	t.Run("heartbeat_monitor", func(t *testing.T) {
-		// heartbeat is a single nested block, alert_settings.ssl_certificates
-		// has been removed.
+		// SDK v2 stored heartbeat as a list of one element, and
+		// alert_settings.ssl_certificates has been removed.
 		state := upgradeSDKv2Fixture(t, NewHeartbeatMonitorResource(), "heartbeat_monitor")
 		requireStateValue(t, state, path.Root("heartbeat").AtName("period_unit"), types.StringValue("days"))
 		requireStateValue(t, state, path.Root("alert_settings").AtName("time_based_escalation").AtName("minutes_failing_threshold"), types.Int64Value(5))

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -57,7 +56,7 @@ type HeartbeatMonitorResourceModel struct {
 	TriggerIncident          types.Object `tfsdk:"trigger_incident"`
 }
 
-// HeartbeatMonitorHeartbeatModel describes the heartbeat block data model.
+// HeartbeatMonitorHeartbeatModel describes the heartbeat attribute data model.
 type HeartbeatMonitorHeartbeatModel struct {
 	Period     types.Int64  `tfsdk:"period"`
 	PeriodUnit types.String `tfsdk:"period_unit"`
@@ -125,12 +124,10 @@ func (r *HeartbeatMonitorResource) Schema(ctx context.Context, req resource.Sche
 				Default:     booldefault.StaticBool(false),
 				Description: "When true, the account level alert settings will be used, not the alert setting defined on this check.",
 			},
-		},
-		Blocks: map[string]schema.Block{
-			"heartbeat": schema.SingleNestedBlock{
+			"heartbeat": schema.SingleNestedAttribute{
+				Required:    true,
 				Description: "The heartbeat schedule and grace period.",
 				Validators: []validator.Object{
-					objectvalidator.IsRequired(),
 					heartbeatMonitorDurationValidator{},
 				},
 				Attributes: map[string]schema.Attribute{
@@ -167,6 +164,8 @@ func (r *HeartbeatMonitorResource) Schema(ctx context.Context, req resource.Sche
 					},
 				},
 			},
+		},
+		Blocks: map[string]schema.Block{
 			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{
 				Monitor: true,
 			}),
@@ -370,8 +369,8 @@ func heartbeatMonitorToModel(ctx context.Context, c *checkly.HeartbeatMonitor, m
 	model.TriggerIncident = triggerIncidentToObject(ctx, c.TriggerIncident, diags)
 }
 
-// heartbeatMonitorHeartbeatFromObject converts the heartbeat block value to
-// its API representation.
+// heartbeatMonitorHeartbeatFromObject converts the heartbeat attribute value
+// to its API representation.
 func heartbeatMonitorHeartbeatFromObject(ctx context.Context, obj types.Object, diags *diag.Diagnostics) checkly.Heartbeat {
 	if obj.IsNull() || obj.IsUnknown() {
 		return checkly.Heartbeat{}
@@ -393,7 +392,7 @@ func heartbeatMonitorHeartbeatFromObject(ctx context.Context, obj types.Object, 
 }
 
 // heartbeatMonitorHeartbeatToObject converts the API representation of a
-// heartbeat to the heartbeat block value.
+// heartbeat to the heartbeat attribute value.
 func heartbeatMonitorHeartbeatToObject(ctx context.Context, heartbeat checkly.Heartbeat, diags *diag.Diagnostics) types.Object {
 	obj, d := types.ObjectValue(heartbeatMonitorHeartbeatAttrTypes, map[string]attr.Value{
 		"period":      types.Int64Value(int64(heartbeat.Period)),
@@ -410,7 +409,7 @@ func heartbeatMonitorHeartbeatToObject(ctx context.Context, heartbeat checkly.He
 var _ validator.Object = heartbeatMonitorDurationValidator{}
 
 // heartbeatMonitorDurationValidator validates the period and grace durations
-// of the heartbeat block. The period must be between 30 seconds and 365 days,
+// of the heartbeat attribute. The period must be between 30 seconds and 365 days,
 // and the grace period must be at most 365 days.
 type heartbeatMonitorDurationValidator struct{}
 

@@ -514,7 +514,7 @@ resource "checkly_heartbeat" "test" {
   tags                      = ["tf-upgrade"]
   use_global_alert_settings = false
 
-  heartbeat {
+  heartbeat = {
     period      = 5
     period_unit = "days"
     grace       = 1
@@ -583,7 +583,7 @@ resource "checkly_heartbeat_monitor" "test" {
   tags                      = ["tf-upgrade"]
   use_global_alert_settings = false
 
-  heartbeat {
+  heartbeat = {
     period      = 10
     period_unit = "minutes"
     grace       = 5
@@ -2901,7 +2901,7 @@ resource "checkly_heartbeat_monitor" "test" {
   name      = "tf-upgrade-{{id}}-moved-heartbeat"
   activated = true
 
-  heartbeat {
+  heartbeat = {
     period      = 5
     period_unit = "days"
     grace       = 1

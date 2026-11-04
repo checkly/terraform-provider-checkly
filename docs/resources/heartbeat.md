@@ -22,7 +22,7 @@ We recommend using the `checkly_heartbeat_monitor` resource type for any new res
 resource "checkly_heartbeat" "example-heartbeat" {
   name      = "Example heartbeat"
   activated = true
-  heartbeat {
+  heartbeat = {
     period      = 7
     period_unit = "days"
     grace       = 1
@@ -38,6 +38,7 @@ resource "checkly_heartbeat" "example-heartbeat" {
 ### Required
 
 - `activated` (Boolean) Determines if the check is running or not. Possible values `true`, and `false`.
+- `heartbeat` (Attributes) The heartbeat schedule and grace period. (see [below for nested schema](#nestedatt--heartbeat))
 - `name` (String) The name of the check.
 
 ### Optional
@@ -45,7 +46,6 @@ resource "checkly_heartbeat" "example-heartbeat" {
 - `alert_channel_subscription` (Block Set) An array of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your monitor, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedblock--alert_channel_subscription))
 - `alert_settings` (Attributes) Determines the alert escalation policy for the monitor. (see [below for nested schema](#nestedatt--alert_settings))
 - `description` (String) A description of the monitor.
-- `heartbeat` (Block, Optional) The heartbeat schedule and grace period. (see [below for nested schema](#nestedblock--heartbeat))
 - `muted` (Boolean) Determines if any notifications will be sent out when a check fails/degrades/recovers.
 - `tags` (Set of String) A list of tags for organizing and filtering checks.
 - `trigger_incident` (Attributes) Create and resolve an incident based on the alert configuration. Useful for status page automation. (see [below for nested schema](#nestedatt--trigger_incident))
@@ -54,6 +54,21 @@ resource "checkly_heartbeat" "example-heartbeat" {
 ### Read-Only
 
 - `id` (String) The ID of the monitor.
+
+<a id="nestedatt--heartbeat"></a>
+### Nested Schema for `heartbeat`
+
+Required:
+
+- `grace` (Number) How long Checkly should wait before triggering any alerts when a ping does not arrive within the set period. The combination of `grace` and `grace_unit` must be at most 365 days.
+- `grace_unit` (String) Possible values `seconds`, `minutes`, `hours` and `days`.
+- `period` (Number) How often you expect a ping to the ping URL. The combination of `period` and `period_unit` must be between 30 seconds and 365 days.
+- `period_unit` (String) Possible values `seconds`, `minutes`, `hours` and `days`.
+
+Optional:
+
+- `ping_token` (String, Sensitive) Custom token to generate your ping URL. Checkly will expect a ping to `https://ping.checklyhq.com/[PING_TOKEN]`.
+
 
 <a id="nestedblock--alert_channel_subscription"></a>
 ### Nested Schema for `alert_channel_subscription`
@@ -108,21 +123,6 @@ Optional:
 
 - `minutes_failing_threshold` (Number) Send an alert notification after the monitor has been failing for the given amount of time (in minutes). Possible values are `5`, `10`, `15`, and `30`. (Default `5`).
 
-
-
-<a id="nestedblock--heartbeat"></a>
-### Nested Schema for `heartbeat`
-
-Required:
-
-- `grace` (Number) How long Checkly should wait before triggering any alerts when a ping does not arrive within the set period. The combination of `grace` and `grace_unit` must be at most 365 days.
-- `grace_unit` (String) Possible values `seconds`, `minutes`, `hours` and `days`.
-- `period` (Number) How often you expect a ping to the ping URL. The combination of `period` and `period_unit` must be between 30 seconds and 365 days.
-- `period_unit` (String) Possible values `seconds`, `minutes`, `hours` and `days`.
-
-Optional:
-
-- `ping_token` (String, Sensitive) Custom token to generate your ping URL. Checkly will expect a ping to `https://ping.checklyhq.com/[PING_TOKEN]`.
 
 
 <a id="nestedatt--trigger_incident"></a>

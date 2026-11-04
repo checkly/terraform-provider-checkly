@@ -1,9 +1,14 @@
 package provider
 
 import (
+	"context"
 	"regexp"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
@@ -39,7 +44,7 @@ func TestAccHeartbeatMonitorInvalidInputs(t *testing.T) {
 	})
 }
 
-func TestAccHeartbeatMonitorMissingHeartbeatBlock(t *testing.T) {
+func TestAccHeartbeatMonitorMissingHeartbeat(t *testing.T) {
 	config := `resource "checkly_heartbeat_monitor" "test" {
 		activated = true
 		name = "heartbeat monitor"
@@ -47,7 +52,7 @@ func TestAccHeartbeatMonitorMissingHeartbeatBlock(t *testing.T) {
 	accTestCase(t, []resource.TestStep{
 		{
 			Config:      config,
-			ExpectError: regexp.MustCompile(`Block heartbeat must have a configuration value`),
+			ExpectError: regexp.MustCompile(`The argument "heartbeat" is required, but no definition was found.`),
 		},
 	})
 }
@@ -56,26 +61,14 @@ func TestAccHeartbeatMonitorMissingHeartbeatFields(t *testing.T) {
 	config := `resource "checkly_heartbeat_monitor" "test" {
 		activated = true
 		name = "heartbeat monitor"
-		heartbeat {
+		heartbeat = {
 
 		}
 	}`
 	accTestCase(t, []resource.TestStep{
 		{
 			Config:      config,
-			ExpectError: regexp.MustCompile(`The argument "grace" is required, but no definition was found.`),
-		},
-		{
-			Config:      config,
-			ExpectError: regexp.MustCompile(`The argument "grace_unit" is required, but no definition was found.`),
-		},
-		{
-			Config:      config,
-			ExpectError: regexp.MustCompile(`The argument "period" is required, but no definition was found.`),
-		},
-		{
-			Config:      config,
-			ExpectError: regexp.MustCompile(`The argument "period_unit" is required, but no definition was found.`),
+			ExpectError: regexp.MustCompile(`attributes "grace",\s+"grace_unit", "period", and "period_unit" are required`),
 		},
 	})
 }
@@ -84,7 +77,7 @@ func TestAccHeartbeatMonitorPeriodTooBig(t *testing.T) {
 	config := `resource "checkly_heartbeat_monitor" "test" {
 		activated = true
 		name = "heartbeat monitor"
-		heartbeat {
+		heartbeat = {
 			period = 366
 			period_unit = "days"
 			grace = 0
@@ -103,7 +96,7 @@ func TestAccHeartbeatMonitorPeriodTooSmall(t *testing.T) {
 	config := `resource "checkly_heartbeat_monitor" "test" {
 		activated = true
 		name = "heartbeat monitor"
-		heartbeat {
+		heartbeat = {
 			period = 5
 			period_unit = "seconds"
 			grace = 0
@@ -122,7 +115,7 @@ func TestAccHeartbeatMonitorGraceTooBig(t *testing.T) {
 	config := `resource "checkly_heartbeat_monitor" "test" {
 		activated = true
 		name = "heartbeat monitor"
-		heartbeat {
+		heartbeat = {
 			period = 5
 			period_unit = "days"
 			grace = 366
@@ -141,7 +134,7 @@ func TestAccHeartbeatMonitorInvalidPeriodUnit(t *testing.T) {
 	config := `resource "checkly_heartbeat_monitor" "test" {
 		activated = true
 		name = "heartbeat monitor"
-		heartbeat {
+		heartbeat = {
 			period = 5
 			period_unit = "lightyear"
 			grace = 0
@@ -160,7 +153,7 @@ func TestAccHeartbeatMonitorInvalidGraceUnit(t *testing.T) {
 	config := `resource "checkly_heartbeat_monitor" "test" {
 		activated = true
 		name = "heartbeat monitor"
-		heartbeat {
+		heartbeat = {
 			period = 5
 			period_unit = "days"
 			grace = 0
@@ -180,7 +173,7 @@ func TestAccHeartbeatMonitorCreate(t *testing.T) {
 		activated = true
 		name = "heartbeat monitor"
 		description = "Heartbeat monitor description"
-		heartbeat {
+		heartbeat = {
 			period = 5
 			period_unit = "days"
 			grace = 0
@@ -227,7 +220,7 @@ func TestAccHeartbeatMonitorDescriptionRemoval(t *testing.T) {
 				activated = true
 				name = "heartbeat monitor"
 				description = "Heartbeat monitor description"
-				heartbeat {
+				heartbeat = {
 					period = 5
 					period_unit = "days"
 					grace = 0
@@ -244,7 +237,7 @@ func TestAccHeartbeatMonitorDescriptionRemoval(t *testing.T) {
 			Config: `resource "checkly_heartbeat_monitor" "test" {
 				activated = true
 				name = "heartbeat monitor"
-				heartbeat {
+				heartbeat = {
 					period = 5
 					period_unit = "days"
 					grace = 0
@@ -270,7 +263,7 @@ resource "checkly_heartbeat_monitor" "test_trigger_incident" {
 	name      = "Heartbeat Monitor with Trigger Incident"
 	activated = true
 
-	heartbeat {
+	heartbeat = {
 		period      = 10
 		period_unit = "minutes"
 		grace       = 5
@@ -344,7 +337,7 @@ func TestAccHeartbeatMonitorUnsetSweepBooleansAndTags(t *testing.T) {
 					muted                     = true
 					use_global_alert_settings = true
 					tags                      = ["sweep-a", "sweep-b"]
-					heartbeat {
+					heartbeat = {
 						period      = 5
 						period_unit = "days"
 						grace       = 10
@@ -383,7 +376,7 @@ func TestAccHeartbeatMonitorUnsetSweepBooleansAndTags(t *testing.T) {
 				resource "checkly_heartbeat_monitor" "test" {
 					name      = "heartbeat-unset-sweep-basics"
 					activated = true
-					heartbeat {
+					heartbeat = {
 						period      = 5
 						period_unit = "days"
 						grace       = 0
@@ -432,7 +425,7 @@ func TestAccHeartbeatMonitorUnsetSweepTriggerIncident(t *testing.T) {
 				resource "checkly_heartbeat_monitor" "test" {
 					name      = "heartbeat-unset-sweep-trigger-incident"
 					activated = true
-					heartbeat {
+					heartbeat = {
 						period      = 5
 						period_unit = "days"
 						grace       = 0
@@ -462,7 +455,7 @@ func TestAccHeartbeatMonitorUnsetSweepTriggerIncident(t *testing.T) {
 				resource "checkly_heartbeat_monitor" "test" {
 					name      = "heartbeat-unset-sweep-trigger-incident"
 					activated = true
-					heartbeat {
+					heartbeat = {
 						period      = 5
 						period_unit = "days"
 						grace       = 0
@@ -505,7 +498,7 @@ func TestAccHeartbeatMonitorAlertChannelSubscriptions(t *testing.T) {
 					name      = "heartbeat-alert-channel-sub-test"
 					activated = true
 
-					heartbeat {
+					heartbeat = {
 						period      = 5
 						period_unit = "days"
 						grace       = 0
@@ -568,7 +561,7 @@ func TestAccHeartbeatMonitorAlertChannelSubscriptions(t *testing.T) {
 					name      = "heartbeat-alert-channel-sub-test"
 					activated = true
 
-					heartbeat {
+					heartbeat = {
 						period      = 5
 						period_unit = "days"
 						grace       = 0
@@ -642,7 +635,7 @@ func TestAccHeartbeatMonitorAlertChannelSubscriptions(t *testing.T) {
 					name      = "heartbeat-alert-channel-sub-test"
 					activated = true
 
-					heartbeat {
+					heartbeat = {
 						period      = 5
 						period_unit = "days"
 						grace       = 0
@@ -659,4 +652,53 @@ func TestAccHeartbeatMonitorAlertChannelSubscriptions(t *testing.T) {
 			),
 		},
 	})
+}
+
+func TestHeartbeatMonitorDurationValidator(t *testing.T) {
+	heartbeat := func(period types.Int64, periodUnit types.String, grace types.Int64, graceUnit types.String) types.Object {
+		return types.ObjectValueMust(heartbeatMonitorHeartbeatAttrTypes, map[string]attr.Value{
+			"period":      period,
+			"period_unit": periodUnit,
+			"grace":       grace,
+			"grace_unit":  graceUnit,
+			"ping_token":  types.StringNull(),
+		})
+	}
+
+	tests := map[string]struct {
+		value     types.Object
+		wantError string
+	}{
+		"null object": {value: types.ObjectNull(heartbeatMonitorHeartbeatAttrTypes)},
+		// Terraform rejects an empty heartbeat object before provider
+		// validation runs; with every member null there is nothing to check.
+		"all members null": {value: heartbeat(types.Int64Null(), types.StringNull(), types.Int64Null(), types.StringNull())},
+		"unknown period":   {value: heartbeat(types.Int64Unknown(), types.StringValue("seconds"), types.Int64Value(1), types.StringValue("hours"))},
+		"valid":            {value: heartbeat(types.Int64Value(1), types.StringValue("days"), types.Int64Value(1), types.StringValue("hours"))},
+		"period too short": {value: heartbeat(types.Int64Value(29), types.StringValue("seconds"), types.Int64Value(1), types.StringValue("hours")), wantError: "period must be between 30 seconds and 365 days"},
+		"period too long":  {value: heartbeat(types.Int64Value(366), types.StringValue("days"), types.Int64Value(1), types.StringValue("hours")), wantError: "period must be between 30 seconds and 365 days"},
+		"grace too long":   {value: heartbeat(types.Int64Value(1), types.StringValue("days"), types.Int64Value(366), types.StringValue("days")), wantError: "grace must be less than 365 days"},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			req := validator.ObjectRequest{
+				Path:        path.Root("heartbeat"),
+				ConfigValue: tt.value,
+			}
+			resp := &validator.ObjectResponse{}
+
+			heartbeatMonitorDurationValidator{}.ValidateObject(context.Background(), req, resp)
+
+			if tt.wantError == "" {
+				if resp.Diagnostics.HasError() {
+					t.Fatalf("unexpected error: %v", resp.Diagnostics)
+				}
+				return
+			}
+			if resp.Diagnostics.ErrorsCount() != 1 || resp.Diagnostics.Errors()[0].Detail() != tt.wantError {
+				t.Fatalf("expected error %q, got %v", tt.wantError, resp.Diagnostics)
+			}
+		})
+	}
 }

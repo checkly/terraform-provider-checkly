@@ -39,7 +39,7 @@ func TestAccHeartbeatInvalidInputs(t *testing.T) {
 	})
 }
 
-func TestAccHeartbeatMissingHeartbeatBlock(t *testing.T) {
+func TestAccHeartbeatMissingHeartbeat(t *testing.T) {
 	config := `resource "checkly_heartbeat" "test" {
 		activated = true
 		name = "heartbeat monitor"
@@ -47,7 +47,7 @@ func TestAccHeartbeatMissingHeartbeatBlock(t *testing.T) {
 	accTestCase(t, []resource.TestStep{
 		{
 			Config:      config,
-			ExpectError: regexp.MustCompile(`Block heartbeat must have a configuration value`),
+			ExpectError: regexp.MustCompile(`The argument "heartbeat" is required, but no definition was found.`),
 		},
 	})
 }
@@ -56,26 +56,14 @@ func TestAccHeartbeatMissingHeartbeatFields(t *testing.T) {
 	config := `resource "checkly_heartbeat" "test" {
 		activated = true
 		name = "heartbeat monitor"
-		heartbeat {
+		heartbeat = {
 
 		}
 	}`
 	accTestCase(t, []resource.TestStep{
 		{
 			Config:      config,
-			ExpectError: regexp.MustCompile(`The argument "grace" is required, but no definition was found.`),
-		},
-		{
-			Config:      config,
-			ExpectError: regexp.MustCompile(`The argument "grace_unit" is required, but no definition was found.`),
-		},
-		{
-			Config:      config,
-			ExpectError: regexp.MustCompile(`The argument "period" is required, but no definition was found.`),
-		},
-		{
-			Config:      config,
-			ExpectError: regexp.MustCompile(`The argument "period_unit" is required, but no definition was found.`),
+			ExpectError: regexp.MustCompile(`attributes "grace",\s+"grace_unit", "period", and "period_unit" are required`),
 		},
 	})
 }
@@ -84,7 +72,7 @@ func TestAccHeartbeatPeriodTooBig(t *testing.T) {
 	config := `resource "checkly_heartbeat" "test" {
 		activated = true
 		name = "heartbeat monitor"
-		heartbeat {
+		heartbeat = {
 			period = 366
 			period_unit = "days"
 			grace = 0
@@ -103,7 +91,7 @@ func TestAccHeartbeatPeriodTooSmall(t *testing.T) {
 	config := `resource "checkly_heartbeat" "test" {
 		activated = true
 		name = "heartbeat monitor"
-		heartbeat {
+		heartbeat = {
 			period = 5
 			period_unit = "seconds"
 			grace = 0
@@ -122,7 +110,7 @@ func TestAccHeartbeatInvalidPeriodUnit(t *testing.T) {
 	config := `resource "checkly_heartbeat" "test" {
 		activated = true
 		name = "heartbeat monitor"
-		heartbeat {
+		heartbeat = {
 			period = 5
 			period_unit = "lightyear"
 			grace = 0
@@ -141,7 +129,7 @@ func TestAccHeartbeatInvalidGraceUnit(t *testing.T) {
 	config := `resource "checkly_heartbeat" "test" {
 		activated = true
 		name = "heartbeat monitor"
-		heartbeat {
+		heartbeat = {
 			period = 5
 			period_unit = "days"
 			grace = 0
@@ -160,7 +148,7 @@ func TestAccHeartbeatCreate(t *testing.T) {
 	config := `resource "checkly_heartbeat" "test" {
 		activated = true
 		name = "heartbeat monitor"
-		heartbeat {
+		heartbeat = {
 			period = 5
 			period_unit = "days"
 			grace = 0
@@ -200,7 +188,7 @@ func TestAccHeartbeatMovedToHeartbeatMonitor(t *testing.T) {
 			Config: `resource "checkly_heartbeat" "test" {
 				activated = true
 				name = "heartbeat monitor"
-				heartbeat {
+				heartbeat = {
 					period = 5
 					period_unit = "days"
 					grace = 0
@@ -213,7 +201,7 @@ func TestAccHeartbeatMovedToHeartbeatMonitor(t *testing.T) {
 				resource "checkly_heartbeat_monitor" "test" {
 					activated = true
 					name = "heartbeat monitor"
-					heartbeat {
+					heartbeat = {
 						period = 5
 						period_unit = "days"
 						grace = 0

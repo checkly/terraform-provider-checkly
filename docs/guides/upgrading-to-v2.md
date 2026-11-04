@@ -72,7 +72,7 @@ This affects:
 | `checkly_check` | `alert_settings` (and its `parallel_run_failure_threshold`, `reminders`, `run_based_escalation`, `time_based_escalation`), `request` (and its `assertion` and `basic_auth`), `retry_strategy` (and its `only_on`), `trigger_incident` |
 | `checkly_check_group` | `alert_settings` (and nested objects as above), `api_check_defaults` (and its `basic_auth` and `assertion`), `retry_strategy` (and its `only_on`) |
 | `checkly_check_group_v2` | `api_check_defaults` (and its `basic_auth` and `assertion`), `default_runtime`, `enforce_alert_settings` (and its `alert_settings` and `alert_channel_subscription`), `enforce_locations`, `enforce_retry_strategy` (and its `retry_strategy`), `enforce_scheduling_strategy`, `setup_script`, `teardown_script` |
-| `checkly_heartbeat`, `checkly_heartbeat_monitor` | `alert_settings` (and nested objects as above), `trigger_incident` |
+| `checkly_heartbeat`, `checkly_heartbeat_monitor` | `alert_settings` (and nested objects as above), `heartbeat`, `trigger_incident` |
 | `checkly_url_monitor` | `alert_settings` (and nested objects as above), `request` (and its `assertion`), `retry_strategy` (and its `only_on`), `trigger_incident` |
 | `checkly_dns_monitor` | `alert_settings` (and nested objects as above), `request` (and its `assertion` and `name_server`), `retry_strategy`, `trigger_incident` |
 | `checkly_grpc_monitor` | `alert_settings` (and nested objects as above), `request` (and its `assertion` and `metadata`), `retry_strategy`, `trigger_incident` |
@@ -81,7 +81,7 @@ This affects:
 | `checkly_playwright_check_suite` | `alert_settings` (and nested objects as above), `bundle`, `runtime` (and its `engine`, `playwright`, `steps`), `trigger_incident` |
 | `checkly_playwright_code_bundle` | `prebuilt_archive` |
 
-The table lists every such attribute. All other blocks, such as `heartbeat` and repeated blocks like `alert_channel_subscription`, keep their block syntax.
+The table lists every such attribute. All other blocks, such as the repeated `alert_channel_subscription` block, keep their block syntax.
 
 ### Removed attributes
 
