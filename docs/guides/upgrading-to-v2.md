@@ -21,8 +21,8 @@ Existing state is upgraded automatically: you do not need to import or recreate 
 1. If you use `checkly_trigger_check` or `checkly_trigger_group`, take them out of your configuration and state, as described in [Removed resource types](#removed-resource-types).
 1. Back up your state, for example with `terraform state pull > backup.tfstate`. Once v2 has refreshed the state, v1.x can no longer read it; to go back to v1.x, restore the backup.
 1. Update the version constraint, for example `version = "~> 2.0"`, and run `terraform init -upgrade`.
-1. Update your configuration as described in [Configuration changes](#configuration-changes). `terraform validate` points at every line that needs to change.
-1. Run `terraform plan`. It should report no changes, except for the cases listed under [Expected one-time changes](#expected-one-time-changes).
+1. Update your configuration as described in [Configuration changes](#configuration-changes). `terraform validate` points at every line that needs to change, except misspelled names inside objects assigned with `= { ... }`, which Terraform ignores (see [Single nested objects are attributes](#single-nested-objects-are-attributes)).
+1. Run `terraform plan`. It should report no changes, except for the cases listed under [Expected one-time changes](#expected-one-time-changes). A change to a value inside a converted object, such as a setting going back to its default, usually means that a name in that object is misspelled.
 
 ## Configuration changes
 
@@ -91,6 +91,35 @@ resource "checkly_url_monitor" "example" {
 ```
 
 Leaving such a list out means it is empty, as leaving out the blocks did in v1.x.
+
+A `dynamic` block that generated such nested blocks becomes a `for` expression:
+
+```terraform
+# v1.x
+request {
+  url = "https://example.com"
+  dynamic "assertion" {
+    for_each = var.assertions
+    content {
+      source     = assertion.value.source
+      comparison = assertion.value.comparison
+      target     = assertion.value.target
+    }
+  }
+}
+
+# v2
+request = {
+  url = "https://example.com"
+  assertion = [for a in var.assertions : {
+    source     = a.source
+    comparison = a.comparison
+    target     = a.target
+  }]
+}
+```
+
+`dynamic` blocks keep working for the blocks that remain, such as `alert_channel_subscription` and `environment_variable`.
 
 Terraform does not reject unknown names inside these objects: a misspelled optional attribute, such as `folow_redirects` in `request = { ... }`, is ignored instead of raising an error as it did inside a block. The attribute then keeps its default. Check the names in these objects carefully when you convert them, in particular the rules of `security_baseline` in `checkly_ssl_monitor`, where a misspelled rule silently keeps its default instead of the value you set.
 
