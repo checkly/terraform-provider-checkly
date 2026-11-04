@@ -25,6 +25,10 @@ $ export TF_VAR_checkly_api_key="your-api-key"
 $ export TF_VAR_checkly_account_id="your-account-id"
 ```
 
+## Request timeout
+
+Each request to the Checkly API times out after 15 seconds. To change this, set the `API_CALL_TIMEOUT` environment variable to a whole number of seconds, such as `API_CALL_TIMEOUT=60`.
+
 ## Example Usage
 
 ```terraform

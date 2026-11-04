@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -34,18 +35,36 @@ func apiCallTimeout() time.Duration {
 	return apiRequestTimeout() + rateLimitAllowance
 }
 
+// defaultAPIRequestTimeout bounds a single HTTP request to the Checkly API
+// when API_CALL_TIMEOUT is not set.
+const defaultAPIRequestTimeout = 15 * time.Second
+
 // apiRequestTimeout bounds a single HTTP request to the Checkly API:
-// API_CALL_TIMEOUT seconds, 15 by default.
+// API_CALL_TIMEOUT seconds, 15 by default. The provider's Configure rejects an
+// invalid API_CALL_TIMEOUT, so the default here only stands in for a value
+// that has already been reported.
 func apiRequestTimeout() time.Duration {
-	timeout := os.Getenv("API_CALL_TIMEOUT")
-	if timeout != "" {
-		v, err := strconv.ParseInt(timeout, 10, 64)
-		if err != nil || v < 1 {
-			panic("Invalid API_CALL_TIMEOUT value, must be a positive number")
-		}
-		return time.Duration(v) * time.Second
+	timeout, err := parseAPIRequestTimeout()
+	if err != nil {
+		return defaultAPIRequestTimeout
 	}
-	return 15 * time.Second
+	return timeout
+}
+
+// parseAPIRequestTimeout reads API_CALL_TIMEOUT, a positive whole number of
+// seconds.
+func parseAPIRequestTimeout() (time.Duration, error) {
+	timeout := os.Getenv("API_CALL_TIMEOUT")
+	if timeout == "" {
+		return defaultAPIRequestTimeout, nil
+	}
+
+	v, err := strconv.ParseInt(timeout, 10, 64)
+	// The upper bound keeps the conversion to a Duration from overflowing.
+	if err != nil || v < 1 || v > int64(math.MaxInt64/time.Second) {
+		return 0, fmt.Errorf("invalid API_CALL_TIMEOUT value %q: must be a positive whole number of seconds", timeout)
+	}
+	return time.Duration(v) * time.Second, nil
 }
 
 // contextWithAPITimeout returns a child context with the standard API call
@@ -107,17 +126,14 @@ func encodeNumericID(id int64) string {
 
 // checksumSha256 computes the hex-encoded SHA-256 checksum of the data read
 // from r.
-func checksumSha256(r io.Reader) string {
+func checksumSha256(r io.Reader) (string, error) {
 	hash := sha256.New()
 
-	_, err := io.Copy(hash, r)
-	if err != nil {
-		panic("failed to calculate checksum: " + err.Error())
+	if _, err := io.Copy(hash, r); err != nil {
+		return "", err
 	}
 
-	checksum := hex.EncodeToString(hash.Sum(nil))
-
-	return checksum
+	return hex.EncodeToString(hash.Sum(nil)), nil
 }
 
 type allowedValue[T any] struct {

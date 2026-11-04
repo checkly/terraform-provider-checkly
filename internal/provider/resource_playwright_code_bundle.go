@@ -501,7 +501,10 @@ func (a *PlaywrightCodeBundlePrebuiltArchiveAttribute) ChecksumSha256() (string,
 	}
 	defer file.Close()
 
-	checksum := checksumSha256(file)
+	checksum, err := checksumSha256(file)
+	if err != nil {
+		return "", fmt.Errorf("failed to read archive file %q: %w", a.File, err)
+	}
 
 	return checksum, nil
 }

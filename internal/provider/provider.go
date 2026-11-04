@@ -131,10 +131,16 @@ func (p *ChecklyProvider) Configure(ctx context.Context, req provider.ConfigureR
 		apiURL = "https://api.checklyhq.com"
 	}
 
+	requestTimeout, err := parseAPIRequestTimeout()
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid API Request Timeout", err.Error())
+		return
+	}
+
 	client := checkly.NewClient(
 		apiURL,
 		apiKey,
-		&http.Client{Timeout: apiRequestTimeout()},
+		&http.Client{Timeout: requestTimeout},
 		nil,
 	)
 

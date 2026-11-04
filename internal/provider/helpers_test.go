@@ -3,6 +3,7 @@ package provider
 import (
 	"errors"
 	"testing"
+	"time"
 )
 
 func TestIsNotFoundError(t *testing.T) {
@@ -36,6 +37,37 @@ func TestIsNotFoundError(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			if got := isNotFoundError(c.err); got != c.want {
 				t.Errorf("isNotFoundError(%v) = %v, want %v", c.err, got, c.want)
+			}
+		})
+	}
+}
+
+func TestParseAPIRequestTimeout(t *testing.T) {
+	cases := map[string]struct {
+		value   string
+		want    time.Duration
+		wantErr bool
+	}{
+		"unset":         {"", 15 * time.Second, false},
+		"whole seconds": {"60", 60 * time.Second, false},
+		"with a unit":   {"30s", 0, true},
+		"fractional":    {"1.5", 0, true},
+		"zero":          {"0", 0, true},
+		"negative":      {"-5", 0, true},
+		"not a number":  {"abc", 0, true},
+		"overflowing":   {"9223372037", 0, true},
+	}
+
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			t.Setenv("API_CALL_TIMEOUT", c.value)
+
+			got, err := parseAPIRequestTimeout()
+			if (err != nil) != c.wantErr {
+				t.Fatalf("parseAPIRequestTimeout() error = %v, wantErr %v", err, c.wantErr)
+			}
+			if got != c.want {
+				t.Errorf("parseAPIRequestTimeout() = %v, want %v", got, c.want)
 			}
 		})
 	}
