@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
-	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -50,9 +49,9 @@ type CheckGroupV2ResourceModel struct {
 	Muted                     types.Bool   `tfsdk:"muted"`
 	Tags                      types.Set    `tfsdk:"tags"`
 	EnvironmentVariable       types.List   `tfsdk:"environment_variable"`
-	SetupScript               types.List   `tfsdk:"setup_script"`
-	TeardownScript            types.List   `tfsdk:"teardown_script"`
-	DefaultRuntime            types.List   `tfsdk:"default_runtime"`
+	SetupScript               types.Object `tfsdk:"setup_script"`
+	TeardownScript            types.Object `tfsdk:"teardown_script"`
+	DefaultRuntime            types.Object `tfsdk:"default_runtime"`
 	EnforceAlertSettings      types.Object `tfsdk:"enforce_alert_settings"`
 	EnforceLocations          types.Object `tfsdk:"enforce_locations"`
 	EnforceRetryStrategy      types.Object `tfsdk:"enforce_retry_strategy"`
@@ -133,19 +132,17 @@ func (r *CheckGroupV2Resource) Metadata(ctx context.Context, req resource.Metada
 }
 
 func (r *CheckGroupV2Resource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
-	scriptNestedObject := schema.NestedBlockObject{
-		Attributes: map[string]schema.Attribute{
-			"snippet_id": schema.Int64Attribute{
-				Optional:    true,
-				Description: "The ID of a code snippet. Code snippets are not available for new plans.",
-				Validators: []validator.Int64{
-					int64validator.AtLeast(1),
-				},
+	scriptAttributes := map[string]schema.Attribute{
+		"snippet_id": schema.Int64Attribute{
+			Optional:    true,
+			Description: "The ID of a code snippet. Code snippets are not available for new plans.",
+			Validators: []validator.Int64{
+				int64validator.AtLeast(1),
 			},
-			"inline_script": schema.StringAttribute{
-				Optional:    true,
-				Description: "A valid piece of Node.js code.",
-			},
+		},
+		"inline_script": schema.StringAttribute{
+			Optional:    true,
+			Description: "A valid piece of Node.js code.",
 		},
 	}
 
@@ -318,6 +315,36 @@ func (r *CheckGroupV2Resource) Schema(ctx context.Context, req resource.SchemaRe
 				},
 			},
 			apiCheckDefaultsAttributeName: makeAPICheckDefaultsAttributeSchema(),
+			"setup_script": schema.SingleNestedAttribute{
+				Optional: true,
+				Description: "A script to run in the setup phase of an API check. " +
+					"Runs in addition to the check's own setup script.",
+				Validators: []validator.Object{
+					checkGroupV2ScriptValidator{},
+				},
+				Attributes: scriptAttributes,
+			},
+			"teardown_script": schema.SingleNestedAttribute{
+				Optional: true,
+				Description: "A script to run in the teardown phase of an API check. " +
+					"Runs in addition to the check's own teardown script.",
+				Validators: []validator.Object{
+					checkGroupV2ScriptValidator{},
+				},
+				Attributes: scriptAttributes,
+			},
+			"default_runtime": schema.SingleNestedAttribute{
+				Optional: true,
+				Description: "Sets a default runtime for the group. " +
+					"Used as a fallback when a check belonging to the group has no runtime set. " +
+					"Takes precedence over the account default runtime.",
+				Attributes: map[string]schema.Attribute{
+					"runtime_id": schema.StringAttribute{
+						Required:    true,
+						Description: "The runtime ID.",
+					},
+				},
+			},
 		},
 		Blocks: map[string]schema.Block{
 			environmentVariableAttributeName: makeEnvironmentVariableSchema(EnvironmentVariableAttributeSchemaOptions{
@@ -325,40 +352,6 @@ func (r *CheckGroupV2Resource) Schema(ctx context.Context, req resource.SchemaRe
 					"Only relevant for check types that support environment variables. " +
 					"Use global environment variables whenever possible.",
 			}),
-			"setup_script": schema.ListNestedBlock{
-				Description: "A script to run in the setup phase of an API check. " +
-					"Runs in addition to the check's own setup script.",
-				Validators: []validator.List{
-					listvalidator.SizeAtMost(1),
-					checkGroupV2ScriptValidator{},
-				},
-				NestedObject: scriptNestedObject,
-			},
-			"teardown_script": schema.ListNestedBlock{
-				Description: "A script to run in the teardown phase of an API check. " +
-					"Runs in addition to the check's own teardown script.",
-				Validators: []validator.List{
-					listvalidator.SizeAtMost(1),
-					checkGroupV2ScriptValidator{},
-				},
-				NestedObject: scriptNestedObject,
-			},
-			"default_runtime": schema.ListNestedBlock{
-				Description: "Sets a default runtime for the group. " +
-					"Used as a fallback when a check belonging to the group has no runtime set. " +
-					"Takes precedence over the account default runtime.",
-				Validators: []validator.List{
-					listvalidator.SizeAtMost(1),
-				},
-				NestedObject: schema.NestedBlockObject{
-					Attributes: map[string]schema.Attribute{
-						"runtime_id": schema.StringAttribute{
-							Required:    true,
-							Description: "The runtime ID.",
-						},
-					},
-				},
-			},
 		},
 	}
 }
@@ -555,7 +548,7 @@ func (r *CheckGroupV2Resource) ImportState(ctx context.Context, req resource.Imp
 }
 
 // checkGroupV2ScriptValidator validates that a setup_script/teardown_script
-// block configures exactly one of snippet_id and inline_script.
+// object configures exactly one of snippet_id and inline_script.
 type checkGroupV2ScriptValidator struct{}
 
 func (v checkGroupV2ScriptValidator) Description(ctx context.Context) string {
@@ -566,42 +559,35 @@ func (v checkGroupV2ScriptValidator) MarkdownDescription(ctx context.Context) st
 	return "exactly one of `snippet_id` or `inline_script` must be specified"
 }
 
-func (v checkGroupV2ScriptValidator) ValidateList(ctx context.Context, req validator.ListRequest, resp *validator.ListResponse) {
+func (v checkGroupV2ScriptValidator) ValidateObject(ctx context.Context, req validator.ObjectRequest, resp *validator.ObjectResponse) {
 	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
 		return
 	}
 
-	for _, element := range req.ConfigValue.Elements() {
-		obj, ok := element.(types.Object)
-		if !ok || obj.IsNull() || obj.IsUnknown() {
-			continue
-		}
+	attrs := req.ConfigValue.Attributes()
+	snippetID := attrs["snippet_id"]
+	inlineScript := attrs["inline_script"]
 
-		attrs := obj.Attributes()
-		snippetID := attrs["snippet_id"]
-		inlineScript := attrs["inline_script"]
+	// Unknown values may turn out to be either null or set; there is nothing
+	// to validate yet.
+	if snippetID.IsUnknown() || inlineScript.IsUnknown() {
+		return
+	}
 
-		// Unknown values may turn out to be either null or set; there is
-		// nothing to validate yet.
-		if snippetID.IsUnknown() || inlineScript.IsUnknown() {
-			continue
-		}
+	configured := 0
+	if !snippetID.IsNull() {
+		configured++
+	}
+	if !inlineScript.IsNull() {
+		configured++
+	}
 
-		configured := 0
-		if !snippetID.IsNull() {
-			configured++
-		}
-		if !inlineScript.IsNull() {
-			configured++
-		}
-
-		if configured != 1 {
-			resp.Diagnostics.AddAttributeError(
-				req.Path,
-				"Invalid Script",
-				"Exactly one of \"snippet_id\" or \"inline_script\" must be specified.",
-			)
-		}
+	if configured != 1 {
+		resp.Diagnostics.AddAttributeError(
+			req.Path,
+			"Invalid Script",
+			"Exactly one of \"snippet_id\" or \"inline_script\" must be specified.",
+		)
 	}
 }
 
@@ -658,28 +644,8 @@ func checkGroupV2EnforcementEnabled(obj types.Object) bool {
 	return boolAttrValue(obj.Attributes()["enabled"])
 }
 
-// checkGroupV2FirstElement returns the first element of a list of objects,
-// or nil when the list is null, unknown or empty.
-func checkGroupV2FirstElement(list types.List) *types.Object {
-	if list.IsNull() || list.IsUnknown() {
-		return nil
-	}
-
-	elements := list.Elements()
-	if len(elements) == 0 {
-		return nil
-	}
-
-	obj, ok := elements[0].(types.Object)
-	if !ok || obj.IsNull() || obj.IsUnknown() {
-		return nil
-	}
-
-	return &obj
-}
-
-// checkGroupV2ScriptFromObject converts a setup_script/teardown_script block
-// value to its API representation.
+// checkGroupV2ScriptFromObject converts a setup_script/teardown_script
+// attribute value to its API representation.
 func checkGroupV2ScriptFromObject(obj types.Object) (snippetID *int64, inlineScript *string) {
 	attrs := obj.Attributes()
 
@@ -770,19 +736,19 @@ func checkGroupV2FromModel(ctx context.Context, model *CheckGroupV2ResourceModel
 		EnvironmentVariables: environmentVariablesFromList(ctx, model.EnvironmentVariable, diags),
 	}
 
-	if runtime := checkGroupV2FirstElement(model.DefaultRuntime); runtime != nil {
+	if runtime := model.DefaultRuntime; !runtime.IsNull() && !runtime.IsUnknown() {
 		if v, ok := runtime.Attributes()["runtime_id"].(types.String); ok && !v.IsNull() && !v.IsUnknown() {
 			val := v.ValueString()
 			group.RuntimeID = &val
 		}
 	}
 
-	if script := checkGroupV2FirstElement(model.SetupScript); script != nil {
-		group.SetupSnippetID, group.LocalSetupScript = checkGroupV2ScriptFromObject(*script)
+	if script := model.SetupScript; !script.IsNull() && !script.IsUnknown() {
+		group.SetupSnippetID, group.LocalSetupScript = checkGroupV2ScriptFromObject(script)
 	}
 
-	if script := checkGroupV2FirstElement(model.TeardownScript); script != nil {
-		group.TearDownSnippetID, group.LocalTearDownScript = checkGroupV2ScriptFromObject(*script)
+	if script := model.TeardownScript; !script.IsNull() && !script.IsUnknown() {
+		group.TearDownSnippetID, group.LocalTearDownScript = checkGroupV2ScriptFromObject(script)
 	}
 
 	if checkGroupV2EnforcementEnabled(model.EnforceAlertSettings) {
@@ -849,9 +815,9 @@ func checkGroupV2ToModel(ctx context.Context, group *checkly.GroupV2, model *Che
 	model.Muted = types.BoolValue(group.Muted)
 	model.Tags = setFromStrings(ctx, group.Tags, diags)
 	model.EnvironmentVariable = environmentVariablesToList(ctx, group.EnvironmentVariables, model.EnvironmentVariable, diags)
-	model.SetupScript = checkGroupV2ScriptToList(group.SetupSnippetID, group.LocalSetupScript)
-	model.TeardownScript = checkGroupV2ScriptToList(group.TearDownSnippetID, group.LocalTearDownScript)
-	model.DefaultRuntime = checkGroupV2DefaultRuntimeToList(group.RuntimeID)
+	model.SetupScript = checkGroupV2ScriptToObject(group.SetupSnippetID, group.LocalSetupScript)
+	model.TeardownScript = checkGroupV2ScriptToObject(group.TearDownSnippetID, group.LocalTearDownScript)
+	model.DefaultRuntime = checkGroupV2DefaultRuntimeToObject(group.RuntimeID)
 	model.EnforceAlertSettings = checkGroupV2EnforceAlertSettingsToObject(ctx, group, model.EnforceAlertSettings, diags)
 	model.EnforceLocations = checkGroupV2EnforceLocationsToObject(ctx, group, model.EnforceLocations, diags)
 	model.EnforceRetryStrategy = checkGroupV2EnforceRetryStrategyToObject(ctx, group, model.EnforceRetryStrategy, diags)
@@ -859,13 +825,12 @@ func checkGroupV2ToModel(ctx context.Context, group *checkly.GroupV2, model *Che
 	model.APICheckDefaults = apiCheckDefaultsToObject(ctx, group.APICheckDefaults, model.APICheckDefaults, diags)
 }
 
-// checkGroupV2ScriptToList converts the API representation of a
-// setup/teardown script to a setup_script/teardown_script block value.
-func checkGroupV2ScriptToList(snippetID *int64, inlineScript *string) types.List {
-	elemType := types.ObjectType{AttrTypes: checkGroupV2ScriptAttrTypes}
-
+// checkGroupV2ScriptToObject converts the API representation of a
+// setup/teardown script to a setup_script/teardown_script attribute value,
+// which is null when the group has no script.
+func checkGroupV2ScriptToObject(snippetID *int64, inlineScript *string) types.Object {
 	if snippetID == nil && inlineScript == nil {
-		return types.ListValueMust(elemType, []attr.Value{})
+		return types.ObjectNull(checkGroupV2ScriptAttrTypes)
 	}
 
 	snippetValue := types.Int64Null()
@@ -878,27 +843,22 @@ func checkGroupV2ScriptToList(snippetID *int64, inlineScript *string) types.List
 		inlineValue = types.StringValue(*inlineScript)
 	}
 
-	return types.ListValueMust(elemType, []attr.Value{
-		types.ObjectValueMust(checkGroupV2ScriptAttrTypes, map[string]attr.Value{
-			"snippet_id":    snippetValue,
-			"inline_script": inlineValue,
-		}),
+	return types.ObjectValueMust(checkGroupV2ScriptAttrTypes, map[string]attr.Value{
+		"snippet_id":    snippetValue,
+		"inline_script": inlineValue,
 	})
 }
 
-// checkGroupV2DefaultRuntimeToList converts the API representation of a
-// group runtime to a default_runtime block value.
-func checkGroupV2DefaultRuntimeToList(runtimeID *string) types.List {
-	elemType := types.ObjectType{AttrTypes: checkGroupV2DefaultRuntimeAttrTypes}
-
+// checkGroupV2DefaultRuntimeToObject converts the API representation of a
+// group runtime to a default_runtime attribute value, which is null when the
+// group has no default runtime.
+func checkGroupV2DefaultRuntimeToObject(runtimeID *string) types.Object {
 	if runtimeID == nil {
-		return types.ListValueMust(elemType, []attr.Value{})
+		return types.ObjectNull(checkGroupV2DefaultRuntimeAttrTypes)
 	}
 
-	return types.ListValueMust(elemType, []attr.Value{
-		types.ObjectValueMust(checkGroupV2DefaultRuntimeAttrTypes, map[string]attr.Value{
-			"runtime_id": types.StringValue(*runtimeID),
-		}),
+	return types.ObjectValueMust(checkGroupV2DefaultRuntimeAttrTypes, map[string]attr.Value{
+		"runtime_id": types.StringValue(*runtimeID),
 	})
 }
 

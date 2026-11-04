@@ -1,8 +1,14 @@
 package provider
 
 import (
+	"context"
 	"regexp"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
@@ -469,7 +475,7 @@ func TestAccCheckGroupV2DefaultRuntime(t *testing.T) {
 				resource "checkly_check_group_v2" "test" {
 					name = "default-runtime-test"
 
-					default_runtime {
+					default_runtime = {
 						runtime_id = "2023.02"
 					}
 				}
@@ -477,7 +483,7 @@ func TestAccCheckGroupV2DefaultRuntime(t *testing.T) {
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					checkGroupV2Resource,
-					"default_runtime.0.runtime_id",
+					"default_runtime.runtime_id",
 					"2023.02",
 				),
 			),
@@ -491,7 +497,7 @@ func TestAccCheckGroupV2DefaultRuntime(t *testing.T) {
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckNoResourceAttr(
 					checkGroupV2Resource,
-					"default_runtime.#",
+					"default_runtime",
 				),
 			),
 		},
@@ -831,11 +837,11 @@ func TestAccCheckGroupV2Scripts(t *testing.T) {
 				resource "checkly_check_group_v2" "test" {
 					name = "scripts-test"
 
-					setup_script {
+					setup_script = {
 						inline_script = "console.log('setup')"
 					}
 
-					teardown_script {
+					teardown_script = {
 						inline_script = "console.log('teardown')"
 					}
 				}
@@ -843,12 +849,12 @@ func TestAccCheckGroupV2Scripts(t *testing.T) {
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					checkGroupV2Resource,
-					"setup_script.0.inline_script",
+					"setup_script.inline_script",
 					"console.log('setup')",
 				),
 				resource.TestCheckResourceAttr(
 					checkGroupV2Resource,
-					"teardown_script.0.inline_script",
+					"teardown_script.inline_script",
 					"console.log('teardown')",
 				),
 			),
@@ -862,11 +868,11 @@ func TestAccCheckGroupV2Scripts(t *testing.T) {
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckNoResourceAttr(
 					checkGroupV2Resource,
-					"setup_script.#",
+					"setup_script",
 				),
 				resource.TestCheckNoResourceAttr(
 					checkGroupV2Resource,
-					"teardown_script.#",
+					"teardown_script",
 				),
 			),
 		},
@@ -880,7 +886,7 @@ func TestAccCheckGroupV2ScriptsValidation(t *testing.T) {
 				resource "checkly_check_group_v2" "test" {
 					name = "scripts-validation-test"
 
-					setup_script {
+					setup_script = {
 						snippet_id = 0
 					}
 				}
@@ -892,7 +898,7 @@ func TestAccCheckGroupV2ScriptsValidation(t *testing.T) {
 				resource "checkly_check_group_v2" "test" {
 					name = "scripts-validation-test"
 
-					teardown_script {
+					teardown_script = {
 						snippet_id    = 1
 						inline_script = "console.log('teardown')"
 					}
@@ -901,6 +907,46 @@ func TestAccCheckGroupV2ScriptsValidation(t *testing.T) {
 			ExpectError: regexp.MustCompile(`Invalid Script`),
 		},
 	})
+}
+
+func TestCheckGroupV2ScriptValidator(t *testing.T) {
+	script := func(snippetID types.Int64, inlineScript types.String) types.Object {
+		return types.ObjectValueMust(checkGroupV2ScriptAttrTypes, map[string]attr.Value{
+			"snippet_id":    snippetID,
+			"inline_script": inlineScript,
+		})
+	}
+
+	tests := map[string]struct {
+		value     types.Object
+		wantError bool
+	}{
+		"null object":     {value: types.ObjectNull(checkGroupV2ScriptAttrTypes)},
+		"empty object":    {value: script(types.Int64Null(), types.StringNull()), wantError: true},
+		"both configured": {value: script(types.Int64Value(1), types.StringValue("x")), wantError: true},
+		"snippet only":    {value: script(types.Int64Value(1), types.StringNull())},
+		"inline only":     {value: script(types.Int64Null(), types.StringValue("x"))},
+		"unknown member":  {value: script(types.Int64Unknown(), types.StringNull())},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			req := validator.ObjectRequest{
+				Path:        path.Root("setup_script"),
+				ConfigValue: tt.value,
+			}
+			resp := &validator.ObjectResponse{}
+
+			checkGroupV2ScriptValidator{}.ValidateObject(context.Background(), req, resp)
+
+			if got := resp.Diagnostics.HasError(); got != tt.wantError {
+				t.Fatalf("HasError() = %v, want %v: %v", got, tt.wantError, resp.Diagnostics)
+			}
+			if tt.wantError && resp.Diagnostics.Errors()[0].Summary() != "Invalid Script" {
+				t.Fatalf("unexpected error summary %q", resp.Diagnostics.Errors()[0].Summary())
+			}
+		})
+	}
 }
 
 func TestAccCheckGroupV2TopLevelAttributes(t *testing.T) {
@@ -1664,22 +1710,22 @@ func TestAccCheckGroupV2UnsetSweepSnippetScripts(t *testing.T) {
 				resource "checkly_check_group_v2" "test" {
 					name = "group-v2-sweep-snippets"
 
-					setup_script {
+					setup_script = {
 						snippet_id = checkly_snippet.setup.id
 					}
 
-					teardown_script {
+					teardown_script = {
 						snippet_id = checkly_snippet.teardown.id
 					}
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttrPair(
-					checkGroupV2Resource, "setup_script.0.snippet_id",
+					checkGroupV2Resource, "setup_script.snippet_id",
 					"checkly_snippet.setup", "id",
 				),
 				resource.TestCheckResourceAttrPair(
-					checkGroupV2Resource, "teardown_script.0.snippet_id",
+					checkGroupV2Resource, "teardown_script.snippet_id",
 					"checkly_snippet.teardown", "id",
 				),
 			),
@@ -1705,11 +1751,11 @@ func TestAccCheckGroupV2UnsetSweepSnippetScripts(t *testing.T) {
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckNoResourceAttr(
 					checkGroupV2Resource,
-					"setup_script.#",
+					"setup_script",
 				),
 				resource.TestCheckNoResourceAttr(
 					checkGroupV2Resource,
-					"teardown_script.#",
+					"teardown_script",
 				),
 			),
 		},

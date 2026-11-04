@@ -86,7 +86,7 @@ resource "checkly_check_group_v2" "production-api" {
   }
 
   # Default runtime for checks that don't specify their own.
-  default_runtime {
+  default_runtime = {
     runtime_id = "2024.02"
   }
 
@@ -123,14 +123,14 @@ resource "checkly_check_group_v2" "production-api" {
   }
 
   # Setup and teardown scripts run in addition to each check's own scripts.
-  setup_script {
+  setup_script = {
     inline_script = <<-EOF
       // Runs before every API check in this group
       console.log("Setting up...")
     EOF
   }
 
-  teardown_script {
+  teardown_script = {
     inline_script = <<-EOF
       // Runs after every API check in this group
       console.log("Tearing down...")

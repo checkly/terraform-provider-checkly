@@ -106,7 +106,7 @@ resource "checkly_check_group_v2" "production-api" {
   }
 
   # Default runtime for checks that don't specify their own.
-  default_runtime {
+  default_runtime = {
     runtime_id = "2024.02"
   }
 
@@ -143,14 +143,14 @@ resource "checkly_check_group_v2" "production-api" {
   }
 
   # Setup and teardown scripts run in addition to each check's own scripts.
-  setup_script {
+  setup_script = {
     inline_script = <<-EOF
       // Runs before every API check in this group
       console.log("Setting up...")
     EOF
   }
 
-  teardown_script {
+  teardown_script = {
     inline_script = <<-EOF
       // Runs after every API check in this group
       console.log("Tearing down...")
@@ -300,16 +300,16 @@ resource "checkly_check_group_v2" "single-retry" {
 - `activated` (Boolean) Determines whether activated checks in the group should run or not. Deactivating the group will prevent all checks in the group from running, regardless of their activated state. (Default `true`).
 - `api_check_defaults` (Attributes) Default settings for API checks in this group. (see [below for nested schema](#nestedatt--api_check_defaults))
 - `concurrency` (Number) Determines the number of checks to run concurrently when triggering the check group via CI/CD or the API. (Default `1`).
-- `default_runtime` (Block List) Sets a default runtime for the group. Used as a fallback when a check belonging to the group has no runtime set. Takes precedence over the account default runtime. (see [below for nested schema](#nestedblock--default_runtime))
+- `default_runtime` (Attributes) Sets a default runtime for the group. Used as a fallback when a check belonging to the group has no runtime set. Takes precedence over the account default runtime. (see [below for nested schema](#nestedatt--default_runtime))
 - `enforce_alert_settings` (Attributes) Enforces alert settings for the whole group. Overrides check configuration. (see [below for nested schema](#nestedatt--enforce_alert_settings))
 - `enforce_locations` (Attributes) Enforces public and private locations for the whole group. Overrides check configuration. (see [below for nested schema](#nestedatt--enforce_locations))
 - `enforce_retry_strategy` (Attributes) Enforces a retry strategy for the whole group. Overrides check configuration. (see [below for nested schema](#nestedatt--enforce_retry_strategy))
 - `enforce_scheduling_strategy` (Attributes) Enforces a scheduling strategy for the whole group. Overrides check configuration. (see [below for nested schema](#nestedatt--enforce_scheduling_strategy))
 - `environment_variable` (Block List) Insert environment variables into the runtime environment of checks in the group. Only relevant for check types that support environment variables. Use global environment variables whenever possible. (see [below for nested schema](#nestedblock--environment_variable))
 - `muted` (Boolean) Determines if any notifications will be sent out when a check in this group fails and/or recovers. Muting the group will deactivate all notifications for all checks in the group, regardless of their muted state. (Default `false`).
-- `setup_script` (Block List) A script to run in the setup phase of an API check. Runs in addition to the check's own setup script. (see [below for nested schema](#nestedblock--setup_script))
+- `setup_script` (Attributes) A script to run in the setup phase of an API check. Runs in addition to the check's own setup script. (see [below for nested schema](#nestedatt--setup_script))
 - `tags` (Set of String) Additional tags to append to all checks in the group.
-- `teardown_script` (Block List) A script to run in the teardown phase of an API check. Runs in addition to the check's own teardown script. (see [below for nested schema](#nestedblock--teardown_script))
+- `teardown_script` (Attributes) A script to run in the teardown phase of an API check. Runs in addition to the check's own teardown script. (see [below for nested schema](#nestedatt--teardown_script))
 
 ### Read-Only
 
@@ -353,7 +353,7 @@ Required:
 
 
 
-<a id="nestedblock--default_runtime"></a>
+<a id="nestedatt--default_runtime"></a>
 ### Nested Schema for `default_runtime`
 
 Required:
@@ -499,7 +499,7 @@ Optional:
 - `secret` (Boolean) If true, the value will never be visible. The API never returns secret values, so Terraform keeps the last applied value and does not detect changes made outside Terraform. (Default `false`).
 
 
-<a id="nestedblock--setup_script"></a>
+<a id="nestedatt--setup_script"></a>
 ### Nested Schema for `setup_script`
 
 Optional:
@@ -508,7 +508,7 @@ Optional:
 - `snippet_id` (Number) The ID of a code snippet. Code snippets are not available for new plans.
 
 
-<a id="nestedblock--teardown_script"></a>
+<a id="nestedatt--teardown_script"></a>
 ### Nested Schema for `teardown_script`
 
 Optional:

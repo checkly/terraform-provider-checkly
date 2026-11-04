@@ -89,7 +89,12 @@
     "id": "123",
     "muted": false,
     "name": "g",
-    "setup_script": [],
+    "setup_script": [
+      {
+        "inline_script": "console.log('x')",
+        "snippet_id": 0
+      }
+    ],
     "tags": null,
     "teardown_script": []
 }

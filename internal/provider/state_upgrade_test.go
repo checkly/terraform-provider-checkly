@@ -136,7 +136,13 @@ func TestUpgradeSDKv2State(t *testing.T) {
 		requireStateValue(t, state, path.Root("enforce_retry_strategy").AtName("retry_strategy").AtName("only_on").AtName("network_error"), types.BoolValue(true))
 		requireStateValue(t, state, path.Root("enforce_scheduling_strategy").AtName("run_parallel"), types.BoolValue(true))
 		requireStateValue(t, state, path.Root("api_check_defaults").AtName("basic_auth").AtName("username"), types.StringValue("u"))
-		requireStateValue(t, state, path.Root("default_runtime").AtListIndex(0).AtName("runtime_id"), types.StringValue("2024.09"))
+		// SDK v2 stored default_runtime, setup_script and teardown_script as
+		// lists of at most one element, empty when not configured, and stored
+		// an unset snippet_id as 0.
+		requireStateValue(t, state, path.Root("default_runtime").AtName("runtime_id"), types.StringValue("2024.09"))
+		requireStateValue(t, state, path.Root("setup_script").AtName("inline_script"), types.StringValue("console.log('x')"))
+		requireStateNull(t, state, path.Root("setup_script").AtName("snippet_id"))
+		requireStateNull(t, state, path.Root("teardown_script"))
 	})
 
 	t.Run("playwright_check_suite", func(t *testing.T) {

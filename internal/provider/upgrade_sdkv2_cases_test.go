@@ -1102,15 +1102,15 @@ resource "checkly_check_group_v2" "test" {
     }
   }
 
-  default_runtime {
+  default_runtime = {
     runtime_id = "2023.09"
   }
 
-  setup_script {
+  setup_script = {
     inline_script = "console.log('setup')"
   }
 
-  teardown_script {
+  teardown_script = {
     inline_script = "console.log('teardown')"
   }
 
