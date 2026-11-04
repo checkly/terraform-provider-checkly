@@ -1,6 +1,6 @@
 # Email Alert Channel
 resource "checkly_alert_channel" "email_ac" {
-  email {
+  email = {
     address = "info@example.com"
   }
   send_recovery = true
@@ -11,7 +11,7 @@ resource "checkly_alert_channel" "email_ac" {
 
 # Slack App Alert Channel
 resource "checkly_alert_channel" "slack_app_ac" {
-  slack_app {
+  slack_app = {
     slack_channels = ["#ops", "@John"]
   }
   send_recovery        = true
@@ -23,7 +23,7 @@ resource "checkly_alert_channel" "slack_app_ac" {
 
 # Slack Alert Channel
 resource "checkly_alert_channel" "slack_ac" {
-  slack {
+  slack = {
     channel = "checkly_alerts"
     url     = "https://hooks.slack.com/services/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"
   }
@@ -36,7 +36,7 @@ resource "checkly_alert_channel" "slack_ac" {
 
 # SMS Alert Channel
 resource "checkly_alert_channel" "sms_ac" {
-  sms {
+  sms = {
     name   = "smsalerts"
     number = "+4917512345678"
   }
@@ -44,7 +44,7 @@ resource "checkly_alert_channel" "sms_ac" {
 
 # Phone Call Alert Channel
 resource "checkly_alert_channel" "call_ac" {
-  call {
+  call = {
     name   = "phone call alert"
     number = "+4917512345678"
   }
@@ -52,7 +52,7 @@ resource "checkly_alert_channel" "call_ac" {
 
 # Opsgenie Alert Channel
 resource "checkly_alert_channel" "opsgenie_ac" {
-  opsgenie {
+  opsgenie = {
     name     = "opsalert"
     api_key  = "key1"
     region   = "EU"
@@ -62,7 +62,7 @@ resource "checkly_alert_channel" "opsgenie_ac" {
 
 # Pagerduty Alert Channel
 resource "checkly_alert_channel" "pagerduty_ac" {
-  pagerduty {
+  pagerduty = {
     account      = "checkly"
     service_key  = "key1"
     service_name = "pdalert"
@@ -71,7 +71,7 @@ resource "checkly_alert_channel" "pagerduty_ac" {
 
 # Webhook Alert Channel
 resource "checkly_alert_channel" "webhook_ac" {
-  webhook {
+  webhook = {
     name   = "webhhookalerts"
     method = "get"
     headers = {
@@ -87,7 +87,7 @@ resource "checkly_alert_channel" "webhook_ac" {
 }
 
 resource "checkly_alert_channel" "firehydrant_ac" {
-  webhook {
+  webhook = {
     name         = "firehydrant"
     method       = "post"
     template     = <<EOT
@@ -109,7 +109,7 @@ resource "checkly_alert_channel" "firehydrant_ac" {
 # A Rootly alert channel — In-App Routing mode.
 # Alerts are sent to Rootly and routed internally via Rootly Alert Routes.
 resource "checkly_alert_channel" "rootly_inapp_ac" {
-  webhook {
+  webhook = {
     name           = "Rootly (In-App Routing)"
     method         = "POST"
     url            = "https://webhooks.rootly.com/webhooks/incoming/checkly_webhooks"
@@ -137,7 +137,7 @@ EOT
 # Type is one of: Service, Group (for Teams), EscalationPolicy, Functionality.
 # The target ID can be found in the Rootly UI for the chosen resource.
 resource "checkly_alert_channel" "rootly_direct_ac" {
-  webhook {
+  webhook = {
     name           = "Rootly (Direct Routing)"
     method         = "POST"
     url            = "https://webhooks.rootly.com/webhooks/incoming/checkly_webhooks/notify/EscalationPolicy/<rootly-escalation-policy-id>"

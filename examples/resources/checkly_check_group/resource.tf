@@ -92,13 +92,13 @@ resource "checkly_check" "test_check1" {
 
 # Using with alert channels
 resource "checkly_alert_channel" "email_ac1" {
-  email {
+  email = {
     address = "info@example.com"
   }
 }
 
 resource "checkly_alert_channel" "email_ac2" {
-  email {
+  email = {
     address = "info2@example.com"
   }
 }

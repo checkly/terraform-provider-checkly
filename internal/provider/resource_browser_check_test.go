@@ -639,7 +639,7 @@ const browserCheckUnsetSweepDeps = `
 	}
 
 	resource "checkly_alert_channel" "sweep" {
-		email {
+		email = {
 			address = "browser-check-unset-sweep@example.com"
 		}
 	}

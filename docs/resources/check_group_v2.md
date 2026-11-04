@@ -215,13 +215,13 @@ resource "checkly_check_group_v2" "use-global-alerts" {
 
 # Example: enforce alert channel subscriptions with custom alert settings.
 resource "checkly_alert_channel" "email" {
-  email {
+  email = {
     address = "alerts@example.com"
   }
 }
 
 resource "checkly_alert_channel" "slack" {
-  slack {
+  slack = {
     channel = "#alerts"
     url     = "https://hooks.slack.com/services/TXXXXX/XXXXX/XXXXXXXXXX"
   }

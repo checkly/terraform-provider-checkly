@@ -518,7 +518,7 @@ const multistepCheckUnsetSweepDeps = `
 	}
 
 	resource "checkly_alert_channel" "sweep" {
-		email {
+		email = {
 			address = "multistep-check-unset-sweep@example.com"
 		}
 	}

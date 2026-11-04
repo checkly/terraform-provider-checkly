@@ -58,7 +58,7 @@ func TestAccEmail(t *testing.T) {
 	accTestCase(t, []resource.TestStep{
 		{
 			Config: `resource "checkly_alert_channel" "t1" {
-				email {
+				email = {
 					address = "info@example.com"
 				}
 				send_recovery = false
@@ -67,6 +67,7 @@ func TestAccEmail(t *testing.T) {
 				ssl_expiry    = false
 				ssl_expiry_threshold = 10
 				}`,
+			Check: resource.TestCheckResourceAttr("checkly_alert_channel.t1", "email.address", "info@example.com"),
 		},
 	})
 }
@@ -75,7 +76,7 @@ func TestAccSlack(t *testing.T) {
 	accTestCase(t, []resource.TestStep{
 		{
 			Config: `resource "checkly_alert_channel" "slack_ac" {
-				slack {
+				slack = {
 					channel = "checkly_alerts"
 					url     = "https://hooks.slack.com/services/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"
 				}
@@ -93,7 +94,7 @@ func TestAccSlackApp(t *testing.T) {
 	accTestCaseWithErrorCheck(t, []resource.TestStep{
 		{
 			Config: `resource "checkly_alert_channel" "slack_app_ac" {
-				slack_app {
+				slack_app = {
 					slack_channels = ["#terraform-e2e-slack-app-alert-target"]
 				}
 				send_recovery        = true
@@ -119,7 +120,7 @@ func TestAccSMS(t *testing.T) {
 	accTestCase(t, []resource.TestStep{
 		{
 			Config: `resource "checkly_alert_channel" "sms_ac" {
-				sms {
+				sms = {
 					name   = "smsalerts"
 					number = "+4917512345678"
 				}
@@ -132,7 +133,7 @@ func TestAccOpsgenie(t *testing.T) {
 	accTestCase(t, []resource.TestStep{
 		{
 			Config: `resource "checkly_alert_channel" "opsgenie_ac" {
-				opsgenie {
+				opsgenie = {
 					name     = "opsalert"
 					api_key  = "key1"
 					region   = "EU"
@@ -147,12 +148,16 @@ func TestAccPagerduty(t *testing.T) {
 	accTestCase(t, []resource.TestStep{
 		{
 			Config: `resource "checkly_alert_channel" "pagerduty_ac" {
-				pagerduty {
+				pagerduty = {
 					account      = "checkly"
 					service_key  = "key1"
 					service_name = "pdalert"
 				}
 			}`,
+			Check: resource.ComposeAggregateTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_alert_channel.pagerduty_ac", "pagerduty.account", "checkly"),
+				resource.TestCheckResourceAttr("checkly_alert_channel.pagerduty_ac", "pagerduty.service_name", "pdalert"),
+			),
 		},
 	})
 }
@@ -161,7 +166,7 @@ func TestAccWebhook(t *testing.T) {
 	accTestCase(t, []resource.TestStep{
 		{
 			Config: `resource "checkly_alert_channel" "webhook_ac" {
-				webhook {
+				webhook = {
 				  name   = "webhhookalerts"
 				  method = "get"
 				  headers  = {
@@ -175,6 +180,60 @@ func TestAccWebhook(t *testing.T) {
 				  webhook_secret = "foo-secret"
 				}
 			  }`,
+			Check: resource.ComposeAggregateTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_alert_channel.webhook_ac", "webhook.name", "webhhookalerts"),
+				resource.TestCheckResourceAttr("checkly_alert_channel.webhook_ac", "webhook.method", "get"),
+				resource.TestCheckResourceAttr("checkly_alert_channel.webhook_ac", "webhook.headers.X-HEADER-1", "foo"),
+				resource.TestCheckResourceAttr("checkly_alert_channel.webhook_ac", "webhook.query_parameters.query1", "bar"),
+				resource.TestCheckResourceAttr("checkly_alert_channel.webhook_ac", "webhook.template", "tmpl"),
+				resource.TestCheckNoResourceAttr("checkly_alert_channel.webhook_ac", "email"),
+			),
+		},
+		// Unset optional attributes take their defaults or stay null.
+		{
+			Config: `resource "checkly_alert_channel" "webhook_ac" {
+				webhook = {
+				  name = "webhhookalerts"
+				  url  = "https://example.com/webhook"
+				}
+			  }`,
+			Check: resource.ComposeAggregateTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_alert_channel.webhook_ac", "webhook.method", "POST"),
+				resource.TestCheckResourceAttr("checkly_alert_channel.webhook_ac", "webhook.headers.%", "0"),
+				resource.TestCheckResourceAttr("checkly_alert_channel.webhook_ac", "webhook.query_parameters.%", "0"),
+				resource.TestCheckNoResourceAttr("checkly_alert_channel.webhook_ac", "webhook.template"),
+				resource.TestCheckNoResourceAttr("checkly_alert_channel.webhook_ac", "webhook.webhook_secret"),
+				resource.TestCheckNoResourceAttr("checkly_alert_channel.webhook_ac", "webhook.webhook_type"),
+			),
+		},
+		// Optional strings configured as "" stay empty instead of refreshing
+		// to null.
+		{
+			Config: `resource "checkly_alert_channel" "webhook_ac" {
+				webhook = {
+				  name           = "webhhookalerts"
+				  url            = "https://example.com/webhook"
+				  template       = ""
+				  webhook_secret = ""
+				}
+			  }`,
+			Check: resource.ComposeAggregateTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_alert_channel.webhook_ac", "webhook.template", ""),
+				resource.TestCheckResourceAttr("checkly_alert_channel.webhook_ac", "webhook.webhook_secret", ""),
+			),
+		},
+		{
+			Config: `resource "checkly_alert_channel" "webhook_ac" {
+				webhook = {
+				  name = "webhhookalerts"
+				  url  = "https://example.com/webhook"
+				}
+			  }`,
+		},
+		{
+			ResourceName:      "checkly_alert_channel.webhook_ac",
+			ImportState:       true,
+			ImportStateVerify: true,
 		},
 	})
 }
@@ -186,89 +245,56 @@ func TestAccFail(t *testing.T) {
 	}{
 		{
 			Config: `resource "checkly_alert_channel" "t1" {
-				email {	}
+				email = {}
 			}`,
-			Error: `The argument "address" is required`,
+			Error: `Inappropriate value for attribute "email": attribute "address" is required.`,
 		},
 		{
 			Config: `resource "checkly_alert_channel" "t1" {
-				sms {
-				}
+				sms = {}
 			}`,
-			Error: `The argument "number" is required`,
+			Error: `Inappropriate value for attribute "sms": attributes "name" and "number" are required.`,
 		},
 		{
 			Config: `resource "checkly_alert_channel" "t1" {
-				slack {
-				}
+				slack = {}
 			}`,
-			Error: `The argument "channel" is required`,
+			Error: `Inappropriate value for attribute "slack": attributes "channel" and "url" are required.`,
 		},
 		{
 			Config: `resource "checkly_alert_channel" "t1" {
-				slack {
-				}
+				webhook = {}
 			}`,
-			Error: `Missing required argument`,
+			Error: `Inappropriate value for attribute "webhook": attributes "name" and "url" are required.`,
 		},
 		{
 			Config: `resource "checkly_alert_channel" "t1" {
-				webhook {
-				}
+				opsgenie = {}
 			}`,
-			Error: `The argument "name" is required`,
+			Error: `Inappropriate value for attribute "opsgenie": attributes "api_key", "name", "priority", and "region" are required.`,
 		},
 		{
 			Config: `resource "checkly_alert_channel" "t1" {
-				webhook {
-				}
+				pagerduty = {}
 			}`,
-			Error: `The argument "url" is required`,
-		},
-		{
-			Config: `resource "checkly_alert_channel" "t1" {
-				opsgenie {
-				}
-			}`,
-			Error: `The argument "api_key" is required`,
-		},
-		{
-			Config: `resource "checkly_alert_channel" "t1" {
-				opsgenie {
-				}
-			}`,
-			Error: `The argument "priority" is required`,
-		},
-		{
-			Config: `resource "checkly_alert_channel" "t1" {
-				opsgenie {
-				}
-			}`,
-			Error: `The argument "region" is required`,
-		},
-		{
-			Config: `resource "checkly_alert_channel" "t1" {
-				pagerduty {
-				}
-			}`,
-			Error: `The argument "service_key" is required`,
+			Error: `Inappropriate value for attribute "pagerduty": attribute "service_key" is required.`,
 		},
 		{
 			Config: `resource "checkly_alert_channel" "t1" {
 			}`,
-			Error: `requires exactly one channel type block`,
+			Error: `An alert channel requires exactly one channel type attribute`,
 		},
 		{
 			Config: `resource "checkly_alert_channel" "t1" {
-				email {
+				email = {
 					address = "info@example.com"
 				}
-				sms {
+				sms = {
 					name   = "smsalerts"
 					number = "+4917512345678"
 				}
 			}`,
-			Error: `cannot contain more than one channel type`,
+			Error: `An alert channel cannot contain more than one channel type, but these are configured: email, sms.`,
 		},
 	}
 	for key, tc := range cases {
@@ -276,9 +302,19 @@ func TestAccFail(t *testing.T) {
 			accTestCase(t, []resource.TestStep{
 				{
 					Config:      tc.Config,
-					ExpectError: regexp.MustCompile(tc.Error),
+					ExpectError: wrappedMessageRegexp(tc.Error),
 				},
 			})
 		})
 	}
+}
+
+// wrappedMessageRegexp matches message in Terraform's diagnostic output,
+// which wraps long lines at arbitrary spaces.
+func wrappedMessageRegexp(message string) *regexp.Regexp {
+	words := strings.Fields(message)
+	for i, word := range words {
+		words[i] = regexp.QuoteMeta(word)
+	}
+	return regexp.MustCompile(strings.Join(words, `\s+`))
 }

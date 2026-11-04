@@ -33,11 +33,19 @@ func newSDKv2UpgradeCase(sdkv2Config, config string) sdkv2UpgradeCase {
 	}
 }
 
-// upgradeEmailChannel is a helper alert channel for cases that subscribe to
-// one. Its syntax is the same in both providers.
-const upgradeEmailChannel = `
+// upgradeEmailChannelSDKv2 and upgradeEmailChannel are a helper alert
+// channel for cases that subscribe to one, in the syntax of each provider.
+const upgradeEmailChannelSDKv2 = `
 resource "checkly_alert_channel" "email" {
   email {
+    address = "tf-upgrade-{{id}}@example.com"
+  }
+}
+`
+
+const upgradeEmailChannel = `
+resource "checkly_alert_channel" "email" {
+  email = {
     address = "tf-upgrade-{{id}}@example.com"
   }
 }
@@ -120,7 +128,7 @@ resource "checkly_playwright_code_bundle" "test" {
 // extra cases where an absent nested object (stored by SDK v2 as an empty
 // list) or a different nesting is common in practice.
 var sdkv2UpgradeCases = map[string]sdkv2UpgradeCase{
-	"check_api": newSDKv2UpgradeCase(upgradeEmailChannel+`
+	"check_api": newSDKv2UpgradeCase(upgradeEmailChannelSDKv2+`
 resource "checkly_check" "test" {
   name                      = "tf-upgrade-{{id}}-check-api"
   description               = "API check upgraded from SDK v2"
@@ -518,7 +526,7 @@ resource "checkly_heartbeat" "test" {
 }
 `),
 
-	"heartbeat_monitor": newSDKv2UpgradeCase(upgradeStatusPageService+upgradeEmailChannel+`
+	"heartbeat_monitor": newSDKv2UpgradeCase(upgradeStatusPageService+upgradeEmailChannelSDKv2+`
 resource "checkly_heartbeat_monitor" "test" {
   name                      = "tf-upgrade-{{id}}-heartbeat-monitor"
   description               = "Heartbeat monitor upgraded from SDK v2"
@@ -800,7 +808,7 @@ resource "checkly_tcp_monitor" "test" {
 }
 `),
 
-	"check_group": newSDKv2UpgradeCase(upgradeEmailChannel+`
+	"check_group": newSDKv2UpgradeCase(upgradeEmailChannelSDKv2+`
 resource "checkly_check_group" "test" {
   name                      = "tf-upgrade-{{id}}-check-group"
   activated                 = true
@@ -956,7 +964,7 @@ resource "checkly_check_group_v2" "test" {
 }
 `),
 
-	"check_group_v2": newSDKv2UpgradeCase(upgradeEmailChannel+`
+	"check_group_v2": newSDKv2UpgradeCase(upgradeEmailChannelSDKv2+`
 resource "checkly_private_location" "test" {
   name      = "tf-upgrade-{{id}}-group-v2"
   slug_name = "tf-upgrade-g2-{{id}}"
@@ -1340,7 +1348,7 @@ resource "checkly_alert_channel" "test" {
   ssl_expiry           = true
   ssl_expiry_threshold = 14
 
-  email {
+  email = {
     address = "tf-upgrade-{{id}}-channel@example.com"
   }
 }
@@ -1438,9 +1446,59 @@ resource "checkly_alert_channel" "test" {
 }
 `, `
 resource "checkly_alert_channel" "test" {
-  webhook {
+  webhook = {
     name = "tf-upgrade-{{id}}-webhook"
     url  = "https://example.com/tf-upgrade-{{id}}"
+  }
+}
+`),
+
+	"alert_channel_webhook_headers": newSDKv2UpgradeCase(`
+resource "checkly_alert_channel" "test" {
+  webhook {
+    name   = "tf-upgrade-{{id}}-webhook"
+    method = "POST"
+    url    = "https://example.com/tf-upgrade-{{id}}"
+    headers = {
+      Authorization = "Bearer tf-upgrade-{{id}}"
+      X-Upgrade-Run = "{{id}}"
+    }
+    query_parameters = {
+      token = "tf-upgrade-{{id}}"
+      run   = "{{id}}"
+    }
+  }
+}
+`, `
+resource "checkly_alert_channel" "test" {
+  webhook = {
+    name   = "tf-upgrade-{{id}}-webhook"
+    method = "POST"
+    url    = "https://example.com/tf-upgrade-{{id}}"
+    headers = {
+      Authorization = "Bearer tf-upgrade-{{id}}"
+      X-Upgrade-Run = "{{id}}"
+    }
+    query_parameters = {
+      token = "tf-upgrade-{{id}}"
+      run   = "{{id}}"
+    }
+  }
+}
+`),
+
+	"alert_channel_call": newSDKv2UpgradeCase(`
+resource "checkly_alert_channel" "test" {
+  call {
+    name   = "tf-upgrade-{{id}}-call"
+    number = "+4917512345678"
+  }
+}
+`, `
+resource "checkly_alert_channel" "test" {
+  call = {
+    name   = "tf-upgrade-{{id}}-call"
+    number = "+4917512345678"
   }
 }
 `),
@@ -1448,7 +1506,7 @@ resource "checkly_alert_channel" "test" {
 	// SDK v2 stored "" for the unset optional strings of a channel, so a
 	// configured "" updates in place once and then stays stable.
 	"alert_channel_webhook_empty_strings": func() sdkv2UpgradeCase {
-		config := `
+		c := newSDKv2UpgradeCase(`
 resource "checkly_alert_channel" "test" {
   webhook {
     name           = "tf-upgrade-{{id}}-webhook"
@@ -1457,8 +1515,16 @@ resource "checkly_alert_channel" "test" {
     webhook_secret = ""
   }
 }
-`
-		c := newSDKv2UpgradeCase(config, config)
+`, `
+resource "checkly_alert_channel" "test" {
+  webhook = {
+    name           = "tf-upgrade-{{id}}-webhook"
+    url            = "https://example.com/tf-upgrade-{{id}}"
+    template       = ""
+    webhook_secret = ""
+  }
+}
+`)
 		c.expectUpdate = "checkly_alert_channel.test"
 		return c
 	}(),
@@ -1471,14 +1537,14 @@ resource "checkly_alert_channel" "test" {
 }
 `, `
 resource "checkly_alert_channel" "test" {
-  pagerduty {
+  pagerduty = {
     service_key = "tf-upgrade-{{id}}"
   }
 }
 `),
 
 	"alert_channel_pagerduty_empty_strings": func() sdkv2UpgradeCase {
-		config := `
+		c := newSDKv2UpgradeCase(`
 resource "checkly_alert_channel" "test" {
   pagerduty {
     service_key  = "tf-upgrade-{{id}}"
@@ -1486,11 +1552,70 @@ resource "checkly_alert_channel" "test" {
     account      = ""
   }
 }
-`
-		c := newSDKv2UpgradeCase(config, config)
+`, `
+resource "checkly_alert_channel" "test" {
+  pagerduty = {
+    service_key  = "tf-upgrade-{{id}}"
+    service_name = ""
+    account      = ""
+  }
+}
+`)
 		c.expectUpdate = "checkly_alert_channel.test"
 		return c
 	}(),
+
+	"alert_channel_slack": newSDKv2UpgradeCase(`
+resource "checkly_alert_channel" "test" {
+  slack {
+    channel = "tf-upgrade-{{id}}"
+    url     = "https://hooks.slack.com/services/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"
+  }
+}
+`, `
+resource "checkly_alert_channel" "test" {
+  slack = {
+    channel = "tf-upgrade-{{id}}"
+    url     = "https://hooks.slack.com/services/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"
+  }
+}
+`),
+
+	"alert_channel_sms": newSDKv2UpgradeCase(`
+resource "checkly_alert_channel" "test" {
+  sms {
+    name   = "tf-upgrade-{{id}}-sms"
+    number = "+4917512345678"
+  }
+}
+`, `
+resource "checkly_alert_channel" "test" {
+  sms = {
+    name   = "tf-upgrade-{{id}}-sms"
+    number = "+4917512345678"
+  }
+}
+`),
+
+	"alert_channel_opsgenie": newSDKv2UpgradeCase(`
+resource "checkly_alert_channel" "test" {
+  opsgenie {
+    name     = "tf-upgrade-{{id}}-opsgenie"
+    api_key  = "tf-upgrade-{{id}}"
+    region   = "EU"
+    priority = "P1"
+  }
+}
+`, `
+resource "checkly_alert_channel" "test" {
+  opsgenie = {
+    name     = "tf-upgrade-{{id}}-opsgenie"
+    api_key  = "tf-upgrade-{{id}}"
+    region   = "EU"
+    priority = "P1"
+  }
+}
+`),
 
 	"status_page": newSDKv2UpgradeCase(upgradeStatusPageService+`
 resource "checkly_status_page" "test" {
@@ -1666,7 +1791,7 @@ resource "checkly_status_page_v3_automation_rule" "test" {
 }
 `),
 
-	"url_monitor": newSDKv2UpgradeCase(upgradeStatusPageService+upgradeEmailChannel+`
+	"url_monitor": newSDKv2UpgradeCase(upgradeStatusPageService+upgradeEmailChannelSDKv2+`
 resource "checkly_url_monitor" "test" {
   name                      = "tf-upgrade-{{id}}-url-monitor"
   description               = "URL monitor upgraded from SDK v2"

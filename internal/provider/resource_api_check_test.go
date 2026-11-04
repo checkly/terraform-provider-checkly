@@ -993,7 +993,7 @@ const apiCheckUnsetSweepDeps = `
 	}
 
 	resource "checkly_alert_channel" "sweep" {
-		email {
+		email = {
 			address = "api-check-unset-sweep@example.com"
 		}
 	}

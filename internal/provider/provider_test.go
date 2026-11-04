@@ -72,6 +72,8 @@ func TestSensitiveAttributes(t *testing.T) {
 			"slack.url",
 			"webhook.url",
 			"webhook.webhook_secret",
+			"webhook.headers",
+			"webhook.query_parameters",
 			"opsgenie.api_key",
 			"pagerduty.service_key",
 		},

@@ -157,6 +157,27 @@ func TestUpgradeSDKv2State(t *testing.T) {
 		requireStateNull(t, state, path.Root("path"))
 	})
 
+	t.Run("alert_channel", func(t *testing.T) {
+		// SDK v2 stored every channel type as a list, empty for the types
+		// that are not configured, and "" for unset optional strings.
+		raw := `{"id":"1","email":[],"slack":[],"sms":[],"call":[],"opsgenie":[],"pagerduty":[],` +
+			`"webhook":[{"name":"w","method":"POST","headers":{},"query_parameters":{},"template":"","url":"https://example.com","webhook_secret":"","webhook_type":""}],` +
+			`"send_recovery":true,"send_failure":true,"send_degraded":false,"ssl_expiry":false,"ssl_expiry_threshold":30}`
+		var schemaResp resource.SchemaResponse
+		NewAlertChannelResource().Schema(context.Background(), resource.SchemaRequest{}, &schemaResp)
+		value, err := upgradeSDKv2RawState(context.Background(), &tfprotov6.RawState{JSON: []byte(raw)}, schemaResp.Schema)
+		if err != nil {
+			t.Fatal(err)
+		}
+		state := tfsdk.State{Schema: schemaResp.Schema, Raw: value}
+		requireStateNull(t, state, path.Root("email"))
+		requireStateNull(t, state, path.Root("slack_app"))
+		requireStateValue(t, state, path.Root("webhook").AtName("name"), types.StringValue("w"))
+		requireStateValue(t, state, path.Root("webhook").AtName("headers"), types.MapValueMust(types.StringType, map[string]attr.Value{}))
+		requireStateNull(t, state, path.Root("webhook").AtName("template"))
+		requireStateNull(t, state, path.Root("webhook").AtName("webhook_secret"))
+	})
+
 	t.Run("ssl_monitor after refresh", func(t *testing.T) {
 		state := upgradeSDKv2Fixture(t, NewSSLMonitorResource(), "ssl_monitor_read")
 		requireStateNull(t, state, path.Root("request").AtListIndex(0).AtName("client_certificate").AtName("client_certificate_id"))

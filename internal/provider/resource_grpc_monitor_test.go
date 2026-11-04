@@ -679,7 +679,7 @@ func grpcMonitorUnsetConfig(slug, monitor, request string) string {
 		}
 
 		resource "checkly_alert_channel" "test" {
-		  email {
+		  email = {
 			address = "grpc-unset@example.com"
 		  }
 		}

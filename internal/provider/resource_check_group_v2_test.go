@@ -620,19 +620,19 @@ func TestAccCheckGroupV2AlertChannelSubscriptions(t *testing.T) {
 		{
 			Config: `
 				resource "checkly_alert_channel" "email_1" {
-					email {
+					email = {
 						address = "alert-sub-test-1@example.com"
 					}
 				}
 
 				resource "checkly_alert_channel" "email_2" {
-					email {
+					email = {
 						address = "alert-sub-test-2@example.com"
 					}
 				}
 
 				resource "checkly_alert_channel" "email_3" {
-					email {
+					email = {
 						address = "alert-sub-test-3@example.com"
 					}
 				}
@@ -693,19 +693,19 @@ func TestAccCheckGroupV2AlertChannelSubscriptions(t *testing.T) {
 		{
 			Config: `
 				resource "checkly_alert_channel" "email_1" {
-					email {
+					email = {
 						address = "alert-sub-test-1@example.com"
 					}
 				}
 
 				resource "checkly_alert_channel" "email_2" {
-					email {
+					email = {
 						address = "alert-sub-test-2@example.com"
 					}
 				}
 
 				resource "checkly_alert_channel" "email_3" {
-					email {
+					email = {
 						address = "alert-sub-test-3@example.com"
 					}
 				}
@@ -776,19 +776,19 @@ func TestAccCheckGroupV2AlertChannelSubscriptions(t *testing.T) {
 		{
 			Config: `
 				resource "checkly_alert_channel" "email_1" {
-					email {
+					email = {
 						address = "alert-sub-test-1@example.com"
 					}
 				}
 
 				resource "checkly_alert_channel" "email_2" {
-					email {
+					email = {
 						address = "alert-sub-test-2@example.com"
 					}
 				}
 
 				resource "checkly_alert_channel" "email_3" {
-					email {
+					email = {
 						address = "alert-sub-test-3@example.com"
 					}
 				}
@@ -1522,7 +1522,7 @@ func TestAccCheckGroupV2UnsetSweepAlertChannelSubscriptions(t *testing.T) {
 		{
 			Config: `
 				resource "checkly_alert_channel" "email" {
-					email {
+					email = {
 						address = "group-v2-sweep-acs@example.com"
 					}
 				}
@@ -1579,7 +1579,7 @@ func TestAccCheckGroupV2UnsetSweepAlertChannelSubscriptions(t *testing.T) {
 		{
 			Config: `
 				resource "checkly_alert_channel" "email" {
-					email {
+					email = {
 						address = "group-v2-sweep-acs@example.com"
 					}
 				}
@@ -1622,7 +1622,7 @@ func TestAccCheckGroupV2UnsetSweepAlertChannelSubscriptions(t *testing.T) {
 		{
 			Config: `
 				resource "checkly_alert_channel" "email" {
-					email {
+					email = {
 						address = "group-v2-sweep-acs@example.com"
 					}
 				}

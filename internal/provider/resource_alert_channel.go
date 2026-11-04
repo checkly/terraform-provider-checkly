@@ -9,7 +9,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
-	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -18,7 +17,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -33,7 +34,6 @@ var (
 	_ resource.ResourceWithUpgradeState     = (*AlertChannelResource)(nil)
 	_ resource.ResourceWithConfigValidators = (*AlertChannelResource)(nil)
 	_ resource.ResourceWithImportState      = (*AlertChannelResource)(nil)
-	_ resource.ResourceWithModifyPlan       = (*AlertChannelResource)(nil)
 )
 
 // NewAlertChannelResource returns a new checkly_alert_channel resource.
@@ -49,14 +49,14 @@ type AlertChannelResource struct {
 // AlertChannelResourceModel describes the resource data model.
 type AlertChannelResourceModel struct {
 	ID                 types.String `tfsdk:"id"`
-	Email              types.Set    `tfsdk:"email"`
-	Slack              types.Set    `tfsdk:"slack"`
-	SlackApp           types.Set    `tfsdk:"slack_app"`
-	SMS                types.Set    `tfsdk:"sms"`
-	Call               types.Set    `tfsdk:"call"`
-	Webhook            types.Set    `tfsdk:"webhook"`
-	Opsgenie           types.Set    `tfsdk:"opsgenie"`
-	Pagerduty          types.Set    `tfsdk:"pagerduty"`
+	Email              types.Object `tfsdk:"email"`
+	Slack              types.Object `tfsdk:"slack"`
+	SlackApp           types.Object `tfsdk:"slack_app"`
+	SMS                types.Object `tfsdk:"sms"`
+	Call               types.Object `tfsdk:"call"`
+	Webhook            types.Object `tfsdk:"webhook"`
+	Opsgenie           types.Object `tfsdk:"opsgenie"`
+	Pagerduty          types.Object `tfsdk:"pagerduty"`
 	SendRecovery       types.Bool   `tfsdk:"send_recovery"`
 	SendFailure        types.Bool   `tfsdk:"send_failure"`
 	SendDegraded       types.Bool   `tfsdk:"send_degraded"`
@@ -172,9 +172,10 @@ var alertChannelWebhookTypes = allowedValues[string]{
 	{Value: "WEBHOOK_TELEGRAM"},
 }
 
-// alertChannelTypeBlockNames lists the schema blocks that each configure one
-// alert channel type. Exactly one of them must be present in a configuration.
-var alertChannelTypeBlockNames = []string{
+// alertChannelTypeAttributeNames lists the schema attributes that each
+// configure one alert channel type. Exactly one of them must be present in a
+// configuration.
+var alertChannelTypeAttributeNames = []string{
 	"email",
 	"slack",
 	"slack_app",
@@ -234,182 +235,145 @@ func (r *AlertChannelResource) Schema(ctx context.Context, req resource.SchemaRe
 					int64validator.Between(1, 30),
 				},
 			},
-		},
-		Blocks: map[string]schema.Block{
-			"email": schema.SetNestedBlock{
-				Validators: []validator.Set{
-					setvalidator.SizeAtMost(1),
+			"email": schema.SingleNestedAttribute{
+				Optional: true,
+				Attributes: map[string]schema.Attribute{
+					"address": schema.StringAttribute{
+						Required:    true,
+						Description: "The email address of this email alert channel.",
+					},
 				},
-				NestedObject: schema.NestedBlockObject{
-					Attributes: map[string]schema.Attribute{
-						"address": schema.StringAttribute{
-							Required:    true,
-							Description: "The email address of this email alert channel.",
+			},
+			"slack": schema.SingleNestedAttribute{
+				Optional:           true,
+				DeprecationMessage: "The `slack` attribute uses the legacy Slack webhook integration and will be removed in a future major release. Use `slack_app` instead.",
+				Attributes: map[string]schema.Attribute{
+					"url": schema.StringAttribute{
+						Required:    true,
+						Sensitive:   true,
+						Description: "The Slack webhook URL",
+					},
+					"channel": schema.StringAttribute{
+						Required:    true,
+						Description: "The name of the alert's Slack channel",
+					},
+				},
+			},
+			"slack_app": schema.SingleNestedAttribute{
+				Optional: true,
+				Attributes: map[string]schema.Attribute{
+					"slack_channels": schema.ListAttribute{
+						Required:    true,
+						ElementType: types.StringType,
+						Description: "The Slack channels or users to notify, e.g. `[\"#ops\", \"@John\"]`.",
+						Validators: []validator.List{
+							listvalidator.SizeAtLeast(1),
 						},
 					},
 				},
 			},
-			"slack": schema.SetNestedBlock{
-				DeprecationMessage: "The `slack` block uses the legacy Slack webhook integration and will be removed in a future major release. Use `slack_app` instead.",
-				Validators: []validator.Set{
-					setvalidator.SizeAtMost(1),
+			"sms": schema.SingleNestedAttribute{
+				Optional: true,
+				Attributes: map[string]schema.Attribute{
+					"name": schema.StringAttribute{
+						Required:    true,
+						Description: "The name of this alert channel",
+					},
+					"number": schema.StringAttribute{
+						Required:    true,
+						Description: "The mobile number to receive the alerts",
+					},
 				},
-				NestedObject: schema.NestedBlockObject{
-					Attributes: map[string]schema.Attribute{
-						"url": schema.StringAttribute{
-							Required:    true,
-							Sensitive:   true,
-							Description: "The Slack webhook URL",
-						},
-						"channel": schema.StringAttribute{
-							Required:    true,
-							Description: "The name of the alert's Slack channel",
+			},
+			"call": schema.SingleNestedAttribute{
+				Optional: true,
+				Attributes: map[string]schema.Attribute{
+					"name": schema.StringAttribute{
+						Required:    true,
+						Description: "The name of this alert channel",
+					},
+					"number": schema.StringAttribute{
+						Required:    true,
+						Description: "The mobile number to receive the alerts",
+					},
+				},
+			},
+			"webhook": schema.SingleNestedAttribute{
+				Optional: true,
+				Attributes: map[string]schema.Attribute{
+					"name": schema.StringAttribute{
+						Required: true,
+					},
+					"method": schema.StringAttribute{
+						Optional:    true,
+						Computed:    true,
+						Default:     stringdefault.StaticString("POST"),
+						Description: "(Default `POST`)",
+					},
+					"headers": schema.MapAttribute{
+						Optional:    true,
+						Computed:    true,
+						Sensitive:   true,
+						Default:     mapdefault.StaticValue(types.MapValueMust(types.StringType, map[string]attr.Value{})),
+						ElementType: types.StringType,
+					},
+					"query_parameters": schema.MapAttribute{
+						Optional:    true,
+						Computed:    true,
+						Sensitive:   true,
+						Default:     mapdefault.StaticValue(types.MapValueMust(types.StringType, map[string]attr.Value{})),
+						ElementType: types.StringType,
+					},
+					"template": schema.StringAttribute{
+						Optional: true,
+					},
+					"url": schema.StringAttribute{
+						Required:  true,
+						Sensitive: true,
+					},
+					"webhook_secret": schema.StringAttribute{
+						Optional:  true,
+						Sensitive: true,
+					},
+					"webhook_type": schema.StringAttribute{
+						Optional:    true,
+						Description: "Type of the webhook. " + alertChannelWebhookTypes.String(),
+						Validators: []validator.String{
+							stringvalidator.OneOf(alertChannelWebhookTypes.Values()...),
 						},
 					},
 				},
 			},
-			"slack_app": schema.SetNestedBlock{
-				Validators: []validator.Set{
-					setvalidator.SizeAtMost(1),
-				},
-				NestedObject: schema.NestedBlockObject{
-					Attributes: map[string]schema.Attribute{
-						"slack_channels": schema.ListAttribute{
-							Required:    true,
-							ElementType: types.StringType,
-							Description: "The Slack channels or users to notify, e.g. `[\"#ops\", \"@John\"]`.",
-							Validators: []validator.List{
-								listvalidator.SizeAtLeast(1),
-							},
-						},
+			"opsgenie": schema.SingleNestedAttribute{
+				Optional: true,
+				Attributes: map[string]schema.Attribute{
+					"name": schema.StringAttribute{
+						Required: true,
+					},
+					"api_key": schema.StringAttribute{
+						Required:  true,
+						Sensitive: true,
+					},
+					"region": schema.StringAttribute{
+						Required: true,
+					},
+					"priority": schema.StringAttribute{
+						Required: true,
 					},
 				},
 			},
-			"sms": schema.SetNestedBlock{
-				Validators: []validator.Set{
-					setvalidator.SizeAtMost(1),
-				},
-				NestedObject: schema.NestedBlockObject{
-					Attributes: map[string]schema.Attribute{
-						"name": schema.StringAttribute{
-							Required:    true,
-							Description: "The name of this alert channel",
-						},
-						"number": schema.StringAttribute{
-							Required:    true,
-							Description: "The mobile number to receive the alerts",
-						},
+			"pagerduty": schema.SingleNestedAttribute{
+				Optional: true,
+				Attributes: map[string]schema.Attribute{
+					"service_key": schema.StringAttribute{
+						Required:  true,
+						Sensitive: true,
 					},
-				},
-			},
-			"call": schema.SetNestedBlock{
-				Validators: []validator.Set{
-					setvalidator.SizeAtMost(1),
-				},
-				NestedObject: schema.NestedBlockObject{
-					Attributes: map[string]schema.Attribute{
-						"name": schema.StringAttribute{
-							Required:    true,
-							Description: "The name of this alert channel",
-						},
-						"number": schema.StringAttribute{
-							Required:    true,
-							Description: "The mobile number to receive the alerts",
-						},
+					"service_name": schema.StringAttribute{
+						Optional: true,
 					},
-				},
-			},
-			"webhook": schema.SetNestedBlock{
-				Validators: []validator.Set{
-					setvalidator.SizeAtMost(1),
-				},
-				NestedObject: schema.NestedBlockObject{
-					// Attributes nested in this set block must not use schema
-					// defaults. The framework looks up configuration values
-					// for set elements by full element value; once computed
-					// attributes resolve, the lookup misses, the configuration
-					// is treated as null, and defaults would override values
-					// the practitioner actually configured, producing a
-					// perpetual diff. Default values are instead applied in
-					// ModifyPlan.
-					Attributes: map[string]schema.Attribute{
-						"name": schema.StringAttribute{
-							Required: true,
-						},
-						"method": schema.StringAttribute{
-							Optional:    true,
-							Computed:    true,
-							Description: "(Default `POST`)",
-						},
-						"headers": schema.MapAttribute{
-							Optional:    true,
-							Computed:    true,
-							ElementType: types.StringType,
-						},
-						"query_parameters": schema.MapAttribute{
-							Optional:    true,
-							Computed:    true,
-							ElementType: types.StringType,
-						},
-						"template": schema.StringAttribute{
-							Optional: true,
-						},
-						"url": schema.StringAttribute{
-							Required:  true,
-							Sensitive: true,
-						},
-						"webhook_secret": schema.StringAttribute{
-							Optional:  true,
-							Sensitive: true,
-						},
-						"webhook_type": schema.StringAttribute{
-							Optional:    true,
-							Description: "Type of the webhook. " + alertChannelWebhookTypes.String(),
-							Validators: []validator.String{
-								stringvalidator.OneOf(alertChannelWebhookTypes.Values()...),
-							},
-						},
-					},
-				},
-			},
-			"opsgenie": schema.SetNestedBlock{
-				Validators: []validator.Set{
-					setvalidator.SizeAtMost(1),
-				},
-				NestedObject: schema.NestedBlockObject{
-					Attributes: map[string]schema.Attribute{
-						"name": schema.StringAttribute{
-							Required: true,
-						},
-						"api_key": schema.StringAttribute{
-							Required:  true,
-							Sensitive: true,
-						},
-						"region": schema.StringAttribute{
-							Required: true,
-						},
-						"priority": schema.StringAttribute{
-							Required: true,
-						},
-					},
-				},
-			},
-			"pagerduty": schema.SetNestedBlock{
-				Validators: []validator.Set{
-					setvalidator.SizeAtMost(1),
-				},
-				NestedObject: schema.NestedBlockObject{
-					Attributes: map[string]schema.Attribute{
-						"service_key": schema.StringAttribute{
-							Required:  true,
-							Sensitive: true,
-						},
-						"service_name": schema.StringAttribute{
-							Optional: true,
-						},
-						"account": schema.StringAttribute{
-							Optional: true,
-						},
+					"account": schema.StringAttribute{
+						Optional: true,
 					},
 				},
 			},
@@ -424,12 +388,12 @@ func (r *AlertChannelResource) ConfigValidators(ctx context.Context) []resource.
 }
 
 // alertChannelExactlyOneChannelValidator validates that a configuration
-// contains exactly one channel type block. The Checkly API stores a single
+// contains exactly one channel type attribute. The Checkly API stores a single
 // channel configuration per alert channel.
 type alertChannelExactlyOneChannelValidator struct{}
 
 func (v alertChannelExactlyOneChannelValidator) Description(ctx context.Context) string {
-	return fmt.Sprintf("Exactly one of these blocks must be configured: %s.", strings.Join(alertChannelTypeBlockNames, ", "))
+	return fmt.Sprintf("Exactly one of these attributes must be configured: %s.", strings.Join(alertChannelTypeAttributeNames, ", "))
 }
 
 func (v alertChannelExactlyOneChannelValidator) MarkdownDescription(ctx context.Context) string {
@@ -440,20 +404,20 @@ func (v alertChannelExactlyOneChannelValidator) ValidateResource(ctx context.Con
 	var configured []string
 	unknown := false
 
-	for _, name := range alertChannelTypeBlockNames {
-		var set types.Set
+	for _, name := range alertChannelTypeAttributeNames {
+		var obj types.Object
 
-		resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(name), &set)...)
+		resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(name), &obj)...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
 
-		if set.IsUnknown() {
+		if obj.IsUnknown() {
 			unknown = true
 			continue
 		}
 
-		if !set.IsNull() && len(set.Elements()) > 0 {
+		if !obj.IsNull() {
 			configured = append(configured, name)
 		}
 	}
@@ -469,7 +433,7 @@ func (v alertChannelExactlyOneChannelValidator) ValidateResource(ctx context.Con
 	if len(configured) == 0 && !unknown {
 		resp.Diagnostics.AddError(
 			"Invalid Alert Channel Configuration",
-			fmt.Sprintf("An alert channel requires exactly one channel type block: %s.", strings.Join(alertChannelTypeBlockNames, ", ")),
+			fmt.Sprintf("An alert channel requires exactly one channel type attribute: %s.", strings.Join(alertChannelTypeAttributeNames, ", ")),
 		)
 	}
 }
@@ -482,51 +446,6 @@ func (r *AlertChannelResource) UpgradeState(ctx context.Context) map[int64]resou
 
 func (r *AlertChannelResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	r.client = clientFromProviderData(req.ProviderData, &resp.Diagnostics)
-}
-
-// ModifyPlan applies default values to the optional+computed attributes
-// nested in the webhook set block. Schema defaults cannot be used for these
-// attributes (see the schema for details), so the plan is adjusted here
-// instead. Substituting static values keeps every set element fully known
-// and stable across plans, which set element correlation requires.
-func (r *AlertChannelResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	planNestedDefaults(ctx, req, resp, path.Root("webhook"), alertChannelWebhookWithDefaults)
-}
-
-// alertChannelWebhookWithDefaults returns the webhook block value with
-// default values substituted for null and unknown optional+computed
-// attributes.
-func alertChannelWebhookWithDefaults(ctx context.Context, set types.Set, diags *diag.Diagnostics) types.Set {
-	if set.IsNull() || set.IsUnknown() {
-		return set
-	}
-
-	var models []alertChannelWebhookModel
-	diags.Append(set.ElementsAs(ctx, &models, false)...)
-	if diags.HasError() {
-		return set
-	}
-
-	for i, model := range models {
-		models[i].Method = stringOrDefault(model.Method, "POST")
-		models[i].Headers = mapOrEmpty(model.Headers, types.StringType)
-		models[i].QueryParameters = mapOrEmpty(model.QueryParameters, types.StringType)
-	}
-
-	result, d := types.SetValueFrom(ctx, types.ObjectType{AttrTypes: alertChannelWebhookAttrTypes}, models)
-	diags.Append(d...)
-
-	return result
-}
-
-// mapOrEmpty returns the given value, or an empty map when the value is null
-// or unknown. It is used to apply default values during plan modification to
-// attributes nested in set blocks, where schema defaults cannot be used.
-func mapOrEmpty(value types.Map, elementType attr.Type) types.Map {
-	if value.IsNull() || value.IsUnknown() {
-		return types.MapValueMust(elementType, map[string]attr.Value{})
-	}
-	return value
 }
 
 func (r *AlertChannelResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -555,8 +474,8 @@ func (r *AlertChannelResource) Create(ctx context.Context, req resource.CreateRe
 	}
 
 	// Every other attribute is known in the plan (optional+computed
-	// attributes are defaulted by the schema or in ModifyPlan), so only the
-	// ID needs to be filled in from the API response.
+	// attributes are defaulted by the schema), so only the ID needs to be
+	// filled in from the API response.
 	plan.ID = types.StringValue(encodeNumericID(result.ID))
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
@@ -678,21 +597,20 @@ func (r *AlertChannelResource) ImportState(ctx context.Context, req resource.Imp
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
 
-// alertChannelFirstElement extracts the single element of a MaxItems:1
-// channel type block into its model type. It returns nil when the block is
-// not configured.
-func alertChannelFirstElement[T any](ctx context.Context, set types.Set, diags *diag.Diagnostics) *T {
-	if set.IsNull() || set.IsUnknown() || len(set.Elements()) == 0 {
+// alertChannelObjectAs decodes a channel type attribute into its model type.
+// It returns nil when the attribute is not configured.
+func alertChannelObjectAs[T any](ctx context.Context, obj types.Object, diags *diag.Diagnostics) *T {
+	if obj.IsNull() || obj.IsUnknown() {
 		return nil
 	}
 
-	var models []T
-	diags.Append(set.ElementsAs(ctx, &models, false)...)
-	if diags.HasError() || len(models) == 0 {
+	var model T
+	diags.Append(obj.As(ctx, &model, basetypes.ObjectAsOptions{})...)
+	if diags.HasError() {
 		return nil
 	}
 
-	return &models[0]
+	return &model
 }
 
 // alertChannelFromModel converts the resource model to its API
@@ -710,14 +628,14 @@ func alertChannelFromModel(ctx context.Context, model *AlertChannelResourceModel
 		ac.SSLExpiryThreshold = &threshold
 	}
 
-	if m := alertChannelFirstElement[alertChannelEmailModel](ctx, model.Email, diags); m != nil {
+	if m := alertChannelObjectAs[alertChannelEmailModel](ctx, model.Email, diags); m != nil {
 		ac.Type = checkly.AlertTypeEmail
 		ac.Email = &checkly.AlertChannelEmail{
 			Address: m.Address.ValueString(),
 		}
 	}
 
-	if m := alertChannelFirstElement[alertChannelSlackModel](ctx, model.Slack, diags); m != nil {
+	if m := alertChannelObjectAs[alertChannelSlackModel](ctx, model.Slack, diags); m != nil {
 		ac.Type = checkly.AlertTypeSlack
 		ac.Slack = &checkly.AlertChannelSlack{
 			WebhookURL: m.URL.ValueString(),
@@ -725,14 +643,14 @@ func alertChannelFromModel(ctx context.Context, model *AlertChannelResourceModel
 		}
 	}
 
-	if m := alertChannelFirstElement[alertChannelSlackAppModel](ctx, model.SlackApp, diags); m != nil {
+	if m := alertChannelObjectAs[alertChannelSlackAppModel](ctx, model.SlackApp, diags); m != nil {
 		ac.Type = checkly.AlertTypeSlackApp
 		ac.SlackApp = &checkly.AlertChannelSlackApp{
 			SlackChannels: stringsFromList(ctx, m.SlackChannels, diags),
 		}
 	}
 
-	if m := alertChannelFirstElement[alertChannelSMSModel](ctx, model.SMS, diags); m != nil {
+	if m := alertChannelObjectAs[alertChannelSMSModel](ctx, model.SMS, diags); m != nil {
 		ac.Type = checkly.AlertTypeSMS
 		ac.SMS = &checkly.AlertChannelSMS{
 			Name:   m.Name.ValueString(),
@@ -740,7 +658,7 @@ func alertChannelFromModel(ctx context.Context, model *AlertChannelResourceModel
 		}
 	}
 
-	if m := alertChannelFirstElement[alertChannelCallModel](ctx, model.Call, diags); m != nil {
+	if m := alertChannelObjectAs[alertChannelCallModel](ctx, model.Call, diags); m != nil {
 		ac.Type = checkly.AlertTypeCall
 		ac.CALL = &checkly.AlertChannelCall{
 			Name:   m.Name.ValueString(),
@@ -748,7 +666,7 @@ func alertChannelFromModel(ctx context.Context, model *AlertChannelResourceModel
 		}
 	}
 
-	if m := alertChannelFirstElement[alertChannelWebhookModel](ctx, model.Webhook, diags); m != nil {
+	if m := alertChannelObjectAs[alertChannelWebhookModel](ctx, model.Webhook, diags); m != nil {
 		ac.Type = checkly.AlertTypeWebhook
 		ac.Webhook = &checkly.AlertChannelWebhook{
 			Name:            m.Name.ValueString(),
@@ -762,7 +680,7 @@ func alertChannelFromModel(ctx context.Context, model *AlertChannelResourceModel
 		}
 	}
 
-	if m := alertChannelFirstElement[alertChannelOpsgenieModel](ctx, model.Opsgenie, diags); m != nil {
+	if m := alertChannelObjectAs[alertChannelOpsgenieModel](ctx, model.Opsgenie, diags); m != nil {
 		ac.Type = checkly.AlertTypeOpsgenie
 		ac.Opsgenie = &checkly.AlertChannelOpsgenie{
 			Name:     m.Name.ValueString(),
@@ -772,7 +690,7 @@ func alertChannelFromModel(ctx context.Context, model *AlertChannelResourceModel
 		}
 	}
 
-	if m := alertChannelFirstElement[alertChannelPagerdutyModel](ctx, model.Pagerduty, diags); m != nil {
+	if m := alertChannelObjectAs[alertChannelPagerdutyModel](ctx, model.Pagerduty, diags); m != nil {
 		ac.Type = checkly.AlertTypePagerduty
 		ac.Pagerduty = &checkly.AlertChannelPagerduty{
 			Account:     m.Account.ValueString(),
@@ -789,14 +707,14 @@ func alertChannelFromModel(ctx context.Context, model *AlertChannelResourceModel
 // the API tracks a value for them, preserving the prior state otherwise.
 func alertChannelToModel(ctx context.Context, ac *checkly.AlertChannel, model *AlertChannelResourceModel, diags *diag.Diagnostics) {
 	model.ID = types.StringValue(encodeNumericID(ac.ID))
-	model.Email = alertChannelEmailToSet(ctx, ac.Email, diags)
-	model.Slack = alertChannelSlackToSet(ctx, ac.Slack, diags)
-	model.SlackApp = alertChannelSlackAppToSet(ctx, ac.SlackApp, diags)
-	model.SMS = alertChannelSMSToSet(ctx, ac.SMS, diags)
-	model.Call = alertChannelCallToSet(ctx, ac.CALL, diags)
-	model.Webhook = alertChannelWebhookToSet(ctx, ac.Webhook, model.Webhook, diags)
-	model.Opsgenie = alertChannelOpsgenieToSet(ctx, ac.Opsgenie, diags)
-	model.Pagerduty = alertChannelPagerdutyToSet(ctx, ac.Pagerduty, model.Pagerduty, diags)
+	model.Email = alertChannelEmailToObject(ctx, ac.Email, diags)
+	model.Slack = alertChannelSlackToObject(ctx, ac.Slack, diags)
+	model.SlackApp = alertChannelSlackAppToObject(ctx, ac.SlackApp, diags)
+	model.SMS = alertChannelSMSToObject(ctx, ac.SMS, diags)
+	model.Call = alertChannelCallToObject(ctx, ac.CALL, diags)
+	model.Webhook = alertChannelWebhookToObject(ctx, ac.Webhook, model.Webhook, diags)
+	model.Opsgenie = alertChannelOpsgenieToObject(ctx, ac.Opsgenie, diags)
+	model.Pagerduty = alertChannelPagerdutyToObject(ctx, ac.Pagerduty, model.Pagerduty, diags)
 
 	if ac.SendRecovery != nil {
 		model.SendRecovery = types.BoolValue(*ac.SendRecovery)
@@ -815,174 +733,128 @@ func alertChannelToModel(ctx context.Context, ac *checkly.AlertChannel, model *A
 	}
 }
 
-func alertChannelEmailToSet(ctx context.Context, cfg *checkly.AlertChannelEmail, diags *diag.Diagnostics) types.Set {
-	elemType := types.ObjectType{AttrTypes: alertChannelEmailAttrTypes}
-	if cfg == nil {
-		return types.SetNull(elemType)
-	}
-
-	set, d := types.SetValueFrom(ctx, elemType, []alertChannelEmailModel{
-		{
-			Address: types.StringValue(cfg.Address),
-		},
-	})
+// alertChannelObjectFrom converts a channel type model to its attribute
+// value.
+func alertChannelObjectFrom(ctx context.Context, attrTypes map[string]attr.Type, model any, diags *diag.Diagnostics) types.Object {
+	obj, d := types.ObjectValueFrom(ctx, attrTypes, model)
 	diags.Append(d...)
 
-	return set
+	return obj
 }
 
-func alertChannelSlackToSet(ctx context.Context, cfg *checkly.AlertChannelSlack, diags *diag.Diagnostics) types.Set {
-	elemType := types.ObjectType{AttrTypes: alertChannelSlackAttrTypes}
+func alertChannelEmailToObject(ctx context.Context, cfg *checkly.AlertChannelEmail, diags *diag.Diagnostics) types.Object {
 	if cfg == nil {
-		return types.SetNull(elemType)
+		return types.ObjectNull(alertChannelEmailAttrTypes)
 	}
 
-	set, d := types.SetValueFrom(ctx, elemType, []alertChannelSlackModel{
-		{
-			URL:     types.StringValue(cfg.WebhookURL),
-			Channel: types.StringValue(cfg.Channel),
-		},
-	})
-	diags.Append(d...)
-
-	return set
+	return alertChannelObjectFrom(ctx, alertChannelEmailAttrTypes, alertChannelEmailModel{
+		Address: types.StringValue(cfg.Address),
+	}, diags)
 }
 
-func alertChannelSlackAppToSet(ctx context.Context, cfg *checkly.AlertChannelSlackApp, diags *diag.Diagnostics) types.Set {
-	elemType := types.ObjectType{AttrTypes: alertChannelSlackAppAttrTypes}
+func alertChannelSlackToObject(ctx context.Context, cfg *checkly.AlertChannelSlack, diags *diag.Diagnostics) types.Object {
 	if cfg == nil {
-		return types.SetNull(elemType)
+		return types.ObjectNull(alertChannelSlackAttrTypes)
 	}
 
-	set, d := types.SetValueFrom(ctx, elemType, []alertChannelSlackAppModel{
-		{
-			SlackChannels: listFromStrings(ctx, cfg.SlackChannels, diags),
-		},
-	})
-	diags.Append(d...)
-
-	return set
+	return alertChannelObjectFrom(ctx, alertChannelSlackAttrTypes, alertChannelSlackModel{
+		URL:     types.StringValue(cfg.WebhookURL),
+		Channel: types.StringValue(cfg.Channel),
+	}, diags)
 }
 
-func alertChannelSMSToSet(ctx context.Context, cfg *checkly.AlertChannelSMS, diags *diag.Diagnostics) types.Set {
-	elemType := types.ObjectType{AttrTypes: alertChannelSMSAttrTypes}
+func alertChannelSlackAppToObject(ctx context.Context, cfg *checkly.AlertChannelSlackApp, diags *diag.Diagnostics) types.Object {
 	if cfg == nil {
-		return types.SetNull(elemType)
+		return types.ObjectNull(alertChannelSlackAppAttrTypes)
 	}
 
-	set, d := types.SetValueFrom(ctx, elemType, []alertChannelSMSModel{
-		{
-			Name:   types.StringValue(cfg.Name),
-			Number: types.StringValue(cfg.Number),
-		},
-	})
-	diags.Append(d...)
-
-	return set
+	return alertChannelObjectFrom(ctx, alertChannelSlackAppAttrTypes, alertChannelSlackAppModel{
+		SlackChannels: listFromStrings(ctx, cfg.SlackChannels, diags),
+	}, diags)
 }
 
-func alertChannelCallToSet(ctx context.Context, cfg *checkly.AlertChannelCall, diags *diag.Diagnostics) types.Set {
-	elemType := types.ObjectType{AttrTypes: alertChannelCallAttrTypes}
+func alertChannelSMSToObject(ctx context.Context, cfg *checkly.AlertChannelSMS, diags *diag.Diagnostics) types.Object {
 	if cfg == nil {
-		return types.SetNull(elemType)
+		return types.ObjectNull(alertChannelSMSAttrTypes)
 	}
 
-	set, d := types.SetValueFrom(ctx, elemType, []alertChannelCallModel{
-		{
-			Name:   types.StringValue(cfg.Name),
-			Number: types.StringValue(cfg.Number),
-		},
-	})
-	diags.Append(d...)
-
-	return set
+	return alertChannelObjectFrom(ctx, alertChannelSMSAttrTypes, alertChannelSMSModel{
+		Name:   types.StringValue(cfg.Name),
+		Number: types.StringValue(cfg.Number),
+	}, diags)
 }
 
-func alertChannelWebhookToSet(ctx context.Context, cfg *checkly.AlertChannelWebhook, prior types.Set, diags *diag.Diagnostics) types.Set {
-	elemType := types.ObjectType{AttrTypes: alertChannelWebhookAttrTypes}
+func alertChannelCallToObject(ctx context.Context, cfg *checkly.AlertChannelCall, diags *diag.Diagnostics) types.Object {
 	if cfg == nil {
-		return types.SetNull(elemType)
+		return types.ObjectNull(alertChannelCallAttrTypes)
+	}
+
+	return alertChannelObjectFrom(ctx, alertChannelCallAttrTypes, alertChannelCallModel{
+		Name:   types.StringValue(cfg.Name),
+		Number: types.StringValue(cfg.Number),
+	}, diags)
+}
+
+func alertChannelWebhookToObject(ctx context.Context, cfg *checkly.AlertChannelWebhook, prior types.Object, diags *diag.Diagnostics) types.Object {
+	if cfg == nil {
+		return types.ObjectNull(alertChannelWebhookAttrTypes)
 	}
 
 	var priorModel alertChannelWebhookModel
-	alertChannelPriorElement(ctx, prior, &priorModel)
+	alertChannelPriorObject(ctx, prior, &priorModel)
 
-	set, d := types.SetValueFrom(ctx, elemType, []alertChannelWebhookModel{
-		{
-			Name:            types.StringValue(cfg.Name),
-			Method:          types.StringValue(cfg.Method),
-			Headers:         alertChannelMapFromKeyValues(ctx, cfg.Headers, diags),
-			QueryParameters: alertChannelMapFromKeyValues(ctx, cfg.QueryParameters, diags),
-			// The API returns "" for optional string fields that are not
-			// set.
-			Template:      stringValueOrPriorEmpty(cfg.Template, priorModel.Template),
-			URL:           types.StringValue(cfg.URL),
-			WebhookSecret: stringValueOrPriorEmpty(cfg.WebhookSecret, priorModel.WebhookSecret),
-			WebhookType:   stringValueOrPriorEmpty(cfg.WebhookType, priorModel.WebhookType),
-		},
-	})
-	diags.Append(d...)
-
-	return set
+	return alertChannelObjectFrom(ctx, alertChannelWebhookAttrTypes, alertChannelWebhookModel{
+		Name:            types.StringValue(cfg.Name),
+		Method:          types.StringValue(cfg.Method),
+		Headers:         alertChannelMapFromKeyValues(ctx, cfg.Headers, diags),
+		QueryParameters: alertChannelMapFromKeyValues(ctx, cfg.QueryParameters, diags),
+		// The API returns "" for optional string fields that are not set.
+		Template:      stringValueOrPriorEmpty(cfg.Template, priorModel.Template),
+		URL:           types.StringValue(cfg.URL),
+		WebhookSecret: stringValueOrPriorEmpty(cfg.WebhookSecret, priorModel.WebhookSecret),
+		WebhookType:   stringValueOrPriorEmpty(cfg.WebhookType, priorModel.WebhookType),
+	}, diags)
 }
 
-func alertChannelOpsgenieToSet(ctx context.Context, cfg *checkly.AlertChannelOpsgenie, diags *diag.Diagnostics) types.Set {
-	elemType := types.ObjectType{AttrTypes: alertChannelOpsgenieAttrTypes}
+func alertChannelOpsgenieToObject(ctx context.Context, cfg *checkly.AlertChannelOpsgenie, diags *diag.Diagnostics) types.Object {
 	if cfg == nil {
-		return types.SetNull(elemType)
+		return types.ObjectNull(alertChannelOpsgenieAttrTypes)
 	}
 
-	set, d := types.SetValueFrom(ctx, elemType, []alertChannelOpsgenieModel{
-		{
-			Name:     types.StringValue(cfg.Name),
-			APIKey:   types.StringValue(cfg.APIKey),
-			Region:   types.StringValue(cfg.Region),
-			Priority: types.StringValue(cfg.Priority),
-		},
-	})
-	diags.Append(d...)
-
-	return set
+	return alertChannelObjectFrom(ctx, alertChannelOpsgenieAttrTypes, alertChannelOpsgenieModel{
+		Name:     types.StringValue(cfg.Name),
+		APIKey:   types.StringValue(cfg.APIKey),
+		Region:   types.StringValue(cfg.Region),
+		Priority: types.StringValue(cfg.Priority),
+	}, diags)
 }
 
-func alertChannelPagerdutyToSet(ctx context.Context, cfg *checkly.AlertChannelPagerduty, prior types.Set, diags *diag.Diagnostics) types.Set {
-	elemType := types.ObjectType{AttrTypes: alertChannelPagerdutyAttrTypes}
+func alertChannelPagerdutyToObject(ctx context.Context, cfg *checkly.AlertChannelPagerduty, prior types.Object, diags *diag.Diagnostics) types.Object {
 	if cfg == nil {
-		return types.SetNull(elemType)
+		return types.ObjectNull(alertChannelPagerdutyAttrTypes)
 	}
 
 	var priorModel alertChannelPagerdutyModel
-	alertChannelPriorElement(ctx, prior, &priorModel)
+	alertChannelPriorObject(ctx, prior, &priorModel)
 
-	set, d := types.SetValueFrom(ctx, elemType, []alertChannelPagerdutyModel{
-		{
-			// The API returns "" for optional string fields that are not
-			// set.
-			Account:     stringValueOrPriorEmpty(cfg.Account, priorModel.Account),
-			ServiceKey:  types.StringValue(cfg.ServiceKey),
-			ServiceName: stringValueOrPriorEmpty(cfg.ServiceName, priorModel.ServiceName),
-		},
-	})
-	diags.Append(d...)
-
-	return set
+	return alertChannelObjectFrom(ctx, alertChannelPagerdutyAttrTypes, alertChannelPagerdutyModel{
+		// The API returns "" for optional string fields that are not set.
+		Account:     stringValueOrPriorEmpty(cfg.Account, priorModel.Account),
+		ServiceKey:  types.StringValue(cfg.ServiceKey),
+		ServiceName: stringValueOrPriorEmpty(cfg.ServiceName, priorModel.ServiceName),
+	}, diags)
 }
 
-// alertChannelPriorElement decodes the single element of a prior channel
-// block into target, leaving target zero-valued (with null attributes) when
-// there is no prior element.
-func alertChannelPriorElement(ctx context.Context, prior types.Set, target any) {
-	if prior.IsNull() || prior.IsUnknown() || len(prior.Elements()) != 1 {
+// alertChannelPriorObject decodes a prior channel type attribute value into
+// target, leaving target zero-valued (with null attributes) when there is no
+// prior value.
+func alertChannelPriorObject(ctx context.Context, prior types.Object, target any) {
+	if prior.IsNull() || prior.IsUnknown() {
 		return
 	}
 
-	obj, ok := prior.Elements()[0].(types.Object)
-	if !ok || obj.IsNull() || obj.IsUnknown() {
-		return
-	}
-
-	// A prior element that fails to decode is no worse than none at all.
-	_ = obj.As(ctx, target, basetypes.ObjectAsOptions{})
+	// A prior value that fails to decode is no worse than none at all.
+	_ = prior.As(ctx, target, basetypes.ObjectAsOptions{})
 }
 
 // alertChannelKeyValuesFromMap converts a map of strings to the API's

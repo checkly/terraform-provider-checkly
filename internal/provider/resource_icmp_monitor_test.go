@@ -830,19 +830,19 @@ func TestAccICMPMonitorAlertChannelSubscriptions(t *testing.T) {
 		{
 			Config: `
 				resource "checkly_alert_channel" "email_1" {
-					email {
+					email = {
 						address = "icmp-acs-1@example.com"
 					}
 				}
 
 				resource "checkly_alert_channel" "email_2" {
-					email {
+					email = {
 						address = "icmp-acs-2@example.com"
 					}
 				}
 
 				resource "checkly_alert_channel" "email_3" {
-					email {
+					email = {
 						address = "icmp-acs-3@example.com"
 					}
 				}
@@ -899,19 +899,19 @@ func TestAccICMPMonitorAlertChannelSubscriptions(t *testing.T) {
 		{
 			Config: `
 				resource "checkly_alert_channel" "email_1" {
-					email {
+					email = {
 						address = "icmp-acs-1@example.com"
 					}
 				}
 
 				resource "checkly_alert_channel" "email_2" {
-					email {
+					email = {
 						address = "icmp-acs-2@example.com"
 					}
 				}
 
 				resource "checkly_alert_channel" "email_3" {
-					email {
+					email = {
 						address = "icmp-acs-3@example.com"
 					}
 				}
@@ -979,19 +979,19 @@ func TestAccICMPMonitorAlertChannelSubscriptions(t *testing.T) {
 		{
 			Config: `
 				resource "checkly_alert_channel" "email_1" {
-					email {
+					email = {
 						address = "icmp-acs-1@example.com"
 					}
 				}
 
 				resource "checkly_alert_channel" "email_2" {
-					email {
+					email = {
 						address = "icmp-acs-2@example.com"
 					}
 				}
 
 				resource "checkly_alert_channel" "email_3" {
-					email {
+					email = {
 						address = "icmp-acs-3@example.com"
 					}
 				}

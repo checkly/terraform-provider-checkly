@@ -62,10 +62,13 @@ resource "checkly_url_monitor" "example" {
 
 Collections nested inside such an attribute become lists of objects, for example `assertion = [{ ... }]` inside `api_check_defaults`.
 
+References to values inside these objects no longer go through a list or set of one element. For example, `one(checkly_alert_channel.example.email).address`, `one(checkly_check.example.request).url` and `checkly_url_monitor.example.retry_strategy[0].type` become `checkly_alert_channel.example.email.address`, `checkly_check.example.request.url` and `checkly_url_monitor.example.retry_strategy.type`.
+
 This affects:
 
 | Resource type | Attributes |
 |---|---|
+| `checkly_alert_channel` | `call`, `email`, `opsgenie`, `pagerduty`, `slack`, `slack_app`, `sms`, `webhook` |
 | `checkly_check` | `alert_settings` (and its `parallel_run_failure_threshold`, `reminders`, `run_based_escalation`, `time_based_escalation`), `request` (and its `assertion` and `basic_auth`), `retry_strategy` (and its `only_on`), `trigger_incident` |
 | `checkly_check_group` | `alert_settings` (and nested objects as above), `api_check_defaults` (and its `basic_auth` and `assertion`), `retry_strategy` (and its `only_on`) |
 | `checkly_check_group_v2` | `api_check_defaults` (and its `basic_auth` and `assertion`), `enforce_alert_settings` (and its `alert_settings` and `alert_channel_subscription`), `enforce_locations`, `enforce_retry_strategy` (and its `retry_strategy`), `enforce_scheduling_strategy` |
@@ -108,12 +111,12 @@ These attributes are now sensitive, so Terraform redacts them in plan output:
 
 - `value` of `checkly_environment_variable`, and of `environment_variable` blocks on checks, check groups and Playwright check suites.
 - `password` of `basic_auth` in a check `request` and in `api_check_defaults`.
-- `slack.url`, `webhook.url`, `webhook.webhook_secret`, `opsgenie.api_key` and `pagerduty.service_key` of `checkly_alert_channel`.
+- `slack.url`, `webhook.url`, `webhook.webhook_secret`, `webhook.headers`, `webhook.query_parameters`, `opsgenie.api_key` and `pagerduty.service_key` of `checkly_alert_channel`.
 - `heartbeat.ping_token` of `checkly_heartbeat_monitor` and `checkly_heartbeat`.
 
 An output that exposes one of them, for example a heartbeat ping URL built from `ping_token`, must set `sensitive = true`.
 
-Terraform cannot redact a single attribute inside a set of blocks, so plans show the whole `slack`, `webhook`, `opsgenie` or `pagerduty` block of an alert channel as sensitive. Header and query parameter values, such as those of a webhook or an API check request, are not redacted: keep credentials in them out of shared plan output, for example by using a global environment variable in a check.
+Header and query parameter values of check requests and of `api_check_defaults` are not redacted: keep credentials in them out of shared plan output, for example by using a global environment variable in a check.
 
 ## Removed resource types
 
