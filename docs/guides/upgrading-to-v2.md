@@ -60,7 +60,39 @@ resource "checkly_url_monitor" "example" {
 }
 ```
 
-Collections nested inside such an attribute become lists of objects, for example `assertion = [{ ... }]` inside `api_check_defaults`.
+Repeated blocks nested inside such an attribute become lists or sets of objects, written as `[{ ... }]` and also assigned with `=`:
+
+```terraform
+# v1.x
+resource "checkly_url_monitor" "example" {
+  # ...
+  request {
+    url = "https://example.com"
+    assertion {
+      source     = "STATUS_CODE"
+      comparison = "EQUALS"
+      target     = "200"
+    }
+  }
+}
+
+# v2
+resource "checkly_url_monitor" "example" {
+  # ...
+  request = {
+    url = "https://example.com"
+    assertion = [{
+      source     = "STATUS_CODE"
+      comparison = "EQUALS"
+      target     = "200"
+    }]
+  }
+}
+```
+
+Leaving such a list out means it is empty, as leaving out the blocks did in v1.x.
+
+Terraform does not reject unknown names inside these objects: a misspelled optional attribute, such as `folow_redirects` in `request = { ... }`, is ignored instead of raising an error as it did inside a block. The attribute then keeps its default. Check the names in these objects carefully when you convert them, in particular the rules of `security_baseline` in `checkly_ssl_monitor`, where a misspelled rule silently keeps its default instead of the value you set.
 
 References to values inside these objects no longer go through a list or set of one element. For example, `one(checkly_alert_channel.example.email).address`, `one(checkly_check.example.request).url` and `checkly_url_monitor.example.retry_strategy[0].type` become `checkly_alert_channel.example.email.address`, `checkly_check.example.request.url` and `checkly_url_monitor.example.retry_strategy.type`.
 
