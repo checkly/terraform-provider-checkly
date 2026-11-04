@@ -63,7 +63,7 @@ resource "checkly_maintenance_windows" "maintenance-2" {
   ]
   description = "We're upgrading our API servers."
 
-  status_page_visibility {
+  status_page_visibility = {
     enabled         = true
     severity        = "MINOR"
     notify_on_start = true
@@ -91,7 +91,7 @@ resource "checkly_maintenance_windows" "maintenance-2" {
 - `repeat_unit` (String) The repeat cadence for the maintenance window. Possible values `DAY`, `WEEK` and `MONTH`.
 - `silence_alerts_tags` (Set of String) The tags of the checks and groups whose alerts are silenced during the maintenance window. Ignored when `silence_all_alerts` is `true`.
 - `silence_all_alerts` (Boolean) Silence alerts for every check in the account during the maintenance window, regardless of `silence_alerts_tags`. Defaults to `false`.
-- `status_page_visibility` (Block List) Whether and how the maintenance window appears on status pages. Omitting the block hides the window and unlinks it from all status pages and services. Only service-based status page links are supported; links to status page components can't be managed here. An account without the status page maintenance windows entitlement can only change `enabled` to `false`: keep the rest of the block as it is, because removing the block also changes the other settings, which is rejected. (see [below for nested schema](#nestedblock--status_page_visibility))
+- `status_page_visibility` (Attributes) Whether and how the maintenance window appears on status pages. Omitting the attribute hides the window and unlinks it from all status pages and services. Only service-based status page links are supported; links to status page components can't be managed here. An account without the status page maintenance windows entitlement can only change `enabled` to `false`: keep the rest of the attribute as it is, because removing it also changes the other settings, which is rejected. (see [below for nested schema](#nestedatt--status_page_visibility))
 - `tags` (Set of String) The tags of the checks and groups that are paused during the maintenance window. Ignored when `pause_all_checks` is `true`.
 - `timezone` (String) The named IANA time zone used to schedule recurring occurrences, e.g. `America/New_York`. Occurrences keep the same local time across daylight-saving changes. `starts_at` and `ends_at` remain absolute instants; the time zone does not reinterpret them. Use the canonical IANA name (e.g. `America/New_York`, not `US/Eastern`): the API stores canonical names, so an alias shows as a change on every plan. UTC offsets such as `+05:00` or `Etc/GMT+5` are not accepted. Defaults to `UTC`. The time zone cannot be changed while a maintenance is active.
 
@@ -99,7 +99,7 @@ resource "checkly_maintenance_windows" "maintenance-2" {
 
 - `id` (String) The ID of the maintenance window.
 
-<a id="nestedblock--status_page_visibility"></a>
+<a id="nestedatt--status_page_visibility"></a>
 ### Nested Schema for `status_page_visibility`
 
 Optional:
@@ -107,7 +107,7 @@ Optional:
 - `affect_all_services` (Boolean) Mark every service on the linked status pages as affected. Can't be combined with `service_ids`. (Default `false`).
 - `auto_end` (Boolean) Complete the maintenance automatically at the scheduled end time. (Default `true`).
 - `auto_start` (Boolean) Start the maintenance automatically at the scheduled time. (Default `true`).
-- `enabled` (Boolean) Show the maintenance window on the linked status pages. All other settings in this block only take effect when this is `true`. (Default `false`).
+- `enabled` (Boolean) Show the maintenance window on the linked status pages. All other settings in this attribute only take effect when this is `true`. (Default `false`).
 - `notify_on_end` (Boolean) Email status page subscribers when the maintenance ends. (Default `false`).
 - `notify_on_start` (Boolean) Email status page subscribers when the maintenance starts. (Default `false`).
 - `reminder_minutes_before` (Set of Number) Up to three reminders, in minutes before the maintenance starts (60 to 10080), sent to status page subscribers.

@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 
 	checkly "github.com/checkly/checkly-go-sdk"
 )
@@ -83,16 +84,16 @@ func nullMaintenanceWindowModel() MaintenanceWindowResourceModel {
 		SilenceAlertsTags:    types.SetNull(types.StringType),
 		SilenceAllAlerts:     types.BoolValue(false),
 		Description:          types.StringNull(),
-		StatusPageVisibility: types.ListValueMust(types.ObjectType{AttrTypes: maintenanceWindowStatusPageVisibilityAttrTypes}, []attr.Value{}),
+		StatusPageVisibility: types.ObjectNull(maintenanceWindowStatusPageVisibilityAttrTypes),
 	}
 }
 
-// defaultStatusPageVisibilityBlock returns a block with only enabled = false
-// configured, with schema defaults applied.
-func defaultStatusPageVisibilityBlock(t *testing.T) types.List {
+// defaultStatusPageVisibility returns a status_page_visibility value with only
+// enabled = false configured, with schema defaults applied.
+func defaultStatusPageVisibility(t *testing.T) types.Object {
 	t.Helper()
 	var diags diag.Diagnostics
-	list, d := types.ListValueFrom(context.Background(), types.ObjectType{AttrTypes: maintenanceWindowStatusPageVisibilityAttrTypes}, []MaintenanceWindowStatusPageVisibilityModel{{
+	obj, d := types.ObjectValueFrom(context.Background(), maintenanceWindowStatusPageVisibilityAttrTypes, MaintenanceWindowStatusPageVisibilityModel{
 		Enabled:               types.BoolValue(false),
 		Severity:              types.StringNull(),
 		AffectAllServices:     types.BoolValue(false),
@@ -105,17 +106,17 @@ func defaultStatusPageVisibilityBlock(t *testing.T) types.List {
 		ShowAffectedServices:  types.BoolValue(true),
 		StatusPageIDs:         types.SetNull(types.StringType),
 		ServiceIDs:            types.SetNull(types.StringType),
-	}})
+	})
 	diags.Append(d...)
 	if diags.HasError() {
 		t.Fatal(diags)
 	}
-	return list
+	return obj
 }
 
-// The read path keeps a block that is in the prior state, even with default
-// settings, and writes no block when neither the prior state nor the API has
-// one, so both configurations plan without a diff.
+// The read path keeps a status_page_visibility value that is in the prior
+// state, even with default settings, and writes null when neither the prior
+// state nor the API has one, so both configurations plan without a diff.
 func TestMaintenanceWindowToModelStatusPageVisibility(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
@@ -134,12 +135,13 @@ func TestMaintenanceWindowToModelStatusPageVisibility(t *testing.T) {
 
 	cases := []struct {
 		name  string
-		prior types.List
-		want  int
+		prior types.Object
+		want  bool
 	}{
-		{name: "no block", prior: nullMaintenanceWindowModel().StatusPageVisibility, want: 0},
-		{name: "null block after import", prior: types.ListNull(types.ObjectType{AttrTypes: maintenanceWindowStatusPageVisibilityAttrTypes}), want: 0},
-		{name: "explicit all-defaults block", prior: defaultStatusPageVisibilityBlock(t), want: 1},
+		{name: "not configured", prior: nullMaintenanceWindowModel().StatusPageVisibility, want: false},
+		{name: "null after import", prior: types.ObjectNull(maintenanceWindowStatusPageVisibilityAttrTypes), want: false},
+		{name: "unknown prior", prior: types.ObjectUnknown(maintenanceWindowStatusPageVisibilityAttrTypes), want: false},
+		{name: "explicit all-defaults object", prior: defaultStatusPageVisibility(t), want: true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -150,11 +152,11 @@ func TestMaintenanceWindowToModelStatusPageVisibility(t *testing.T) {
 			if diags.HasError() {
 				t.Fatal(diags)
 			}
-			if got := len(model.StatusPageVisibility.Elements()); got != tc.want {
-				t.Errorf("status_page_visibility.# = %d, want %d", got, tc.want)
+			if got := !model.StatusPageVisibility.IsNull(); got != tc.want {
+				t.Errorf("status_page_visibility set = %t, want %t", got, tc.want)
 			}
-			if tc.want == 1 {
-				// Empty sets from the API stay null like the prior block's.
+			if tc.want {
+				// Empty sets from the API stay null like the prior value's.
 				if !reflect.DeepEqual(model.StatusPageVisibility, tc.prior) {
 					t.Errorf("status_page_visibility = %v, want %v", model.StatusPageVisibility, tc.prior)
 				}
@@ -163,7 +165,7 @@ func TestMaintenanceWindowToModelStatusPageVisibility(t *testing.T) {
 	}
 
 	// Non-default settings from the API are written even without a prior
-	// block, so drift made outside Terraform shows up as a diff.
+	// value, so drift made outside Terraform shows up as a diff.
 	enabled := *window
 	enabled.StatusPageVisibility.Enabled = true
 	enabled.StatusPageVisibility.ReminderMinutesBefore = []int{60, 120}
@@ -174,9 +176,9 @@ func TestMaintenanceWindowToModelStatusPageVisibility(t *testing.T) {
 	if diags.HasError() {
 		t.Fatal(diags)
 	}
-	block, ok := maintenanceWindowStatusPageVisibilityModelFromList(ctx, model.StatusPageVisibility, &diags)
+	block, ok := maintenanceWindowStatusPageVisibilityModelFromObject(ctx, model.StatusPageVisibility, &diags)
 	if !ok {
-		t.Fatal("status_page_visibility.# = 0, want 1")
+		t.Fatal("status_page_visibility is null, want a value")
 	}
 	if got := len(block.ReminderMinutesBefore.Elements()); got != 2 {
 		t.Errorf("reminder_minutes_before.# = %d, want 2", got)
@@ -246,7 +248,7 @@ func TestMaintenanceWindowFromModelStatusPageVisibility(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 	var diags diag.Diagnostics
-	block, d := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: maintenanceWindowStatusPageVisibilityAttrTypes}, []MaintenanceWindowStatusPageVisibilityModel{{
+	block, d := types.ObjectValueFrom(ctx, maintenanceWindowStatusPageVisibilityAttrTypes, MaintenanceWindowStatusPageVisibilityModel{
 		Enabled:               types.BoolValue(true),
 		Severity:              types.StringValue("MAJOR"),
 		AffectAllServices:     types.BoolValue(false),
@@ -259,7 +261,7 @@ func TestMaintenanceWindowFromModelStatusPageVisibility(t *testing.T) {
 		ShowAffectedServices:  types.BoolValue(false),
 		StatusPageIDs:         types.SetValueMust(types.StringType, []attr.Value{types.StringValue("page")}),
 		ServiceIDs:            types.SetValueMust(types.StringType, []attr.Value{types.StringValue("service")}),
-	}})
+	})
 	diags.Append(d...)
 	model := nullMaintenanceWindowModel()
 	model.StatusPageVisibility = block
@@ -374,7 +376,7 @@ func TestAccMaintenanceWindowControlsAllFields(t *testing.T) {
 			silence_all_alerts  = true
 			description         = "Planned upgrade"
 
-			status_page_visibility {
+			status_page_visibility = {
 				enabled                 = true
 				severity                = "MAJOR"
 				notify_on_start         = true
@@ -385,15 +387,24 @@ func TestAccMaintenanceWindowControlsAllFields(t *testing.T) {
 			}
 		}
 	`, rInt)
-	withDefaultBlock := statusPage + fmt.Sprintf(`
+	withDefaults := statusPage + fmt.Sprintf(`
 		resource "checkly_maintenance_window" "test" {
 			name      = "Maintenance Window %d"
 			starts_at = "2099-01-01T09:00:00.000Z"
 			ends_at   = "2099-01-01T10:00:00.000Z"
 
-			status_page_visibility {
+			status_page_visibility = {
 				enabled = false
 			}
+		}
+	`, rInt)
+	withEmptyObject := statusPage + fmt.Sprintf(`
+		resource "checkly_maintenance_window" "test" {
+			name      = "Maintenance Window %d"
+			starts_at = "2099-01-01T09:00:00.000Z"
+			ends_at   = "2099-01-01T10:00:00.000Z"
+
+			status_page_visibility = {}
 		}
 	`, rInt)
 	withNothing := statusPage + fmt.Sprintf(`
@@ -416,12 +427,11 @@ func TestAccMaintenanceWindowControlsAllFields(t *testing.T) {
 				resource.TestCheckTypeSetElemAttr(r, "silence_alerts_tags.*", "tf-acc-silenced"),
 				resource.TestCheckResourceAttr(r, "silence_all_alerts", "true"),
 				resource.TestCheckResourceAttr(r, "description", "Planned upgrade"),
-				resource.TestCheckResourceAttr(r, "status_page_visibility.#", "1"),
-				resource.TestCheckResourceAttr(r, "status_page_visibility.0.enabled", "true"),
-				resource.TestCheckResourceAttr(r, "status_page_visibility.0.severity", "MAJOR"),
-				resource.TestCheckResourceAttr(r, "status_page_visibility.0.auto_end", "false"),
-				resource.TestCheckResourceAttr(r, "status_page_visibility.0.status_page_ids.#", "1"),
-				resource.TestCheckResourceAttr(r, "status_page_visibility.0.service_ids.#", "1"),
+				resource.TestCheckResourceAttr(r, "status_page_visibility.enabled", "true"),
+				resource.TestCheckResourceAttr(r, "status_page_visibility.severity", "MAJOR"),
+				resource.TestCheckResourceAttr(r, "status_page_visibility.auto_end", "false"),
+				resource.TestCheckResourceAttr(r, "status_page_visibility.status_page_ids.#", "1"),
+				resource.TestCheckResourceAttr(r, "status_page_visibility.service_ids.#", "1"),
 			),
 		},
 		{
@@ -439,17 +449,28 @@ func TestAccMaintenanceWindowControlsAllFields(t *testing.T) {
 				resource.TestCheckNoResourceAttr(r, "silence_alerts_tags"),
 				resource.TestCheckResourceAttr(r, "silence_all_alerts", "false"),
 				resource.TestCheckNoResourceAttr(r, "description"),
-				resource.TestCheckResourceAttr(r, "status_page_visibility.#", "0"),
+				resource.TestCheckNoResourceAttr(r, "status_page_visibility"),
 			),
 		},
 		{
-			// An explicit block with default settings is kept in state; the
+			// An explicit object with default settings is kept in state; the
 			// harness's follow-up plan check proves it stays without a diff.
-			Config: withDefaultBlock,
+			Config: withDefaults,
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(r, "status_page_visibility.#", "1"),
-				resource.TestCheckResourceAttr(r, "status_page_visibility.0.enabled", "false"),
+				resource.TestCheckResourceAttr(r, "status_page_visibility.enabled", "false"),
+				resource.TestCheckResourceAttr(r, "status_page_visibility.auto_start", "true"),
 			),
+		},
+		{
+			// An empty object takes every schema default, so it equals the
+			// previous step's object and plans no change.
+			Config: withEmptyObject,
+			ConfigPlanChecks: resource.ConfigPlanChecks{
+				PreApply: []plancheck.PlanCheck{
+					plancheck.ExpectEmptyPlan(),
+				},
+			},
+			Check: resource.TestCheckResourceAttr(r, "status_page_visibility.enabled", "false"),
 		},
 	})
 }

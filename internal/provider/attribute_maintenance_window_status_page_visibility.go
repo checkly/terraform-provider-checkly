@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
-	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -13,12 +12,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 
 	checkly "github.com/checkly/checkly-go-sdk"
 )
 
 // MaintenanceWindowStatusPageVisibilityModel describes the
-// status_page_visibility block data model.
+// status_page_visibility attribute data model.
 type MaintenanceWindowStatusPageVisibilityModel struct {
 	Enabled               types.Bool   `tfsdk:"enabled"`
 	Severity              types.String `tfsdk:"severity"`
@@ -49,106 +49,103 @@ var maintenanceWindowStatusPageVisibilityAttrTypes = map[string]attr.Type{
 	"service_ids":             types.SetType{ElemType: types.StringType},
 }
 
-// maintenanceWindowStatusPageVisibilitySchema is deliberately a block without
-// a computed value: removing the block must reset the window's status page
-// settings rather than keep the ones stored by the API. The nested defaults
-// are safe because the block is a list; defaults inside set elements break
-// the framework's lookup of configured element values.
-func maintenanceWindowStatusPageVisibilitySchema() schema.ListNestedBlock {
-	return schema.ListNestedBlock{
+// maintenanceWindowStatusPageVisibilitySchema is deliberately an optional
+// attribute without a computed value: removing it must reset the window's
+// status page settings rather than keep the ones stored by the API. The
+// nested defaults are safe because the object is not a set element; defaults
+// inside set elements break the framework's lookup of configured element
+// values.
+func maintenanceWindowStatusPageVisibilitySchema() schema.SingleNestedAttribute {
+	return schema.SingleNestedAttribute{
+		Optional: true,
 		Description: "Whether and how the maintenance window appears on status pages. " +
-			"Omitting the block hides the window and unlinks it from all status pages and services. " +
+			"Omitting the attribute hides the window and unlinks it from all status pages and services. " +
 			"Only service-based status page links are supported; links to status page components can't be managed here. " +
 			"An account without the status page maintenance windows entitlement can only change `enabled` to `false`: " +
-			"keep the rest of the block as it is, because removing the block also changes the other settings, which is rejected.",
-		Validators: []validator.List{
-			listvalidator.SizeAtMost(1),
-		},
-		NestedObject: schema.NestedBlockObject{
-			Attributes: map[string]schema.Attribute{
-				"enabled": schema.BoolAttribute{
-					Optional:    true,
-					Computed:    true,
-					Default:     booldefault.StaticBool(false),
-					Description: "Show the maintenance window on the linked status pages. All other settings in this block only take effect when this is `true`. (Default `false`).",
+			"keep the rest of the attribute as it is, because removing it also changes the other settings, which is rejected.",
+		Attributes: map[string]schema.Attribute{
+			"enabled": schema.BoolAttribute{
+				Optional:    true,
+				Computed:    true,
+				Default:     booldefault.StaticBool(false),
+				Description: "Show the maintenance window on the linked status pages. All other settings in this attribute only take effect when this is `true`. (Default `false`).",
+			},
+			"severity": schema.StringAttribute{
+				Optional:    true,
+				Description: "The severity shown on the status page. Possible values are `MINOR`, `MEDIUM`, `MAJOR` and `CRITICAL`.",
+				Validators: []validator.String{
+					stringvalidator.OneOf("MINOR", "MEDIUM", "MAJOR", "CRITICAL"),
 				},
-				"severity": schema.StringAttribute{
-					Optional:    true,
-					Description: "The severity shown on the status page. Possible values are `MINOR`, `MEDIUM`, `MAJOR` and `CRITICAL`.",
-					Validators: []validator.String{
-						stringvalidator.OneOf("MINOR", "MEDIUM", "MAJOR", "CRITICAL"),
-					},
+			},
+			"affect_all_services": schema.BoolAttribute{
+				Optional:    true,
+				Computed:    true,
+				Default:     booldefault.StaticBool(false),
+				Description: "Mark every service on the linked status pages as affected. Can't be combined with `service_ids`. (Default `false`).",
+			},
+			"notify_on_start": schema.BoolAttribute{
+				Optional:    true,
+				Computed:    true,
+				Default:     booldefault.StaticBool(false),
+				Description: "Email status page subscribers when the maintenance starts. (Default `false`).",
+			},
+			"notify_on_end": schema.BoolAttribute{
+				Optional:    true,
+				Computed:    true,
+				Default:     booldefault.StaticBool(false),
+				Description: "Email status page subscribers when the maintenance ends. (Default `false`).",
+			},
+			"suppress_auto_incidents": schema.BoolAttribute{
+				Optional:    true,
+				Computed:    true,
+				Default:     booldefault.StaticBool(false),
+				Description: "Suppress automatically created incidents for the linked services during the maintenance. (Default `false`).",
+			},
+			"reminder_minutes_before": schema.SetAttribute{
+				Optional:    true,
+				ElementType: types.Int64Type,
+				Description: "Up to three reminders, in minutes before the maintenance starts (60 to 10080), sent to status page subscribers.",
+				Validators: []validator.Set{
+					setvalidator.SizeAtMost(3),
+					setvalidator.ValueInt64sAre(int64validator.Between(60, 10080)),
 				},
-				"affect_all_services": schema.BoolAttribute{
-					Optional:    true,
-					Computed:    true,
-					Default:     booldefault.StaticBool(false),
-					Description: "Mark every service on the linked status pages as affected. Can't be combined with `service_ids`. (Default `false`).",
-				},
-				"notify_on_start": schema.BoolAttribute{
-					Optional:    true,
-					Computed:    true,
-					Default:     booldefault.StaticBool(false),
-					Description: "Email status page subscribers when the maintenance starts. (Default `false`).",
-				},
-				"notify_on_end": schema.BoolAttribute{
-					Optional:    true,
-					Computed:    true,
-					Default:     booldefault.StaticBool(false),
-					Description: "Email status page subscribers when the maintenance ends. (Default `false`).",
-				},
-				"suppress_auto_incidents": schema.BoolAttribute{
-					Optional:    true,
-					Computed:    true,
-					Default:     booldefault.StaticBool(false),
-					Description: "Suppress automatically created incidents for the linked services during the maintenance. (Default `false`).",
-				},
-				"reminder_minutes_before": schema.SetAttribute{
-					Optional:    true,
-					ElementType: types.Int64Type,
-					Description: "Up to three reminders, in minutes before the maintenance starts (60 to 10080), sent to status page subscribers.",
-					Validators: []validator.Set{
-						setvalidator.SizeAtMost(3),
-						setvalidator.ValueInt64sAre(int64validator.Between(60, 10080)),
-					},
-				},
-				"auto_start": schema.BoolAttribute{
-					Optional:    true,
-					Computed:    true,
-					Default:     booldefault.StaticBool(true),
-					Description: "Start the maintenance automatically at the scheduled time. (Default `true`).",
-				},
-				"auto_end": schema.BoolAttribute{
-					Optional:    true,
-					Computed:    true,
-					Default:     booldefault.StaticBool(true),
-					Description: "Complete the maintenance automatically at the scheduled end time. (Default `true`).",
-				},
-				"show_affected_services": schema.BoolAttribute{
-					Optional:    true,
-					Computed:    true,
-					Default:     booldefault.StaticBool(true),
-					Description: "Show which services the maintenance affects. When `false`, downtime during the maintenance counts against the services' uptime. (Default `true`).",
-				},
-				"status_page_ids": schema.SetAttribute{
-					Optional:    true,
-					ElementType: types.StringType,
-					Description: "The IDs of the status pages (`checkly_status_page`) to show the maintenance window on. Requires `service_ids` or `affect_all_services`.",
-				},
-				"service_ids": schema.SetAttribute{
-					Optional:    true,
-					ElementType: types.StringType,
-					Description: "The IDs of the affected status page services (`checkly_status_page_service`). Each service must be on one of the linked status pages.",
-				},
+			},
+			"auto_start": schema.BoolAttribute{
+				Optional:    true,
+				Computed:    true,
+				Default:     booldefault.StaticBool(true),
+				Description: "Start the maintenance automatically at the scheduled time. (Default `true`).",
+			},
+			"auto_end": schema.BoolAttribute{
+				Optional:    true,
+				Computed:    true,
+				Default:     booldefault.StaticBool(true),
+				Description: "Complete the maintenance automatically at the scheduled end time. (Default `true`).",
+			},
+			"show_affected_services": schema.BoolAttribute{
+				Optional:    true,
+				Computed:    true,
+				Default:     booldefault.StaticBool(true),
+				Description: "Show which services the maintenance affects. When `false`, downtime during the maintenance counts against the services' uptime. (Default `true`).",
+			},
+			"status_page_ids": schema.SetAttribute{
+				Optional:    true,
+				ElementType: types.StringType,
+				Description: "The IDs of the status pages (`checkly_status_page`) to show the maintenance window on. Requires `service_ids` or `affect_all_services`.",
+			},
+			"service_ids": schema.SetAttribute{
+				Optional:    true,
+				ElementType: types.StringType,
+				Description: "The IDs of the affected status page services (`checkly_status_page_service`). Each service must be on one of the linked status pages.",
 			},
 		},
 	}
 }
 
-// maintenanceWindowStatusPageVisibilityFromList returns the zero value for a
-// missing block, which the SDK sends as the API's defaults.
-func maintenanceWindowStatusPageVisibilityFromList(ctx context.Context, list types.List, diags *diag.Diagnostics) checkly.MaintenanceWindowStatusPageVisibility {
-	model, ok := maintenanceWindowStatusPageVisibilityModelFromList(ctx, list, diags)
+// maintenanceWindowStatusPageVisibilityFromObject returns the zero value for a
+// missing attribute, which the SDK sends as the API's defaults.
+func maintenanceWindowStatusPageVisibilityFromObject(ctx context.Context, obj types.Object, diags *diag.Diagnostics) checkly.MaintenanceWindowStatusPageVisibility {
+	model, ok := maintenanceWindowStatusPageVisibilityModelFromObject(ctx, obj, diags)
 	if !ok {
 		return checkly.MaintenanceWindowStatusPageVisibility{}
 	}
@@ -169,17 +166,16 @@ func maintenanceWindowStatusPageVisibilityFromList(ctx context.Context, list typ
 	}
 }
 
-// maintenanceWindowStatusPageVisibilityToList returns no block for default
-// settings when the prior state has no block either, so a configuration
-// without the block doesn't show a diff. A block that is in the prior state
-// is always written back, which keeps an explicit all-defaults block stable.
-// Empty sets from the API stay null where the prior block had them null.
-func maintenanceWindowStatusPageVisibilityToList(ctx context.Context, v checkly.MaintenanceWindowStatusPageVisibility, prior types.List, diags *diag.Diagnostics) types.List {
-	elementType := types.ObjectType{AttrTypes: maintenanceWindowStatusPageVisibilityAttrTypes}
-
-	priorModel, hasPrior := maintenanceWindowStatusPageVisibilityModelFromList(ctx, prior, diags)
+// maintenanceWindowStatusPageVisibilityToObject returns null for default
+// settings when the prior state has no value either, so a configuration
+// without the attribute doesn't show a diff. A value that is in the prior
+// state is always written back, which keeps an explicit all-defaults object
+// stable. Empty sets from the API stay null where the prior value had them
+// null.
+func maintenanceWindowStatusPageVisibilityToObject(ctx context.Context, v checkly.MaintenanceWindowStatusPageVisibility, prior types.Object, diags *diag.Diagnostics) types.Object {
+	priorModel, hasPrior := maintenanceWindowStatusPageVisibilityModelFromObject(ctx, prior, diags)
 	if !hasPrior && isDefaultMaintenanceWindowStatusPageVisibility(v) {
-		return types.ListValueMust(elementType, []attr.Value{})
+		return types.ObjectNull(maintenanceWindowStatusPageVisibilityAttrTypes)
 	}
 	if !hasPrior {
 		priorModel = MaintenanceWindowStatusPageVisibilityModel{
@@ -190,41 +186,39 @@ func maintenanceWindowStatusPageVisibilityToList(ctx context.Context, v checkly.
 		}
 	}
 
-	list, d := types.ListValueFrom(ctx, elementType, []MaintenanceWindowStatusPageVisibilityModel{
-		{
-			Enabled:               types.BoolValue(v.Enabled),
-			Severity:              stringValueOrNull(v.Severity),
-			AffectAllServices:     types.BoolValue(v.AffectAllServices),
-			NotifyOnStart:         types.BoolValue(v.NotifyOnStart),
-			NotifyOnEnd:           types.BoolValue(v.NotifyOnEnd),
-			SuppressAutoIncidents: types.BoolValue(v.SuppressAutoIncidents),
-			ReminderMinutesBefore: int64SetFromInts(ctx, v.ReminderMinutesBefore, priorModel.ReminderMinutesBefore, diags),
-			AutoStart:             types.BoolValue(v.AutoStart == nil || *v.AutoStart),
-			AutoEnd:               types.BoolValue(v.AutoEnd == nil || *v.AutoEnd),
-			ShowAffectedServices:  types.BoolValue(v.ShowAffectedServices == nil || *v.ShowAffectedServices),
-			StatusPageIDs:         stringSetFromAPINullIfUnset(ctx, v.StatusPageIDs, priorModel.StatusPageIDs, diags),
-			ServiceIDs:            stringSetFromAPINullIfUnset(ctx, v.ServiceIDs, priorModel.ServiceIDs, diags),
-		},
+	obj, d := types.ObjectValueFrom(ctx, maintenanceWindowStatusPageVisibilityAttrTypes, MaintenanceWindowStatusPageVisibilityModel{
+		Enabled:               types.BoolValue(v.Enabled),
+		Severity:              stringValueOrNull(v.Severity),
+		AffectAllServices:     types.BoolValue(v.AffectAllServices),
+		NotifyOnStart:         types.BoolValue(v.NotifyOnStart),
+		NotifyOnEnd:           types.BoolValue(v.NotifyOnEnd),
+		SuppressAutoIncidents: types.BoolValue(v.SuppressAutoIncidents),
+		ReminderMinutesBefore: int64SetFromInts(ctx, v.ReminderMinutesBefore, priorModel.ReminderMinutesBefore, diags),
+		AutoStart:             types.BoolValue(v.AutoStart == nil || *v.AutoStart),
+		AutoEnd:               types.BoolValue(v.AutoEnd == nil || *v.AutoEnd),
+		ShowAffectedServices:  types.BoolValue(v.ShowAffectedServices == nil || *v.ShowAffectedServices),
+		StatusPageIDs:         stringSetFromAPINullIfUnset(ctx, v.StatusPageIDs, priorModel.StatusPageIDs, diags),
+		ServiceIDs:            stringSetFromAPINullIfUnset(ctx, v.ServiceIDs, priorModel.ServiceIDs, diags),
 	})
 	diags.Append(d...)
 
-	return list
+	return obj
 }
 
-// maintenanceWindowStatusPageVisibilityModelFromList returns the single block
-// element, and false when the list is null, unknown or empty.
-func maintenanceWindowStatusPageVisibilityModelFromList(ctx context.Context, list types.List, diags *diag.Diagnostics) (MaintenanceWindowStatusPageVisibilityModel, bool) {
-	if list.IsNull() || list.IsUnknown() || len(list.Elements()) == 0 {
+// maintenanceWindowStatusPageVisibilityModelFromObject returns the attribute
+// value as a model, and false when it is null or unknown.
+func maintenanceWindowStatusPageVisibilityModelFromObject(ctx context.Context, obj types.Object, diags *diag.Diagnostics) (MaintenanceWindowStatusPageVisibilityModel, bool) {
+	if obj.IsNull() || obj.IsUnknown() {
 		return MaintenanceWindowStatusPageVisibilityModel{}, false
 	}
 
-	var models []MaintenanceWindowStatusPageVisibilityModel
-	diags.Append(list.ElementsAs(ctx, &models, false)...)
-	if diags.HasError() || len(models) == 0 {
+	var model MaintenanceWindowStatusPageVisibilityModel
+	diags.Append(obj.As(ctx, &model, basetypes.ObjectAsOptions{})...)
+	if diags.HasError() {
 		return MaintenanceWindowStatusPageVisibilityModel{}, false
 	}
 
-	return models[0], true
+	return model, true
 }
 
 func isDefaultMaintenanceWindowStatusPageVisibility(v checkly.MaintenanceWindowStatusPageVisibility) bool {

@@ -251,12 +251,26 @@ func TestUpgradeSDKv2State(t *testing.T) {
 		requireStateNull(t, state, path.Root("request").AtName("security_baseline"))
 	})
 
+	t.Run("maintenance_windows", func(t *testing.T) {
+		// SDK v2 stored status_page_visibility as a list of one element and
+		// an unset set as [].
+		state := upgradeSDKv2Fixture(t, NewMaintenanceWindowResource(), "maintenance_windows")
+		visibility := path.Root("status_page_visibility")
+		requireStateValue(t, state, visibility.AtName("enabled"), types.BoolValue(true))
+		requireStateValue(t, state, visibility.AtName("severity"), types.StringValue("MAJOR"))
+		requireStateValue(t, state, visibility.AtName("auto_end"), types.BoolValue(false))
+		requireStateValue(t, state, visibility.AtName("status_page_ids"), types.SetValueMust(types.StringType, []attr.Value{types.StringValue("page")}))
+		requireStateNull(t, state, visibility.AtName("service_ids"))
+	})
+
 	t.Run("maintenance_windows after refresh", func(t *testing.T) {
 		state := upgradeSDKv2Fixture(t, NewMaintenanceWindowResource(), "maintenance_window_read")
 		requireStateNull(t, state, path.Root("description"))
 		requireStateNull(t, state, path.Root("repeat_unit"))
 		requireStateNull(t, state, path.Root("repeat_interval"))
 		requireStateNull(t, state, path.Root("silence_alerts_tags"))
+		// Not configured, stored as [] by SDK v2.
+		requireStateNull(t, state, path.Root("status_page_visibility"))
 	})
 
 	t.Run("check", func(t *testing.T) {
@@ -347,6 +361,11 @@ func TestMoveSDKv2State(t *testing.T) {
 			fixture:    "maintenance_windows",
 			attr:       path.Root("repeat_unit"),
 			want:       types.StringValue("WEEK"),
+			check: func(t *testing.T, state tfsdk.State) {
+				visibility := path.Root("status_page_visibility")
+				requireStateValue(t, state, visibility.AtName("enabled"), types.BoolValue(true))
+				requireStateNull(t, state, visibility.AtName("service_ids"))
+			},
 		},
 	}
 

@@ -10,7 +10,26 @@
     "silence_alerts_tags": [],
     "silence_all_alerts": false,
     "starts_at": "2030-01-01T00:00:00.000Z",
-    "status_page_visibility": [],
+    "status_page_visibility": [
+        {
+            "affect_all_services": false,
+            "auto_end": false,
+            "auto_start": true,
+            "enabled": true,
+            "notify_on_end": false,
+            "notify_on_start": true,
+            "reminder_minutes_before": [
+                60
+            ],
+            "service_ids": [],
+            "severity": "MAJOR",
+            "show_affected_services": true,
+            "status_page_ids": [
+                "page"
+            ],
+            "suppress_auto_incidents": false
+        }
+    ],
     "tags": [
         "a"
     ],

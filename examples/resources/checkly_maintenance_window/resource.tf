@@ -42,7 +42,7 @@ resource "checkly_maintenance_window" "maintenance-2" {
   ]
   description = "We're upgrading our API servers."
 
-  status_page_visibility {
+  status_page_visibility = {
     enabled         = true
     severity        = "MINOR"
     notify_on_start = true

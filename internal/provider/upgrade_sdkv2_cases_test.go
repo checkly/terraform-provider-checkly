@@ -1326,7 +1326,7 @@ resource "checkly_maintenance_windows" "test" {
   silence_all_alerts  = true
   description         = "Planned upgrade"
 
-  status_page_visibility {
+  status_page_visibility = {
     enabled                 = true
     severity                = "MAJOR"
     notify_on_start         = true

@@ -24,6 +24,7 @@ import (
 //
 //   - Single nested objects were blocks limited to one element, which SDK v2
 //     stores as a JSON array: `[{...}]`, or `[]` when the block is absent.
+//     They are single nested attributes now.
 //   - SDK v2 cannot store null for an unset string, number or collection, so
 //     state refreshed by it holds `""`, `0`, `[]` or `{}` instead. Several Read
 //     implementations keep such prior values, so they would never become
@@ -108,11 +109,12 @@ func upgradeSDKv2RawState(ctx context.Context, raw *tfprotov6.RawState, s schema
 }
 
 // normalizeSDKv2Object rewrites obj in place, at any depth below it: every
-// single nested attribute or block described by attrs and blocks holds an
-// object (or null) instead of a list of at most one object, and every
-// optional, non-computed attribute holds null instead of an empty string,
-// zero number or empty collection. Nested blocks other than single ones keep
-// their empty lists, which is how the framework stores absent blocks too.
+// single nested attribute described by attrs holds an object (or null)
+// instead of a list of at most one object, and every optional, non-computed
+// attribute holds null instead of an empty string, zero number or empty
+// collection. The remaining blocks are all repeated; they keep their empty
+// lists, which is how the framework stores absent blocks too, and only their
+// elements are normalized.
 func normalizeSDKv2Object(obj map[string]any, attrs map[string]schema.Attribute, blocks map[string]schema.Block) {
 	for name, attr := range attrs {
 		value, ok := obj[name]
@@ -157,11 +159,6 @@ func normalizeSDKv2Object(obj map[string]any, attrs map[string]schema.Attribute,
 		}
 
 		switch block := block.(type) {
-		case schema.SingleNestedBlock:
-			obj[name] = unwrapList(value)
-			if nested, ok := obj[name].(map[string]any); ok {
-				normalizeSDKv2Object(nested, block.Attributes, block.Blocks)
-			}
 		case schema.ListNestedBlock:
 			forEachObject(value, func(nested map[string]any) {
 				normalizeSDKv2Object(nested, block.NestedObject.Attributes, block.NestedObject.Blocks)

@@ -80,9 +80,10 @@ This affects:
 | `checkly_ssl_monitor` | `alert_settings` (and nested objects as above), `request` (and its `assertion`, `client_certificate` and `security_baseline` with each of its rules, such as `min_tls_version`), `retry_strategy`, `trigger_incident` |
 | `checkly_playwright_check_suite` | `alert_settings` (and nested objects as above), `bundle`, `runtime` (and its `engine`, `playwright`, `steps`), `trigger_incident` |
 | `checkly_playwright_code_bundle` | `prebuilt_archive` |
+| `checkly_maintenance_window`, `checkly_maintenance_windows` | `status_page_visibility` |
 | `checkly_status_page_v3` | `theme_colors` (and its `light` and `dark`) |
 
-The table lists every such attribute. All other blocks, such as the repeated `alert_channel_subscription` block, keep their block syntax.
+The table lists every such attribute. Only blocks that can be repeated, such as `alert_channel_subscription` and `environment_variable`, keep their block syntax.
 
 ### Removed attributes
 

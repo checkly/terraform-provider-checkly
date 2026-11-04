@@ -1,0 +1,160 @@
+package provider
+
+import (
+	"context"
+	"regexp"
+	"testing"
+
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/provider"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+)
+
+// repeatedBlocks is the exact inventory of blocks in the provider's resource
+// schemas (data sources have none), keyed by type name and block path. Each
+// holds any number of elements; an object that a resource can hold at most
+// one of is a single nested attribute (`x = { ... }`) instead. An entry that no schema
+// uses any more fails the test, so the list stays exact.
+var repeatedBlocks = map[string]bool{
+	"checkly_api_check.alert_channel_subscription":              true,
+	"checkly_browser_check.alert_channel_subscription":          true,
+	"checkly_browser_check.dependency":                          true,
+	"checkly_browser_check.environment_variable":                true,
+	"checkly_check.alert_channel_subscription":                  true,
+	"checkly_check.environment_variable":                        true,
+	"checkly_check_group.alert_channel_subscription":            true,
+	"checkly_check_group.environment_variable":                  true,
+	"checkly_check_group_v2.environment_variable":               true,
+	"checkly_dns_monitor.alert_channel_subscription":            true,
+	"checkly_grpc_monitor.alert_channel_subscription":           true,
+	"checkly_heartbeat.alert_channel_subscription":              true,
+	"checkly_heartbeat_monitor.alert_channel_subscription":      true,
+	"checkly_icmp_monitor.alert_channel_subscription":           true,
+	"checkly_multistep_check.alert_channel_subscription":        true,
+	"checkly_multistep_check.dependency":                        true,
+	"checkly_multistep_check.environment_variable":              true,
+	"checkly_playwright_check_suite.alert_channel_subscription": true,
+	"checkly_playwright_check_suite.environment_variable":       true,
+	"checkly_ssl_monitor.alert_channel_subscription":            true,
+	"checkly_status_page.card":                                  true,
+	"checkly_status_page.card.service_attachment":               true,
+	"checkly_status_page_v3_automation_rule.component":          true,
+	"checkly_tcp_check.alert_channel_subscription":              true,
+	"checkly_tcp_monitor.alert_channel_subscription":            true,
+	"checkly_traceroute_monitor.alert_channel_subscription":     true,
+	"checkly_url_monitor.alert_channel_subscription":            true,
+}
+
+// singleElementLimit matches the description of a size validator that caps a
+// block at one element, such as listvalidator.SizeAtMost(1), which would make
+// the block a single nested object in disguise.
+var singleElementLimit = regexp.MustCompile(`at most 1 elements?\b`)
+
+// checkBlockValidators fails when a block's validators cap it at one element.
+func checkBlockValidators[V validator.Describer](t *testing.T, where string, validators []V) {
+	t.Helper()
+
+	for _, v := range validators {
+		if description := v.Description(context.Background()); singleElementLimit.MatchString(description) {
+			t.Errorf("%s: block is limited to one element (%q); make it a single nested attribute", where, description)
+		}
+	}
+}
+
+// checkRepeatedBlock fails when the block at path is not in repeatedBlocks,
+// and records it as seen.
+func checkRepeatedBlock(t *testing.T, path string, seen map[string]bool) {
+	t.Helper()
+
+	seen[path] = true
+	if !repeatedBlocks[path] {
+		t.Errorf("%s: block is not in repeatedBlocks; objects held at most once must be single nested attributes, repeated blocks must be added to the list", path)
+	}
+}
+
+func walkResourceBlocks(t *testing.T, where string, seen map[string]bool, blocks map[string]schema.Block) {
+	t.Helper()
+
+	for name, block := range blocks {
+		path := where + "." + name
+		checkRepeatedBlock(t, path, seen)
+
+		switch block := block.(type) {
+		case schema.ListNestedBlock:
+			checkBlockValidators(t, path, block.Validators)
+			walkResourceBlocks(t, path, seen, block.NestedObject.Blocks)
+		case schema.SetNestedBlock:
+			checkBlockValidators(t, path, block.Validators)
+			walkResourceBlocks(t, path, seen, block.NestedObject.Blocks)
+		default:
+			t.Errorf("%s: block of type %T; only list and set nested blocks may remain", path, block)
+		}
+	}
+}
+
+// TestOnlyRepeatedBlocks keeps every object that a resource or data source
+// can hold at most one of a single nested attribute: blocks are reserved for
+// repeated objects such as alert_channel_subscription.
+func TestOnlyRepeatedBlocks(t *testing.T) {
+	seen := make(map[string]bool)
+
+	for name, s := range resourceSchemas(t) {
+		walkResourceBlocks(t, name, seen, s.Blocks)
+	}
+
+	ctx := context.Background()
+	p := New("test")()
+
+	var providerMetadata provider.MetadataResponse
+	p.Metadata(ctx, provider.MetadataRequest{}, &providerMetadata)
+
+	for _, newDataSource := range p.DataSources(ctx) {
+		d := newDataSource()
+
+		var metadata datasource.MetadataResponse
+		d.Metadata(ctx, datasource.MetadataRequest{ProviderTypeName: providerMetadata.TypeName}, &metadata)
+
+		var resp datasource.SchemaResponse
+		d.Schema(ctx, datasource.SchemaRequest{}, &resp)
+		if resp.Diagnostics.HasError() {
+			t.Fatalf("%s: schema diagnostics: %v", metadata.TypeName, resp.Diagnostics)
+		}
+
+		// No data source has blocks; nested attributes cover every shape.
+		if len(resp.Schema.Blocks) > 0 {
+			t.Errorf("%s: data sources must not use blocks; use nested attributes", metadata.TypeName)
+		}
+	}
+
+	for path := range repeatedBlocks {
+		if !seen[path] {
+			t.Errorf("%s: listed in repeatedBlocks, but no schema has this block; remove the entry", path)
+		}
+	}
+}
+
+// The single-element check relies on the descriptions of the framework's
+// size validators; this guards against a wording change silently disabling
+// it.
+func TestSingleElementLimitMatchesSizeValidators(t *testing.T) {
+	ctx := context.Background()
+
+	for _, tc := range []struct {
+		validator validator.Describer
+		want      bool
+	}{
+		{listvalidator.SizeAtMost(1), true},
+		{setvalidator.SizeAtMost(1), true},
+		{listvalidator.SizeBetween(1, 1), true},
+		{listvalidator.SizeAtMost(10), false},
+		{listvalidator.SizeAtLeast(1), false},
+	} {
+		description := tc.validator.Description(ctx)
+		if got := singleElementLimit.MatchString(description); got != tc.want {
+			t.Errorf("%q: match = %t, want %t", description, got, tc.want)
+		}
+	}
+}

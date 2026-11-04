@@ -130,8 +130,6 @@ func schemaAttributeAtPath(s schema.Schema, names []string) (schema.Attribute, b
 		}
 
 		switch block := blocks[name].(type) {
-		case schema.SingleNestedBlock:
-			attributes, blocks = block.Attributes, block.Blocks
 		case schema.ListNestedBlock:
 			attributes, blocks = block.NestedObject.Attributes, block.NestedObject.Blocks
 		case schema.SetNestedBlock:

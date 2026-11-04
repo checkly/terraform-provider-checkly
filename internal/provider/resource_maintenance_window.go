@@ -56,7 +56,7 @@ type MaintenanceWindowResourceModel struct {
 	SilenceAlertsTags    types.Set    `tfsdk:"silence_alerts_tags"`
 	SilenceAllAlerts     types.Bool   `tfsdk:"silence_all_alerts"`
 	Description          types.String `tfsdk:"description"`
-	StatusPageVisibility types.List   `tfsdk:"status_page_visibility"`
+	StatusPageVisibility types.Object `tfsdk:"status_page_visibility"`
 }
 
 func (r *MaintenanceWindowResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -140,8 +140,6 @@ func (r *MaintenanceWindowResource) Schema(ctx context.Context, req resource.Sch
 				Optional:    true,
 				Description: "A description of the maintenance window. When the window is visible on status pages, the description is shown there too.",
 			},
-		},
-		Blocks: map[string]schema.Block{
 			"status_page_visibility": maintenanceWindowStatusPageVisibilitySchema(),
 		},
 	}
@@ -323,7 +321,7 @@ func maintenanceWindowFromModel(ctx context.Context, model *MaintenanceWindowRes
 		SilenceAlertsTags:    stringsFromSet(ctx, model.SilenceAlertsTags, diags),
 		SilenceAllAlerts:     model.SilenceAllAlerts.ValueBool(),
 		Description:          model.Description.ValueString(),
-		StatusPageVisibility: maintenanceWindowStatusPageVisibilityFromList(ctx, model.StatusPageVisibility, diags),
+		StatusPageVisibility: maintenanceWindowStatusPageVisibilityFromObject(ctx, model.StatusPageVisibility, diags),
 	}
 }
 
@@ -347,7 +345,7 @@ func maintenanceWindowToModel(ctx context.Context, mw *checkly.MaintenanceWindow
 	model.SilenceAlertsTags = stringSetFromAPINullIfUnset(ctx, mw.SilenceAlertsTags, model.SilenceAlertsTags, diags)
 	model.SilenceAllAlerts = types.BoolValue(mw.SilenceAllAlerts)
 	model.Description = stringValueOrPriorEmpty(mw.Description, model.Description)
-	model.StatusPageVisibility = maintenanceWindowStatusPageVisibilityToList(ctx, mw.StatusPageVisibility, model.StatusPageVisibility, diags)
+	model.StatusPageVisibility = maintenanceWindowStatusPageVisibilityToObject(ctx, mw.StatusPageVisibility, model.StatusPageVisibility, diags)
 }
 
 // maintenanceWindowRepeatInterval converts the repeat interval from the API,
