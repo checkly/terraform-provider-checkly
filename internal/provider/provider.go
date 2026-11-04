@@ -2,8 +2,6 @@ package provider
 
 import (
 	"context"
-	"fmt"
-	"io"
 	"net/http"
 	"os"
 
@@ -133,24 +131,11 @@ func (p *ChecklyProvider) Configure(ctx context.Context, req provider.ConfigureR
 		apiURL = "https://api.checklyhq.com"
 	}
 
-	var debugOutput io.Writer
-	if debugLog := os.Getenv("CHECKLY_DEBUG_LOG"); debugLog != "" {
-		debugFile, err := os.OpenFile(debugLog, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Unable to Open Debug Log File",
-				fmt.Sprintf("The CHECKLY_DEBUG_LOG environment variable is set, but the file cannot be opened for writing: %s", err),
-			)
-			return
-		}
-		debugOutput = debugFile
-	}
-
 	client := checkly.NewClient(
 		apiURL,
 		apiKey,
 		&http.Client{Timeout: apiRequestTimeout()},
-		debugOutput,
+		nil,
 	)
 
 	if accountID != "" {

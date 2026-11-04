@@ -184,6 +184,10 @@ An output that exposes one of them, for example a heartbeat ping URL built from 
 
 Header and query parameter values of check requests and of `api_check_defaults` are not redacted, as in v1.x. To keep credentials in them out of plan output, take them from a variable declared with `sensitive = true` or wrap them in `sensitive(...)`, which Terraform redacts wherever the value is used, or reference a global environment variable in the check instead of the secret itself.
 
+### Debug log removed
+
+The `CHECKLY_DEBUG_LOG` environment variable no longer writes API requests and responses to a file. The file included the API key and secret values in plain text. To inspect the provider's API traffic, route it through an HTTPS proxy with the `HTTPS_PROXY` environment variable, which the provider honors. An intercepting proxy only works once its CA certificate is trusted, for example through the system keychain on macOS or `SSL_CERT_FILE` on Linux. Use `TF_LOG` for Terraform's own logs.
+
 ## Removed resource types
 
 `checkly_trigger_check` and `checkly_trigger_group` are gone. They managed command line trigger URLs, which Checkly has deprecated. To run checks on demand, use the [Checkly CLI](https://www.checklyhq.com/docs/cli/) (`npx checkly trigger`) or the check sessions trigger endpoint of the Checkly API (`POST /v1/check-sessions/trigger`).
