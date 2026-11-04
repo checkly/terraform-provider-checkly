@@ -108,9 +108,17 @@ func TestUpgradeSDKv2State(t *testing.T) {
 	})
 
 	t.Run("ssl_monitor", func(t *testing.T) {
-		// client_certificate is a single nested attribute inside the request list.
+		// SDK v2 stored request, client_certificate, security_baseline and
+		// each baseline rule as lists of at most one element, empty for the
+		// rules that are not configured.
 		state := upgradeSDKv2Fixture(t, NewSSLMonitorResource(), "ssl_monitor")
-		requireStateValue(t, state, path.Root("request").AtListIndex(0).AtName("client_certificate").AtName("mode"), types.StringValue("account_default"))
+		request := path.Root("request")
+		requireStateValue(t, state, request.AtName("hostname"), types.StringValue("example.com"))
+		requireStateValue(t, state, request.AtName("client_certificate").AtName("mode"), types.StringValue("account_default"))
+		requireStateValue(t, state, request.AtName("security_baseline").AtName("enabled"), types.BoolValue(true))
+		requireStateValue(t, state, request.AtName("security_baseline").AtName("min_tls_version").AtName("value"), types.StringValue("TLS1.2"))
+		requireStateNull(t, state, request.AtName("security_baseline").AtName("known_bad_ca"))
+		requireStateValue(t, state, request.AtName("assertion"), types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{}))
 		requireStateValue(t, state, path.Root("retry_strategy").AtName("type"), types.StringValue("NO_RETRIES"))
 	})
 
@@ -215,7 +223,9 @@ func TestUpgradeSDKv2State(t *testing.T) {
 
 	t.Run("ssl_monitor after refresh", func(t *testing.T) {
 		state := upgradeSDKv2Fixture(t, NewSSLMonitorResource(), "ssl_monitor_read")
-		requireStateNull(t, state, path.Root("request").AtListIndex(0).AtName("client_certificate").AtName("client_certificate_id"))
+		requireStateNull(t, state, path.Root("request").AtName("client_certificate").AtName("client_certificate_id"))
+		// An unconfigured security baseline, stored as [] by SDK v2.
+		requireStateNull(t, state, path.Root("request").AtName("security_baseline"))
 	})
 
 	t.Run("maintenance_windows after refresh", func(t *testing.T) {

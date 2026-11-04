@@ -25,7 +25,7 @@ resource "checkly_ssl_monitor" "example-ssl-monitor" {
     "us-west-1"
   ]
 
-  request {
+  request = {
     hostname                 = "api.checklyhq.com"
     port                     = 443
     alert_days_before_expiry = 30
@@ -59,7 +59,7 @@ resource "checkly_ssl_monitor" "example-ssl-monitor-2" {
     }
   }
 
-  request {
+  request = {
     hostname                 = "api.checklyhq.com"
     port                     = 443
     server_name              = "api.checklyhq.com"
@@ -70,12 +70,12 @@ resource "checkly_ssl_monitor" "example-ssl-monitor-2" {
 
     # Override individual security-baseline rules; rules that are not listed
     # keep their server defaults.
-    security_baseline {
-      min_tls_version {
+    security_baseline = {
+      min_tls_version = {
         value    = "TLS1.2"
         severity = "fail"
       }
-      min_key_size_bits {
+      min_key_size_bits = {
         value    = 2048
         severity = "fail"
       }
@@ -85,19 +85,20 @@ resource "checkly_ssl_monitor" "example-ssl-monitor-2" {
       mode = "account_default"
     }
 
-    assertion {
-      source     = "CERTIFICATE"
-      property   = "daysUntilExpiry"
-      comparison = "GREATER_THAN"
-      target     = "14"
-    }
-
-    assertion {
-      source     = "CONNECTION"
-      property   = "hostnameVerified"
-      comparison = "EQUALS"
-      target     = "true"
-    }
+    assertion = [
+      {
+        source     = "CERTIFICATE"
+        property   = "daysUntilExpiry"
+        comparison = "GREATER_THAN"
+        target     = "14"
+      },
+      {
+        source     = "CONNECTION"
+        property   = "hostnameVerified"
+        comparison = "EQUALS"
+        target     = "true"
+      },
+    ]
   }
 }
 ```
@@ -110,6 +111,7 @@ resource "checkly_ssl_monitor" "example-ssl-monitor-2" {
 - `activated` (Boolean) Determines if the monitor is running or not. Possible values `true`, and `false`.
 - `frequency` (Number) Controls how often the monitor should run. Defined in minutes. The allowed values are `0` (high frequency - use `frequency_offset` to define the actual frequency), `1` (1 minute), `2` (2 minutes), `5` (5 minutes), `10` (10 minutes), `15` (15 minutes), `30` (30 minutes), `60` (1 hour), `120` (2 hours), `180` (3 hours), `360` (6 hours), `720` (12 hours) and `1440` (24 hours).
 - `name` (String) The name of the monitor.
+- `request` (Attributes) The parameters for the SSL connection. (see [below for nested schema](#nestedatt--request))
 
 ### Optional
 
@@ -124,7 +126,6 @@ resource "checkly_ssl_monitor" "example-ssl-monitor-2" {
 - `max_response_time` (Number) The handshake time in milliseconds above which the monitor is considered failing. Must be greater than or equal to `degraded_response_time`. Possible values are between 0 and 30000. (Default `20000`).
 - `muted` (Boolean) Determines if any notifications will be sent out when a monitor fails/degrades/recovers.
 - `private_locations` (Set of String) An array of one or more private locations slugs.
-- `request` (Block List) The parameters for the SSL connection. (see [below for nested schema](#nestedblock--request))
 - `retry_strategy` (Attributes) A strategy for retrying failed check/monitor runs. (see [below for nested schema](#nestedatt--retry_strategy))
 - `run_parallel` (Boolean) Determines if the monitor should run in all selected locations in parallel or round-robin.
 - `runtime_id` (String) The ID of the runtime to use for this monitor.
@@ -136,6 +137,142 @@ resource "checkly_ssl_monitor" "example-ssl-monitor-2" {
 ### Read-Only
 
 - `id` (String) The ID of the monitor.
+
+<a id="nestedatt--request"></a>
+### Nested Schema for `request`
+
+Required:
+
+- `hostname` (String) The hostname to connect to and validate the TLS certificate of. Do not include a scheme or a port in this value.
+
+Optional:
+
+- `alert_days_before_expiry` (Number) Raise an alert when the certificate is within this many days of expiry. Possible values are between 1 and 365. (Default `20`).
+- `assertion` (Attributes Set) A request can have multiple assertions. The allowed comparisons, properties, and target formats depend on the assertion source — see the [Assertion Reference](#assertion-reference) below. (see [below for nested schema](#nestedatt--request--assertion))
+- `client_certificate` (Attributes) The mutual-TLS client certificate configuration. (see [below for nested schema](#nestedatt--request--client_certificate))
+- `handshake_timeout_ms` (Number) The number of milliseconds to wait for the TLS handshake to complete before timing out. Possible values are between 1000 and 30000. (Default `10000`).
+- `ip_family` (String) The IP family to use when executing the check. The value can be either `IPv4` or `IPv6`. (Default `IPv4`).
+- `port` (Number) The port number to connect to. Possible values are between 1 and 65535. (Default `443`).
+- `security_baseline` (Attributes) The SSL security baseline — a set of enforceable and advisory rules. Omit the attribute to inherit the account default baseline. Rules that are not listed keep their server defaults; removing a rule (or the whole attribute) resets it to its default on the next apply. Only listed rules are drift-checked: an external change to an unlisted rule is not shown by `terraform plan` and is reset on the next apply. (see [below for nested schema](#nestedatt--request--security_baseline))
+- `server_name` (String) An optional SNI server name to send in the TLS handshake. Defaults to `hostname` when unset.
+- `skip_chain_validation` (Boolean) When true, the certificate chain is not validated against trusted roots (the certificate is still inspected for expiry and the security baseline). (Default `false`).
+
+<a id="nestedatt--request--assertion"></a>
+### Nested Schema for `request.assertion`
+
+Required:
+
+- `comparison` (String) The type of comparison to be executed between expected and actual value of the assertion. Possible values are `EQUALS`, `NOT_EQUALS`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL`, and `NOT_NULL`. The allowed set depends on the asserted `source` and `property`; for example, boolean properties such as `chainTrusted` only allow `EQUALS`.
+- `source` (String) The source of the asserted value. Possible values are `CERTIFICATE`, `CONNECTION`, `RESPONSE_TIME`, `JSON_RESPONSE`, and `TEXT_RESPONSE`.
+
+Optional:
+
+- `property` (String) The property selecting the asserted value within the source. For `CERTIFICATE`: `daysUntilExpiry`, `keySizeBits`, `subjectCN`, `issuerCN`, `serialNumber`, `fingerprintSha256`, `issuerFingerprintSha256`, `keyAlgorithm`, `signatureAlgorithm`, `sans`, `selfSigned`, or `isCA`. For `CONNECTION`: `tlsVersion`, `cipherSuite`, `hostnameVerified`, `chainTrusted`, `ocspStapled`, `ocspStatus`, or `resolvedIp`. For `JSON_RESPONSE`: a JSONPath expression. For `TEXT_RESPONSE`: a regular expression applied to the serialized response.
+- `target` (String)
+
+
+<a id="nestedatt--request--client_certificate"></a>
+### Nested Schema for `request.client_certificate`
+
+Optional:
+
+- `client_certificate_id` (String) The ID of the stored client certificate to present. Required when `mode = "explicit"`.
+- `mode` (String) The mutual-TLS client-certificate mode. `account_default` inherits the account setting (no certificate sent), `auto` lets Checkly select a stored certificate, `explicit` uses the certificate referenced by `client_certificate_id`. (Default `account_default`).
+
+
+<a id="nestedatt--request--security_baseline"></a>
+### Nested Schema for `request.security_baseline`
+
+Optional:
+
+- `enabled` (Boolean) Whether the security baseline is enforced. (Default `true`).
+- `known_bad_ca` (Attributes) Enforceable rule: the certificate chain must not include a known-bad CA. (see [below for nested schema](#nestedatt--request--security_baseline--known_bad_ca))
+- `min_key_size_bits` (Attributes) Enforceable rule: the minimum public key size in bits. (see [below for nested schema](#nestedatt--request--security_baseline--min_key_size_bits))
+- `min_tls_version` (Attributes) Enforceable rule: the minimum TLS version the server must accept. (see [below for nested schema](#nestedatt--request--security_baseline--min_tls_version))
+- `ocsp_must_staple_respected` (Attributes) Advisory rule: an OCSP Must-Staple extension, when present, must be respected. (see [below for nested schema](#nestedatt--request--security_baseline--ocsp_must_staple_respected))
+- `recommended_key_size_bits` (Attributes) Advisory rule: the recommended public key size in bits. (see [below for nested schema](#nestedatt--request--security_baseline--recommended_key_size_bits))
+- `recommended_tls_version` (Attributes) Advisory rule: the recommended TLS version. (see [below for nested schema](#nestedatt--request--security_baseline--recommended_tls_version))
+- `sct_present` (Attributes) Advisory rule: the certificate should carry a Signed Certificate Timestamp. (see [below for nested schema](#nestedatt--request--security_baseline--sct_present))
+- `weak_cipher_suite` (Attributes) Enforceable rule: the connection must not negotiate a weak cipher suite. (see [below for nested schema](#nestedatt--request--security_baseline--weak_cipher_suite))
+- `weak_signature_algorithm` (Attributes) Enforceable rule: the certificate must not use a weak signature algorithm. (see [below for nested schema](#nestedatt--request--security_baseline--weak_signature_algorithm))
+
+<a id="nestedatt--request--security_baseline--known_bad_ca"></a>
+### Nested Schema for `request.security_baseline.known_bad_ca`
+
+Optional:
+
+- `severity` (String) What happens when the rule is violated: `fail` fails the monitor, `degrade` marks it degraded, `ignore` disables the rule. (Default `fail`).
+
+
+<a id="nestedatt--request--security_baseline--min_key_size_bits"></a>
+### Nested Schema for `request.security_baseline.min_key_size_bits`
+
+Optional:
+
+- `severity` (String) What happens when the rule is violated: `fail` fails the monitor, `degrade` marks it degraded, `ignore` disables the rule. (Default `fail`).
+- `value` (Number) The key size in bits. Possible values are between 1024 and 16384. (Default `2048`).
+
+
+<a id="nestedatt--request--security_baseline--min_tls_version"></a>
+### Nested Schema for `request.security_baseline.min_tls_version`
+
+Optional:
+
+- `severity` (String) What happens when the rule is violated: `fail` fails the monitor, `degrade` marks it degraded, `ignore` disables the rule. (Default `fail`).
+- `value` (String) The TLS version. Possible values are `TLS1.2` and `TLS1.3`. (Default `TLS1.2`).
+
+
+<a id="nestedatt--request--security_baseline--ocsp_must_staple_respected"></a>
+### Nested Schema for `request.security_baseline.ocsp_must_staple_respected`
+
+Optional:
+
+- `severity` (String) What happens when the rule is violated: `fail` fails the monitor, `degrade` marks it degraded, `ignore` disables the rule. (Default `ignore`).
+
+
+<a id="nestedatt--request--security_baseline--recommended_key_size_bits"></a>
+### Nested Schema for `request.security_baseline.recommended_key_size_bits`
+
+Optional:
+
+- `severity` (String) What happens when the rule is violated: `fail` fails the monitor, `degrade` marks it degraded, `ignore` disables the rule. (Default `ignore`).
+- `value` (Number) The key size in bits. Possible values are between 1024 and 16384. (Default `3072`).
+
+
+<a id="nestedatt--request--security_baseline--recommended_tls_version"></a>
+### Nested Schema for `request.security_baseline.recommended_tls_version`
+
+Optional:
+
+- `severity` (String) What happens when the rule is violated: `fail` fails the monitor, `degrade` marks it degraded, `ignore` disables the rule. (Default `ignore`).
+- `value` (String) The TLS version. Possible values are `TLS1.2` and `TLS1.3`. (Default `TLS1.3`).
+
+
+<a id="nestedatt--request--security_baseline--sct_present"></a>
+### Nested Schema for `request.security_baseline.sct_present`
+
+Optional:
+
+- `severity` (String) What happens when the rule is violated: `fail` fails the monitor, `degrade` marks it degraded, `ignore` disables the rule. (Default `ignore`).
+
+
+<a id="nestedatt--request--security_baseline--weak_cipher_suite"></a>
+### Nested Schema for `request.security_baseline.weak_cipher_suite`
+
+Optional:
+
+- `severity` (String) What happens when the rule is violated: `fail` fails the monitor, `degrade` marks it degraded, `ignore` disables the rule. (Default `fail`).
+
+
+<a id="nestedatt--request--security_baseline--weak_signature_algorithm"></a>
+### Nested Schema for `request.security_baseline.weak_signature_algorithm`
+
+Optional:
+
+- `severity` (String) What happens when the rule is violated: `fail` fails the monitor, `degrade` marks it degraded, `ignore` disables the rule. (Default `fail`).
+
+
+
 
 <a id="nestedblock--alert_channel_subscription"></a>
 ### Nested Schema for `alert_channel_subscription`
@@ -192,142 +329,6 @@ Optional:
 
 
 
-<a id="nestedblock--request"></a>
-### Nested Schema for `request`
-
-Required:
-
-- `hostname` (String) The hostname to connect to and validate the TLS certificate of. Do not include a scheme or a port in this value.
-
-Optional:
-
-- `alert_days_before_expiry` (Number) Raise an alert when the certificate is within this many days of expiry. Possible values are between 1 and 365. (Default `20`).
-- `assertion` (Block Set) A request can have multiple assertions. The allowed comparisons, properties, and target formats depend on the assertion source — see the [Assertion Reference](#assertion-reference) below. (see [below for nested schema](#nestedblock--request--assertion))
-- `client_certificate` (Attributes) The mutual-TLS client certificate configuration. (see [below for nested schema](#nestedatt--request--client_certificate))
-- `handshake_timeout_ms` (Number) The number of milliseconds to wait for the TLS handshake to complete before timing out. Possible values are between 1000 and 30000. (Default `10000`).
-- `ip_family` (String) The IP family to use when executing the check. The value can be either `IPv4` or `IPv6`. (Default `IPv4`).
-- `port` (Number) The port number to connect to. Possible values are between 1 and 65535. (Default `443`).
-- `security_baseline` (Block List) The SSL security baseline — a set of enforceable and advisory rules. Omit the block to inherit the account default baseline. Rules that are not listed keep their server defaults; removing a rule (or the whole block) resets it to its default on the next apply. Only listed rules are drift-checked: an external change to an unlisted rule is not shown by `terraform plan` and is reset on the next apply. (see [below for nested schema](#nestedblock--request--security_baseline))
-- `server_name` (String) An optional SNI server name to send in the TLS handshake. Defaults to `hostname` when unset.
-- `skip_chain_validation` (Boolean) When true, the certificate chain is not validated against trusted roots (the certificate is still inspected for expiry and the security baseline). (Default `false`).
-
-<a id="nestedblock--request--assertion"></a>
-### Nested Schema for `request.assertion`
-
-Required:
-
-- `comparison` (String) The type of comparison to be executed between expected and actual value of the assertion. Possible values are `EQUALS`, `NOT_EQUALS`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL`, and `NOT_NULL`. The allowed set depends on the asserted `source` and `property`; for example, boolean properties such as `chainTrusted` only allow `EQUALS`.
-- `source` (String) The source of the asserted value. Possible values are `CERTIFICATE`, `CONNECTION`, `RESPONSE_TIME`, `JSON_RESPONSE`, and `TEXT_RESPONSE`.
-
-Optional:
-
-- `property` (String) The property selecting the asserted value within the source. For `CERTIFICATE`: `daysUntilExpiry`, `keySizeBits`, `subjectCN`, `issuerCN`, `serialNumber`, `fingerprintSha256`, `issuerFingerprintSha256`, `keyAlgorithm`, `signatureAlgorithm`, `sans`, `selfSigned`, or `isCA`. For `CONNECTION`: `tlsVersion`, `cipherSuite`, `hostnameVerified`, `chainTrusted`, `ocspStapled`, `ocspStatus`, or `resolvedIp`. For `JSON_RESPONSE`: a JSONPath expression. For `TEXT_RESPONSE`: a regular expression applied to the serialized response.
-- `target` (String)
-
-
-<a id="nestedatt--request--client_certificate"></a>
-### Nested Schema for `request.client_certificate`
-
-Optional:
-
-- `client_certificate_id` (String) The ID of the stored client certificate to present. Required when `mode = "explicit"`.
-- `mode` (String) The mutual-TLS client-certificate mode. `account_default` inherits the account setting (no certificate sent), `auto` lets Checkly select a stored certificate, `explicit` uses the certificate referenced by `client_certificate_id`. (Default `account_default`).
-
-
-<a id="nestedblock--request--security_baseline"></a>
-### Nested Schema for `request.security_baseline`
-
-Optional:
-
-- `enabled` (Boolean) Whether the security baseline is enforced. (Default `true`).
-- `known_bad_ca` (Block List) Enforceable rule: the certificate chain must not include a known-bad CA. (see [below for nested schema](#nestedblock--request--security_baseline--known_bad_ca))
-- `min_key_size_bits` (Block List) Enforceable rule: the minimum public key size in bits. (see [below for nested schema](#nestedblock--request--security_baseline--min_key_size_bits))
-- `min_tls_version` (Block List) Enforceable rule: the minimum TLS version the server must accept. (see [below for nested schema](#nestedblock--request--security_baseline--min_tls_version))
-- `ocsp_must_staple_respected` (Block List) Advisory rule: an OCSP Must-Staple extension, when present, must be respected. (see [below for nested schema](#nestedblock--request--security_baseline--ocsp_must_staple_respected))
-- `recommended_key_size_bits` (Block List) Advisory rule: the recommended public key size in bits. (see [below for nested schema](#nestedblock--request--security_baseline--recommended_key_size_bits))
-- `recommended_tls_version` (Block List) Advisory rule: the recommended TLS version. (see [below for nested schema](#nestedblock--request--security_baseline--recommended_tls_version))
-- `sct_present` (Block List) Advisory rule: the certificate should carry a Signed Certificate Timestamp. (see [below for nested schema](#nestedblock--request--security_baseline--sct_present))
-- `weak_cipher_suite` (Block List) Enforceable rule: the connection must not negotiate a weak cipher suite. (see [below for nested schema](#nestedblock--request--security_baseline--weak_cipher_suite))
-- `weak_signature_algorithm` (Block List) Enforceable rule: the certificate must not use a weak signature algorithm. (see [below for nested schema](#nestedblock--request--security_baseline--weak_signature_algorithm))
-
-<a id="nestedblock--request--security_baseline--known_bad_ca"></a>
-### Nested Schema for `request.security_baseline.known_bad_ca`
-
-Optional:
-
-- `severity` (String) What happens when the rule is violated: `fail` fails the monitor, `degrade` marks it degraded, `ignore` disables the rule. (Default `fail`).
-
-
-<a id="nestedblock--request--security_baseline--min_key_size_bits"></a>
-### Nested Schema for `request.security_baseline.min_key_size_bits`
-
-Optional:
-
-- `severity` (String) What happens when the rule is violated: `fail` fails the monitor, `degrade` marks it degraded, `ignore` disables the rule. (Default `fail`).
-- `value` (Number) The key size in bits. Possible values are between 1024 and 16384. (Default `2048`).
-
-
-<a id="nestedblock--request--security_baseline--min_tls_version"></a>
-### Nested Schema for `request.security_baseline.min_tls_version`
-
-Optional:
-
-- `severity` (String) What happens when the rule is violated: `fail` fails the monitor, `degrade` marks it degraded, `ignore` disables the rule. (Default `fail`).
-- `value` (String) The TLS version. Possible values are `TLS1.2` and `TLS1.3`. (Default `TLS1.2`).
-
-
-<a id="nestedblock--request--security_baseline--ocsp_must_staple_respected"></a>
-### Nested Schema for `request.security_baseline.ocsp_must_staple_respected`
-
-Optional:
-
-- `severity` (String) What happens when the rule is violated: `fail` fails the monitor, `degrade` marks it degraded, `ignore` disables the rule. (Default `ignore`).
-
-
-<a id="nestedblock--request--security_baseline--recommended_key_size_bits"></a>
-### Nested Schema for `request.security_baseline.recommended_key_size_bits`
-
-Optional:
-
-- `severity` (String) What happens when the rule is violated: `fail` fails the monitor, `degrade` marks it degraded, `ignore` disables the rule. (Default `ignore`).
-- `value` (Number) The key size in bits. Possible values are between 1024 and 16384. (Default `3072`).
-
-
-<a id="nestedblock--request--security_baseline--recommended_tls_version"></a>
-### Nested Schema for `request.security_baseline.recommended_tls_version`
-
-Optional:
-
-- `severity` (String) What happens when the rule is violated: `fail` fails the monitor, `degrade` marks it degraded, `ignore` disables the rule. (Default `ignore`).
-- `value` (String) The TLS version. Possible values are `TLS1.2` and `TLS1.3`. (Default `TLS1.3`).
-
-
-<a id="nestedblock--request--security_baseline--sct_present"></a>
-### Nested Schema for `request.security_baseline.sct_present`
-
-Optional:
-
-- `severity` (String) What happens when the rule is violated: `fail` fails the monitor, `degrade` marks it degraded, `ignore` disables the rule. (Default `ignore`).
-
-
-<a id="nestedblock--request--security_baseline--weak_cipher_suite"></a>
-### Nested Schema for `request.security_baseline.weak_cipher_suite`
-
-Optional:
-
-- `severity` (String) What happens when the rule is violated: `fail` fails the monitor, `degrade` marks it degraded, `ignore` disables the rule. (Default `fail`).
-
-
-<a id="nestedblock--request--security_baseline--weak_signature_algorithm"></a>
-### Nested Schema for `request.security_baseline.weak_signature_algorithm`
-
-Optional:
-
-- `severity` (String) What happens when the rule is violated: `fail` fails the monitor, `degrade` marks it degraded, `ignore` disables the rule. (Default `fail`).
-
-
-
-
 <a id="nestedatt--retry_strategy"></a>
 ### Nested Schema for `retry_strategy`
 
@@ -356,7 +357,7 @@ Required:
 
 ## Assertion Reference
 
-Each `assertion` block has the shape `{ source, property, comparison, target }`. SSL assertions use a property-scoped grammar: for the `CERTIFICATE` and `CONNECTION` sources, `property` selects the fact being asserted, and that property determines which comparisons are allowed. These rules are enforced by the Checkly API at apply time.
+Each element of `request.assertion` has the shape `{ source, property, comparison, target }`. SSL assertions use a property-scoped grammar: for the `CERTIFICATE` and `CONNECTION` sources, `property` selects the fact being asserted, and that property determines which comparisons are allowed. These rules are enforced by the Checkly API at apply time.
 
 ### Source `CERTIFICATE`
 
@@ -401,28 +402,32 @@ Each `assertion` block has the shape `{ source, property, comparison, target }`.
 
 ### Examples
 
+The following `assertion` list, placed inside `request`, shows assertions on the certificate, the connection and the check result.
+
 ```terraform
-# The certificate must be valid for at least 14 more days.
-assertion {
-  source     = "CERTIFICATE"
-  property   = "daysUntilExpiry"
-  comparison = "GREATER_THAN"
-  target     = "14"
-}
+assertion = [
+  # The certificate must be valid for at least 14 more days.
+  {
+    source     = "CERTIFICATE"
+    property   = "daysUntilExpiry"
+    comparison = "GREATER_THAN"
+    target     = "14"
+  },
 
-# The certificate chain must be trusted (booleans allow EQUALS only).
-assertion {
-  source     = "CONNECTION"
-  property   = "chainTrusted"
-  comparison = "EQUALS"
-  target     = "true"
-}
+  # The certificate chain must be trusted (booleans allow EQUALS only).
+  {
+    source     = "CONNECTION"
+    property   = "chainTrusted"
+    comparison = "EQUALS"
+    target     = "true"
+  },
 
-# A value selected from the check result via JSONPath.
-assertion {
-  source     = "JSON_RESPONSE"
-  property   = "$.certificate.keySizeBits"
-  comparison = "GREATER_THAN"
-  target     = "2048"
-}
+  # A value selected from the check result via JSONPath.
+  {
+    source     = "JSON_RESPONSE"
+    property   = "$.certificate.keySizeBits"
+    comparison = "GREATER_THAN"
+    target     = "2048"
+  },
+]
 ```

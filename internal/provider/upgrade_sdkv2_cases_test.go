@@ -2450,7 +2450,7 @@ resource "checkly_ssl_monitor" "test" {
   locations              = ["us-east-1", "eu-central-1"]
   tags                   = ["tf-upgrade"]
 
-  request {
+  request = {
     hostname                 = "api.checklyhq.com"
     port                     = 443
     server_name              = "api.checklyhq.com"
@@ -2459,20 +2459,20 @@ resource "checkly_ssl_monitor" "test" {
     handshake_timeout_ms     = 10000
     alert_days_before_expiry = 20
 
-    security_baseline {
+    security_baseline = {
       enabled = true
-      min_tls_version {
+      min_tls_version = {
         value    = "TLS1.2"
         severity = "fail"
       }
-      min_key_size_bits {
+      min_key_size_bits = {
         value    = 2048
         severity = "fail"
       }
-      weak_signature_algorithm {
+      weak_signature_algorithm = {
         severity = "fail"
       }
-      known_bad_ca {
+      known_bad_ca = {
         severity = "fail"
       }
     }
@@ -2481,12 +2481,12 @@ resource "checkly_ssl_monitor" "test" {
       mode = "account_default"
     }
 
-    assertion {
+    assertion = [{
       source     = "CERTIFICATE"
       property   = "daysUntilExpiry"
       comparison = "GREATER_THAN"
       target     = "14"
-    }
+    }]
   }
 
   alert_settings = {
@@ -2530,7 +2530,7 @@ resource "checkly_ssl_monitor" "test" {
   frequency = 60
   locations = ["us-east-1"]
 
-  request {
+  request = {
     hostname = "api.checklyhq.com"
   }
 }

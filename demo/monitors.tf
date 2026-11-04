@@ -70,17 +70,17 @@ resource "checkly_ssl_monitor" "ssl-monitor-1" {
     "us-east-2",
   ]
 
-  request {
+  request = {
     hostname                 = "api.checklyhq.com"
     port                     = 443
     alert_days_before_expiry = 30
 
-    assertion {
+    assertion = [{
       source     = "CERTIFICATE"
       property   = "daysUntilExpiry"
       comparison = "GREATER_THAN"
       target     = "14"
-    }
+    }]
   }
 
   use_global_alert_settings = true
