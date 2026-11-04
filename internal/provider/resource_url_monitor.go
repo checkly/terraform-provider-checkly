@@ -19,7 +19,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 
 	checkly "github.com/checkly/checkly-go-sdk"
 )
@@ -537,13 +536,8 @@ func urlMonitorToModel(ctx context.Context, c *checkly.URLMonitor, model *URLMon
 // urlMonitorRequestFromObject converts the request attribute value to its
 // API representation.
 func urlMonitorRequestFromObject(ctx context.Context, obj types.Object, diags *diag.Diagnostics) checkly.URLRequest {
-	if obj.IsNull() || obj.IsUnknown() {
-		return checkly.URLRequest{}
-	}
-
-	var model URLMonitorRequestModel
-	diags.Append(obj.As(ctx, &model, basetypes.ObjectAsOptions{})...)
-	if diags.HasError() {
+	model := objectAs[URLMonitorRequestModel](ctx, obj, diags)
+	if model == nil {
 		return checkly.URLRequest{}
 	}
 

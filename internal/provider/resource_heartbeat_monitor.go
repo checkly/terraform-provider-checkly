@@ -17,7 +17,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 
 	checkly "github.com/checkly/checkly-go-sdk"
 )
@@ -372,13 +371,8 @@ func heartbeatMonitorToModel(ctx context.Context, c *checkly.HeartbeatMonitor, m
 // heartbeatMonitorHeartbeatFromObject converts the heartbeat attribute value
 // to its API representation.
 func heartbeatMonitorHeartbeatFromObject(ctx context.Context, obj types.Object, diags *diag.Diagnostics) checkly.Heartbeat {
-	if obj.IsNull() || obj.IsUnknown() {
-		return checkly.Heartbeat{}
-	}
-
-	var model HeartbeatMonitorHeartbeatModel
-	diags.Append(obj.As(ctx, &model, basetypes.ObjectAsOptions{})...)
-	if diags.HasError() {
+	model := objectAs[HeartbeatMonitorHeartbeatModel](ctx, obj, diags)
+	if model == nil {
 		return checkly.Heartbeat{}
 	}
 

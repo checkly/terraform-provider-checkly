@@ -28,7 +28,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 
 	checkly "github.com/checkly/checkly-go-sdk"
 )
@@ -357,13 +356,8 @@ func playwrightPrebuiltArchivePath() tfpath.Path {
 // attribute value to an archive helper. It returns nil when the attribute is
 // absent or its file path is not yet known.
 func playwrightCodeBundleArchiveFromObject(ctx context.Context, obj types.Object, diags *diag.Diagnostics) *PlaywrightCodeBundlePrebuiltArchiveAttribute {
-	if obj.IsNull() || obj.IsUnknown() {
-		return nil
-	}
-
-	var model PlaywrightCodeBundlePrebuiltArchiveModel
-	diags.Append(obj.As(ctx, &model, basetypes.ObjectAsOptions{})...)
-	if diags.HasError() {
+	model := objectAs[PlaywrightCodeBundlePrebuiltArchiveModel](ctx, obj, diags)
+	if model == nil {
 		return nil
 	}
 

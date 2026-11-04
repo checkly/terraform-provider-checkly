@@ -784,13 +784,8 @@ func sslMonitorToModel(ctx context.Context, c *checkly.SSLMonitor, model *SSLMon
 // sslMonitorRequestFromObject converts the request attribute value to its
 // API representation.
 func sslMonitorRequestFromObject(ctx context.Context, obj types.Object, diags *diag.Diagnostics) checkly.SSLRequest {
-	if obj.IsNull() || obj.IsUnknown() {
-		return checkly.SSLRequest{}
-	}
-
-	var model SSLMonitorRequestModel
-	diags.Append(obj.As(ctx, &model, basetypes.ObjectAsOptions{})...)
-	if diags.HasError() {
+	model := objectAs[SSLMonitorRequestModel](ctx, obj, diags)
+	if model == nil {
 		return checkly.SSLRequest{}
 	}
 
@@ -881,17 +876,12 @@ func sslMonitorPriorRequest(ctx context.Context, prior types.Object, diags *diag
 		ClientCertificate: types.ObjectNull(sslMonitorClientCertificateAttrTypes),
 	}
 
-	if prior.IsNull() || prior.IsUnknown() {
+	model := objectAs[SSLMonitorRequestModel](ctx, prior, diags)
+	if model == nil {
 		return empty
 	}
 
-	var model SSLMonitorRequestModel
-	diags.Append(prior.As(ctx, &model, basetypes.ObjectAsOptions{})...)
-	if diags.HasError() {
-		return empty
-	}
-
-	return model
+	return *model
 }
 
 // sslMonitorClientCertificateToObject converts the API representation of the
@@ -933,13 +923,8 @@ func sslMonitorClientCertificateToObject(ctx context.Context, r checkly.SSLReque
 // always carry both leaves, as the schema defaults fill whatever the
 // configuration leaves out.
 func sslMonitorSecurityBaselineFromObject(ctx context.Context, obj types.Object, diags *diag.Diagnostics) *checkly.SecurityBaseline {
-	if obj.IsNull() || obj.IsUnknown() {
-		return nil
-	}
-
-	var model SSLMonitorSecurityBaselineModel
-	diags.Append(obj.As(ctx, &model, basetypes.ObjectAsOptions{})...)
-	if diags.HasError() {
+	model := objectAs[SSLMonitorSecurityBaselineModel](ctx, obj, diags)
+	if model == nil {
 		return nil
 	}
 
@@ -963,13 +948,8 @@ func sslMonitorSecurityBaselineFromObject(ctx context.Context, obj types.Object,
 }
 
 func sslMonitorTLSRuleFromObject(ctx context.Context, obj types.Object, diags *diag.Diagnostics) *checkly.SSLBaselineTLSRule {
-	if obj.IsNull() || obj.IsUnknown() {
-		return nil
-	}
-
-	var model SSLMonitorBaselineTLSRuleModel
-	diags.Append(obj.As(ctx, &model, basetypes.ObjectAsOptions{})...)
-	if diags.HasError() {
+	model := objectAs[SSLMonitorBaselineTLSRuleModel](ctx, obj, diags)
+	if model == nil {
 		return nil
 	}
 
@@ -980,13 +960,8 @@ func sslMonitorTLSRuleFromObject(ctx context.Context, obj types.Object, diags *d
 }
 
 func sslMonitorKeySizeRuleFromObject(ctx context.Context, obj types.Object, diags *diag.Diagnostics) *checkly.SSLBaselineKeySizeRule {
-	if obj.IsNull() || obj.IsUnknown() {
-		return nil
-	}
-
-	var model SSLMonitorBaselineKeySizeRuleModel
-	diags.Append(obj.As(ctx, &model, basetypes.ObjectAsOptions{})...)
-	if diags.HasError() {
+	model := objectAs[SSLMonitorBaselineKeySizeRuleModel](ctx, obj, diags)
+	if model == nil {
 		return nil
 	}
 
@@ -997,13 +972,8 @@ func sslMonitorKeySizeRuleFromObject(ctx context.Context, obj types.Object, diag
 }
 
 func sslMonitorSeverityRuleFromObject(ctx context.Context, obj types.Object, diags *diag.Diagnostics) *checkly.SSLBaselineSeverityRule {
-	if obj.IsNull() || obj.IsUnknown() {
-		return nil
-	}
-
-	var model SSLMonitorBaselineSeverityRuleModel
-	diags.Append(obj.As(ctx, &model, basetypes.ObjectAsOptions{})...)
-	if diags.HasError() {
+	model := objectAs[SSLMonitorBaselineSeverityRuleModel](ctx, obj, diags)
+	if model == nil {
 		return nil
 	}
 

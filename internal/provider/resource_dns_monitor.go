@@ -19,7 +19,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 
 	checkly "github.com/checkly/checkly-go-sdk"
 )
@@ -542,13 +541,8 @@ func dnsMonitorToModel(ctx context.Context, c *checkly.DNSMonitor, model *DNSMon
 // dnsMonitorRequestFromObject converts the request attribute value to its
 // API representation.
 func dnsMonitorRequestFromObject(ctx context.Context, obj types.Object, diags *diag.Diagnostics) checkly.DNSRequest {
-	if obj.IsNull() || obj.IsUnknown() {
-		return checkly.DNSRequest{}
-	}
-
-	var model DNSMonitorRequestModel
-	diags.Append(obj.As(ctx, &model, basetypes.ObjectAsOptions{})...)
-	if diags.HasError() {
+	model := objectAs[DNSMonitorRequestModel](ctx, obj, diags)
+	if model == nil {
 		return checkly.DNSRequest{}
 	}
 
@@ -583,17 +577,12 @@ func dnsMonitorRequestToObject(ctx context.Context, r checkly.DNSRequest, diags 
 // value to its host and port components. An unset name server converts to
 // zero values.
 func dnsMonitorNameServerFromObject(ctx context.Context, obj types.Object, diags *diag.Diagnostics) DNSMonitorNameServerModel {
-	if obj.IsNull() || obj.IsUnknown() {
+	model := objectAs[DNSMonitorNameServerModel](ctx, obj, diags)
+	if model == nil {
 		return DNSMonitorNameServerModel{}
 	}
 
-	var model DNSMonitorNameServerModel
-	diags.Append(obj.As(ctx, &model, basetypes.ObjectAsOptions{})...)
-	if diags.HasError() {
-		return DNSMonitorNameServerModel{}
-	}
-
-	return model
+	return *model
 }
 
 // dnsMonitorNameServerToObject converts the API representation of the name

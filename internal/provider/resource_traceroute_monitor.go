@@ -20,7 +20,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 
 	checkly "github.com/checkly/checkly-go-sdk"
 )
@@ -601,17 +600,12 @@ func tracerouteMonitorToModel(ctx context.Context, c *checkly.TracerouteMonitor,
 // tracerouteMonitorRequestFromObject converts the request attribute value to
 // its API representation.
 func tracerouteMonitorRequestFromObject(ctx context.Context, obj types.Object, diags *diag.Diagnostics) checkly.TracerouteRequest {
-	if obj.IsNull() || obj.IsUnknown() {
+	model := objectAs[TracerouteMonitorRequestModel](ctx, obj, diags)
+	if model == nil {
 		return checkly.TracerouteRequest{}
 	}
 
-	var model TracerouteMonitorRequestModel
-	diags.Append(obj.As(ctx, &model, basetypes.ObjectAsOptions{})...)
-	if diags.HasError() {
-		return checkly.TracerouteRequest{}
-	}
-
-	return tracerouteMonitorRequestFromModel(ctx, model, diags)
+	return tracerouteMonitorRequestFromModel(ctx, *model, diags)
 }
 
 // tracerouteMonitorRequestFromModel converts the request attribute model to

@@ -869,17 +869,12 @@ func grpcMonitorToModel(ctx context.Context, c *checkly.GRPCMonitor, model *GRPC
 // grpcMonitorRequestFromObject converts the request attribute value to its
 // API representation.
 func grpcMonitorRequestFromObject(ctx context.Context, obj types.Object, diags *diag.Diagnostics) checkly.GRPCRequest {
-	if obj.IsNull() || obj.IsUnknown() {
+	model := objectAs[GRPCMonitorRequestModel](ctx, obj, diags)
+	if model == nil {
 		return checkly.GRPCRequest{}
 	}
 
-	var model GRPCMonitorRequestModel
-	diags.Append(obj.As(ctx, &model, basetypes.ObjectAsOptions{})...)
-	if diags.HasError() {
-		return checkly.GRPCRequest{}
-	}
-
-	return grpcMonitorRequestFromModel(ctx, model, diags)
+	return grpcMonitorRequestFromModel(ctx, *model, diags)
 }
 
 // grpcMonitorRequestFromModel converts the request attribute model to its

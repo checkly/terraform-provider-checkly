@@ -9,7 +9,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 
 	checkly "github.com/checkly/checkly-go-sdk"
 )
@@ -70,13 +69,8 @@ func makeTriggerIncidentSchema() schema.SingleNestedAttribute {
 // triggerIncidentFromObject converts the trigger_incident attribute value to
 // its API representation. A null or unknown value converts to nil.
 func triggerIncidentFromObject(ctx context.Context, obj types.Object, diags *diag.Diagnostics) *checkly.IncidentTrigger {
-	if obj.IsNull() || obj.IsUnknown() {
-		return nil
-	}
-
-	var model TriggerIncidentModel
-	diags.Append(obj.As(ctx, &model, basetypes.ObjectAsOptions{})...)
-	if diags.HasError() {
+	model := objectAs[TriggerIncidentModel](ctx, obj, diags)
+	if model == nil {
 		return nil
 	}
 

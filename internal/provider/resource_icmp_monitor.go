@@ -19,7 +19,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 
 	checkly "github.com/checkly/checkly-go-sdk"
 )
@@ -510,13 +509,8 @@ func icmpMonitorToModel(ctx context.Context, c *checkly.ICMPMonitor, model *ICMP
 // icmpMonitorRequestFromObject converts the request attribute value to its
 // API representation.
 func icmpMonitorRequestFromObject(ctx context.Context, obj types.Object, diags *diag.Diagnostics) checkly.ICMPRequest {
-	if obj.IsNull() || obj.IsUnknown() {
-		return checkly.ICMPRequest{}
-	}
-
-	var model ICMPMonitorRequestModel
-	diags.Append(obj.As(ctx, &model, basetypes.ObjectAsOptions{})...)
-	if diags.HasError() {
+	model := objectAs[ICMPMonitorRequestModel](ctx, obj, diags)
+	if model == nil {
 		return checkly.ICMPRequest{}
 	}
 

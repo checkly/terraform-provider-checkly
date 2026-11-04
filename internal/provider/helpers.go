@@ -15,6 +15,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 
 	checkly "github.com/checkly/checkly-go-sdk"
 )
@@ -213,4 +215,20 @@ func planNestedDefaults[T attr.Value](ctx context.Context, req resource.ModifyPl
 	}
 
 	resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, p, planned)...)
+}
+
+// objectAs decodes an object value into its model type T. It returns nil when
+// the value is null or unknown, or when diags holds an error after decoding.
+func objectAs[T any](ctx context.Context, obj types.Object, diags *diag.Diagnostics) *T {
+	if obj.IsNull() || obj.IsUnknown() {
+		return nil
+	}
+
+	var model T
+	diags.Append(obj.As(ctx, &model, basetypes.ObjectAsOptions{})...)
+	if diags.HasError() {
+		return nil
+	}
+
+	return &model
 }

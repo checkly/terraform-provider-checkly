@@ -597,22 +597,6 @@ func (r *AlertChannelResource) ImportState(ctx context.Context, req resource.Imp
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
 
-// alertChannelObjectAs decodes a channel type attribute into its model type.
-// It returns nil when the attribute is not configured.
-func alertChannelObjectAs[T any](ctx context.Context, obj types.Object, diags *diag.Diagnostics) *T {
-	if obj.IsNull() || obj.IsUnknown() {
-		return nil
-	}
-
-	var model T
-	diags.Append(obj.As(ctx, &model, basetypes.ObjectAsOptions{})...)
-	if diags.HasError() {
-		return nil
-	}
-
-	return &model
-}
-
 // alertChannelFromModel converts the resource model to its API
 // representation.
 func alertChannelFromModel(ctx context.Context, model *AlertChannelResourceModel, diags *diag.Diagnostics) checkly.AlertChannel {
@@ -628,14 +612,14 @@ func alertChannelFromModel(ctx context.Context, model *AlertChannelResourceModel
 		ac.SSLExpiryThreshold = &threshold
 	}
 
-	if m := alertChannelObjectAs[alertChannelEmailModel](ctx, model.Email, diags); m != nil {
+	if m := objectAs[alertChannelEmailModel](ctx, model.Email, diags); m != nil {
 		ac.Type = checkly.AlertTypeEmail
 		ac.Email = &checkly.AlertChannelEmail{
 			Address: m.Address.ValueString(),
 		}
 	}
 
-	if m := alertChannelObjectAs[alertChannelSlackModel](ctx, model.Slack, diags); m != nil {
+	if m := objectAs[alertChannelSlackModel](ctx, model.Slack, diags); m != nil {
 		ac.Type = checkly.AlertTypeSlack
 		ac.Slack = &checkly.AlertChannelSlack{
 			WebhookURL: m.URL.ValueString(),
@@ -643,14 +627,14 @@ func alertChannelFromModel(ctx context.Context, model *AlertChannelResourceModel
 		}
 	}
 
-	if m := alertChannelObjectAs[alertChannelSlackAppModel](ctx, model.SlackApp, diags); m != nil {
+	if m := objectAs[alertChannelSlackAppModel](ctx, model.SlackApp, diags); m != nil {
 		ac.Type = checkly.AlertTypeSlackApp
 		ac.SlackApp = &checkly.AlertChannelSlackApp{
 			SlackChannels: stringsFromList(ctx, m.SlackChannels, diags),
 		}
 	}
 
-	if m := alertChannelObjectAs[alertChannelSMSModel](ctx, model.SMS, diags); m != nil {
+	if m := objectAs[alertChannelSMSModel](ctx, model.SMS, diags); m != nil {
 		ac.Type = checkly.AlertTypeSMS
 		ac.SMS = &checkly.AlertChannelSMS{
 			Name:   m.Name.ValueString(),
@@ -658,7 +642,7 @@ func alertChannelFromModel(ctx context.Context, model *AlertChannelResourceModel
 		}
 	}
 
-	if m := alertChannelObjectAs[alertChannelCallModel](ctx, model.Call, diags); m != nil {
+	if m := objectAs[alertChannelCallModel](ctx, model.Call, diags); m != nil {
 		ac.Type = checkly.AlertTypeCall
 		ac.CALL = &checkly.AlertChannelCall{
 			Name:   m.Name.ValueString(),
@@ -666,7 +650,7 @@ func alertChannelFromModel(ctx context.Context, model *AlertChannelResourceModel
 		}
 	}
 
-	if m := alertChannelObjectAs[alertChannelWebhookModel](ctx, model.Webhook, diags); m != nil {
+	if m := objectAs[alertChannelWebhookModel](ctx, model.Webhook, diags); m != nil {
 		ac.Type = checkly.AlertTypeWebhook
 		ac.Webhook = &checkly.AlertChannelWebhook{
 			Name:            m.Name.ValueString(),
@@ -680,7 +664,7 @@ func alertChannelFromModel(ctx context.Context, model *AlertChannelResourceModel
 		}
 	}
 
-	if m := alertChannelObjectAs[alertChannelOpsgenieModel](ctx, model.Opsgenie, diags); m != nil {
+	if m := objectAs[alertChannelOpsgenieModel](ctx, model.Opsgenie, diags); m != nil {
 		ac.Type = checkly.AlertTypeOpsgenie
 		ac.Opsgenie = &checkly.AlertChannelOpsgenie{
 			Name:     m.Name.ValueString(),
@@ -690,7 +674,7 @@ func alertChannelFromModel(ctx context.Context, model *AlertChannelResourceModel
 		}
 	}
 
-	if m := alertChannelObjectAs[alertChannelPagerdutyModel](ctx, model.Pagerduty, diags); m != nil {
+	if m := objectAs[alertChannelPagerdutyModel](ctx, model.Pagerduty, diags); m != nil {
 		ac.Type = checkly.AlertTypePagerduty
 		ac.Pagerduty = &checkly.AlertChannelPagerduty{
 			Account:     m.Account.ValueString(),

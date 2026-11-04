@@ -50,6 +50,22 @@ func upgradeSDKv2Fixture(t *testing.T, r resource.Resource, fixture string) tfsd
 	return resp.State
 }
 
+// upgradeSDKv2Raw upgrades raw state written by the SDK v2 implementation of
+// r, given as JSON, to r's current schema.
+func upgradeSDKv2Raw(t *testing.T, r resource.Resource, raw string) tfsdk.State {
+	t.Helper()
+
+	var schemaResp resource.SchemaResponse
+	r.Schema(context.Background(), resource.SchemaRequest{}, &schemaResp)
+
+	value, err := upgradeSDKv2RawState(context.Background(), &tfprotov6.RawState{JSON: []byte(raw)}, schemaResp.Schema)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return tfsdk.State{Schema: schemaResp.Schema, Raw: value}
+}
+
 func requireStateValue(t *testing.T, state tfsdk.State, p path.Path, want attr.Value) {
 	t.Helper()
 
@@ -192,13 +208,7 @@ func TestUpgradeSDKv2State(t *testing.T) {
 		// An empty passphrase is the same as none, so it upgrades like any
 		// other empty optional string.
 		raw := `{"id":"cc","host":"*.example.com","certificate":"c","private_key":"k","passphrase":"","path":"","trusted_ca":""}`
-		var schemaResp resource.SchemaResponse
-		NewClientCertificateResource().Schema(context.Background(), resource.SchemaRequest{}, &schemaResp)
-		value, err := upgradeSDKv2RawState(context.Background(), &tfprotov6.RawState{JSON: []byte(raw)}, schemaResp.Schema)
-		if err != nil {
-			t.Fatal(err)
-		}
-		state := tfsdk.State{Schema: schemaResp.Schema, Raw: value}
+		state := upgradeSDKv2Raw(t, NewClientCertificateResource(), raw)
 		requireStateNull(t, state, path.Root("passphrase"))
 		requireStateNull(t, state, path.Root("path"))
 	})
@@ -209,13 +219,7 @@ func TestUpgradeSDKv2State(t *testing.T) {
 		raw := `{"id":"1","email":[],"slack":[],"sms":[],"call":[],"opsgenie":[],"pagerduty":[],` +
 			`"webhook":[{"name":"w","method":"POST","headers":{},"query_parameters":{},"template":"","url":"https://example.com","webhook_secret":"","webhook_type":""}],` +
 			`"send_recovery":true,"send_failure":true,"send_degraded":false,"ssl_expiry":false,"ssl_expiry_threshold":30}`
-		var schemaResp resource.SchemaResponse
-		NewAlertChannelResource().Schema(context.Background(), resource.SchemaRequest{}, &schemaResp)
-		value, err := upgradeSDKv2RawState(context.Background(), &tfprotov6.RawState{JSON: []byte(raw)}, schemaResp.Schema)
-		if err != nil {
-			t.Fatal(err)
-		}
-		state := tfsdk.State{Schema: schemaResp.Schema, Raw: value}
+		state := upgradeSDKv2Raw(t, NewAlertChannelResource(), raw)
 		requireStateNull(t, state, path.Root("email"))
 		requireStateNull(t, state, path.Root("slack_app"))
 		requireStateValue(t, state, path.Root("webhook").AtName("name"), types.StringValue("w"))
@@ -230,13 +234,7 @@ func TestUpgradeSDKv2State(t *testing.T) {
 		upgrade := func(nameServer string) tfsdk.State {
 			raw := `{"id":"1","request":[{"record_type":"A","query":"example.com","protocol":"UDP",` +
 				`"name_server":` + nameServer + `,"assertion":[]}]}`
-			var schemaResp resource.SchemaResponse
-			NewDNSMonitorResource().Schema(context.Background(), resource.SchemaRequest{}, &schemaResp)
-			value, err := upgradeSDKv2RawState(context.Background(), &tfprotov6.RawState{JSON: []byte(raw)}, schemaResp.Schema)
-			if err != nil {
-				t.Fatal(err)
-			}
-			return tfsdk.State{Schema: schemaResp.Schema, Raw: value}
+			return upgradeSDKv2Raw(t, NewDNSMonitorResource(), raw)
 		}
 		state := upgrade(`[{"host":"1.1.1.1","port":53}]`)
 		requireStateValue(t, state, path.Root("request").AtName("query"), types.StringValue("example.com"))

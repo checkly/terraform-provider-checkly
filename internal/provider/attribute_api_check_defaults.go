@@ -178,13 +178,8 @@ func apiCheckDefaultsMapFromKeyValues(keyValues []checkly.KeyValue) types.Map {
 // to its API representation. Null and unknown values convert to empty API
 // check defaults.
 func apiCheckDefaultsFromObject(ctx context.Context, obj types.Object, diags *diag.Diagnostics) checkly.APICheckDefaults {
-	if obj.IsNull() || obj.IsUnknown() {
-		return checkly.APICheckDefaults{}
-	}
-
-	var model apiCheckDefaultsModel
-	diags.Append(obj.As(ctx, &model, basetypes.ObjectAsOptions{})...)
-	if diags.HasError() {
+	model := objectAs[apiCheckDefaultsModel](ctx, obj, diags)
+	if model == nil {
 		return checkly.APICheckDefaults{}
 	}
 

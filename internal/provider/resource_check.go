@@ -713,14 +713,3 @@ func stringOrDefault(value types.String, defaultValue string) types.String {
 	}
 	return value
 }
-
-// boolOrDefault returns the given value, or the given default value when the
-// value is null or unknown. It is used to apply default values during plan
-// modification to attributes nested in set elements, where schema defaults
-// cannot be used.
-func boolOrDefault(value types.Bool, defaultValue bool) types.Bool {
-	if value.IsNull() || value.IsUnknown() {
-		return types.BoolValue(defaultValue)
-	}
-	return value
-}

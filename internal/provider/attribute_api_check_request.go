@@ -183,13 +183,8 @@ func apiCheckRequestAttributeSchema(opts apiCheckRequestAttributeSchemaOptions) 
 // apiCheckRequestFromObject converts the request attribute value to its API
 // representation. A null or unknown value converts to a zero-valued request.
 func apiCheckRequestFromObject(ctx context.Context, obj types.Object, diags *diag.Diagnostics) checkly.Request {
-	if obj.IsNull() || obj.IsUnknown() {
-		return checkly.Request{}
-	}
-
-	var model apiCheckRequestModel
-	diags.Append(obj.As(ctx, &model, basetypes.ObjectAsOptions{})...)
-	if diags.HasError() {
+	model := objectAs[apiCheckRequestModel](ctx, obj, diags)
+	if model == nil {
 		return checkly.Request{}
 	}
 
@@ -293,13 +288,8 @@ func apiCheckMapFromKeyValues(ctx context.Context, kvs []checkly.KeyValue, prior
 // value to its API representation. Null and unknown values convert to nil,
 // which disables basic authentication.
 func apiCheckBasicAuthFromObject(ctx context.Context, obj types.Object, diags *diag.Diagnostics) *checkly.BasicAuth {
-	if obj.IsNull() || obj.IsUnknown() {
-		return nil
-	}
-
-	var model apiCheckBasicAuthModel
-	diags.Append(obj.As(ctx, &model, basetypes.ObjectAsOptions{})...)
-	if diags.HasError() {
+	model := objectAs[apiCheckBasicAuthModel](ctx, obj, diags)
+	if model == nil {
 		return nil
 	}
 

@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 
 	checkly "github.com/checkly/checkly-go-sdk"
 )
@@ -145,8 +144,8 @@ func maintenanceWindowStatusPageVisibilitySchema() schema.SingleNestedAttribute 
 // maintenanceWindowStatusPageVisibilityFromObject returns the zero value for a
 // missing attribute, which the SDK sends as the API's defaults.
 func maintenanceWindowStatusPageVisibilityFromObject(ctx context.Context, obj types.Object, diags *diag.Diagnostics) checkly.MaintenanceWindowStatusPageVisibility {
-	model, ok := maintenanceWindowStatusPageVisibilityModelFromObject(ctx, obj, diags)
-	if !ok {
+	model := objectAs[MaintenanceWindowStatusPageVisibilityModel](ctx, obj, diags)
+	if model == nil {
 		return checkly.MaintenanceWindowStatusPageVisibility{}
 	}
 
@@ -173,12 +172,12 @@ func maintenanceWindowStatusPageVisibilityFromObject(ctx context.Context, obj ty
 // stable. Empty sets from the API stay null where the prior value had them
 // null.
 func maintenanceWindowStatusPageVisibilityToObject(ctx context.Context, v checkly.MaintenanceWindowStatusPageVisibility, prior types.Object, diags *diag.Diagnostics) types.Object {
-	priorModel, hasPrior := maintenanceWindowStatusPageVisibilityModelFromObject(ctx, prior, diags)
-	if !hasPrior && isDefaultMaintenanceWindowStatusPageVisibility(v) {
+	priorModel := objectAs[MaintenanceWindowStatusPageVisibilityModel](ctx, prior, diags)
+	if priorModel == nil && isDefaultMaintenanceWindowStatusPageVisibility(v) {
 		return types.ObjectNull(maintenanceWindowStatusPageVisibilityAttrTypes)
 	}
-	if !hasPrior {
-		priorModel = MaintenanceWindowStatusPageVisibilityModel{
+	if priorModel == nil {
+		priorModel = &MaintenanceWindowStatusPageVisibilityModel{
 			Severity:              types.StringNull(),
 			ReminderMinutesBefore: types.SetNull(types.Int64Type),
 			StatusPageIDs:         types.SetNull(types.StringType),
@@ -203,22 +202,6 @@ func maintenanceWindowStatusPageVisibilityToObject(ctx context.Context, v checkl
 	diags.Append(d...)
 
 	return obj
-}
-
-// maintenanceWindowStatusPageVisibilityModelFromObject returns the attribute
-// value as a model, and false when it is null or unknown.
-func maintenanceWindowStatusPageVisibilityModelFromObject(ctx context.Context, obj types.Object, diags *diag.Diagnostics) (MaintenanceWindowStatusPageVisibilityModel, bool) {
-	if obj.IsNull() || obj.IsUnknown() {
-		return MaintenanceWindowStatusPageVisibilityModel{}, false
-	}
-
-	var model MaintenanceWindowStatusPageVisibilityModel
-	diags.Append(obj.As(ctx, &model, basetypes.ObjectAsOptions{})...)
-	if diags.HasError() {
-		return MaintenanceWindowStatusPageVisibilityModel{}, false
-	}
-
-	return model, true
 }
 
 func isDefaultMaintenanceWindowStatusPageVisibility(v checkly.MaintenanceWindowStatusPageVisibility) bool {

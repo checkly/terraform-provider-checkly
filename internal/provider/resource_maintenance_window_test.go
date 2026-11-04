@@ -176,8 +176,8 @@ func TestMaintenanceWindowToModelStatusPageVisibility(t *testing.T) {
 	if diags.HasError() {
 		t.Fatal(diags)
 	}
-	block, ok := maintenanceWindowStatusPageVisibilityModelFromObject(ctx, model.StatusPageVisibility, &diags)
-	if !ok {
+	block := objectAs[MaintenanceWindowStatusPageVisibilityModel](ctx, model.StatusPageVisibility, &diags)
+	if block == nil {
 		t.Fatal("status_page_visibility is null, want a value")
 	}
 	if got := len(block.ReminderMinutesBefore.Elements()); got != 2 {
