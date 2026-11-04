@@ -436,6 +436,11 @@ func TestAccApiCheckFull(t *testing.T) {
 				),
 			),
 		},
+		{
+			ResourceName:      "checkly_check.test",
+			ImportState:       true,
+			ImportStateVerify: true,
+		},
 	})
 }
 

@@ -42,6 +42,11 @@ func TestAccEnvVarSuccess(t *testing.T) {
 				),
 			),
 		},
+		{
+			ResourceName:      "checkly_environment_variable.test",
+			ImportState:       true,
+			ImportStateVerify: true,
+		},
 	})
 }
 
@@ -53,6 +58,13 @@ func TestAccSecretEnvVarSuccess(t *testing.T) {
 				value   = "https://api.checklyhq.com"
 				secret  = true
 			}`,
+		},
+		{
+			ResourceName:      "checkly_environment_variable.test",
+			ImportState:       true,
+			ImportStateVerify: true,
+			// The API never returns the value of a secret environment variable.
+			ImportStateVerifyIgnore: []string{"value"},
 		},
 	})
 }

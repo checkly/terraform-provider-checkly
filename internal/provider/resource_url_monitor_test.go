@@ -170,6 +170,11 @@ func TestAccURLMonitorFull(t *testing.T) {
 				),
 			),
 		},
+		{
+			ResourceName:      "checkly_url_monitor.test",
+			ImportState:       true,
+			ImportStateVerify: true,
+		},
 	})
 }
 

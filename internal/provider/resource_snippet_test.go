@@ -42,5 +42,10 @@ func TestAccSnippetSuccess(t *testing.T) {
 				),
 			),
 		},
+		{
+			ResourceName:      "checkly_snippet.test",
+			ImportState:       true,
+			ImportStateVerify: true,
+		},
 	})
 }

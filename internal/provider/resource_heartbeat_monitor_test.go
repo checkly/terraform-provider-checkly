@@ -210,6 +210,11 @@ func TestAccHeartbeatMonitorCreate(t *testing.T) {
 				),
 			),
 		},
+		{
+			ResourceName:      "checkly_heartbeat_monitor.test",
+			ImportState:       true,
+			ImportStateVerify: true,
+		},
 	})
 }
 

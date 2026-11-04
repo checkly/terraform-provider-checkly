@@ -281,6 +281,11 @@ func TestAccICMPMonitorFull(t *testing.T) {
 				),
 			),
 		},
+		{
+			ResourceName:      "checkly_icmp_monitor.test",
+			ImportState:       true,
+			ImportStateVerify: true,
+		},
 	})
 }
 

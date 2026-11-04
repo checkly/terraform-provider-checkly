@@ -60,6 +60,14 @@ func TestAccPrivateLocationSuccess(t *testing.T) {
 				),
 			),
 		},
+		{
+			ResourceName:      "checkly_private_location.test",
+			ImportState:       true,
+			ImportStateVerify: true,
+			// The API returns raw keys only in the create response; reads return
+			// masked keys, so an imported private location has none.
+			ImportStateVerifyIgnore: []string{"keys"},
+		},
 	})
 }
 

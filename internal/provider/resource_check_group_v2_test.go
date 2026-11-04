@@ -1002,6 +1002,11 @@ func TestAccCheckGroupV2TopLevelAttributes(t *testing.T) {
 				),
 			),
 		},
+		{
+			ResourceName:      checkGroupV2Resource,
+			ImportState:       true,
+			ImportStateVerify: true,
+		},
 	})
 }
 

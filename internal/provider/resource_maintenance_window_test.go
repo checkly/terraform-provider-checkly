@@ -435,6 +435,15 @@ func TestAccMaintenanceWindowControlsAllFields(t *testing.T) {
 			),
 		},
 		{
+			// Imported while every attribute holds a non-default value. An
+			// explicit status_page_visibility object with default settings
+			// reads back the same as an absent one, so a later step would not
+			// round-trip.
+			ResourceName:      r,
+			ImportState:       true,
+			ImportStateVerify: true,
+		},
+		{
 			// Removing every optional attribute must reset it rather than keep
 			// the stored value. Unset optional attributes are null in the
 			// framework's state, so they are checked as absent.

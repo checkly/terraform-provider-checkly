@@ -196,6 +196,11 @@ func TestAccStatusPageHappyPath(t *testing.T) {
 				),
 			),
 		},
+		{
+			ResourceName:      "checkly_status_page.test",
+			ImportState:       true,
+			ImportStateVerify: true,
+		},
 	})
 }
 

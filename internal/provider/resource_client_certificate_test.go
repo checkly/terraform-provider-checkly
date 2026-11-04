@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"fmt"
 	"regexp"
 	"testing"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
 func TestAccClientCertificateCheckRequiredFields(t *testing.T) {
@@ -153,6 +155,25 @@ resource "checkly_client_certificate" "test" {
 						"-----END CERTIFICATE-----\n",
 				),
 			),
+		},
+		{
+			ResourceName:      "checkly_client_certificate.test",
+			ImportState:       true,
+			ImportStateVerify: true,
+			// The API never returns the private key or its passphrase, and it
+			// stores the path without the configured trailing slash.
+			ImportStateVerifyIgnore: []string{"private_key", "passphrase", "path"},
+			// With no prior state to keep the configured spelling from, the
+			// imported path is the API's normalized one.
+			ImportStateCheck: func(states []*terraform.InstanceState) error {
+				if len(states) != 1 {
+					return fmt.Errorf("expected 1 imported state, got %d", len(states))
+				}
+				if got := states[0].Attributes["path"]; got != "/partner/api" {
+					return fmt.Errorf("imported path = %q, want %q", got, "/partner/api")
+				}
+				return nil
+			},
 		},
 	})
 }

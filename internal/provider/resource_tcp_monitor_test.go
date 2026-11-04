@@ -162,6 +162,11 @@ func TestAccTCPMonitorFull(t *testing.T) {
 				),
 			),
 		},
+		{
+			ResourceName:      "checkly_tcp_monitor.test",
+			ImportState:       true,
+			ImportStateVerify: true,
+		},
 	})
 }
 

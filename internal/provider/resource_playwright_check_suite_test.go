@@ -111,6 +111,16 @@ func TestAccPlaywrightCheckSuiteWithEnvironmentVariable(t *testing.T) {
 				),
 			),
 		},
+		{
+			ResourceName:      "checkly_playwright_check_suite.test",
+			ImportState:       true,
+			ImportStateVerify: true,
+			// The bundle attachment exists only in Terraform state: its
+			// metadata is computed from the local archive and the API never
+			// returns it, so an imported check has no bundle until the next
+			// apply attaches the configured one.
+			ImportStateVerifyIgnore: []string{"bundle"},
+		},
 	})
 }
 

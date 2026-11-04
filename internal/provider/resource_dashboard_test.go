@@ -480,6 +480,14 @@ func TestAccDashboardPrivateDashboard(t *testing.T) {
 			),
 		},
 		{
+			ResourceName:      "checkly_dashboard.test",
+			ImportState:       true,
+			ImportStateVerify: true,
+			// The API returns a dashboard's key only in the create
+			// response, so an imported dashboard has no key.
+			ImportStateVerifyIgnore: []string{"key"},
+		},
+		{
 			// An unrelated in-place update keeps the key of a private
 			// dashboard, and the plan already knows it.
 			Config: fmt.Sprintf(`

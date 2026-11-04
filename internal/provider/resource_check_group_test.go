@@ -235,6 +235,11 @@ func TestAccCheckGroupFull(t *testing.T) {
 				),
 			),
 		},
+		{
+			ResourceName:      "checkly_check_group.test",
+			ImportState:       true,
+			ImportStateVerify: true,
+		},
 	})
 }
 

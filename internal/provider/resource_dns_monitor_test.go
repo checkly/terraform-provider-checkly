@@ -300,6 +300,11 @@ func TestAccDNSMonitorFull(t *testing.T) {
 				),
 			),
 		},
+		{
+			ResourceName:      "checkly_dns_monitor.test",
+			ImportState:       true,
+			ImportStateVerify: true,
+		},
 	})
 }
 

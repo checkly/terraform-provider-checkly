@@ -33,5 +33,10 @@ func TestAccStatusPageServiceHappyPath(t *testing.T) {
 				),
 			),
 		},
+		{
+			ResourceName:      "checkly_status_page_service.test",
+			ImportState:       true,
+			ImportStateVerify: true,
+		},
 	})
 }
