@@ -148,8 +148,8 @@ Required:
 
 Optional:
 
-- `property` (String)
-- `target` (String)
+- `property` (String) A regular expression for `RESPONSE_DATA` whose first capture group is asserted instead of the whole response data. Not used for `RESPONSE_TIME`.
+- `target` (String) The value to compare against, e.g. a number of milliseconds for `RESPONSE_TIME`. Leave empty for comparisons that take no value, such as `IS_EMPTY` and `NOT_NULL`.
 
 
 

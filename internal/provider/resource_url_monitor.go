@@ -252,8 +252,9 @@ func (r *URLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 									},
 								},
 								"property": schema.StringAttribute{
-									Optional: true,
-									Computed: true,
+									Optional:    true,
+									Computed:    true,
+									Description: "Not used by `STATUS_CODE`, the only allowed source; leave empty.",
 								},
 								"comparison": schema.StringAttribute{
 									Required:    true,

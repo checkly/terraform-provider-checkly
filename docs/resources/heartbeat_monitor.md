@@ -55,9 +55,9 @@ resource "checkly_heartbeat_monitor" "example-heartbeat-monitor" {
 Required:
 
 - `grace` (Number) How long Checkly should wait before triggering any alerts when a ping does not arrive within the set period. The combination of `grace` and `grace_unit` must be at most 365 days.
-- `grace_unit` (String) Possible values `seconds`, `minutes`, `hours` and `days`.
+- `grace_unit` (String) The unit of `grace`. Possible values `seconds`, `minutes`, `hours` and `days`.
 - `period` (Number) How often you expect a ping to the ping URL. The combination of `period` and `period_unit` must be between 30 seconds and 365 days.
-- `period_unit` (String) Possible values `seconds`, `minutes`, `hours` and `days`.
+- `period_unit` (String) The unit of `period`. Possible values `seconds`, `minutes`, `hours` and `days`.
 
 Optional:
 

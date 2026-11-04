@@ -98,7 +98,7 @@ Required:
 
 Optional:
 
-- `property` (String)
+- `property` (String) The property selecting the asserted value within the source: a regular expression for `TEXT_ANSWER` whose first capture group is asserted instead of the whole answer, or a JSONPath expression for `JSON_ANSWER`. Not used for `RESPONSE_CODE` and `RESPONSE_TIME`.
 
 
 <a id="nestedatt--request--name_server"></a>

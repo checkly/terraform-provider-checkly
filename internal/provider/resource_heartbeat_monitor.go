@@ -136,7 +136,7 @@ func (r *HeartbeatMonitorResource) Schema(ctx context.Context, req resource.Sche
 					},
 					"period_unit": schema.StringAttribute{
 						Required:    true,
-						Description: "Possible values `seconds`, `minutes`, `hours` and `days`.",
+						Description: "The unit of `period`. Possible values `seconds`, `minutes`, `hours` and `days`.",
 						Validators: []validator.String{
 							stringvalidator.OneOf("seconds", "minutes", "hours", "days"),
 						},
@@ -147,7 +147,7 @@ func (r *HeartbeatMonitorResource) Schema(ctx context.Context, req resource.Sche
 					},
 					"grace_unit": schema.StringAttribute{
 						Required:    true,
-						Description: "Possible values `seconds`, `minutes`, `hours` and `days`.",
+						Description: "The unit of `grace`. Possible values `seconds`, `minutes`, `hours` and `days`.",
 						Validators: []validator.String{
 							stringvalidator.OneOf("seconds", "minutes", "hours", "days"),
 						},

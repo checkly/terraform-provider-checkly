@@ -253,16 +253,18 @@ func (r *TCPMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 									Description: "The source of the asserted value. Possible values are `RESPONSE_DATA` and `RESPONSE_TIME`.",
 								},
 								"property": schema.StringAttribute{
-									Optional: true,
-									Computed: true,
+									Optional:    true,
+									Computed:    true,
+									Description: "A regular expression for `RESPONSE_DATA` whose first capture group is asserted instead of the whole response data. Not used for `RESPONSE_TIME`.",
 								},
 								"comparison": schema.StringAttribute{
 									Required:    true,
 									Description: "The type of comparison to be executed between expected and actual value of the assertion. Possible values are `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL`, and `NOT_NULL`.",
 								},
 								"target": schema.StringAttribute{
-									Optional: true,
-									Computed: true,
+									Optional:    true,
+									Computed:    true,
+									Description: "The value to compare against, e.g. a number of milliseconds for `RESPONSE_TIME`. Leave empty for comparisons that take no value, such as `IS_EMPTY` and `NOT_NULL`.",
 								},
 							},
 						},

@@ -233,12 +233,12 @@ Optional:
 - `basic_auth` (Attributes) Set up HTTP basic authentication (username & password). (see [below for nested schema](#nestedatt--request--basic_auth))
 - `body` (String) The body of the request.
 - `body_type` (String) The `Content-Type` header of the request. Possible values `NONE`, `JSON`, `FORM`, `RAW`, and `GRAPHQL`. (Default `NONE`).
-- `follow_redirects` (Boolean)
-- `headers` (Map of String)
+- `follow_redirects` (Boolean) Whether to follow HTTP redirects. (Default `false`).
+- `headers` (Map of String) HTTP headers to send with the request, as a map of header names to values.
 - `ip_family` (String) IP Family to be used when executing the api check. The value can be either IPv4 or IPv6. (Default `IPv4`).
 - `method` (String) The HTTP method to use for this API check. Possible values are `GET`, `POST`, `PUT`, `HEAD`, `DELETE`, `PATCH`. (Default `GET`).
-- `query_parameters` (Map of String)
-- `skip_ssl` (Boolean)
+- `query_parameters` (Map of String) Query parameters to add to the request URL, as a map of parameter names to values.
+- `skip_ssl` (Boolean) Whether to skip TLS certificate validation of the request. (Default `false`).
 
 <a id="nestedatt--request--assertion"></a>
 ### Nested Schema for `request.assertion`
@@ -250,8 +250,8 @@ Required:
 
 Optional:
 
-- `property` (String)
-- `target` (String)
+- `property` (String) The property selecting the asserted value within the source: a JSONPath expression for `JSON_BODY`, a header name for `HEADERS`, or a regular expression for `TEXT_BODY` whose first capture group is asserted instead of the whole body. Not used for `STATUS_CODE` and `RESPONSE_TIME`.
+- `target` (String) The value to compare against, e.g. `200` for `STATUS_CODE` or a number of milliseconds for `RESPONSE_TIME`. Leave empty for comparisons that take no value, such as `IS_EMPTY` and `NOT_NULL`.
 
 
 <a id="nestedatt--request--basic_auth"></a>
@@ -259,8 +259,8 @@ Optional:
 
 Required:
 
-- `password` (String, Sensitive)
-- `username` (String)
+- `password` (String, Sensitive) The basic auth password.
+- `username` (String) The basic auth username.
 
 
 

@@ -63,8 +63,6 @@ var apiCheckRequestAttrTypes = map[string]attr.Type{
 type apiCheckRequestAttributeSchemaOptions struct {
 	// Description is the description of the request attribute.
 	Description string
-	// URLDescription is the description of the request.url attribute.
-	URLDescription string
 	// Required makes the request attribute mandatory.
 	Required bool
 }
@@ -85,25 +83,29 @@ func apiCheckRequestAttributeSchema(opts apiCheckRequestAttributeSchemaOptions) 
 			},
 			"url": schema.StringAttribute{
 				Required:    true,
-				Description: opts.URLDescription,
+				Description: "The URL to call.",
 			},
 			"follow_redirects": schema.BoolAttribute{
-				Optional: true,
-				Computed: true,
-				Default:  booldefault.StaticBool(false),
+				Optional:    true,
+				Computed:    true,
+				Default:     booldefault.StaticBool(false),
+				Description: "Whether to follow HTTP redirects. (Default `false`).",
 			},
 			"skip_ssl": schema.BoolAttribute{
-				Optional: true,
-				Computed: true,
-				Default:  booldefault.StaticBool(false),
+				Optional:    true,
+				Computed:    true,
+				Default:     booldefault.StaticBool(false),
+				Description: "Whether to skip TLS certificate validation of the request. (Default `false`).",
 			},
 			"headers": schema.MapAttribute{
 				Optional:    true,
 				ElementType: types.StringType,
+				Description: "HTTP headers to send with the request, as a map of header names to values.",
 			},
 			"query_parameters": schema.MapAttribute{
 				Optional:    true,
 				ElementType: types.StringType,
+				Description: "Query parameters to add to the request URL, as a map of parameter names to values.",
 			},
 			"body": schema.StringAttribute{
 				Optional:    true,
@@ -140,16 +142,18 @@ func apiCheckRequestAttributeSchema(opts apiCheckRequestAttributeSchemaOptions) 
 							Description: "The source of the asserted value. Possible values `STATUS_CODE`, `JSON_BODY`, `HEADERS`, `TEXT_BODY`, and `RESPONSE_TIME`.",
 						},
 						"property": schema.StringAttribute{
-							Optional: true,
-							Computed: true,
+							Optional:    true,
+							Computed:    true,
+							Description: "The property selecting the asserted value within the source: a JSONPath expression for `JSON_BODY`, a header name for `HEADERS`, or a regular expression for `TEXT_BODY` whose first capture group is asserted instead of the whole body. Not used for `STATUS_CODE` and `RESPONSE_TIME`.",
 						},
 						"comparison": schema.StringAttribute{
 							Required:    true,
 							Description: "The type of comparison to be executed between expected and actual value of the assertion. Possible values `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL`, and `NOT_NULL`.",
 						},
 						"target": schema.StringAttribute{
-							Optional: true,
-							Computed: true,
+							Optional:    true,
+							Computed:    true,
+							Description: "The value to compare against, e.g. `200` for `STATUS_CODE` or a number of milliseconds for `RESPONSE_TIME`. Leave empty for comparisons that take no value, such as `IS_EMPTY` and `NOT_NULL`.",
 						},
 					},
 				},
@@ -159,11 +163,13 @@ func apiCheckRequestAttributeSchema(opts apiCheckRequestAttributeSchemaOptions) 
 				Description: "Set up HTTP basic authentication (username & password).",
 				Attributes: map[string]schema.Attribute{
 					"username": schema.StringAttribute{
-						Required: true,
+						Required:    true,
+						Description: "The basic auth username.",
 					},
 					"password": schema.StringAttribute{
-						Required:  true,
-						Sensitive: true,
+						Required:    true,
+						Sensitive:   true,
+						Description: "The basic auth password.",
 					},
 				},
 			},

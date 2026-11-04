@@ -501,8 +501,9 @@ func (r *SSLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 									Description: "The type of comparison to be executed between expected and actual value of the assertion. Possible values are `EQUALS`, `NOT_EQUALS`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL`, and `NOT_NULL`. The allowed set depends on the asserted `source` and `property`; for example, boolean properties such as `chainTrusted` only allow `EQUALS`.",
 								},
 								"target": schema.StringAttribute{
-									Optional: true,
-									Computed: true,
+									Optional:    true,
+									Computed:    true,
+									Description: "The value to compare against, e.g. a number of days for the `daysUntilExpiry` property. Leave empty for comparisons that take no value, such as `IS_EMPTY` and `NOT_NULL`.",
 								},
 							},
 						},

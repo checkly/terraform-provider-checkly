@@ -94,7 +94,7 @@ Required:
 
 Optional:
 
-- `property` (String)
+- `property` (String) Not used by `STATUS_CODE`, the only allowed source; leave empty.
 
 
 

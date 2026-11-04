@@ -206,37 +206,38 @@ func (r *AlertChannelResource) Schema(ctx context.Context, req resource.SchemaRe
 				Optional:    true,
 				Computed:    true,
 				Default:     booldefault.StaticBool(true),
-				Description: "(Default `true`)",
+				Description: "Whether to send an alert when a check recovers. (Default `true`).",
 			},
 			"send_failure": schema.BoolAttribute{
 				Optional:    true,
 				Computed:    true,
 				Default:     booldefault.StaticBool(true),
-				Description: "(Default `true`)",
+				Description: "Whether to send an alert when a check fails. (Default `true`).",
 			},
 			"send_degraded": schema.BoolAttribute{
 				Optional:    true,
 				Computed:    true,
 				Default:     booldefault.StaticBool(false),
-				Description: "(Default `false`)",
+				Description: "Whether to send an alert when a check is degraded. (Default `false`).",
 			},
 			"ssl_expiry": schema.BoolAttribute{
 				Optional:    true,
 				Computed:    true,
 				Default:     booldefault.StaticBool(false),
-				Description: "(Default `false`)",
+				Description: "Whether to send an alert for expiring SSL certificates. (Default `false`).",
 			},
 			"ssl_expiry_threshold": schema.Int64Attribute{
 				Optional:    true,
 				Computed:    true,
 				Default:     int64default.StaticInt64(30),
-				Description: "Value must be between 1 and 30 (Default `30`)",
+				Description: "How many days before an SSL certificate expires to start sending alerts, when `ssl_expiry` is enabled. Value must be between 1 and 30. (Default `30`).",
 				Validators: []validator.Int64{
 					int64validator.Between(1, 30),
 				},
 			},
 			"email": schema.SingleNestedAttribute{
-				Optional: true,
+				Optional:    true,
+				Description: "Sends alerts by email.",
 				Attributes: map[string]schema.Attribute{
 					"address": schema.StringAttribute{
 						Required:    true,
@@ -246,6 +247,7 @@ func (r *AlertChannelResource) Schema(ctx context.Context, req resource.SchemaRe
 			},
 			"slack": schema.SingleNestedAttribute{
 				Optional:           true,
+				Description:        "Sends alerts to a Slack channel through a legacy Slack incoming webhook.",
 				DeprecationMessage: "The `slack` attribute uses the legacy Slack webhook integration and will be removed in a future major release. Use `slack_app` instead.",
 				Attributes: map[string]schema.Attribute{
 					"url": schema.StringAttribute{
@@ -260,7 +262,8 @@ func (r *AlertChannelResource) Schema(ctx context.Context, req resource.SchemaRe
 				},
 			},
 			"slack_app": schema.SingleNestedAttribute{
-				Optional: true,
+				Optional:    true,
+				Description: "Sends alerts to Slack channels or users through the Checkly Slack app.",
 				Attributes: map[string]schema.Attribute{
 					"slack_channels": schema.ListAttribute{
 						Required:    true,
@@ -273,7 +276,8 @@ func (r *AlertChannelResource) Schema(ctx context.Context, req resource.SchemaRe
 				},
 			},
 			"sms": schema.SingleNestedAttribute{
-				Optional: true,
+				Optional:    true,
+				Description: "Sends alerts as SMS messages.",
 				Attributes: map[string]schema.Attribute{
 					"name": schema.StringAttribute{
 						Required:    true,
@@ -286,7 +290,8 @@ func (r *AlertChannelResource) Schema(ctx context.Context, req resource.SchemaRe
 				},
 			},
 			"call": schema.SingleNestedAttribute{
-				Optional: true,
+				Optional:    true,
+				Description: "Sends alerts as phone calls.",
 				Attributes: map[string]schema.Attribute{
 					"name": schema.StringAttribute{
 						Required:    true,
@@ -299,16 +304,18 @@ func (r *AlertChannelResource) Schema(ctx context.Context, req resource.SchemaRe
 				},
 			},
 			"webhook": schema.SingleNestedAttribute{
-				Optional: true,
+				Optional:    true,
+				Description: "Sends alerts as HTTP requests to a webhook.",
 				Attributes: map[string]schema.Attribute{
 					"name": schema.StringAttribute{
-						Required: true,
+						Required:    true,
+						Description: "The name of this alert channel.",
 					},
 					"method": schema.StringAttribute{
 						Optional:    true,
 						Computed:    true,
 						Default:     stringdefault.StaticString("POST"),
-						Description: "(Default `POST`)",
+						Description: "The HTTP method of the webhook request. Possible values are `GET`, `POST`, `PUT`, `HEAD`, `DELETE` and `PATCH`. (Default `POST`).",
 					},
 					"headers": schema.MapAttribute{
 						Optional:    true,
@@ -316,6 +323,7 @@ func (r *AlertChannelResource) Schema(ctx context.Context, req resource.SchemaRe
 						Sensitive:   true,
 						Default:     mapdefault.StaticValue(types.MapValueMust(types.StringType, map[string]attr.Value{})),
 						ElementType: types.StringType,
+						Description: "HTTP headers to send with the webhook request, as a map of header names to values.",
 					},
 					"query_parameters": schema.MapAttribute{
 						Optional:    true,
@@ -323,17 +331,21 @@ func (r *AlertChannelResource) Schema(ctx context.Context, req resource.SchemaRe
 						Sensitive:   true,
 						Default:     mapdefault.StaticValue(types.MapValueMust(types.StringType, map[string]attr.Value{})),
 						ElementType: types.StringType,
+						Description: "Query parameters to add to the webhook URL, as a map of parameter names to values.",
 					},
 					"template": schema.StringAttribute{
-						Optional: true,
+						Optional:    true,
+						Description: "The body of the webhook request, which can contain template variables such as `{{ALERT_TITLE}}` and `{{RESULT_LINK}}`. When not set, Checkly sends its default JSON payload.",
 					},
 					"url": schema.StringAttribute{
-						Required:  true,
-						Sensitive: true,
+						Required:    true,
+						Sensitive:   true,
+						Description: "The URL to send the webhook request to.",
 					},
 					"webhook_secret": schema.StringAttribute{
-						Optional:  true,
-						Sensitive: true,
+						Optional:    true,
+						Sensitive:   true,
+						Description: "A secret to sign webhook requests with. When set, Checkly sends an HMAC-SHA256 signature of the request body, keyed with this secret, in the `x-checkly-signature` header.",
 					},
 					"webhook_type": schema.StringAttribute{
 						Optional:    true,
@@ -345,35 +357,44 @@ func (r *AlertChannelResource) Schema(ctx context.Context, req resource.SchemaRe
 				},
 			},
 			"opsgenie": schema.SingleNestedAttribute{
-				Optional: true,
+				Optional:    true,
+				Description: "Creates alerts in Opsgenie.",
 				Attributes: map[string]schema.Attribute{
 					"name": schema.StringAttribute{
-						Required: true,
+						Required:    true,
+						Description: "The name of this alert channel.",
 					},
 					"api_key": schema.StringAttribute{
-						Required:  true,
-						Sensitive: true,
+						Required:    true,
+						Sensitive:   true,
+						Description: "The API key of the Opsgenie integration to create alerts with.",
 					},
 					"region": schema.StringAttribute{
-						Required: true,
+						Required:    true,
+						Description: "The region of the Opsgenie account, which selects the Opsgenie API to call. Possible values are `EU` and `US`.",
 					},
 					"priority": schema.StringAttribute{
-						Required: true,
+						Required:    true,
+						Description: "The priority of the alerts created in Opsgenie. Possible values are `P1`, `P2`, `P3`, `P4` and `P5`.",
 					},
 				},
 			},
 			"pagerduty": schema.SingleNestedAttribute{
-				Optional: true,
+				Optional:    true,
+				Description: "Sends alerts to a PagerDuty service.",
 				Attributes: map[string]schema.Attribute{
 					"service_key": schema.StringAttribute{
-						Required:  true,
-						Sensitive: true,
+						Required:    true,
+						Sensitive:   true,
+						Description: "The integration key of the PagerDuty service to send alerts to.",
 					},
 					"service_name": schema.StringAttribute{
-						Optional: true,
+						Optional:    true,
+						Description: "The name of the PagerDuty service.",
 					},
 					"account": schema.StringAttribute{
-						Optional: true,
+						Optional:    true,
+						Description: "The name of the PagerDuty account.",
 					},
 				},
 			},
