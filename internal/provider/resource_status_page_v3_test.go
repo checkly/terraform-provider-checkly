@@ -53,8 +53,8 @@ func TestAccStatusPageV3ThemeColors(t *testing.T) {
 				resource "checkly_status_page_v3" "test" {
 					name = "themed"
 					url  = "status-page-v3-themed-%d"
-					theme_colors {
-						light {
+					theme_colors = {
+						light = {
 							body_background_color           = "#F9FAFB"
 							header_background_color         = "#FFFFFF"
 							header_font_color               = "#151A1E"
@@ -68,7 +68,7 @@ func TestAccStatusPageV3ThemeColors(t *testing.T) {
 							primary_button_background_color = "#151A1E"
 							primary_button_font_color       = "#FFFFFF"
 						}
-						dark {
+						dark = {
 							body_background_color           = "#14171C"
 							header_background_color         = "#171B21"
 							header_font_color               = "#FFFFFF"
@@ -88,18 +88,18 @@ func TestAccStatusPageV3ThemeColors(t *testing.T) {
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					statusPageV3Resource,
-					"theme_colors.0.light.0.link_font_color",
+					"theme_colors.light.link_font_color",
 					"#FF0000",
 				),
 				resource.TestCheckResourceAttr(
 					statusPageV3Resource,
-					"theme_colors.0.dark.0.link_font_color",
+					"theme_colors.dark.link_font_color",
 					"#00FF00",
 				),
 			),
 		},
 		{
-			// Removing the block clears the custom colors remotely; the
+			// Removing the attribute clears the custom colors remotely; the
 			// default palette the API then reports must not show up as a
 			// diff in this step's post-apply plan.
 			Config: fmt.Sprintf(`
@@ -109,10 +109,9 @@ func TestAccStatusPageV3ThemeColors(t *testing.T) {
 				}
 			`, rInt),
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
+				resource.TestCheckNoResourceAttr(
 					statusPageV3Resource,
-					"theme_colors.#",
-					"0",
+					"theme_colors",
 				),
 				testCheckStatusPageV3RemoteLinkColorsAreNot("#FF0000", "#00FF00"),
 			),
@@ -121,7 +120,7 @@ func TestAccStatusPageV3ThemeColors(t *testing.T) {
 }
 
 // testCheckStatusPageV3RemoteLinkColorsAreNot reads the page from the API:
-// once the theme_colors block is removed the provider stops tracking the
+// once the theme_colors attribute is removed the provider stops tracking the
 // colors, so state alone cannot show whether they were cleared remotely.
 func testCheckStatusPageV3RemoteLinkColorsAreNot(light, dark string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {

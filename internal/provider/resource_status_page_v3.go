@@ -6,7 +6,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -93,11 +92,9 @@ var statusPageV3ThemeColorGroupAttrTypes = func() map[string]attr.Type {
 var statusPageV3ThemeColorGroupObjectType = types.ObjectType{AttrTypes: statusPageV3ThemeColorGroupAttrTypes}
 
 var statusPageV3ThemeColorsAttrTypes = map[string]attr.Type{
-	"light": types.ListType{ElemType: statusPageV3ThemeColorGroupObjectType},
-	"dark":  types.ListType{ElemType: statusPageV3ThemeColorGroupObjectType},
+	"light": statusPageV3ThemeColorGroupObjectType,
+	"dark":  statusPageV3ThemeColorGroupObjectType,
 }
-
-var statusPageV3ThemeColorsObjectType = types.ObjectType{AttrTypes: statusPageV3ThemeColorsAttrTypes}
 
 // statusPageV3StringValidator rejects string values for which check returns
 // false. message is a format string receiving the attribute path (%q) and
@@ -144,7 +141,7 @@ var statusPageV3HexColorValidator = statusPageV3StringValidator{
 // The API requires the complete palette when custom colors are given, so
 // every color is required rather than defaulted here: the defaults belong
 // to the backend and may change.
-func statusPageV3ThemeColorGroupSchema(theme string) schema.ListNestedBlock {
+func statusPageV3ThemeColorGroupSchema(theme string) schema.SingleNestedAttribute {
 	colors := make(map[string]schema.Attribute, len(statusPageV3ThemeColorAttributes))
 	for _, a := range statusPageV3ThemeColorAttributes {
 		colors[a.key] = schema.StringAttribute{
@@ -156,15 +153,10 @@ func statusPageV3ThemeColorGroupSchema(theme string) schema.ListNestedBlock {
 		}
 	}
 
-	return schema.ListNestedBlock{
+	return schema.SingleNestedAttribute{
+		Required:    true,
 		Description: "The colors used when the page renders in " + theme + " mode.",
-		Validators: []validator.List{
-			listvalidator.IsRequired(),
-			listvalidator.SizeAtMost(1),
-		},
-		NestedObject: schema.NestedBlockObject{
-			Attributes: colors,
-		},
+		Attributes:  colors,
 	}
 }
 
@@ -196,7 +188,7 @@ type StatusPageV3ResourceModel struct {
 	FooterText         types.String `tfsdk:"footer_text"`
 	GoogleAnalyticsTag types.String `tfsdk:"google_analytics_tag"`
 	AllowIndexing      types.Bool   `tfsdk:"allow_indexing"`
-	ThemeColors        types.List   `tfsdk:"theme_colors"`
+	ThemeColors        types.Object `tfsdk:"theme_colors"`
 }
 
 func (r *StatusPageV3Resource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -283,22 +275,16 @@ func (r *StatusPageV3Resource) Schema(ctx context.Context, req resource.SchemaRe
 				Default:     booldefault.StaticBool(true),
 				Description: "Whether search engines may index the public page. (Default `true`).",
 			},
-		},
-		Blocks: map[string]schema.Block{
-			"theme_colors": schema.ListNestedBlock{
+			"theme_colors": schema.SingleNestedAttribute{
+				Optional: true,
 				Description: "Custom colors for the light and dark theme of the page. Requires custom " +
 					"theme colors to be part of your plan. The complete palette must be given: both " +
-					"`light` and `dark`, each with every color. Leave the block out to use Checkly's " +
+					"`light` and `dark`, each with every color. Leave the attribute out to use Checkly's " +
 					"default colors; the default palette the API then reports is not tracked, and the " +
-					"block is not populated when importing a page.",
-				Validators: []validator.List{
-					listvalidator.SizeAtMost(1),
-				},
-				NestedObject: schema.NestedBlockObject{
-					Blocks: map[string]schema.Block{
-						"light": statusPageV3ThemeColorGroupSchema("light"),
-						"dark":  statusPageV3ThemeColorGroupSchema("dark"),
-					},
+					"attribute is not populated when importing a page.",
+				Attributes: map[string]schema.Attribute{
+					"light": statusPageV3ThemeColorGroupSchema("light"),
+					"dark":  statusPageV3ThemeColorGroupSchema("dark"),
 				},
 			},
 		},
@@ -490,7 +476,7 @@ func statusPageV3FromModel(ctx context.Context, model *StatusPageV3ResourceModel
 		FooterText:         model.FooterText.ValueString(),
 		GoogleAnalyticsTag: model.GoogleAnalyticsTag.ValueString(),
 		AllowIndexing:      model.AllowIndexing.ValueBool(),
-		ThemeColors:        statusPageV3ThemeColorsFromList(model.ThemeColors),
+		ThemeColors:        statusPageV3ThemeColorsFromObject(model.ThemeColors),
 	}
 }
 
@@ -517,28 +503,17 @@ func statusPageV3ToModel(ctx context.Context, p *checkly.StatusPageV3, model *St
 	// The API always reports a palette, the defaults when none is set, so
 	// the colors are only tracked when configured. Tracking them regardless
 	// would make every plan of an unconfigured page try to remove them.
-	if statusPageV3ThemeColorsConfigured(model.ThemeColors) {
-		model.ThemeColors = statusPageV3ThemeColorsToList(p.ThemeColors, model.ThemeColors, diags)
+	if _, ok := statusPageV3KnownObject(model.ThemeColors); ok {
+		model.ThemeColors = statusPageV3ThemeColorsToObject(p.ThemeColors, model.ThemeColors, diags)
 	} else {
-		model.ThemeColors = types.ListValueMust(statusPageV3ThemeColorsObjectType, []attr.Value{})
+		model.ThemeColors = types.ObjectNull(statusPageV3ThemeColorsAttrTypes)
 	}
 }
 
-// statusPageV3ThemeColorsConfigured reports whether the theme_colors block
-// value holds a palette.
-func statusPageV3ThemeColorsConfigured(list types.List) bool {
-	return !list.IsNull() && !list.IsUnknown() && len(list.Elements()) > 0
-}
-
-// statusPageV3FirstObject returns the single object of a MaxItems:1 block
-// list, or false when there is none.
-func statusPageV3FirstObject(value attr.Value) (types.Object, bool) {
-	list, ok := value.(types.List)
-	if !ok || list.IsNull() || list.IsUnknown() || len(list.Elements()) == 0 {
-		return types.Object{}, false
-	}
-
-	obj, ok := list.Elements()[0].(types.Object)
+// statusPageV3KnownObject returns value as an object, or false when it is
+// not an object or is null or unknown.
+func statusPageV3KnownObject(value attr.Value) (types.Object, bool) {
+	obj, ok := value.(types.Object)
 	if !ok || obj.IsNull() || obj.IsUnknown() {
 		return types.Object{}, false
 	}
@@ -546,10 +521,10 @@ func statusPageV3FirstObject(value attr.Value) (types.Object, bool) {
 	return obj, true
 }
 
-func statusPageV3ThemeColorGroupFromList(value attr.Value) checkly.StatusPageV3ThemeColorGroup {
+func statusPageV3ThemeColorGroupFromObject(value attr.Value) checkly.StatusPageV3ThemeColorGroup {
 	var group checkly.StatusPageV3ThemeColorGroup
 
-	obj, ok := statusPageV3FirstObject(value)
+	obj, ok := statusPageV3KnownObject(value)
 	if !ok {
 		return group
 	}
@@ -564,26 +539,25 @@ func statusPageV3ThemeColorGroupFromList(value attr.Value) checkly.StatusPageV3T
 	return group
 }
 
-func statusPageV3ThemeColorsFromList(list types.List) *checkly.StatusPageV3ThemeColors {
-	obj, ok := statusPageV3FirstObject(list)
-	if !ok {
+func statusPageV3ThemeColorsFromObject(obj types.Object) *checkly.StatusPageV3ThemeColors {
+	if _, ok := statusPageV3KnownObject(obj); !ok {
 		return nil
 	}
 
 	attrs := obj.Attributes()
 
 	return &checkly.StatusPageV3ThemeColors{
-		Light: statusPageV3ThemeColorGroupFromList(attrs["light"]),
-		Dark:  statusPageV3ThemeColorGroupFromList(attrs["dark"]),
+		Light: statusPageV3ThemeColorGroupFromObject(attrs["light"]),
+		Dark:  statusPageV3ThemeColorGroupFromObject(attrs["dark"]),
 	}
 }
 
-// statusPageV3ThemeColorGroupToList converts a color group to its block
-// value. Hex colors are case-insensitive, so a prior value that only differs
-// from the API's in case is kept to avoid a spurious diff.
-func statusPageV3ThemeColorGroupToList(group *checkly.StatusPageV3ThemeColorGroup, prior attr.Value, diags *diag.Diagnostics) types.List {
+// statusPageV3ThemeColorGroupToObject converts a color group to its
+// attribute value. Hex colors are case-insensitive, so a prior value that
+// only differs from the API's in case is kept to avoid a spurious diff.
+func statusPageV3ThemeColorGroupToObject(group *checkly.StatusPageV3ThemeColorGroup, prior attr.Value, diags *diag.Diagnostics) types.Object {
 	var priorAttrs map[string]attr.Value
-	if obj, ok := statusPageV3FirstObject(prior); ok {
+	if obj, ok := statusPageV3KnownObject(prior); ok {
 		priorAttrs = obj.Attributes()
 	}
 
@@ -599,33 +573,27 @@ func statusPageV3ThemeColorGroupToList(group *checkly.StatusPageV3ThemeColorGrou
 	obj, d := types.ObjectValue(statusPageV3ThemeColorGroupAttrTypes, colors)
 	diags.Append(d...)
 
-	list, d := types.ListValue(statusPageV3ThemeColorGroupObjectType, []attr.Value{obj})
-	diags.Append(d...)
-
-	return list
+	return obj
 }
 
-// statusPageV3ThemeColorsToList converts the API palette to the
-// theme_colors block value, using prior to keep the configured spelling of
-// each color.
-func statusPageV3ThemeColorsToList(themeColors *checkly.StatusPageV3ThemeColors, prior types.List, diags *diag.Diagnostics) types.List {
+// statusPageV3ThemeColorsToObject converts the API palette to the
+// theme_colors attribute value, using prior to keep the configured spelling
+// of each color. It is null when the API reports no palette.
+func statusPageV3ThemeColorsToObject(themeColors *checkly.StatusPageV3ThemeColors, prior types.Object, diags *diag.Diagnostics) types.Object {
 	if themeColors == nil {
-		return types.ListValueMust(statusPageV3ThemeColorsObjectType, []attr.Value{})
+		return types.ObjectNull(statusPageV3ThemeColorsAttrTypes)
 	}
 
 	var priorAttrs map[string]attr.Value
-	if obj, ok := statusPageV3FirstObject(prior); ok {
+	if obj, ok := statusPageV3KnownObject(prior); ok {
 		priorAttrs = obj.Attributes()
 	}
 
 	obj, d := types.ObjectValue(statusPageV3ThemeColorsAttrTypes, map[string]attr.Value{
-		"light": statusPageV3ThemeColorGroupToList(&themeColors.Light, priorAttrs["light"], diags),
-		"dark":  statusPageV3ThemeColorGroupToList(&themeColors.Dark, priorAttrs["dark"], diags),
+		"light": statusPageV3ThemeColorGroupToObject(&themeColors.Light, priorAttrs["light"], diags),
+		"dark":  statusPageV3ThemeColorGroupToObject(&themeColors.Dark, priorAttrs["dark"], diags),
 	})
 	diags.Append(d...)
 
-	list, d := types.ListValue(statusPageV3ThemeColorsObjectType, []attr.Value{obj})
-	diags.Append(d...)
-
-	return list
+	return obj
 }

@@ -1699,6 +1699,81 @@ resource "checkly_status_page_v3" "test" {
 }
 `),
 
+	// Custom colors, which SDK v2 stored as nested lists of one element.
+	"status_page_v3_theme_colors": newSDKv2UpgradeCase(`
+resource "checkly_status_page_v3" "test" {
+  name = "tf-upgrade-{{id}}-status-page-v3-theme"
+  url  = "tf-upgrade-sp3t-{{id}}"
+
+  theme_colors {
+    light {
+      body_background_color           = "#F9FAFB"
+      header_background_color         = "#FFFFFF"
+      header_font_color               = "#151A1E"
+      title_font_color                = "#212930"
+      body_font_color                 = "#475766"
+      body_font_color_muted           = "#60758A"
+      navigation_font_color           = "#151A1E"
+      link_font_color                 = "#FF0000"
+      card_background_color           = "#FFFFFF"
+      border_color                    = "#E0E5EB"
+      primary_button_background_color = "#151A1E"
+      primary_button_font_color       = "#FFFFFF"
+    }
+    dark {
+      body_background_color           = "#14171C"
+      header_background_color         = "#171B21"
+      header_font_color               = "#FFFFFF"
+      title_font_color                = "#ECEEF2"
+      body_font_color                 = "#C6CDD7"
+      body_font_color_muted           = "#A3B3C2"
+      navigation_font_color           = "#FFFFFF"
+      link_font_color                 = "#00FF00"
+      card_background_color           = "#171B21"
+      border_color                    = "#242B34"
+      primary_button_background_color = "#242B34"
+      primary_button_font_color       = "#FFFFFF"
+    }
+  }
+}
+`, `
+resource "checkly_status_page_v3" "test" {
+  name = "tf-upgrade-{{id}}-status-page-v3-theme"
+  url  = "tf-upgrade-sp3t-{{id}}"
+
+  theme_colors = {
+    light = {
+      body_background_color           = "#F9FAFB"
+      header_background_color         = "#FFFFFF"
+      header_font_color               = "#151A1E"
+      title_font_color                = "#212930"
+      body_font_color                 = "#475766"
+      body_font_color_muted           = "#60758A"
+      navigation_font_color           = "#151A1E"
+      link_font_color                 = "#FF0000"
+      card_background_color           = "#FFFFFF"
+      border_color                    = "#E0E5EB"
+      primary_button_background_color = "#151A1E"
+      primary_button_font_color       = "#FFFFFF"
+    }
+    dark = {
+      body_background_color           = "#14171C"
+      header_background_color         = "#171B21"
+      header_font_color               = "#FFFFFF"
+      title_font_color                = "#ECEEF2"
+      body_font_color                 = "#C6CDD7"
+      body_font_color_muted           = "#A3B3C2"
+      navigation_font_color           = "#FFFFFF"
+      link_font_color                 = "#00FF00"
+      card_background_color           = "#171B21"
+      border_color                    = "#242B34"
+      primary_button_background_color = "#242B34"
+      primary_button_font_color       = "#FFFFFF"
+    }
+  }
+}
+`),
+
 	"status_page_v3_component": newSDKv2UpgradeCase(`
 resource "checkly_status_page_v3" "test" {
   name = "tf-upgrade-{{id}}-components"

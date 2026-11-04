@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
@@ -87,7 +86,7 @@ func TestEncodeDecodeStatusPageV3ThemeColors(t *testing.T) {
 	var diags diag.Diagnostics
 	// Configured: the palette is tracked.
 	model := StatusPageV3ResourceModel{
-		ThemeColors: statusPageV3ThemeColorsToList(want.ThemeColors, types.ListNull(statusPageV3ThemeColorsObjectType), &diags),
+		ThemeColors: statusPageV3ThemeColorsToObject(want.ThemeColors, types.ObjectNull(statusPageV3ThemeColorsAttrTypes), &diags),
 	}
 	statusPageV3ToModel(ctx, &want, &model, &diags)
 	got := statusPageV3FromModel(ctx, &model, &diags)
@@ -113,7 +112,7 @@ func TestStatusPageV3ThemeColorsKeepConfiguredCase(t *testing.T) {
 	}
 	var diags diag.Diagnostics
 	model := StatusPageV3ResourceModel{
-		ThemeColors: statusPageV3ThemeColorsToList(configured, types.ListNull(statusPageV3ThemeColorsObjectType), &diags),
+		ThemeColors: statusPageV3ThemeColorsToObject(configured, types.ObjectNull(statusPageV3ThemeColorsAttrTypes), &diags),
 	}
 	statusPageV3ToModel(ctx, &remote, &model, &diags)
 	got := statusPageV3FromModel(ctx, &model, &diags)
@@ -128,7 +127,7 @@ func TestStatusPageV3ThemeColorsKeepConfiguredCase(t *testing.T) {
 func TestStatusPageV3ThemeColorsNotTrackedUnlessConfigured(t *testing.T) {
 	ctx := context.Background()
 	// The API always reports a palette (the defaults when none is set);
-	// without a theme_colors block it must not land in state.
+	// without a theme_colors attribute it must not land in state.
 	remote := checkly.StatusPageV3{
 		Name: "Foo v3 status page",
 		URL:  "foo-v3-status-page",
@@ -137,9 +136,9 @@ func TestStatusPageV3ThemeColorsNotTrackedUnlessConfigured(t *testing.T) {
 			Dark:  checkly.StatusPageV3ThemeColorGroup{LinkFontColor: "#248AFF"},
 		},
 	}
-	for name, prior := range map[string]types.List{
-		"null":  types.ListNull(statusPageV3ThemeColorsObjectType),
-		"empty": types.ListValueMust(statusPageV3ThemeColorsObjectType, []attr.Value{}),
+	for name, prior := range map[string]types.Object{
+		"null":    types.ObjectNull(statusPageV3ThemeColorsAttrTypes),
+		"unknown": types.ObjectUnknown(statusPageV3ThemeColorsAttrTypes),
 	} {
 		var diags diag.Diagnostics
 		model := StatusPageV3ResourceModel{ThemeColors: prior}
@@ -150,8 +149,8 @@ func TestStatusPageV3ThemeColorsNotTrackedUnlessConfigured(t *testing.T) {
 		if got := statusPageV3FromModel(ctx, &model, &diags); got.ThemeColors != nil {
 			t.Errorf("%s: expected no theme colors in state, got %+v", name, got.ThemeColors)
 		}
-		if model.ThemeColors.IsNull() || len(model.ThemeColors.Elements()) != 0 {
-			t.Errorf("%s: expected an empty theme_colors block list, got %s", name, model.ThemeColors)
+		if !model.ThemeColors.IsNull() {
+			t.Errorf("%s: expected a null theme_colors attribute, got %s", name, model.ThemeColors)
 		}
 	}
 }

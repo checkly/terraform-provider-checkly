@@ -153,6 +153,22 @@ func TestUpgradeSDKv2State(t *testing.T) {
 		requireStateValue(t, state, path.Root("bundle").AtName("metadata"), types.StringValue("{}"))
 	})
 
+	t.Run("status_page_v3", func(t *testing.T) {
+		// SDK v2 stored theme_colors, light and dark as lists of one
+		// element.
+		state := upgradeSDKv2Fixture(t, NewStatusPageV3Resource(), "status_page_v3")
+		themeColors := path.Root("theme_colors")
+		requireStateValue(t, state, themeColors.AtName("light").AtName("link_font_color"), types.StringValue("#FF0000"))
+		requireStateValue(t, state, themeColors.AtName("dark").AtName("link_font_color"), types.StringValue("#00FF00"))
+		requireStateValue(t, state, themeColors.AtName("dark").AtName("border_color"), types.StringValue("#000000"))
+	})
+
+	t.Run("status_page_v3 with default colors", func(t *testing.T) {
+		// Without custom colors SDK v2 stored theme_colors as [].
+		state := upgradeSDKv2Fixture(t, NewStatusPageV3Resource(), "status_page_v3_default_colors")
+		requireStateNull(t, state, path.Root("theme_colors"))
+	})
+
 	// State refreshed by SDK v2 holds empty values where the framework
 	// stores null.
 	t.Run("url_monitor after refresh", func(t *testing.T) {
