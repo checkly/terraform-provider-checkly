@@ -52,7 +52,7 @@ func (d *StaticIPsDataSource) Schema(ctx context.Context, req datasource.SchemaR
 			"addresses": schema.SetAttribute{
 				ElementType: types.StringType,
 				Computed:    true,
-				Description: "Static IP addresses for Checkly's runner infrastructure.",
+				Description: "Static IP addresses for Checkly's runner infrastructure, in CIDR notation (for example `3.64.0.1/32`).",
 			},
 			"locations": schema.SetAttribute{
 				ElementType: types.StringType,
