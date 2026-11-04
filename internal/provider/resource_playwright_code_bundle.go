@@ -18,17 +18,17 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	tfpath "github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 
 	checkly "github.com/checkly/checkly-go-sdk"
 )
@@ -59,12 +59,12 @@ type PlaywrightCodeBundleResource struct {
 // PlaywrightCodeBundleResourceModel describes the resource data model.
 type PlaywrightCodeBundleResourceModel struct {
 	ID              types.String `tfsdk:"id"`
-	PrebuiltArchive types.List   `tfsdk:"prebuilt_archive"`
+	PrebuiltArchive types.Object `tfsdk:"prebuilt_archive"`
 	Metadata        types.String `tfsdk:"metadata"`
 }
 
 // PlaywrightCodeBundlePrebuiltArchiveModel describes the prebuilt_archive
-// block data model.
+// attribute data model.
 type PlaywrightCodeBundlePrebuiltArchiveModel struct {
 	File types.String `tfsdk:"file"`
 }
@@ -98,29 +98,22 @@ func (r *PlaywrightCodeBundleResource) Schema(ctx context.Context, req resource.
 					playwrightCodeBundleMetadataPlanModifier{},
 				},
 			},
-		},
-		Blocks: map[string]schema.Block{
-			playwrightPrebuiltArchiveAttributeName: schema.ListNestedBlock{
+			playwrightPrebuiltArchiveAttributeName: schema.SingleNestedAttribute{
+				Required:    true,
 				Description: "A prebuilt archive containing the code bundle.",
-				Validators: []validator.List{
-					listvalidator.IsRequired(),
-					listvalidator.SizeAtMost(1),
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.RequiresReplace(),
 				},
-				PlanModifiers: []planmodifier.List{
-					listplanmodifier.RequiresReplace(),
-				},
-				NestedObject: schema.NestedBlockObject{
-					Attributes: map[string]schema.Attribute{
-						"file": schema.StringAttribute{
-							Required:    true,
-							Description: "Path to the archive file.",
-							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.RequiresReplace(),
-							},
-							Validators: []validator.String{
-								playwrightFileExistsValidator{},
-								playwrightGzipArchiveValidator{},
-							},
+				Attributes: map[string]schema.Attribute{
+					"file": schema.StringAttribute{
+						Required:    true,
+						Description: "Path to the archive file.",
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
+						},
+						Validators: []validator.String{
+							playwrightFileExistsValidator{},
+							playwrightGzipArchiveValidator{},
 						},
 					},
 				},
@@ -147,7 +140,7 @@ func (r *PlaywrightCodeBundleResource) Create(ctx context.Context, req resource.
 		return
 	}
 
-	archive := playwrightCodeBundleArchiveFromList(ctx, plan.PrebuiltArchive, &resp.Diagnostics)
+	archive := playwrightCodeBundleArchiveFromObject(ctx, plan.PrebuiltArchive, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -300,14 +293,14 @@ func (m playwrightCodeBundleMetadataPlanModifier) MarkdownDescription(ctx contex
 }
 
 func (m playwrightCodeBundleMetadataPlanModifier) PlanModifyString(ctx context.Context, req planmodifier.StringRequest, resp *planmodifier.StringResponse) {
-	var archiveList types.List
+	var archiveObject types.Object
 
-	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, playwrightPrebuiltArchivePath(), &archiveList)...)
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, playwrightPrebuiltArchivePath(), &archiveObject)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	archive := playwrightCodeBundleArchiveFromList(ctx, archiveList, &resp.Diagnostics)
+	archive := playwrightCodeBundleArchiveFromObject(ctx, archiveObject, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() || archive == nil {
 		return
 	}
@@ -355,26 +348,26 @@ func (m playwrightCodeBundleMetadataPlanModifier) PlanModifyString(ctx context.C
 }
 
 // playwrightPrebuiltArchivePath returns the attribute path of the
-// prebuilt_archive block.
+// prebuilt_archive attribute.
 func playwrightPrebuiltArchivePath() tfpath.Path {
 	return tfpath.Root(playwrightPrebuiltArchiveAttributeName)
 }
 
-// playwrightCodeBundleArchiveFromList converts the prebuilt_archive block
-// value to an archive helper. It returns nil when the block is absent or its
-// file path is not yet known.
-func playwrightCodeBundleArchiveFromList(ctx context.Context, list types.List, diags *diag.Diagnostics) *PlaywrightCodeBundlePrebuiltArchiveAttribute {
-	if list.IsNull() || list.IsUnknown() {
+// playwrightCodeBundleArchiveFromObject converts the prebuilt_archive
+// attribute value to an archive helper. It returns nil when the attribute is
+// absent or its file path is not yet known.
+func playwrightCodeBundleArchiveFromObject(ctx context.Context, obj types.Object, diags *diag.Diagnostics) *PlaywrightCodeBundlePrebuiltArchiveAttribute {
+	if obj.IsNull() || obj.IsUnknown() {
 		return nil
 	}
 
-	var models []PlaywrightCodeBundlePrebuiltArchiveModel
-	diags.Append(list.ElementsAs(ctx, &models, false)...)
-	if diags.HasError() || len(models) == 0 {
+	var model PlaywrightCodeBundlePrebuiltArchiveModel
+	diags.Append(obj.As(ctx, &model, basetypes.ObjectAsOptions{})...)
+	if diags.HasError() {
 		return nil
 	}
 
-	file := models[0].File
+	file := model.File
 	if file.IsNull() || file.IsUnknown() {
 		return nil
 	}

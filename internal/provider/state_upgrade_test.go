@@ -149,7 +149,8 @@ func TestUpgradeSDKv2State(t *testing.T) {
 		state := upgradeSDKv2Fixture(t, NewPlaywrightCheckSuiteResource(), "playwright_check_suite")
 		requireStateValue(t, state, path.Root("runtime").AtName("steps").AtName("install").AtName("command"), types.StringValue("npm ci"))
 		requireStateValue(t, state, path.Root("runtime").AtName("playwright").AtName("version"), types.StringValue("1.50.0"))
-		requireStateValue(t, state, path.Root("bundle").AtListIndex(0).AtName("id"), types.StringValue("b"))
+		requireStateValue(t, state, path.Root("bundle").AtName("id"), types.StringValue("b"))
+		requireStateValue(t, state, path.Root("bundle").AtName("metadata"), types.StringValue("{}"))
 	})
 
 	// State refreshed by SDK v2 holds empty values where the framework

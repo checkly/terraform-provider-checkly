@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -69,14 +68,14 @@ type PlaywrightCheckSuiteResourceModel struct {
 	PrivateLocations         types.Set    `tfsdk:"private_locations"`
 	AlertSettings            types.Object `tfsdk:"alert_settings"`
 	UseGlobalAlertSettings   types.Bool   `tfsdk:"use_global_alert_settings"`
-	Bundle                   types.List   `tfsdk:"bundle"`
+	Bundle                   types.Object `tfsdk:"bundle"`
 	Runtime                  types.Object `tfsdk:"runtime"`
 	GroupID                  types.Int64  `tfsdk:"group_id"`
 	GroupOrder               types.Int64  `tfsdk:"group_order"`
 	TriggerIncident          types.Object `tfsdk:"trigger_incident"`
 }
 
-// PlaywrightCheckSuiteBundleModel describes the bundle block data model.
+// PlaywrightCheckSuiteBundleModel describes the bundle attribute data model.
 type PlaywrightCheckSuiteBundleModel struct {
 	ID       types.String `tfsdk:"id"`
 	Metadata types.String `tfsdk:"metadata"`
@@ -368,31 +367,26 @@ func (r *PlaywrightCheckSuiteResource) Schema(ctx context.Context, req resource.
 				Default:     int64default.StaticInt64(0),
 				Description: "The position of the check in the check group. It determines in what order checks and monitors are run when a group is triggered from the API or from CI/CD.",
 			},
+			"bundle": schema.SingleNestedAttribute{
+				Required:    true,
+				Description: "Attaches a code bundle to the check.",
+				Attributes: map[string]schema.Attribute{
+					"id": schema.StringAttribute{
+						Required:    true,
+						Description: "The ID of the code bundle.",
+					},
+					playwrightMetadataAttributeName: schema.StringAttribute{
+						Required:    true,
+						Description: "The generated metadata of the code bundle.",
+					},
+				},
+			},
 		},
 		Blocks: map[string]schema.Block{
 			environmentVariableAttributeName: makeEnvironmentVariableSchema(EnvironmentVariableAttributeSchemaOptions{
 				Description: "Insert environment variables into the execution environment.",
 			}),
 			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{}),
-			"bundle": schema.ListNestedBlock{
-				Description: "Attaches a code bundle to the check.",
-				Validators: []validator.List{
-					listvalidator.IsRequired(),
-					listvalidator.SizeAtMost(1),
-				},
-				NestedObject: schema.NestedBlockObject{
-					Attributes: map[string]schema.Attribute{
-						"id": schema.StringAttribute{
-							Required:    true,
-							Description: "The ID of the code bundle.",
-						},
-						playwrightMetadataAttributeName: schema.StringAttribute{
-							Required:    true,
-							Description: "The generated metadata of the code bundle.",
-						},
-					},
-				},
-			},
 		},
 	}
 }
@@ -571,40 +565,36 @@ func playwrightCheckSuiteFromModel(
 	check.PrivateLocations = &privateLocations
 
 	if !model.Bundle.IsNull() && !model.Bundle.IsUnknown() {
-		var bundles []PlaywrightCheckSuiteBundleModel
-		diags.Append(model.Bundle.ElementsAs(ctx, &bundles, false)...)
+		var bundle PlaywrightCheckSuiteBundleModel
+		diags.Append(model.Bundle.As(ctx, &bundle, basetypes.ObjectAsOptions{})...)
 		if diags.HasError() {
 			return nil
 		}
 
-		if len(bundles) > 0 {
-			bundle := bundles[0]
-
-			if !bundle.ID.IsNull() && !bundle.ID.IsUnknown() {
-				bundlePath, err := base64.StdEncoding.DecodeString(bundle.ID.ValueString())
-				if err != nil {
-					diags.AddError(
-						"Invalid Code Bundle",
-						fmt.Sprintf("Invalid code bundle identifier %q: %s", bundle.ID.ValueString(), err),
-					)
-					return nil
-				}
-
-				check.CodeBundlePath = string(bundlePath)
+		if !bundle.ID.IsNull() && !bundle.ID.IsUnknown() {
+			bundlePath, err := base64.StdEncoding.DecodeString(bundle.ID.ValueString())
+			if err != nil {
+				diags.AddError(
+					"Invalid Code Bundle",
+					fmt.Sprintf("Invalid code bundle identifier %q: %s", bundle.ID.ValueString(), err),
+				)
+				return nil
 			}
 
-			if !bundle.Metadata.IsNull() && !bundle.Metadata.IsUnknown() {
-				metadata, err := PlaywrightCodeBundleMetadataFromString(bundle.Metadata.ValueString())
-				if err != nil {
-					diags.AddError(
-						"Invalid Code Bundle",
-						fmt.Sprintf("Failed to decode code bundle metadata: %s", err),
-					)
-					return nil
-				}
+			check.CodeBundlePath = string(bundlePath)
+		}
 
-				check.CacheHash = metadata.CacheHash
+		if !bundle.Metadata.IsNull() && !bundle.Metadata.IsUnknown() {
+			metadata, err := PlaywrightCodeBundleMetadataFromString(bundle.Metadata.ValueString())
+			if err != nil {
+				diags.AddError(
+					"Invalid Code Bundle",
+					fmt.Sprintf("Failed to decode code bundle metadata: %s", err),
+				)
+				return nil
 			}
+
+			check.CacheHash = metadata.CacheHash
 		}
 	}
 
@@ -955,8 +945,8 @@ func (m playwrightCheckSuiteRuntimePlanModifier) PlanModifyObject(ctx context.Co
 		return
 	}
 
-	var bundleList types.List
-	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, tfpath.Root("bundle"), &bundleList)...)
+	var bundleObject types.Object
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, tfpath.Root("bundle"), &bundleObject)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -969,43 +959,34 @@ func (m playwrightCheckSuiteRuntimePlanModifier) PlanModifyObject(ctx context.Co
 	// the runtime is resolved when the modifier re-runs during apply with the
 	// metadata available.
 	unknown := types.ObjectUnknown(playwrightCheckSuiteRuntimeAttrTypes)
-	if bundleList.IsUnknown() {
+	if bundleObject.IsUnknown() {
 		resp.PlanValue = unknown
 		return
 	}
 
 	metadata := new(PlaywrightCodeBundleMetadata)
-	if !bundleList.IsNull() {
-		for _, element := range bundleList.Elements() {
-			if element.IsUnknown() {
-				resp.PlanValue = unknown
-				return
-			}
-		}
-
-		var bundles []PlaywrightCheckSuiteBundleModel
-		resp.Diagnostics.Append(bundleList.ElementsAs(ctx, &bundles, false)...)
+	if !bundleObject.IsNull() {
+		var bundle PlaywrightCheckSuiteBundleModel
+		resp.Diagnostics.Append(bundleObject.As(ctx, &bundle, basetypes.ObjectAsOptions{})...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
 
-		if len(bundles) > 0 {
-			if bundles[0].Metadata.IsUnknown() {
-				resp.PlanValue = unknown
+		if bundle.Metadata.IsUnknown() {
+			resp.PlanValue = unknown
+			return
+		}
+
+		if !bundle.Metadata.IsNull() {
+			decoded, err := PlaywrightCodeBundleMetadataFromString(bundle.Metadata.ValueString())
+			if err != nil {
+				resp.Diagnostics.AddError(
+					"Invalid Code Bundle",
+					fmt.Sprintf("Failed to decode code bundle metadata: %s", err),
+				)
 				return
 			}
-
-			if !bundles[0].Metadata.IsNull() {
-				decoded, err := PlaywrightCodeBundleMetadataFromString(bundles[0].Metadata.ValueString())
-				if err != nil {
-					resp.Diagnostics.AddError(
-						"Invalid Code Bundle",
-						fmt.Sprintf("Failed to decode code bundle metadata: %s", err),
-					)
-					return
-				}
-				metadata = decoded
-			}
+			metadata = decoded
 		}
 	}
 

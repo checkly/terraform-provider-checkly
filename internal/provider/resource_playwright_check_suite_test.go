@@ -6,11 +6,12 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 )
 
 const playwrightCheckSuiteBase = `
 	resource "checkly_playwright_code_bundle" "test" {
-		prebuilt_archive {
+		prebuilt_archive = {
 			file = "../../fixtures/playwright-project-pnpm.tar.gz"
 		}
 	}
@@ -28,7 +29,7 @@ func TestAccPlaywrightCheckSuiteWithEnvironmentVariable(t *testing.T) {
 					use_global_alert_settings = true
 					locations                 = ["us-east-1"]
 
-					bundle {
+					bundle = {
 						id       = checkly_playwright_code_bundle.test.id
 						metadata = checkly_playwright_code_bundle.test.metadata
 					}
@@ -125,7 +126,7 @@ func TestAccPlaywrightCheckSuiteDescriptionRemoval(t *testing.T) {
 					use_global_alert_settings = true
 					locations                 = ["us-east-1"]
 
-					bundle {
+					bundle = {
 						id       = checkly_playwright_code_bundle.test.id
 						metadata = checkly_playwright_code_bundle.test.metadata
 					}
@@ -146,7 +147,7 @@ func TestAccPlaywrightCheckSuiteDescriptionRemoval(t *testing.T) {
 					use_global_alert_settings = true
 					locations                 = ["us-east-1"]
 
-					bundle {
+					bundle = {
 						id       = checkly_playwright_code_bundle.test.id
 						metadata = checkly_playwright_code_bundle.test.metadata
 					}
@@ -164,7 +165,7 @@ func TestAccPlaywrightCheckSuiteDescriptionRemoval(t *testing.T) {
 func TestAccPlaywrightCheckSuiteBundleChange(t *testing.T) {
 	pnpmBundle := `
 		resource "checkly_playwright_code_bundle" "test" {
-			prebuilt_archive {
+			prebuilt_archive = {
 				file = "../../fixtures/playwright-project-pnpm.tar.gz"
 			}
 		}
@@ -172,7 +173,7 @@ func TestAccPlaywrightCheckSuiteBundleChange(t *testing.T) {
 
 	pnpmNextBundle := `
 		resource "checkly_playwright_code_bundle" "test" {
-			prebuilt_archive {
+			prebuilt_archive = {
 				file = "../../fixtures/playwright-project-pnpm-playwright-next.tar.gz"
 			}
 		}
@@ -186,7 +187,7 @@ func TestAccPlaywrightCheckSuiteBundleChange(t *testing.T) {
 			use_global_alert_settings = true
 			locations                 = ["us-east-1"]
 
-			bundle {
+			bundle = {
 				id       = checkly_playwright_code_bundle.test.id
 				metadata = checkly_playwright_code_bundle.test.metadata
 			}
@@ -215,9 +216,17 @@ func TestAccPlaywrightCheckSuiteBundleChange(t *testing.T) {
 				),
 			),
 		},
-		// Step 2: Swap to a different archive — auto-detected values should update.
+		// Step 2: Swap to a different archive — auto-detected values should
+		// update. A new archive replaces the code bundle, while the check
+		// suite that references it is updated in place.
 		{
 			Config: pnpmNextBundle + checkSuite,
+			ConfigPlanChecks: resource.ConfigPlanChecks{
+				PreApply: []plancheck.PlanCheck{
+					plancheck.ExpectResourceAction("checkly_playwright_code_bundle.test", plancheck.ResourceActionReplace),
+					plancheck.ExpectResourceAction("checkly_playwright_check_suite.test", plancheck.ResourceActionUpdate),
+				},
+			},
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_playwright_check_suite.test",
@@ -250,7 +259,7 @@ func TestAccPlaywrightCheckSuiteWithoutRuntime(t *testing.T) {
 					use_global_alert_settings = true
 					locations                 = ["us-east-1"]
 
-					bundle {
+					bundle = {
 						id       = checkly_playwright_code_bundle.test.id
 						metadata = checkly_playwright_code_bundle.test.metadata
 					}
@@ -288,7 +297,7 @@ func TestAccPlaywrightCheckSuiteWithExplicitVersion(t *testing.T) {
 					use_global_alert_settings = true
 					locations                 = ["us-east-1"]
 
-					bundle {
+					bundle = {
 						id       = checkly_playwright_code_bundle.test.id
 						metadata = checkly_playwright_code_bundle.test.metadata
 					}
@@ -317,7 +326,7 @@ func TestAccPlaywrightCheckSuiteWithExplicitVersion(t *testing.T) {
 					use_global_alert_settings = true
 					locations                 = ["us-east-1"]
 
-					bundle {
+					bundle = {
 						id       = checkly_playwright_code_bundle.test.id
 						metadata = checkly_playwright_code_bundle.test.metadata
 					}
@@ -344,7 +353,7 @@ func TestAccPlaywrightCheckSuiteWithExplicitVersion(t *testing.T) {
 					use_global_alert_settings = true
 					locations                 = ["us-east-1"]
 
-					bundle {
+					bundle = {
 						id       = checkly_playwright_code_bundle.test.id
 						metadata = checkly_playwright_code_bundle.test.metadata
 					}
@@ -369,7 +378,7 @@ func TestAccPlaywrightCheckSuiteWithExplicitVersion(t *testing.T) {
 					use_global_alert_settings = true
 					locations                 = ["us-east-1"]
 
-					bundle {
+					bundle = {
 						id       = checkly_playwright_code_bundle.test.id
 						metadata = checkly_playwright_code_bundle.test.metadata
 					}
@@ -397,7 +406,7 @@ func TestAccPlaywrightCheckSuiteVersionRemovedWithDevicesKept(t *testing.T) {
 					use_global_alert_settings = true
 					locations                 = ["us-east-1"]
 
-					bundle {
+					bundle = {
 						id       = checkly_playwright_code_bundle.test.id
 						metadata = checkly_playwright_code_bundle.test.metadata
 					}
@@ -436,7 +445,7 @@ func TestAccPlaywrightCheckSuiteVersionRemovedWithDevicesKept(t *testing.T) {
 					use_global_alert_settings = true
 					locations                 = ["us-east-1"]
 
-					bundle {
+					bundle = {
 						id       = checkly_playwright_code_bundle.test.id
 						metadata = checkly_playwright_code_bundle.test.metadata
 					}
@@ -479,7 +488,7 @@ func TestAccPlaywrightCheckSuiteWithExplicitDevices(t *testing.T) {
 					use_global_alert_settings = true
 					locations                 = ["us-east-1"]
 
-					bundle {
+					bundle = {
 						id       = checkly_playwright_code_bundle.test.id
 						metadata = checkly_playwright_code_bundle.test.metadata
 					}
@@ -512,7 +521,7 @@ func TestAccPlaywrightCheckSuiteWithExplicitDevices(t *testing.T) {
 					use_global_alert_settings = true
 					locations                 = ["us-east-1"]
 
-					bundle {
+					bundle = {
 						id       = checkly_playwright_code_bundle.test.id
 						metadata = checkly_playwright_code_bundle.test.metadata
 					}
@@ -539,7 +548,7 @@ func TestAccPlaywrightCheckSuiteWithExplicitDevices(t *testing.T) {
 					use_global_alert_settings = true
 					locations                 = ["us-east-1"]
 
-					bundle {
+					bundle = {
 						id       = checkly_playwright_code_bundle.test.id
 						metadata = checkly_playwright_code_bundle.test.metadata
 					}
@@ -564,7 +573,7 @@ func TestAccPlaywrightCheckSuiteWithExplicitDevices(t *testing.T) {
 					use_global_alert_settings = true
 					locations                 = ["us-east-1"]
 
-					bundle {
+					bundle = {
 						id       = checkly_playwright_code_bundle.test.id
 						metadata = checkly_playwright_code_bundle.test.metadata
 					}
@@ -593,7 +602,7 @@ func TestAccPlaywrightCheckSuiteTestCommand(t *testing.T) {
 					use_global_alert_settings = true
 					locations                 = ["us-east-1"]
 
-					bundle {
+					bundle = {
 						id       = checkly_playwright_code_bundle.test.id
 						metadata = checkly_playwright_code_bundle.test.metadata
 					}
@@ -617,7 +626,7 @@ func TestAccPlaywrightCheckSuiteTestCommand(t *testing.T) {
 					use_global_alert_settings = true
 					locations                 = ["us-east-1"]
 
-					bundle {
+					bundle = {
 						id       = checkly_playwright_code_bundle.test.id
 						metadata = checkly_playwright_code_bundle.test.metadata
 					}
@@ -649,7 +658,7 @@ func TestAccPlaywrightCheckSuiteTestCommand(t *testing.T) {
 					use_global_alert_settings = true
 					locations                 = ["us-east-1"]
 
-					bundle {
+					bundle = {
 						id       = checkly_playwright_code_bundle.test.id
 						metadata = checkly_playwright_code_bundle.test.metadata
 					}
@@ -678,7 +687,7 @@ func TestAccPlaywrightCheckSuiteInstallCommand(t *testing.T) {
 					use_global_alert_settings = true
 					locations                 = ["us-east-1"]
 
-					bundle {
+					bundle = {
 						id       = checkly_playwright_code_bundle.test.id
 						metadata = checkly_playwright_code_bundle.test.metadata
 					}
@@ -710,7 +719,7 @@ func TestAccPlaywrightCheckSuiteInstallCommand(t *testing.T) {
 					use_global_alert_settings = true
 					locations                 = ["us-east-1"]
 
-					bundle {
+					bundle = {
 						id       = checkly_playwright_code_bundle.test.id
 						metadata = checkly_playwright_code_bundle.test.metadata
 					}
@@ -738,7 +747,7 @@ func TestAccPlaywrightCheckSuiteInstallCommandPreservedAcrossChanges(t *testing.
 					use_global_alert_settings = true
 					locations                 = ["us-east-1"]
 
-					bundle {
+					bundle = {
 						id       = checkly_playwright_code_bundle.test.id
 						metadata = checkly_playwright_code_bundle.test.metadata
 					}
@@ -779,7 +788,7 @@ func TestAccPlaywrightCheckSuiteInstallCommandPreservedAcrossChanges(t *testing.
 					use_global_alert_settings = true
 					locations                 = ["us-east-1"]
 
-					bundle {
+					bundle = {
 						id       = checkly_playwright_code_bundle.test.id
 						metadata = checkly_playwright_code_bundle.test.metadata
 					}
@@ -820,7 +829,7 @@ func TestAccPlaywrightCheckSuiteInstallCommandPreservedAcrossChanges(t *testing.
 					use_global_alert_settings = true
 					locations                 = ["us-east-1"]
 
-					bundle {
+					bundle = {
 						id       = checkly_playwright_code_bundle.test.id
 						metadata = checkly_playwright_code_bundle.test.metadata
 					}
@@ -861,7 +870,7 @@ func TestAccPlaywrightCheckSuiteWithoutDevicesShouldNotCrash(t *testing.T) {
 					use_global_alert_settings = true
 					locations                 = ["us-east-1"]
 
-					bundle {
+					bundle = {
 						id       = checkly_playwright_code_bundle.test.id
 						metadata = checkly_playwright_code_bundle.test.metadata
 					}
@@ -901,7 +910,7 @@ func TestAccPlaywrightCheckSuiteAutoDetectTransition(t *testing.T) {
 					use_global_alert_settings = true
 					locations                 = ["us-east-1"]
 
-					bundle {
+					bundle = {
 						id       = checkly_playwright_code_bundle.test.id
 						metadata = checkly_playwright_code_bundle.test.metadata
 					}
@@ -955,7 +964,7 @@ func TestAccPlaywrightCheckSuiteAutoDetectTransition(t *testing.T) {
 					use_global_alert_settings = true
 					locations                 = ["us-east-1"]
 
-					bundle {
+					bundle = {
 						id       = checkly_playwright_code_bundle.test.id
 						metadata = checkly_playwright_code_bundle.test.metadata
 					}
@@ -995,7 +1004,7 @@ func TestAccPlaywrightCheckSuiteAutoDetectTransition(t *testing.T) {
 					use_global_alert_settings = true
 					locations                 = ["us-east-1"]
 
-					bundle {
+					bundle = {
 						id       = checkly_playwright_code_bundle.test.id
 						metadata = checkly_playwright_code_bundle.test.metadata
 					}
@@ -1033,7 +1042,7 @@ func TestAccPlaywrightCheckSuiteAutoDetectFalse(t *testing.T) {
 					use_global_alert_settings = true
 					locations                 = ["us-east-1"]
 
-					bundle {
+					bundle = {
 						id       = checkly_playwright_code_bundle.test.id
 						metadata = checkly_playwright_code_bundle.test.metadata
 					}
@@ -1095,7 +1104,7 @@ func TestAccPlaywrightCheckSuiteAutoDetectFalseMissingVersion(t *testing.T) {
 					use_global_alert_settings = true
 					locations                 = ["us-east-1"]
 
-					bundle {
+					bundle = {
 						id       = checkly_playwright_code_bundle.test.id
 						metadata = checkly_playwright_code_bundle.test.metadata
 					}
@@ -1135,7 +1144,7 @@ func TestAccPlaywrightCheckSuiteAutoDetectFalseMissingDevices(t *testing.T) {
 					use_global_alert_settings = true
 					locations                 = ["us-east-1"]
 
-					bundle {
+					bundle = {
 						id       = checkly_playwright_code_bundle.test.id
 						metadata = checkly_playwright_code_bundle.test.metadata
 					}
@@ -1171,7 +1180,7 @@ func TestAccPlaywrightCheckSuiteAutoDetectFalseMissingTestCommand(t *testing.T) 
 					use_global_alert_settings = true
 					locations                 = ["us-east-1"]
 
-					bundle {
+					bundle = {
 						id       = checkly_playwright_code_bundle.test.id
 						metadata = checkly_playwright_code_bundle.test.metadata
 					}
@@ -1198,7 +1207,7 @@ func TestAccPlaywrightCheckSuiteAutoDetectFalseMissingTestCommand(t *testing.T) 
 func TestAccPlaywrightCheckSuiteWorkingDirAutoDetect(t *testing.T) {
 	monorepoBundle := `
 		resource "checkly_playwright_code_bundle" "test" {
-			prebuilt_archive {
+			prebuilt_archive = {
 				file = "../../fixtures/playwright-project-monorepo-pnpm.tar.gz"
 			}
 		}
@@ -1215,7 +1224,7 @@ func TestAccPlaywrightCheckSuiteWorkingDirAutoDetect(t *testing.T) {
 					use_global_alert_settings = true
 					locations                 = ["us-east-1"]
 
-					bundle {
+					bundle = {
 						id       = checkly_playwright_code_bundle.test.id
 						metadata = checkly_playwright_code_bundle.test.metadata
 					}
@@ -1239,7 +1248,7 @@ func TestAccPlaywrightCheckSuiteWorkingDirAutoDetect(t *testing.T) {
 					use_global_alert_settings = true
 					locations                 = ["us-east-1"]
 
-					bundle {
+					bundle = {
 						id       = checkly_playwright_code_bundle.test.id
 						metadata = checkly_playwright_code_bundle.test.metadata
 					}
@@ -1267,7 +1276,7 @@ func TestAccPlaywrightCheckSuiteWorkingDirAutoDetect(t *testing.T) {
 					use_global_alert_settings = true
 					locations                 = ["us-east-1"]
 
-					bundle {
+					bundle = {
 						id       = checkly_playwright_code_bundle.test.id
 						metadata = checkly_playwright_code_bundle.test.metadata
 					}
@@ -1296,7 +1305,7 @@ func TestAccPlaywrightCheckSuiteWorkingDirAutoDetectFlat(t *testing.T) {
 					use_global_alert_settings = true
 					locations                 = ["us-east-1"]
 
-					bundle {
+					bundle = {
 						id       = checkly_playwright_code_bundle.test.id
 						metadata = checkly_playwright_code_bundle.test.metadata
 					}
@@ -1324,7 +1333,7 @@ func TestAccPlaywrightCheckSuiteWorkingDirEmptyStringRejected(t *testing.T) {
 					use_global_alert_settings = true
 					locations                 = ["us-east-1"]
 
-					bundle {
+					bundle = {
 						id       = checkly_playwright_code_bundle.test.id
 						metadata = checkly_playwright_code_bundle.test.metadata
 					}
@@ -1351,7 +1360,7 @@ func TestAccPlaywrightCheckSuiteWorkingDir(t *testing.T) {
 					use_global_alert_settings = true
 					locations                 = ["us-east-1"]
 
-					bundle {
+					bundle = {
 						id       = checkly_playwright_code_bundle.test.id
 						metadata = checkly_playwright_code_bundle.test.metadata
 					}
@@ -1379,7 +1388,7 @@ func TestAccPlaywrightCheckSuiteWorkingDir(t *testing.T) {
 					use_global_alert_settings = true
 					locations                 = ["us-east-1"]
 
-					bundle {
+					bundle = {
 						id       = checkly_playwright_code_bundle.test.id
 						metadata = checkly_playwright_code_bundle.test.metadata
 					}
@@ -1405,7 +1414,7 @@ func TestAccPlaywrightCheckSuiteWorkingDir(t *testing.T) {
 					use_global_alert_settings = true
 					locations                 = ["us-east-1"]
 
-					bundle {
+					bundle = {
 						id       = checkly_playwright_code_bundle.test.id
 						metadata = checkly_playwright_code_bundle.test.metadata
 					}
@@ -1433,7 +1442,7 @@ func TestAccPlaywrightCheckSuiteWorkingDir(t *testing.T) {
 					use_global_alert_settings = true
 					locations                 = ["us-east-1"]
 
-					bundle {
+					bundle = {
 						id       = checkly_playwright_code_bundle.test.id
 						metadata = checkly_playwright_code_bundle.test.metadata
 					}
@@ -1461,7 +1470,7 @@ func TestAccPlaywrightCheckSuiteEnvironmentVariableRemoval(t *testing.T) {
 					use_global_alert_settings = true
 					locations                 = ["us-east-1"]
 
-					bundle {
+					bundle = {
 						id       = checkly_playwright_code_bundle.test.id
 						metadata = checkly_playwright_code_bundle.test.metadata
 					}
@@ -1510,7 +1519,7 @@ func TestAccPlaywrightCheckSuiteEnvironmentVariableRemoval(t *testing.T) {
 					use_global_alert_settings = true
 					locations                 = ["us-east-1"]
 
-					bundle {
+					bundle = {
 						id       = checkly_playwright_code_bundle.test.id
 						metadata = checkly_playwright_code_bundle.test.metadata
 					}
@@ -1558,7 +1567,7 @@ func TestAccPlaywrightCheckSuiteWithEngine(t *testing.T) {
 					use_global_alert_settings = true
 					locations                 = ["us-east-1"]
 
-					bundle {
+					bundle = {
 						id       = checkly_playwright_code_bundle.test.id
 						metadata = checkly_playwright_code_bundle.test.metadata
 					}
@@ -1593,7 +1602,7 @@ func TestAccPlaywrightCheckSuiteWithEngine(t *testing.T) {
 					use_global_alert_settings = true
 					locations                 = ["us-east-1"]
 
-					bundle {
+					bundle = {
 						id       = checkly_playwright_code_bundle.test.id
 						metadata = checkly_playwright_code_bundle.test.metadata
 					}
@@ -1628,7 +1637,7 @@ func TestAccPlaywrightCheckSuiteWithEngine(t *testing.T) {
 					use_global_alert_settings = true
 					locations                 = ["us-east-1"]
 
-					bundle {
+					bundle = {
 						id       = checkly_playwright_code_bundle.test.id
 						metadata = checkly_playwright_code_bundle.test.metadata
 					}
@@ -1663,7 +1672,7 @@ func TestAccPlaywrightCheckSuiteEngineVersionValidation(t *testing.T) {
 					use_global_alert_settings = true
 					locations                 = ["us-east-1"]
 
-					bundle {
+					bundle = {
 						id       = checkly_playwright_code_bundle.test.id
 						metadata = checkly_playwright_code_bundle.test.metadata
 					}
@@ -1687,7 +1696,7 @@ func TestAccPlaywrightCheckSuiteEngineVersionValidation(t *testing.T) {
 					use_global_alert_settings = true
 					locations                 = ["us-east-1"]
 
-					bundle {
+					bundle = {
 						id       = checkly_playwright_code_bundle.test.id
 						metadata = checkly_playwright_code_bundle.test.metadata
 					}

@@ -18,7 +18,7 @@ func TestAccPlaywrightCodeBundleNonExistingFile(t *testing.T) {
 		{
 			Config: `
 				resource "checkly_playwright_code_bundle" "test" {
-					prebuilt_archive {
+					prebuilt_archive = {
 						file = "../../fixtures/does-not-exist.tar.gz"
 					}
 				}
@@ -28,12 +28,25 @@ func TestAccPlaywrightCodeBundleNonExistingFile(t *testing.T) {
 	})
 }
 
+func TestAccPlaywrightCodeBundleEmptyPrebuiltArchive(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_playwright_code_bundle" "test" {
+					prebuilt_archive = {}
+				}
+			`,
+			ExpectError: regexp.MustCompile(`attribute "file" is\s+required`),
+		},
+	})
+}
+
 func TestAccPlaywrightCodeBundleZipArchive(t *testing.T) {
 	accTestCase(t, []resource.TestStep{
 		{
 			Config: `
 				resource "checkly_playwright_code_bundle" "test" {
-					prebuilt_archive {
+					prebuilt_archive = {
 						file = "../../fixtures/playwright-project.zip"
 					}
 				}
@@ -48,7 +61,7 @@ func TestAccPlaywrightCodeBundleInvalidArchiveFormat(t *testing.T) {
 		{
 			Config: `
 				resource "checkly_playwright_code_bundle" "test" {
-					prebuilt_archive {
+					prebuilt_archive = {
 						file = "../../fixtures/not-a-gzip-archive.tar"
 					}
 				}
@@ -63,7 +76,7 @@ func TestAccPlaywrightCodeBundleNoLockfile(t *testing.T) {
 		{
 			Config: `
 				resource "checkly_playwright_code_bundle" "test" {
-					prebuilt_archive {
+					prebuilt_archive = {
 						file = "../../fixtures/playwright-project-no-lockfile.tar.gz"
 					}
 				}
@@ -78,7 +91,7 @@ func TestAccPlaywrightCodeBundleNoPlaywrightInLockfile(t *testing.T) {
 		{
 			Config: `
 				resource "checkly_playwright_code_bundle" "test" {
-					prebuilt_archive {
+					prebuilt_archive = {
 						file = "../../fixtures/playwright-project-no-playwright.tar.gz"
 					}
 				}
@@ -93,7 +106,7 @@ func TestAccPlaywrightCodeBundleBrokenSymlink(t *testing.T) {
 		{
 			Config: `
 				resource "checkly_playwright_code_bundle" "test" {
-					prebuilt_archive {
+					prebuilt_archive = {
 						file = "../../fixtures/playwright-project-broken-symlink.tar.gz"
 					}
 				}

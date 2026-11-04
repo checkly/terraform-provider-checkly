@@ -37,7 +37,7 @@ Creates a Playwright check from a code bundle.
 # included as well (recursively - repeat the process until all relevant
 # workspace packages can be resolved).
 resource "checkly_playwright_code_bundle" "playwright-bundle" {
-  prebuilt_archive {
+  prebuilt_archive = {
     file = data.archive_file.playwright-bundle.output_path
   }
 }
@@ -68,7 +68,7 @@ resource "checkly_playwright_check_suite" "example-playwright-check" {
     "eu-west-1"
   ]
 
-  bundle {
+  bundle = {
     id       = checkly_playwright_code_bundle.playwright-bundle.id
     metadata = checkly_playwright_code_bundle.playwright-bundle.metadata
   }
@@ -86,7 +86,7 @@ resource "checkly_playwright_check_suite" "example-playwright-check-custom" {
     "eu-west-1"
   ]
 
-  bundle {
+  bundle = {
     id       = checkly_playwright_code_bundle.playwright-bundle.id
     metadata = checkly_playwright_code_bundle.playwright-bundle.metadata
   }
@@ -122,6 +122,7 @@ resource "checkly_playwright_check_suite" "example-playwright-check-custom" {
 ### Required
 
 - `activated` (Boolean) Determines whether the check will run periodically or not after being deployed.
+- `bundle` (Attributes) Attaches a code bundle to the check. (see [below for nested schema](#nestedatt--bundle))
 - `frequency` (Number) Controls how often the check should run. Defined in minutes. The allowed values are `1` (1 minute), `2` (2 minutes), `5` (5 minutes), `10` (10 minutes), `15` (15 minutes), `30` (30 minutes), `60` (1 hour), `120` (2 hours), `180` (3 hours), `360` (6 hours), `720` (12 hours) and `1440` (24 hours).
 - `name` (String) The name of the check.
 
@@ -129,7 +130,6 @@ resource "checkly_playwright_check_suite" "example-playwright-check-custom" {
 
 - `alert_channel_subscription` (Block Set) An array of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your check, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedblock--alert_channel_subscription))
 - `alert_settings` (Attributes) Determines the alert escalation policy for the check. (see [below for nested schema](#nestedatt--alert_settings))
-- `bundle` (Block List) Attaches a code bundle to the check. (see [below for nested schema](#nestedblock--bundle))
 - `description` (String) A description of the check.
 - `environment_variable` (Block List) Insert environment variables into the execution environment. (see [below for nested schema](#nestedblock--environment_variable))
 - `group_id` (Number) The ID of the check group that this check is part of.
@@ -146,6 +146,15 @@ resource "checkly_playwright_check_suite" "example-playwright-check-custom" {
 ### Read-Only
 
 - `id` (String) The ID of the check.
+
+<a id="nestedatt--bundle"></a>
+### Nested Schema for `bundle`
+
+Required:
+
+- `id` (String) The ID of the code bundle.
+- `metadata` (String) The generated metadata of the code bundle.
+
 
 <a id="nestedblock--alert_channel_subscription"></a>
 ### Nested Schema for `alert_channel_subscription`
@@ -200,15 +209,6 @@ Optional:
 
 - `minutes_failing_threshold` (Number) Send an alert notification after the check has been failing for the given amount of time (in minutes). Possible values are `5`, `10`, `15`, and `30`. (Default `5`).
 
-
-
-<a id="nestedblock--bundle"></a>
-### Nested Schema for `bundle`
-
-Required:
-
-- `id` (String) The ID of the code bundle.
-- `metadata` (String) The generated metadata of the code bundle.
 
 
 <a id="nestedblock--environment_variable"></a>

@@ -78,7 +78,8 @@ This affects:
 | `checkly_grpc_monitor` | `alert_settings` (and nested objects as above), `request` (and its `assertion` and `metadata`), `retry_strategy`, `trigger_incident` |
 | `checkly_icmp_monitor`, `checkly_tcp_check`, `checkly_tcp_monitor`, `checkly_traceroute_monitor` | `alert_settings` (and nested objects as above), `request` (and its `assertion`), `retry_strategy`, `trigger_incident` |
 | `checkly_ssl_monitor` | `alert_settings` (and nested objects as above), `request` (and its `assertion`, `client_certificate` and `security_baseline` with each of its rules, such as `min_tls_version`), `retry_strategy`, `trigger_incident` |
-| `checkly_playwright_check_suite` | `alert_settings` (and nested objects as above), `runtime` (and its `engine`, `playwright`, `steps`), `trigger_incident` |
+| `checkly_playwright_check_suite` | `alert_settings` (and nested objects as above), `bundle`, `runtime` (and its `engine`, `playwright`, `steps`), `trigger_incident` |
+| `checkly_playwright_code_bundle` | `prebuilt_archive` |
 
 The table lists every such attribute. All other blocks, such as `heartbeat` and repeated blocks like `alert_channel_subscription`, keep their block syntax.
 

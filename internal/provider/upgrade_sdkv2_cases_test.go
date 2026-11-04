@@ -114,11 +114,19 @@ resource "checkly_client_certificate" "test" {
 }
 `
 
-// upgradeCodeBundle is the code bundle shared by the Playwright check suite
-// cases. Its syntax is the same in both providers.
-const upgradeCodeBundle = `
+// upgradeCodeBundleSDKv2 and upgradeCodeBundle are the code bundle shared by
+// the Playwright check suite cases, in the syntax of each provider.
+const upgradeCodeBundleSDKv2 = `
 resource "checkly_playwright_code_bundle" "test" {
   prebuilt_archive {
+    file = "{{fixtures}}/playwright-project-pnpm.tar.gz"
+  }
+}
+`
+
+const upgradeCodeBundle = `
+resource "checkly_playwright_code_bundle" "test" {
+  prebuilt_archive = {
     file = "{{fixtures}}/playwright-project-pnpm.tar.gz"
   }
 }
@@ -2536,7 +2544,7 @@ resource "checkly_ssl_monitor" "test" {
 }
 `),
 
-	"playwright_check_suite": newSDKv2UpgradeCase(upgradeCodeBundle+`
+	"playwright_check_suite": newSDKv2UpgradeCase(upgradeCodeBundleSDKv2+`
 resource "checkly_playwright_check_suite" "test" {
   name                      = "tf-upgrade-{{id}}-playwright"
   description               = "Playwright check suite upgraded from SDK v2"
@@ -2601,7 +2609,7 @@ resource "checkly_playwright_check_suite" "test" {
   tags                      = ["tf-upgrade"]
   use_global_alert_settings = false
 
-  bundle {
+  bundle = {
     id       = checkly_playwright_code_bundle.test.id
     metadata = checkly_playwright_code_bundle.test.metadata
   }
@@ -2649,7 +2657,7 @@ resource "checkly_playwright_check_suite" "test" {
 `),
 
 	// The runtime is detected from the code bundle except for the engine.
-	"playwright_check_suite_engine": newSDKv2UpgradeCase(upgradeCodeBundle+`
+	"playwright_check_suite_engine": newSDKv2UpgradeCase(upgradeCodeBundleSDKv2+`
 resource "checkly_playwright_check_suite" "test" {
   name                      = "tf-upgrade-{{id}}-playwright-engine"
   activated                 = true
@@ -2677,7 +2685,7 @@ resource "checkly_playwright_check_suite" "test" {
   use_global_alert_settings = true
   locations                 = ["us-east-1"]
 
-  bundle {
+  bundle = {
     id       = checkly_playwright_code_bundle.test.id
     metadata = checkly_playwright_code_bundle.test.metadata
   }

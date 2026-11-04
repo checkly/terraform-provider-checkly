@@ -22,7 +22,7 @@
 # included as well (recursively - repeat the process until all relevant
 # workspace packages can be resolved).
 resource "checkly_playwright_code_bundle" "playwright-bundle" {
-  prebuilt_archive {
+  prebuilt_archive = {
     file = data.archive_file.playwright-bundle.output_path
   }
 }
@@ -53,7 +53,7 @@ resource "checkly_playwright_check_suite" "example-playwright-check" {
     "eu-west-1"
   ]
 
-  bundle {
+  bundle = {
     id       = checkly_playwright_code_bundle.playwright-bundle.id
     metadata = checkly_playwright_code_bundle.playwright-bundle.metadata
   }
@@ -71,7 +71,7 @@ resource "checkly_playwright_check_suite" "example-playwright-check-custom" {
     "eu-west-1"
   ]
 
-  bundle {
+  bundle = {
     id       = checkly_playwright_code_bundle.playwright-bundle.id
     metadata = checkly_playwright_code_bundle.playwright-bundle.metadata
   }
