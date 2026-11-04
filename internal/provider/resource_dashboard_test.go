@@ -1,12 +1,26 @@
 package provider
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	fwresource "github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-go/tftypes"
+
+	"github.com/hashicorp/terraform-plugin-testing/compare"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 )
 
 func TestAccDashboardCheckRequiredFields(t *testing.T) {
@@ -434,6 +448,8 @@ func TestAccDashboardFullConfig(t *testing.T) {
 
 func TestAccDashboardPrivateDashboard(t *testing.T) {
 	rInt := acctest.RandInt()
+	// The key from creation must survive the in-place update while private.
+	sameKey := statecheck.CompareValue(compare.ValuesSame())
 	accTestCase(t, []resource.TestStep{
 		{
 			Config: fmt.Sprintf(`
@@ -443,6 +459,9 @@ func TestAccDashboardPrivateDashboard(t *testing.T) {
 					is_private = true
 				}
 			`, rInt),
+			ConfigStateChecks: []statecheck.StateCheck{
+				sameKey.AddStateValue("checkly_dashboard.test", tfjsonpath.New("key")),
+			},
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_dashboard.test",
@@ -461,6 +480,37 @@ func TestAccDashboardPrivateDashboard(t *testing.T) {
 			),
 		},
 		{
+			// An unrelated in-place update keeps the key of a private
+			// dashboard, and the plan already knows it.
+			Config: fmt.Sprintf(`
+				resource "checkly_dashboard" "test" {
+					custom_url = "test-dashboard-%d-private"
+					header     = "Private Dashboard updated"
+					is_private = true
+				}
+			`, rInt),
+			ConfigPlanChecks: resource.ConfigPlanChecks{
+				PreApply: []plancheck.PlanCheck{
+					plancheck.ExpectResourceAction("checkly_dashboard.test", plancheck.ResourceActionUpdate),
+					plancheck.ExpectKnownValue("checkly_dashboard.test", tfjsonpath.New("key"), knownvalue.NotNull()),
+				},
+			},
+			ConfigStateChecks: []statecheck.StateCheck{
+				sameKey.AddStateValue("checkly_dashboard.test", tfjsonpath.New("key")),
+			},
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_dashboard.test",
+					"header",
+					"Private Dashboard updated",
+				),
+				resource.TestCheckResourceAttrSet(
+					"checkly_dashboard.test",
+					"key",
+				),
+			),
+		},
+		{
 			Config: fmt.Sprintf(`
 				resource "checkly_dashboard" "test" {
 					custom_url = "test-dashboard-%d-private"
@@ -468,6 +518,11 @@ func TestAccDashboardPrivateDashboard(t *testing.T) {
 					is_private = false
 				}
 			`, rInt),
+			ConfigPlanChecks: resource.ConfigPlanChecks{
+				PreApply: []plancheck.PlanCheck{
+					plancheck.ExpectKnownValue("checkly_dashboard.test", tfjsonpath.New("key"), knownvalue.Null()),
+				},
+			},
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_dashboard.test",
@@ -476,6 +531,34 @@ func TestAccDashboardPrivateDashboard(t *testing.T) {
 				),
 				// A public dashboard has no access key. In the framework the
 				// attribute is null rather than an empty string.
+				resource.TestCheckNoResourceAttr(
+					"checkly_dashboard.test",
+					"key",
+				),
+			),
+		},
+		{
+			// The update that made the dashboard public deleted its keys on
+			// the backend, and update responses never return a key, so the
+			// dashboard stays without one after it is made private again.
+			Config: fmt.Sprintf(`
+				resource "checkly_dashboard" "test" {
+					custom_url = "test-dashboard-%d-private"
+					header     = "Private Dashboard"
+					is_private = true
+				}
+			`, rInt),
+			ConfigPlanChecks: resource.ConfigPlanChecks{
+				PreApply: []plancheck.PlanCheck{
+					plancheck.ExpectKnownValue("checkly_dashboard.test", tfjsonpath.New("key"), knownvalue.Null()),
+				},
+			},
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_dashboard.test",
+					"is_private",
+					"true",
+				),
 				resource.TestCheckNoResourceAttr(
 					"checkly_dashboard.test",
 					"key",
@@ -661,4 +744,62 @@ func TestAccDashboardCustomCSS(t *testing.T) {
 			),
 		},
 	})
+}
+
+func TestDashboardKeyPlanModifier(t *testing.T) {
+	ctx := context.Background()
+
+	var schemaResp fwresource.SchemaResponse
+	NewDashboardResource().Schema(ctx, fwresource.SchemaRequest{}, &schemaResp)
+	keyAttr := schemaResp.Schema.Attributes["key"].(schema.StringAttribute)
+	objectType := schemaResp.Schema.Type().TerraformType(ctx).(tftypes.Object)
+
+	// dashboardObject returns a dashboard object whose attributes are all null
+	// except is_private.
+	dashboardObject := func(isPrivate tftypes.Value) tftypes.Value {
+		attrs := make(map[string]tftypes.Value, len(objectType.AttributeTypes))
+		for name, typ := range objectType.AttributeTypes {
+			attrs[name] = tftypes.NewValue(typ, nil)
+		}
+		attrs["is_private"] = isPrivate
+		return tftypes.NewValue(objectType, attrs)
+	}
+	private := tftypes.NewValue(tftypes.Bool, true)
+	public := tftypes.NewValue(tftypes.Bool, false)
+	unknown := tftypes.NewValue(tftypes.Bool, tftypes.UnknownValue)
+
+	cases := []struct {
+		name      string
+		state     tftypes.Value
+		isPrivate tftypes.Value
+		stateKey  types.String
+		want      types.String
+	}{
+		{"create", tftypes.NewValue(objectType, nil), private, types.StringNull(), types.StringUnknown()},
+		{"planned public", dashboardObject(private), public, types.StringValue("k"), types.StringNull()},
+		{"planned private with a key", dashboardObject(private), private, types.StringValue("k"), types.StringValue("k")},
+		{"planned private without a key", dashboardObject(public), private, types.StringNull(), types.StringNull()},
+		{"is_private unknown", dashboardObject(private), unknown, types.StringValue("k"), types.StringUnknown()},
+	}
+
+	for _, c := range cases {
+		req := planmodifier.StringRequest{
+			Path:       path.Root("key"),
+			StateValue: c.stateKey,
+			PlanValue:  types.StringUnknown(),
+			State:      tfsdk.State{Schema: schemaResp.Schema, Raw: c.state},
+			Plan:       tfsdk.Plan{Schema: schemaResp.Schema, Raw: dashboardObject(c.isPrivate)},
+		}
+		resp := planmodifier.StringResponse{PlanValue: req.PlanValue}
+		for _, m := range keyAttr.PlanModifiers {
+			m.PlanModifyString(ctx, req, &resp)
+		}
+		if resp.Diagnostics.HasError() {
+			t.Errorf("%s: unexpected diagnostics: %v", c.name, resp.Diagnostics)
+			continue
+		}
+		if !resp.PlanValue.Equal(c.want) {
+			t.Errorf("%s: planned key = %s, want %s", c.name, resp.PlanValue, c.want)
+		}
+	}
 }

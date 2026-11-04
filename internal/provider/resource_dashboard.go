@@ -194,12 +194,15 @@ func (r *DashboardResource) Schema(ctx context.Context, req resource.SchemaReque
 				Optional:    true,
 				Computed:    true,
 				Default:     booldefault.StaticBool(false),
-				Description: "Set your dashboard as private and generate key.",
+				Description: "Set your dashboard as private. An access key is only issued when the dashboard is created private. Making an existing dashboard private through an update leaves it without a key; recreate the dashboard to get one. An update that leaves the dashboard public revokes its key. (Default `false`).",
 			},
 			"key": schema.StringAttribute{
 				Computed:    true,
 				Sensitive:   true,
-				Description: "The access key when the dashboard is private.",
+				Description: "The access key of a private dashboard. It is only issued when the dashboard is created private, and an update that leaves the dashboard public revokes it. A dashboard made private through an update, or imported, has no key.",
+				PlanModifiers: []planmodifier.String{
+					dashboardKeyPlanModifier{},
+				},
 			},
 			"expand_checks": schema.BoolAttribute{
 				Optional:    true,
@@ -273,9 +276,9 @@ func (r *DashboardResource) Create(ctx context.Context, req resource.CreateReque
 	plan.ID = types.StringValue(result.DashboardID)
 
 	// The raw access key of a private dashboard is only included in create
-	// and update responses, never in reads, so it must be captured here.
+	// responses, never in updates or reads, so it must be captured here.
 	dashboardToModel(ctx, result, &plan, &resp.Diagnostics)
-	plan.Key = dashboardKeyValue(result, plan.Key)
+	plan.Key = dashboardKeyValue(result, types.StringNull())
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
@@ -338,11 +341,13 @@ func (r *DashboardResource) Update(ctx context.Context, req resource.UpdateReque
 
 	plan.ID = types.StringValue(result.DashboardID)
 
-	// The raw access key of a private dashboard is only included in create
-	// and update responses, never in reads, so it must be captured here. If
-	// the response has no keys, the key already in state remains valid.
+	// The key is whatever dashboardKeyPlanModifier planned, regardless of the
+	// update response. The plan is only unknown when is_private was unknown
+	// at plan time; the key then follows the applied visibility.
 	dashboardToModel(ctx, result, &plan, &resp.Diagnostics)
-	plan.Key = dashboardKeyValue(result, state.Key)
+	if plan.Key.IsUnknown() {
+		plan.Key = dashboardKeyValue(result, state.Key)
+	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
@@ -439,10 +444,46 @@ func dashboardToModel(ctx context.Context, dashboard *checkly.Dashboard, model *
 	model.ShowP99 = dashboardBoolValue(dashboard.ShowP99, true)
 }
 
-// dashboardKeyValue determines the value of the key attribute. A public
+// dashboardKeyPlanModifier plans the key of an existing dashboard; Update
+// stores the planned value as is. The backend deletes
+// all keys of a dashboard when an update leaves it public, and update
+// responses never return a key, so an update keeps the prior key while the
+// dashboard stays private and clears it when the dashboard is public. On
+// create the key stays unknown until the API returns it.
+type dashboardKeyPlanModifier struct{}
+
+func (m dashboardKeyPlanModifier) Description(ctx context.Context) string {
+	return "Keeps the access key while the dashboard stays private and clears it when the dashboard is public."
+}
+
+func (m dashboardKeyPlanModifier) MarkdownDescription(ctx context.Context) string {
+	return m.Description(ctx)
+}
+
+func (m dashboardKeyPlanModifier) PlanModifyString(ctx context.Context, req planmodifier.StringRequest, resp *planmodifier.StringResponse) {
+	if req.State.Raw.IsNull() || req.Plan.Raw.IsNull() {
+		return
+	}
+
+	var isPrivate types.Bool
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("is_private"), &isPrivate)...)
+	if resp.Diagnostics.HasError() || isPrivate.IsUnknown() {
+		return
+	}
+
+	if !isPrivate.ValueBool() {
+		resp.PlanValue = types.StringNull()
+		return
+	}
+
+	resp.PlanValue = req.StateValue
+}
+
+// dashboardKeyValue determines the value of the key attribute from an API
+// response: after a create, after a read, and after an update whose planned
+// key was unknown because is_private was unknown at plan time. A public
 // dashboard has no key. For a private dashboard, the raw key is only present
-// in create and update API responses; when it is absent, the prior value
-// remains valid.
+// in create API responses; when it is absent, the prior value remains valid.
 func dashboardKeyValue(dashboard *checkly.Dashboard, prior types.String) types.String {
 	if !dashboard.IsPrivate {
 		return types.StringNull()
@@ -450,10 +491,6 @@ func dashboardKeyValue(dashboard *checkly.Dashboard, prior types.String) types.S
 
 	if len(dashboard.Keys) > 0 {
 		return types.StringValue(dashboard.Keys[0].RawKey)
-	}
-
-	if prior.IsUnknown() {
-		return types.StringNull()
 	}
 
 	return prior

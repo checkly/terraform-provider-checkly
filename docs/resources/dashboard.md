@@ -47,7 +47,7 @@ resource "checkly_dashboard" "dashboard_1" {
 - `expand_checks` (Boolean) Expand or collapse checks on the dashboard. (Default `false`).
 - `favicon` (String) A URL pointing to an image file to use as browser favicon.
 - `hide_tags` (Boolean) Show or hide the tags on the dashboard. (Default `false`).
-- `is_private` (Boolean) Set your dashboard as private and generate key.
+- `is_private` (Boolean) Set your dashboard as private. An access key is only issued when the dashboard is created private. Making an existing dashboard private through an update leaves it without a key; recreate the dashboard to get one. An update that leaves the dashboard public revokes its key. (Default `false`).
 - `link` (String) A link to for the dashboard logo.
 - `logo` (String) A URL pointing to an image file to use for the dashboard logo.
 - `paginate` (Boolean) Determines if pagination is on or off. (Default `true`).
@@ -64,4 +64,4 @@ resource "checkly_dashboard" "dashboard_1" {
 ### Read-Only
 
 - `id` (String) The ID of the dashboard.
-- `key` (String, Sensitive) The access key when the dashboard is private.
+- `key` (String, Sensitive) The access key of a private dashboard. It is only issued when the dashboard is created private, and an update that leaves the dashboard public revokes it. A dashboard made private through an update, or imported, has no key.
