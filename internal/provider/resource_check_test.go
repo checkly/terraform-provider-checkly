@@ -75,7 +75,7 @@ func TestAccBrowserCheckMissingScript(t *testing.T) {
 	accTestCase(t, []resource.TestStep{
 		{
 			Config:      config,
-			ExpectError: regexp.MustCompile(`unexpected response status 400`),
+			ExpectError: regexp.MustCompile(`400\s+Bad\s+Request`),
 		},
 	})
 }

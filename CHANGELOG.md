@@ -19,6 +19,7 @@ need changes. Follow the [upgrade guide](docs/guides/upgrading-to-v2.md).
 - **Breaking:** the provider serves plugin protocol 6 only and requires Terraform 1.0 or later.
 - **Breaking:** credentials are sensitive, including nested ones, so Terraform redacts them in plan output. An output that exposes one, such as a heartbeat ping URL built from `ping_token`, must set `sensitive = true`.
 - An invalid `API_CALL_TIMEOUT` is reported as a configuration error instead of crashing the provider.
+- API error messages name the request, the status and the API's own message, for example `GET /v1/checks/…: 404 Not Found`. Scripts that matched the old `unexpected response status` text need updating.
 
 ### Added
 - `checkly_api_check`, `checkly_browser_check` and `checkly_multistep_check`, which replace `checkly_check`.

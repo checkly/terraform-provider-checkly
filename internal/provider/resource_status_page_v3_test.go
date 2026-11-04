@@ -3,15 +3,12 @@ package provider
 import (
 	"context"
 	"fmt"
-	"os"
 	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-
-	checkly "github.com/checkly/checkly-go-sdk"
 )
 
 const statusPageV3Resource = "checkly_status_page_v3.test"
@@ -130,7 +127,7 @@ func testCheckStatusPageV3RemoteLinkColorsAreNot(light, dark string) resource.Te
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), apiCallTimeout())
 		defer cancel()
-		page, err := testAccStatusPageV3Client().GetStatusPageV3(ctx, rs.Primary.ID)
+		page, err := testAccClient().GetStatusPageV3(ctx, rs.Primary.ID)
 		if err != nil {
 			return err
 		}
@@ -145,18 +142,6 @@ func testCheckStatusPageV3RemoteLinkColorsAreNot(light, dark string) resource.Te
 		}
 		return nil
 	}
-}
-
-// testAccStatusPageV3Client returns an API client configured like the
-// provider under test, from the acceptance test environment.
-func testAccStatusPageV3Client() checkly.Client {
-	apiURL := os.Getenv("CHECKLY_API_URL")
-	if apiURL == "" {
-		apiURL = "https://api.checklyhq.com"
-	}
-	client := checkly.NewClient(apiURL, os.Getenv("CHECKLY_API_KEY"), nil, nil)
-	client.SetAccountId(os.Getenv("CHECKLY_ACCOUNT_ID"))
-	return client
 }
 
 func TestAccStatusPageV3HappyPath(t *testing.T) {

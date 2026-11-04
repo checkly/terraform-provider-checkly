@@ -12,6 +12,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
+
+	checkly "github.com/checkly/checkly-go-sdk"
 )
 
 // testAccProtoV6ProviderFactories are used to instantiate a provider during
@@ -20,6 +22,18 @@ import (
 // CLI can reattach.
 var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServer, error){
 	"checkly": providerserver.NewProtocol6WithError(New("test")()),
+}
+
+// testAccClient returns an API client configured like the
+// provider under test, from the acceptance test environment.
+func testAccClient() checkly.Client {
+	apiURL := os.Getenv("CHECKLY_API_URL")
+	if apiURL == "" {
+		apiURL = "https://api.checklyhq.com"
+	}
+	client := checkly.NewClient(apiURL, os.Getenv("CHECKLY_API_KEY"), nil, nil)
+	client.SetAccountId(os.Getenv("CHECKLY_ACCOUNT_ID"))
+	return client
 }
 
 func testAccPreCheck(t *testing.T) {

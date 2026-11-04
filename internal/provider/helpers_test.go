@@ -1,35 +1,55 @@
 package provider
 
 import (
+	"context"
 	"errors"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
+
+	checkly "github.com/checkly/checkly-go-sdk"
 )
 
 func TestIsNotFoundError(t *testing.T) {
+	// One real 404 through the SDK client checks that the client's error
+	// for a missing resource is what isNotFoundError recognises.
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = w.Write([]byte(`{"statusCode":404,"error":"Not Found","message":"Not Found"}`))
+	}))
+	defer server.Close()
+	client := checkly.NewClient(server.URL, "test-key", server.Client(), nil)
+	_, notFound := client.GetEnvironmentVariable(context.Background(), "MISSING")
+	if notFound == nil {
+		t.Fatal("GetEnvironmentVariable on a 404 succeeded, want an error")
+	}
+
 	cases := map[string]struct {
 		err  error
 		want bool
 	}{
-		"nil": {nil, false},
-		"404 response": {
-			errors.New(`unexpected response status 404: "{\"statusCode\":404}"`), true,
+		"nil":          {nil, false},
+		"404 response": {notFound, true},
+		"wrapped 404": {
+			fmt.Errorf("reading environment variable: %w", &checkly.APIError{StatusCode: http.StatusNotFound}), true,
 		},
-		"404 response in the alternative format": {
-			errors.New(`unexpected response status: 404, res: "{\"statusCode\":404}"`), true,
-		},
-		// The 400 body quotes component names, which may contain "404".
-		"400 response quoting 404": {
-			errors.New(`unexpected response status 400: "\"API 404\" is not a GROUP component."`), false,
-		},
-		"400 response quoting the 404 prefix": {
-			errors.New(`unexpected response status 400: "\"unexpected response status 404: x\" is not a GROUP component"`), false,
+		// A validation message can quote user input that contains "404".
+		"400 response whose message mentions 404": {
+			&checkly.APIError{StatusCode: http.StatusBadRequest, Message: `"API 404" is not a valid key, 404 Not Found`}, false,
 		},
 		"500 response for an ID containing 404": {
-			errors.New(`unexpected response status 500: "internal error for check 1404"`), false,
+			&checkly.APIError{Method: http.MethodGet, Path: "/v1/variables/KEY_1404", StatusCode: http.StatusInternalServerError}, false,
 		},
-		"transport error for a URL containing 404": {
-			errors.New(`HTTP request failed with: Delete "https://api.checklyhq.com/v1/variables/PAGE_404_URL": context deadline exceeded`), false,
+		"transport error for a path containing 404": {
+			errors.New("GET /v1/variables/PAGE_404_URL: request to api.checklyhq.com failed: context deadline exceeded"), false,
+		},
+		// Only typed errors count: text in the format of older SDK versions
+		// is not a 404.
+		"404 in the old text format": {
+			errors.New(`unexpected response status 404: "{\"statusCode\":404}"`), false,
 		},
 	}
 
