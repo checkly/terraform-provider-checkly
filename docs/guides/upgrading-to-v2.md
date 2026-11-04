@@ -182,7 +182,7 @@ These attributes are now sensitive, so Terraform redacts them in plan output:
 
 An output that exposes one of them, for example a heartbeat ping URL built from `ping_token`, must set `sensitive = true`.
 
-Header and query parameter values of check requests and of `api_check_defaults` are not redacted: keep credentials in them out of shared plan output, for example by using a global environment variable in a check.
+Header and query parameter values of check requests and of `api_check_defaults` are not redacted, as in v1.x. To keep credentials in them out of plan output, take them from a variable declared with `sensitive = true` or wrap them in `sensitive(...)`, which Terraform redacts wherever the value is used, or reference a global environment variable in the check instead of the secret itself.
 
 ## Removed resource types
 
