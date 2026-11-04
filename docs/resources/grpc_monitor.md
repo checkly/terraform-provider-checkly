@@ -288,6 +288,18 @@ Required:
 - `service_id` (String) The status page service that this incident will be associated with.
 - `severity` (String) The severity level of the incident. Possible values are `MINOR`, `MEDIUM`, `MAJOR`, and `CRITICAL`.
 
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# Import an existing gRPC monitor using its check ID.
+# You can find the ID in the check's URL in the Checkly dashboard.
+terraform import checkly_grpc_monitor.example 3ffee447-5c86-4c56-b95a-2e1b4d1a1234
+```
+
 ## Assertion Reference
 
 Each element of `request.assertion` has the shape `{ source, property, comparison, target }`. Which comparisons are allowed, and what `target` must contain, depend on `source`. The `comparison` and `target` rules are enforced by the Checkly API at apply time; where `property` is marked as ignored, the API accepts any value but does not use it.

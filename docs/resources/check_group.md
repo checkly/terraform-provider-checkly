@@ -299,3 +299,16 @@ Optional:
 Optional:
 
 - `network_error` (Boolean) When `true`, retry only if the cause of the failure is a network error. (Default `false`).
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# checkly_check_group is deprecated; to start managing an existing resource, import it as checkly_check_group_v2 instead.
+# Import an existing check group using its numeric ID.
+# The ID is returned by the Checkly API at GET /v1/check-groups.
+terraform import checkly_check_group.example 12345
+```

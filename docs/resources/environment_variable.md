@@ -42,3 +42,14 @@ resource "checkly_environment_variable" "variable_2" {
 ### Read-Only
 
 - `id` (String) The ID of the environment variable. Identical to the key.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# Import an existing environment variable using its key.
+terraform import checkly_environment_variable.example API_KEY
+```

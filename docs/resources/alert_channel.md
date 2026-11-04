@@ -278,3 +278,15 @@ Optional:
 - `template` (String)
 - `webhook_secret` (String, Sensitive)
 - `webhook_type` (String) Type of the webhook. The allowed values are `WEBHOOK_CORALOGIX`, `WEBHOOK_DISCORD`, `WEBHOOK_FIREHYDRANT`, `WEBHOOK_GITLAB_ALERT`, `WEBHOOK_ILERT`, `WEBHOOK_INCIDENTIO`, `WEBHOOK_MSTEAMS`, `WEBHOOK_ROOTLY`, `WEBHOOK_SPIKESH`, `WEBHOOK_SPLUNK` and `WEBHOOK_TELEGRAM`.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# Import an existing alert channel using its numeric ID.
+# The ID is returned by the Checkly API at GET /v1/alert-channels.
+terraform import checkly_alert_channel.example 12345
+```

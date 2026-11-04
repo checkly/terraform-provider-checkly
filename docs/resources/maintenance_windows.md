@@ -116,3 +116,16 @@ Optional:
 - `show_affected_services` (Boolean) Show which services the maintenance affects. When `false`, downtime during the maintenance counts against the services' uptime. (Default `true`).
 - `status_page_ids` (Set of String) The IDs of the status pages (`checkly_status_page`) to show the maintenance window on. Requires `service_ids` or `affect_all_services`.
 - `suppress_auto_incidents` (Boolean) Suppress automatically created incidents for the linked services during the maintenance. (Default `false`).
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# checkly_maintenance_windows is deprecated; to start managing an existing resource, import it as checkly_maintenance_window instead.
+# Import an existing maintenance window using its numeric ID.
+# The ID is returned by the Checkly API at GET /v1/maintenance-windows.
+terraform import checkly_maintenance_windows.example 12345
+```

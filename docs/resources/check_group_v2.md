@@ -515,3 +515,15 @@ Optional:
 
 - `inline_script` (String) A valid piece of Node.js code.
 - `snippet_id` (Number) The ID of a code snippet. Code snippets are not available for new plans.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# Import an existing check group using its numeric ID.
+# The ID is returned by the Checkly API at GET /v1/check-groups.
+terraform import checkly_check_group_v2.example 12345
+```

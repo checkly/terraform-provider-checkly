@@ -49,3 +49,15 @@ EOT
 ### Read-Only
 
 - `id` (String) The ID of the snippet.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# Import an existing snippet using its numeric ID.
+# The ID is returned by the Checkly API at GET /v1/snippets.
+terraform import checkly_snippet.example 12345
+```

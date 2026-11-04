@@ -149,3 +149,15 @@ Required:
 - `primary_button_background_color` (String) The background of primary buttons, such as "Subscribe". A hex color such as "#FF0000" or "#F00".
 - `primary_button_font_color` (String) The color of text on primary buttons. A hex color such as "#FF0000" or "#F00".
 - `title_font_color` (String) The color of titles and headings. A hex color such as "#FF0000" or "#F00".
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# Import an existing status page using its ID.
+# The ID is returned by the Checkly API at GET /v3/status-pages.
+terraform import checkly_status_page_v3.example e35f7e14-91b2-4d24-b7b6-e0f9e2f8e51c
+```

@@ -65,3 +65,15 @@ resource "checkly_dashboard" "dashboard_1" {
 
 - `id` (String) The ID of the dashboard.
 - `key` (String, Sensitive) The access key of a private dashboard. It is only issued when the dashboard is created private, and an update that leaves the dashboard public revokes it. A dashboard made private through an update, or imported, has no key.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# Import an existing dashboard using its dashboard ID, a short hexadecimal string.
+# The ID is the dashboardId returned by the Checkly API at GET /v1/dashboards.
+terraform import checkly_dashboard.example 7f3a9c21
+```

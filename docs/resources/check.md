@@ -376,3 +376,16 @@ Required:
 - `notify_subscribers` (Boolean) Whether to notify subscribers when the incident is triggered.
 - `service_id` (String) The status page service that this incident will be associated with.
 - `severity` (String) The severity level of the incident. Possible values are `MINOR`, `MEDIUM`, `MAJOR`, and `CRITICAL`.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# checkly_check is deprecated; to start managing an existing resource, import it as checkly_api_check, checkly_browser_check or checkly_multistep_check instead.
+# Import an existing check using its check ID.
+# You can find the ID in the check's URL in the Checkly dashboard.
+terraform import checkly_check.example 3ffee447-5c86-4c56-b95a-2e1b4d1a1234
+```
