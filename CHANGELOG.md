@@ -42,6 +42,8 @@ need changes. Follow the [upgrade guide](docs/guides/upgrading-to-v2.md).
 ### Fixed
 - Only real 404 responses remove a resource from state.
 - A dashboard's `key` no longer shows as changing on every update.
+- Removing `setup_snippet_id`, `teardown_snippet_id`, `local_setup_script` or `local_teardown_script` from a `checkly_check_group` clears the value in Checkly.
+- `checkly_check_group` can be created without `locations` or `private_locations`, which the API used to reject. Its checks then keep their own locations.
 
 ## [v1.6.6](https://github.com/checkly/terraform-provider-checkly/releases/tag/v1.6.6) - 2023-06-06
 ### Added

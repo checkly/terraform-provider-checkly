@@ -1508,7 +1508,8 @@ func TestAccCheckGroupSwitchToV2(t *testing.T) {
 
 // TestAccCheckGroupDoubleCheck covers the deprecated double_check attribute,
 // which implies a single retry in another region when retry_strategy is not
-// configured, and switches back to no retries when removed.
+// configured, and switches back to no retries when removed. The SDK does not
+// read the flag, so importing a group always reads it as false.
 func TestAccCheckGroupDoubleCheck(t *testing.T) {
 	config := func(doubleCheck string) string {
 		return fmt.Sprintf(`
@@ -1532,11 +1533,124 @@ func TestAccCheckGroupDoubleCheck(t *testing.T) {
 			),
 		},
 		{
+			ResourceName:            r,
+			ImportState:             true,
+			ImportStateVerify:       true,
+			ImportStateVerifyIgnore: []string{"double_check"},
+		},
+		{
 			Config: config(""),
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(r, "double_check", "false"),
 				resource.TestCheckResourceAttr(r, "retry_strategy.type", "NO_RETRIES"),
 			),
 		},
+		{
+			Config: config("double_check = true"),
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(r, "double_check", "true"),
+				resource.TestCheckResourceAttr(r, "retry_strategy.type", "FIXED"),
+				resource.TestCheckResourceAttr(r, "retry_strategy.max_retries", "1"),
+			),
+		},
 	})
+}
+
+// TestAccCheckGroupWithoutAlertSettings manages a group that has no alert
+// settings, which is how checkly_check_group_v2 creates one without
+// enforce_alert_settings: an unrelated change keeps them unset, and configuring
+// alert_settings afterwards results in the API's values and an empty plan.
+func TestAccCheckGroupWithoutAlertSettings(t *testing.T) {
+	cases := map[string]struct {
+		alertSettings string
+		check         resource.TestCheckFunc
+	}{
+		"run based": {
+			alertSettings: `alert_settings = { escalation_type = "RUN_BASED" }`,
+			check:         resource.TestCheckResourceAttr("checkly_check_group.test", "alert_settings.run_based_escalation.failed_run_threshold", "1"),
+		},
+		"time based": {
+			alertSettings: `alert_settings = { escalation_type = "TIME_BASED" }`,
+			check:         resource.TestCheckResourceAttr("checkly_check_group.test", "alert_settings.time_based_escalation.minutes_failing_threshold", "5"),
+		},
+	}
+
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			groupName := fmt.Sprintf("tf-acc-group-no-alerts-%d", acctest.RandInt())
+			v2 := fmt.Sprintf(`
+				resource "checkly_check_group_v2" "test" {
+					name = %q
+
+					enforce_locations = {
+						enabled   = true
+						locations = ["eu-central-1"]
+					}
+
+					enforce_retry_strategy = {
+						enabled = true
+						retry_strategy = {
+							type = "NO_RETRIES"
+						}
+					}
+
+					enforce_scheduling_strategy = {
+						enabled      = true
+						run_parallel = false
+					}
+				}
+			`, groupName)
+			v1 := func(concurrency int, alertSettings string) string {
+				return fmt.Sprintf(`
+					resource "checkly_check_group" "test" {
+						name        = %q
+						activated   = true
+						concurrency = %d
+						locations   = ["eu-central-1"]
+						%s
+					}
+				`, groupName, concurrency, alertSettings)
+			}
+			const removeV2 = `
+				removed {
+					from = checkly_check_group_v2.test
+
+					lifecycle {
+						destroy = false
+					}
+				}
+			`
+
+			accTestCase(t, []resource.TestStep{
+				{
+					Config: v2,
+				},
+				{
+					Config: v2 + v1(1, "") + `
+						import {
+							to = checkly_check_group.test
+							id = checkly_check_group_v2.test.id
+						}
+					`,
+					Check: resource.TestCheckResourceAttr("checkly_check_group.test", "alert_settings.escalation_type", ""),
+				},
+				{
+					Config: removeV2 + v1(2, ""),
+					Check: resource.ComposeTestCheckFunc(
+						resource.TestCheckResourceAttr("checkly_check_group.test", "concurrency", "2"),
+						resource.TestCheckResourceAttr("checkly_check_group.test", "alert_settings.escalation_type", ""),
+					),
+				},
+				{
+					Config: v1(2, c.alertSettings),
+					Check: resource.ComposeTestCheckFunc(
+						c.check,
+						resource.TestCheckResourceAttr("checkly_check_group.test", "alert_settings.reminders.amount", "0"),
+						resource.TestCheckResourceAttr("checkly_check_group.test", "alert_settings.reminders.interval", "5"),
+						resource.TestCheckResourceAttr("checkly_check_group.test", "alert_settings.parallel_run_failure_threshold.percentage", "10"),
+					),
+				},
+			})
+		})
+	}
 }

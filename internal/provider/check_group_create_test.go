@@ -19,15 +19,6 @@ type readBackFailingClient struct {
 	checkly.Client
 }
 
-func (readBackFailingClient) CreateGroup(ctx context.Context, group checkly.Group) (*checkly.Group, error) {
-	group.ID = 42
-	return &group, nil
-}
-
-func (readBackFailingClient) GetGroup(ctx context.Context, id int64) (*checkly.Group, error) {
-	return nil, errors.New("502 Bad Gateway")
-}
-
 func (readBackFailingClient) CreateGroupV2(ctx context.Context, group checkly.GroupV2) (*checkly.GroupV2, error) {
 	group.ID = 42
 	return &group, nil
