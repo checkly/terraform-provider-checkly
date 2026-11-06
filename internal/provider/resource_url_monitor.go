@@ -20,7 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/checkly-go-sdk/v2"
 )
 
 var (
@@ -547,7 +547,7 @@ func urlMonitorRequestFromObject(ctx context.Context, obj types.Object, diags *d
 		FollowRedirects: model.FollowRedirects.ValueBool(),
 		SkipSSL:         model.SkipSSL.ValueBool(),
 		Assertions:      assertionsFromSet(ctx, model.Assertions, diags),
-		IPFamily:        model.IPFamily.ValueString(),
+		IPFamily:        checkly.IPFamily(model.IPFamily.ValueString()),
 	}
 }
 
@@ -559,7 +559,7 @@ func urlMonitorRequestToObject(ctx context.Context, r checkly.URLRequest, diags 
 		FollowRedirects: types.BoolValue(r.FollowRedirects),
 		SkipSSL:         types.BoolValue(r.SkipSSL),
 		Assertions:      assertionsToSet(ctx, r.Assertions, diags),
-		IPFamily:        types.StringValue(r.IPFamily),
+		IPFamily:        types.StringValue(string(r.IPFamily)),
 	})
 	diags.Append(d...)
 

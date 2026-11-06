@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"os"
 
@@ -12,7 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/checkly-go-sdk/v2"
 )
 
 var _ provider.Provider = (*ChecklyProvider)(nil)
@@ -60,7 +61,7 @@ func (p *ChecklyProvider) Schema(ctx context.Context, req provider.SchemaRequest
 			},
 			"account_id": schema.StringAttribute{
 				Optional:    true,
-				Description: "The Checkly account ID. Required when using a user-scoped API key. Can also be set using the `CHECKLY_ACCOUNT_ID` environment variable.",
+				Description: "The Checkly account ID, which every API key needs. Required, but can also be set using the `CHECKLY_ACCOUNT_ID` environment variable.",
 			},
 		},
 	}
@@ -103,20 +104,9 @@ func (p *ChecklyProvider) Configure(ctx context.Context, req provider.ConfigureR
 		return
 	}
 
-	apiKey := os.Getenv("CHECKLY_API_KEY")
-	if !config.APIKey.IsNull() {
-		apiKey = config.APIKey.ValueString()
-	}
-
-	apiURL := os.Getenv("CHECKLY_API_URL")
-	if !config.APIURL.IsNull() {
-		apiURL = config.APIURL.ValueString()
-	}
-
-	accountID := os.Getenv("CHECKLY_ACCOUNT_ID")
-	if !config.AccountID.IsNull() {
-		accountID = config.AccountID.ValueString()
-	}
+	apiKey := configuredOrEnv(config.APIKey, "CHECKLY_API_KEY")
+	apiURL := configuredOrEnv(config.APIURL, "CHECKLY_API_URL")
+	accountID := configuredOrEnv(config.AccountID, "CHECKLY_ACCOUNT_ID")
 
 	if apiKey == "" {
 		resp.Diagnostics.AddAttributeError(
@@ -137,25 +127,51 @@ func (p *ChecklyProvider) Configure(ctx context.Context, req provider.ConfigureR
 		return
 	}
 
-	client := checkly.NewClient(
-		apiURL,
-		apiKey,
-		&http.Client{Timeout: requestTimeout},
-		nil,
-	)
-
-	if accountID != "" {
-		client.SetAccountId(accountID)
+	source := os.Getenv("CHECKLY_API_SOURCE")
+	if source == "" {
+		source = "TF"
 	}
 
-	if source := os.Getenv("CHECKLY_API_SOURCE"); source != "" {
-		client.SetChecklySource(source)
-	} else {
-		client.SetChecklySource("TF")
+	// The errors of NewClient name the invalid option, never the API key or
+	// the account ID.
+	client, err := checkly.NewClient(
+		checkly.WithBaseURL(apiURL),
+		checkly.WithAuth(apiKey, accountID),
+		checkly.WithHTTPClient(&http.Client{Timeout: requestTimeout}),
+		checkly.WithSource(source),
+	)
+	switch {
+	case errors.Is(err, checkly.ErrMissingAccountID):
+		resp.Diagnostics.AddAttributeError(
+			path.Root("account_id"),
+			"Missing Checkly Account ID",
+			"The provider requires a Checkly account ID, for every API key. Set the account_id value in the provider configuration or use the CHECKLY_ACCOUNT_ID environment variable.",
+		)
+		return
+	case errors.Is(err, checkly.ErrInvalidAccountID):
+		resp.Diagnostics.AddAttributeError(
+			path.Root("account_id"),
+			"Invalid Checkly Account ID",
+			"The Checkly account ID must be a UUID. Check the account_id value in the provider configuration or the CHECKLY_ACCOUNT_ID environment variable.",
+		)
+		return
+	case err != nil:
+		resp.Diagnostics.AddError("Unable to Create the Checkly API Client", err.Error())
+		return
 	}
 
 	resp.DataSourceData = client
 	resp.ResourceData = client
+}
+
+// configuredOrEnv returns the configured value, or the environment variable
+// when the value is null or empty, such as a variable that defaults to "".
+func configuredOrEnv(value types.String, env string) string {
+	if configured := value.ValueString(); configured != "" {
+		return configured
+	}
+
+	return os.Getenv(env)
 }
 
 func (p *ChecklyProvider) Resources(ctx context.Context) []func() resource.Resource {

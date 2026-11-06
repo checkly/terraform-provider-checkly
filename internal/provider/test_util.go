@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 
-	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/checkly-go-sdk/v2"
 )
 
 // testAccProtoV6ProviderFactories are used to instantiate a provider during
@@ -31,8 +31,13 @@ func testAccClient() checkly.Client {
 	if apiURL == "" {
 		apiURL = "https://api.checklyhq.com"
 	}
-	client := checkly.NewClient(apiURL, os.Getenv("CHECKLY_API_KEY"), nil, nil)
-	client.SetAccountId(os.Getenv("CHECKLY_ACCOUNT_ID"))
+	client, err := checkly.NewClient(
+		checkly.WithBaseURL(apiURL),
+		checkly.WithAuth(os.Getenv("CHECKLY_API_KEY"), os.Getenv("CHECKLY_ACCOUNT_ID")),
+	)
+	if err != nil {
+		panic(err)
+	}
 	return client
 }
 
@@ -79,6 +84,8 @@ var configBlockVersionChecks = []struct {
 	{regexp.MustCompile(`(?m)^\s*removed\s*\{`), tfversion.SkipBelow(tfversion.Version1_7_0)},
 	// import blocks whose id refers to another resource.
 	{regexp.MustCompile(`(?m)^\s*import\s*\{`), tfversion.SkipBelow(tfversion.Version1_6_0)},
+	// The built-in resource whose output is known only at apply time.
+	{regexp.MustCompile(`(?m)^\s*resource\s+"terraform_data"`), tfversion.SkipBelow(tfversion.Version1_4_0)},
 }
 
 // terraformVersionChecks skips a test on Terraform versions that cannot run

@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/checkly-go-sdk/v2"
 )
 
 func TestIsNotFoundError(t *testing.T) {
@@ -21,7 +21,14 @@ func TestIsNotFoundError(t *testing.T) {
 		_, _ = w.Write([]byte(`{"statusCode":404,"error":"Not Found","message":"Not Found"}`))
 	}))
 	defer server.Close()
-	client := checkly.NewClient(server.URL, "test-key", server.Client(), nil)
+	client, err := checkly.NewClient(
+		checkly.WithBaseURL(server.URL),
+		checkly.WithAuth("test-key", "00000000-0000-4000-8000-000000000000"),
+		checkly.WithHTTPClient(server.Client()),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
 	_, notFound := client.GetEnvironmentVariable(context.Background(), "MISSING")
 	if notFound == nil {
 		t.Fatal("GetEnvironmentVariable on a 404 succeeded, want an error")

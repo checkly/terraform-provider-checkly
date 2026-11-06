@@ -17,7 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/checkly-go-sdk/v2"
 )
 
 var (
@@ -339,7 +339,7 @@ func (r *MultistepCheckResource) ImportState(ctx context.Context, req resource.I
 // type. Only MULTI_STEP checks can be moved to this resource type; the other
 // check types have their own dedicated resource types.
 func (r *MultistepCheckResource) MoveState(ctx context.Context) []resource.StateMover {
-	return checkStateMovers(ctx, "MULTI_STEP", multistepCheckModelFromCheckModel)
+	return checkStateMovers(ctx, checkly.CheckTypeMultiStep, multistepCheckModelFromCheckModel)
 }
 
 // multistepCheckModelFromCheckModel converts a checkly_check model of a

@@ -245,3 +245,53 @@ func TestAccStatusPageUnsupportedCustomDomains(t *testing.T) {
 
 	accTestCase(t, steps)
 }
+
+// TestAccStatusPageUpdateClearsRemovedValues removes values that the API keeps
+// when an update leaves them out. The empty plan after the last step shows
+// that they are gone.
+func TestAccStatusPageUpdateClearsRemovedValues(t *testing.T) {
+	rInt := acctest.RandInt()
+	config := func(values string) string {
+		return fmt.Sprintf(`
+			resource "checkly_status_page_service" "test" {
+				name = "tf-acc-clear"
+			}
+
+			resource "checkly_status_page" "test" {
+				name = "tf-acc-clear"
+				url  = "status-page-clear-%d"
+				%s
+
+				card {
+					name = "baz"
+
+					service_attachment {
+						service_id = checkly_status_page_service.test.id
+					}
+				}
+			}
+		`, rInt, values)
+	}
+	const r = "checkly_status_page.test"
+
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: config(fmt.Sprintf(`
+				custom_domain = "status-page-clear-%d.checklyhq.com"
+				logo          = "https://example.com/logo.png"
+				redirect_to   = "https://example.com"
+				favicon       = "https://example.com/favicon.ico"
+			`, rInt)),
+			Check: resource.TestCheckResourceAttr(r, "logo", "https://example.com/logo.png"),
+		},
+		{
+			Config: config(""),
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(r, "custom_domain", ""),
+				resource.TestCheckResourceAttr(r, "logo", ""),
+				resource.TestCheckResourceAttr(r, "redirect_to", ""),
+				resource.TestCheckResourceAttr(r, "favicon", ""),
+			),
+		},
+	})
+}

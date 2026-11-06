@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/checkly-go-sdk/v2"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -99,7 +99,7 @@ func TestCheckGroupFromModelSendsConfiguredSettings(t *testing.T) {
 		t.Errorf("local scripts = %q, %q", *group.LocalSetupScript, *group.LocalTearDownScript)
 	}
 	// Missing alert_settings send the defaults, unlike a stored empty object.
-	if group.AlertSettings == nil || group.AlertSettings.EscalationType != checkly.RunBased {
+	if group.AlertSettings == nil || group.AlertSettings.EscalationType != checkly.EscalationTypeRunBased {
 		t.Errorf("AlertSettings = %+v, want the defaults", group.AlertSettings)
 	}
 }
@@ -136,7 +136,7 @@ func TestPlanUnconfiguredAlertSettingsAsUnknown(t *testing.T) {
 	var diags diag.Diagnostics
 	storedEmpty := alertSettingsToObject(ctx, checkly.AlertSettings{}, types.ObjectNull(alertSettingsAttrTypes), &diags)
 	stored := alertSettingsToObject(ctx, checkly.AlertSettings{
-		EscalationType:     checkly.RunBased,
+		EscalationType:     checkly.EscalationTypeRunBased,
 		RunBasedEscalation: checkly.RunBasedEscalation{FailedRunThreshold: 2},
 	}, types.ObjectNull(alertSettingsAttrTypes), &diags)
 	if diags.HasError() {

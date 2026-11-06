@@ -21,7 +21,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 
-	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/checkly-go-sdk/v2"
 )
 
 var playwrightCheckSuiteDefaultBrowsers = []string{"chromium", "firefox", "webkit"}
@@ -660,7 +660,7 @@ func playwrightCheckSuiteFromModel(
 
 			name := engine.Name.ValueString()
 			version := engine.Version.ValueString()
-			check.Engine = &name
+			check.Engine = (*checkly.PlaywrightEngine)(&name)
 			check.EngineVersion = &version
 		}
 	}
@@ -755,7 +755,7 @@ func playwrightCheckSuiteToModel(
 	alertSettings := check.AlertSettings
 	if alertSettings == nil {
 		alertSettings = &checkly.AlertSettings{
-			EscalationType: checkly.RunBased,
+			EscalationType: checkly.EscalationTypeRunBased,
 			RunBasedEscalation: checkly.RunBasedEscalation{
 				FailedRunThreshold: 1,
 			},
@@ -850,7 +850,7 @@ func playwrightCheckSuiteRuntimeFromAPI(
 
 		var d diag.Diagnostics
 		engine, d = types.ObjectValue(playwrightCheckSuiteRuntimeEngineAttrTypes, map[string]attr.Value{
-			"name":    types.StringValue(*check.Engine),
+			"name":    types.StringValue(string(*check.Engine)),
 			"version": engineVersion,
 		})
 		diags.Append(d...)

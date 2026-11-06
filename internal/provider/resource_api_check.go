@@ -19,7 +19,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/checkly-go-sdk/v2"
 )
 
 var (
@@ -446,7 +446,7 @@ func (r *APICheckResource) ImportState(ctx context.Context, req resource.ImportS
 // type. Only checks with type = "API" can be moved; the schemas are otherwise
 // compatible.
 func (r *APICheckResource) MoveState(ctx context.Context) []resource.StateMover {
-	return checkStateMovers(ctx, checkly.TypeAPI, apiCheckModelFromCheckModel)
+	return checkStateMovers(ctx, checkly.CheckTypeAPI, apiCheckModelFromCheckModel)
 }
 
 // apiCheckModelFromCheckModel converts a checkly_check model of an API check.

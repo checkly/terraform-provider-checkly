@@ -14,7 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 
-	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/checkly-go-sdk/v2"
 )
 
 // apiCheckRequestModel describes the request attribute data model.
@@ -200,12 +200,12 @@ func apiCheckRequestFromObject(ctx context.Context, obj types.Object, diags *dia
 		FollowRedirects: model.FollowRedirects.ValueBool(),
 		SkipSSL:         model.SkipSSL.ValueBool(),
 		Body:            model.Body.ValueString(),
-		BodyType:        model.BodyType.ValueString(),
+		BodyType:        checkly.BodyType(model.BodyType.ValueString()),
 		Headers:         apiCheckKeyValuesFromMap(ctx, model.Headers, diags),
 		QueryParameters: apiCheckKeyValuesFromMap(ctx, model.QueryParameters, diags),
 		Assertions:      assertionsFromSet(ctx, model.Assertion, diags),
 		BasicAuth:       apiCheckBasicAuthFromObject(ctx, model.BasicAuth, diags),
-		IPFamily:        model.IPFamily.ValueString(),
+		IPFamily:        checkly.IPFamily(model.IPFamily.ValueString()),
 	}
 }
 
@@ -234,10 +234,10 @@ func apiCheckRequestToObject(ctx context.Context, r checkly.Request, prior types
 		Headers:         apiCheckMapFromKeyValues(ctx, r.Headers, priorModel.Headers, diags),
 		QueryParameters: apiCheckMapFromKeyValues(ctx, r.QueryParameters, priorModel.QueryParameters, diags),
 		Body:            types.StringValue(r.Body),
-		BodyType:        types.StringValue(r.BodyType),
+		BodyType:        types.StringValue(string(r.BodyType)),
 		Assertion:       assertionsToSet(ctx, r.Assertions, diags),
 		BasicAuth:       apiCheckBasicAuthToObject(ctx, r.BasicAuth, diags),
-		IPFamily:        types.StringValue(r.IPFamily),
+		IPFamily:        types.StringValue(string(r.IPFamily)),
 	})
 	diags.Append(d...)
 

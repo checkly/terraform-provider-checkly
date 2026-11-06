@@ -22,7 +22,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/checkly-go-sdk/v2"
 )
 
 var (
@@ -879,11 +879,11 @@ func grpcMonitorRequestFromObject(ctx context.Context, obj types.Object, diags *
 // API representation.
 func grpcMonitorRequestFromModel(ctx context.Context, model GRPCMonitorRequestModel, diags *diag.Diagnostics) checkly.GRPCRequest {
 	config := checkly.GRPCConfig{
-		Mode:              model.GRPCMode.ValueString(),
+		Mode:              checkly.GRPCMode(model.GRPCMode.ValueString()),
 		TLS:               model.TLS.ValueBool(),
-		Encoding:          model.Encoding.ValueString(),
+		Encoding:          checkly.GRPCEncoding(model.Encoding.ValueString()),
 		Service:           model.Service.ValueString(),
-		ServiceDefinition: model.ServiceDefinition.ValueString(),
+		ServiceDefinition: checkly.GRPCServiceDefinition(model.ServiceDefinition.ValueString()),
 		ProtoContent:      model.ProtoContent.ValueString(),
 		BfbsContent:       model.BfbsContent.ValueString(),
 		Method:            model.Method.ValueString(),
@@ -904,7 +904,7 @@ func grpcMonitorRequestFromModel(ctx context.Context, model GRPCMonitorRequestMo
 	return checkly.GRPCRequest{
 		URL:        model.Host.ValueString(),
 		Port:       int(model.Port.ValueInt64()),
-		IPFamily:   model.IPFamily.ValueString(),
+		IPFamily:   checkly.IPFamily(model.IPFamily.ValueString()),
 		SkipSSL:    model.SkipSSL.ValueBool(),
 		Timeout:    int(model.Timeout.ValueInt64()),
 		Assertions: assertionsFromSet(ctx, model.Assertion, diags),
@@ -918,14 +918,14 @@ func grpcMonitorRequestToObject(ctx context.Context, r checkly.GRPCRequest, diag
 	obj, d := types.ObjectValueFrom(ctx, grpcMonitorRequestAttrTypes, GRPCMonitorRequestModel{
 		Host:              types.StringValue(r.URL),
 		Port:              types.Int64Value(int64(grpcPortToInt(r.Port))),
-		IPFamily:          types.StringValue(r.IPFamily),
-		GRPCMode:          types.StringValue(r.GRPCConfig.Mode),
+		IPFamily:          types.StringValue(string(r.IPFamily)),
+		GRPCMode:          types.StringValue(string(r.GRPCConfig.Mode)),
 		TLS:               types.BoolValue(r.GRPCConfig.TLS),
 		SkipSSL:           types.BoolValue(r.SkipSSL),
 		Timeout:           types.Int64Value(int64(r.Timeout)),
-		Encoding:          types.StringValue(r.GRPCConfig.Encoding),
+		Encoding:          types.StringValue(string(r.GRPCConfig.Encoding)),
 		Service:           types.StringValue(r.GRPCConfig.Service),
-		ServiceDefinition: types.StringValue(r.GRPCConfig.ServiceDefinition),
+		ServiceDefinition: types.StringValue(string(r.GRPCConfig.ServiceDefinition)),
 		ProtoContent:      types.StringValue(r.GRPCConfig.ProtoContent),
 		BfbsContent:       types.StringValue(r.GRPCConfig.BfbsContent),
 		Method:            types.StringValue(r.GRPCConfig.Method),

@@ -20,7 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/checkly-go-sdk/v2"
 )
 
 var (
@@ -550,11 +550,11 @@ func dnsMonitorRequestFromObject(ctx context.Context, obj types.Object, diags *d
 	nameServer := dnsMonitorNameServerFromObject(ctx, model.NameServer, diags)
 
 	return checkly.DNSRequest{
-		RecordType: model.RecordType.ValueString(),
+		RecordType: checkly.DNSRecordType(model.RecordType.ValueString()),
 		Query:      model.Query.ValueString(),
 		NameServer: nameServer.Host.ValueString(),
 		Port:       int(nameServer.Port.ValueInt64()),
-		Protocol:   model.Protocol.ValueString(),
+		Protocol:   checkly.DNSProtocol(model.Protocol.ValueString()),
 		Assertions: assertionsFromSet(ctx, model.Assertions, diags),
 	}
 }
@@ -563,9 +563,9 @@ func dnsMonitorRequestFromObject(ctx context.Context, obj types.Object, diags *d
 // to the request attribute value.
 func dnsMonitorRequestToObject(ctx context.Context, r checkly.DNSRequest, diags *diag.Diagnostics) types.Object {
 	obj, d := types.ObjectValueFrom(ctx, dnsMonitorRequestAttrTypes, DNSMonitorRequestModel{
-		RecordType: types.StringValue(r.RecordType),
+		RecordType: types.StringValue(string(r.RecordType)),
 		Query:      types.StringValue(r.Query),
-		Protocol:   types.StringValue(r.Protocol),
+		Protocol:   types.StringValue(string(r.Protocol)),
 		NameServer: dnsMonitorNameServerToObject(ctx, r.NameServer, r.Port, diags),
 		Assertions: assertionsToSet(ctx, r.Assertions, diags),
 	})

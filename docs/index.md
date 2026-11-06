@@ -81,7 +81,7 @@ resource "checkly_api_check" "example_check" {
 
 ### Optional
 
-- `account_id` (String) The Checkly account ID. Required when using a user-scoped API key. Can also be set using the `CHECKLY_ACCOUNT_ID` environment variable.
+- `account_id` (String) The Checkly account ID, which every API key needs. Required, but can also be set using the `CHECKLY_ACCOUNT_ID` environment variable.
 - `api_key` (String, Sensitive) The Checkly API key. Can also be set using the `CHECKLY_API_KEY` environment variable.
 - `api_url` (String) The Checkly API URL. Defaults to `https://api.checklyhq.com`. Can also be set using the `CHECKLY_API_URL` environment variable.
 

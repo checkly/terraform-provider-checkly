@@ -17,7 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/checkly-go-sdk/v2"
 )
 
 var (
@@ -334,7 +334,7 @@ func (r *BrowserCheckResource) ImportState(ctx context.Context, req resource.Imp
 // type. Only BROWSER checks can be moved to this resource type; the other
 // check types have their own dedicated resource types.
 func (r *BrowserCheckResource) MoveState(ctx context.Context) []resource.StateMover {
-	return checkStateMovers(ctx, checkly.TypeBrowser, browserCheckModelFromCheckModel)
+	return checkStateMovers(ctx, checkly.CheckTypeBrowser, browserCheckModelFromCheckModel)
 }
 
 // browserCheckModelFromCheckModel converts a checkly_check model of a browser

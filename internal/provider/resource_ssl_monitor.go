@@ -22,7 +22,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 
-	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/checkly-go-sdk/v2"
 )
 
 var (
@@ -793,7 +793,7 @@ func sslMonitorRequestFromObject(ctx context.Context, obj types.Object, diags *d
 	config := checkly.SSLConfig{
 		Hostname:              model.Hostname.ValueString(),
 		Port:                  int(model.Port.ValueInt64()),
-		IPFamily:              model.IPFamily.ValueString(),
+		IPFamily:              checkly.IPFamily(model.IPFamily.ValueString()),
 		SkipChainValidation:   model.SkipChainValidation.ValueBool(),
 		HandshakeTimeoutMs:    int(model.HandshakeTimeoutMs.ValueInt64()),
 		AlertDaysBeforeExpiry: int(model.AlertDaysBeforeExpiry.ValueInt64()),
@@ -825,11 +825,11 @@ func sslMonitorRequestFromObject(ctx context.Context, obj types.Object, diags *d
 		diags.Append(model.ClientCertificate.As(ctx, &cert, basetypes.ObjectAsOptions{})...)
 
 		if mode := cert.Mode.ValueString(); mode != "" && mode != "account_default" {
-			request.SSLConfig.ClientCertificateMode = mode
+			request.SSLConfig.ClientCertificateMode = checkly.SSLClientCertificateMode(mode)
 		}
 
 		if certID := cert.ClientCertificateID.ValueString(); certID != "" {
-			request.SSLClientCertificateId = &certID
+			request.SSLClientCertificateID = &certID
 		}
 	}
 
@@ -856,7 +856,7 @@ func sslMonitorRequestToObject(ctx context.Context, r checkly.SSLRequest, prior 
 		Hostname:              types.StringValue(config.Hostname),
 		Port:                  types.Int64Value(int64(config.Port)),
 		ServerName:            types.StringValue(serverName),
-		IPFamily:              types.StringValue(config.IPFamily),
+		IPFamily:              types.StringValue(string(config.IPFamily)),
 		SkipChainValidation:   types.BoolValue(config.SkipChainValidation),
 		HandshakeTimeoutMs:    types.Int64Value(int64(config.HandshakeTimeoutMs)),
 		AlertDaysBeforeExpiry: types.Int64Value(int64(config.AlertDaysBeforeExpiry)),
@@ -896,8 +896,8 @@ func sslMonitorClientCertificateToObject(ctx context.Context, r checkly.SSLReque
 	}
 
 	certID := types.StringNull()
-	if r.SSLClientCertificateId != nil {
-		certID = types.StringValue(*r.SSLClientCertificateId)
+	if r.SSLClientCertificateID != nil {
+		certID = types.StringValue(*r.SSLClientCertificateID)
 	} else if !prior.IsNull() && !prior.IsUnknown() {
 		// A configured empty ID converts to the same API representation as
 		// no ID at all, so it is preserved.
@@ -909,7 +909,7 @@ func sslMonitorClientCertificateToObject(ctx context.Context, r checkly.SSLReque
 	}
 
 	obj, d := types.ObjectValue(sslMonitorClientCertificateAttrTypes, map[string]attr.Value{
-		"mode":                  types.StringValue(mode),
+		"mode":                  types.StringValue(string(mode)),
 		"client_certificate_id": certID,
 	})
 	diags.Append(d...)
@@ -955,8 +955,8 @@ func sslMonitorTLSRuleFromObject(ctx context.Context, obj types.Object, diags *d
 	}
 
 	return &checkly.SSLBaselineTLSRule{
-		Value:    model.Value.ValueString(),
-		Severity: model.Severity.ValueString(),
+		Value:    checkly.TLSVersion(model.Value.ValueString()),
+		Severity: checkly.SSLBaselineSeverity(model.Severity.ValueString()),
 	}
 }
 
@@ -968,7 +968,7 @@ func sslMonitorKeySizeRuleFromObject(ctx context.Context, obj types.Object, diag
 
 	return &checkly.SSLBaselineKeySizeRule{
 		Value:    int(model.Value.ValueInt64()),
-		Severity: model.Severity.ValueString(),
+		Severity: checkly.SSLBaselineSeverity(model.Severity.ValueString()),
 	}
 }
 
@@ -979,7 +979,7 @@ func sslMonitorSeverityRuleFromObject(ctx context.Context, obj types.Object, dia
 	}
 
 	return &checkly.SSLBaselineSeverityRule{
-		Severity: model.Severity.ValueString(),
+		Severity: checkly.SSLBaselineSeverity(model.Severity.ValueString()),
 	}
 }
 
@@ -1029,8 +1029,8 @@ func sslMonitorTLSRuleToObject(remote *checkly.SSLBaselineTLSRule, prior types.O
 	}
 
 	return types.ObjectValueMust(sslMonitorBaselineTLSRuleAttrTypes, map[string]attr.Value{
-		"value":    types.StringValue(remote.Value),
-		"severity": types.StringValue(remote.Severity),
+		"value":    types.StringValue(string(remote.Value)),
+		"severity": types.StringValue(string(remote.Severity)),
 	})
 }
 
@@ -1041,7 +1041,7 @@ func sslMonitorKeySizeRuleToObject(remote *checkly.SSLBaselineKeySizeRule, prior
 
 	return types.ObjectValueMust(sslMonitorBaselineKeySizeRuleAttrTypes, map[string]attr.Value{
 		"value":    types.Int64Value(int64(remote.Value)),
-		"severity": types.StringValue(remote.Severity),
+		"severity": types.StringValue(string(remote.Severity)),
 	})
 }
 
@@ -1051,6 +1051,6 @@ func sslMonitorSeverityRuleToObject(remote *checkly.SSLBaselineSeverityRule, pri
 	}
 
 	return types.ObjectValueMust(sslMonitorBaselineSeverityRuleAttrTypes, map[string]attr.Value{
-		"severity": types.StringValue(remote.Severity),
+		"severity": types.StringValue(string(remote.Severity)),
 	})
 }

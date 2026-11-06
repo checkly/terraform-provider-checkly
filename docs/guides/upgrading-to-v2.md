@@ -14,6 +14,7 @@ Existing state is upgraded automatically: you do not need to import or recreate 
 
 - Terraform 1.0 or later. The provider now uses version 6 of the Terraform plugin protocol.
 - Terraform 1.8 or later to move resources between resource types with `moved` blocks (see [Deprecated resource types](#deprecated-resource-types)).
+- An account ID, for every API key (see [Account ID](#account-id)).
 
 ## Recommended procedure
 
@@ -173,6 +174,12 @@ retry_strategy = {
 }
 ```
 
+The value of `double_check` is not read back from the API. Terraform keeps the value from your configuration, and a change made outside Terraform shows up in `retry_strategy`. An import stores `false`, so importing a check or group with `double_check = true` in its configuration plans one in-place update, which keeps its retry strategy.
+
+### Account ID
+
+Every API key now needs an account ID, which must be a UUID; v1.x only required one for user-scoped API keys. If you use an account-scoped key without one, set `account_id` in the provider configuration or the `CHECKLY_ACCOUNT_ID` environment variable. Without it, the provider stops with a `Missing Checkly Account ID` error.
+
 ### Sensitive values
 
 These attributes are now sensitive, so Terraform redacts them in plan output:
@@ -214,6 +221,8 @@ v2 fails to plan while these resource types are in state. Remove them from your 
 ## Deprecated resource types
 
 `checkly_check` is deprecated in favor of `checkly_api_check`, `checkly_browser_check` and `checkly_multistep_check`, which only expose the attributes of their check type. `checkly_heartbeat` and `checkly_tcp_check` are deprecated in favor of `checkly_heartbeat_monitor` and `checkly_tcp_monitor`. `checkly_maintenance_windows` is deprecated in favor of `checkly_maintenance_window`, because each resource manages a single maintenance window. The deprecated types keep working in v2. `checkly_check_group`, `checkly_status_page` and `checkly_status_page_service` are deprecated too; see [Check groups](#check-groups) and [Status pages](#status-pages).
+
+`checkly_check` now writes through the API endpoint of each check type, which only stores what applies to that type. `degraded_response_time`, `max_response_time`, `setup_snippet_id`, `teardown_snippet_id`, `local_setup_script` and `local_teardown_script` have no effect on browser and multi-step checks, and neither do `script` on API checks and `ssl_check_domain` on multi-step checks: changing one only changes the state. A browser or multi-step check with an empty `script` is an error.
 
 To switch a check, heartbeat, TCP or maintenance window resource to its new type without recreating it, change the resource type and add a `moved` block. This works in the same plan as the provider upgrade:
 
@@ -296,4 +305,12 @@ Maintenance windows can be shown on v3 pages too, but the provider can't link on
 ## Expected one-time changes
 
 - v1.x stored an unset optional string, number or collection as an empty value (`""`, `0` or `[]`), and v2 stores it as null. If your configuration sets such an attribute to an empty value explicitly, for example `tags = []` or `repeat_interval = 0`, the first plan shows an in-place update to that empty value. Removing the attribute from the configuration has the same effect and avoids the update.
+- v1.x could not clear these attributes: leaving one out kept the stored value, and every plan showed the same change. v2 clears them, so a value set in the web app and absent from your configuration is erased by the first apply. To keep such a value, add it to your configuration.
+  - `checkly_status_page`: `custom_domain`, `logo`, `redirect_to` and `favicon`.
+  - `checkly_dashboard`: `custom_domain`, `logo`, `link`, `description` and `favicon`.
+  - `checkly_check`: `tags` and `group_order`, and on API checks only `setup_snippet_id`, `teardown_snippet_id`, `local_setup_script` and `local_teardown_script`.
+  - `checkly_check_group`: `setup_snippet_id`, `teardown_snippet_id`, `local_setup_script` and `local_teardown_script`.
+  - `checkly_url_monitor`, `checkly_tcp_monitor`, `checkly_tcp_check`, `checkly_dns_monitor`, `checkly_icmp_monitor`, `checkly_grpc_monitor`, `checkly_ssl_monitor` and `checkly_traceroute_monitor`: `tags` and `group_order`.
+  - `checkly_heartbeat_monitor` and `checkly_heartbeat`: `tags`.
+- A check or monitor added to a group in the web app, with no `group_id` in its configuration, leaves the group on the first apply, as it did with v1.x.
 - `checkly_client_certificate`: v1.x stored `path` without a trailing slash. If your configuration has one, for example `path = "/partner/api/"`, the first plan shows an in-place update of `path` that does not change the certificate.

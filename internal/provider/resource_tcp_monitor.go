@@ -20,7 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/checkly-go-sdk/v2"
 )
 
 var (
@@ -569,7 +569,7 @@ func tcpMonitorRequestFromObject(ctx context.Context, obj types.Object, diags *d
 		Port:       uint16(model.Port.ValueInt64()),
 		Data:       model.Data.ValueString(),
 		Assertions: assertionsFromSet(ctx, model.Assertion, diags),
-		IPFamily:   model.IPFamily.ValueString(),
+		IPFamily:   checkly.IPFamily(model.IPFamily.ValueString()),
 	}
 }
 
@@ -581,7 +581,7 @@ func tcpMonitorRequestToObject(ctx context.Context, request checkly.TCPRequest, 
 		"port":      types.Int64Value(int64(request.Port)),
 		"data":      types.StringValue(request.Data),
 		"assertion": assertionsToSet(ctx, request.Assertions, diags),
-		"ip_family": types.StringValue(request.IPFamily),
+		"ip_family": types.StringValue(string(request.IPFamily)),
 	})
 	diags.Append(d...)
 

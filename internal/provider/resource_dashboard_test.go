@@ -682,6 +682,46 @@ func TestAccDashboardWithCheckGroup(t *testing.T) {
 	})
 }
 
+// TestAccDashboardUpdateClearsRemovedValues removes values that the API keeps
+// when an update leaves them out. The empty plan after the last step shows
+// that they are gone.
+func TestAccDashboardUpdateClearsRemovedValues(t *testing.T) {
+	rInt := acctest.RandInt()
+	config := func(values string) string {
+		return fmt.Sprintf(`
+			resource "checkly_dashboard" "test" {
+				custom_url = "test-dashboard-%d-clear"
+				header     = "System Status"
+				%s
+			}
+		`, rInt, values)
+	}
+	const r = "checkly_dashboard.test"
+
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: config(fmt.Sprintf(`
+				custom_domain = "status-%d-clear.example.com"
+				logo          = "https://example.com/logo.png"
+				favicon       = "https://example.com/favicon.ico"
+				link          = "https://example.com"
+				description   = "Test dashboard description"
+			`, rInt)),
+			Check: resource.TestCheckResourceAttr(r, "logo", "https://example.com/logo.png"),
+		},
+		{
+			Config: config(""),
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckNoResourceAttr(r, "custom_domain"),
+				resource.TestCheckResourceAttr(r, "logo", ""),
+				resource.TestCheckResourceAttr(r, "favicon", ""),
+				resource.TestCheckResourceAttr(r, "link", ""),
+				resource.TestCheckResourceAttr(r, "description", ""),
+			),
+		},
+	})
+}
+
 func TestAccDashboardCustomCSS(t *testing.T) {
 	rInt := acctest.RandInt()
 	accTestCase(t, []resource.TestStep{

@@ -20,7 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/checkly-go-sdk/v2"
 )
 
 var (
@@ -516,7 +516,7 @@ func icmpMonitorRequestFromObject(ctx context.Context, obj types.Object, diags *
 
 	return checkly.ICMPRequest{
 		Hostname:   model.Hostname.ValueString(),
-		IPFamily:   model.IPFamily.ValueString(),
+		IPFamily:   checkly.IPFamily(model.IPFamily.ValueString()),
 		PingCount:  int(model.PingCount.ValueInt64()),
 		Assertions: assertionsFromSet(ctx, model.Assertions, diags),
 	}
@@ -527,7 +527,7 @@ func icmpMonitorRequestFromObject(ctx context.Context, obj types.Object, diags *
 func icmpMonitorRequestToObject(ctx context.Context, r checkly.ICMPRequest, diags *diag.Diagnostics) types.Object {
 	obj, d := types.ObjectValueFrom(ctx, icmpMonitorRequestAttrTypes, ICMPMonitorRequestModel{
 		Hostname:   types.StringValue(r.Hostname),
-		IPFamily:   types.StringValue(r.IPFamily),
+		IPFamily:   types.StringValue(string(r.IPFamily)),
 		PingCount:  types.Int64Value(int64(r.PingCount)),
 		Assertions: assertionsToSet(ctx, r.Assertions, diags),
 	})

@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 
-	"github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/checkly-go-sdk/v2"
 )
 
 func TestAccURLMonitorRequiredFields(t *testing.T) {
@@ -271,7 +271,7 @@ var wantURLMonitor = checkly.URLMonitor{
 		"bar",
 	},
 	AlertSettings: &checkly.AlertSettings{
-		EscalationType: checkly.RunBased,
+		EscalationType: checkly.EscalationTypeRunBased,
 		RunBasedEscalation: checkly.RunBasedEscalation{
 			FailedRunThreshold: 1,
 		},
@@ -287,8 +287,8 @@ var wantURLMonitor = checkly.URLMonitor{
 		IPFamily:        "IPv6",
 		Assertions: []checkly.Assertion{
 			{
-				Source:     checkly.StatusCode,
-				Comparison: checkly.Equals,
+				Source:     checkly.AssertionSourceStatusCode,
+				Comparison: checkly.AssertionComparisonEquals,
 				Target:     "200",
 			},
 		},

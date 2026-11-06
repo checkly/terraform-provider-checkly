@@ -18,7 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/checkly-go-sdk/v2"
 )
 
 var (
@@ -378,9 +378,9 @@ func heartbeatMonitorHeartbeatFromObject(ctx context.Context, obj types.Object, 
 
 	return checkly.Heartbeat{
 		Period:     int(model.Period.ValueInt64()),
-		PeriodUnit: model.PeriodUnit.ValueString(),
+		PeriodUnit: checkly.HeartbeatUnit(model.PeriodUnit.ValueString()),
 		Grace:      int(model.Grace.ValueInt64()),
-		GraceUnit:  model.GraceUnit.ValueString(),
+		GraceUnit:  checkly.HeartbeatUnit(model.GraceUnit.ValueString()),
 		PingToken:  model.PingToken.ValueString(),
 	}
 }
@@ -390,9 +390,9 @@ func heartbeatMonitorHeartbeatFromObject(ctx context.Context, obj types.Object, 
 func heartbeatMonitorHeartbeatToObject(ctx context.Context, heartbeat checkly.Heartbeat, diags *diag.Diagnostics) types.Object {
 	obj, d := types.ObjectValue(heartbeatMonitorHeartbeatAttrTypes, map[string]attr.Value{
 		"period":      types.Int64Value(int64(heartbeat.Period)),
-		"period_unit": types.StringValue(heartbeat.PeriodUnit),
+		"period_unit": types.StringValue(string(heartbeat.PeriodUnit)),
 		"grace":       types.Int64Value(int64(heartbeat.Grace)),
-		"grace_unit":  types.StringValue(heartbeat.GraceUnit),
+		"grace_unit":  types.StringValue(string(heartbeat.GraceUnit)),
 		"ping_token":  types.StringValue(heartbeat.PingToken),
 	})
 	diags.Append(d...)

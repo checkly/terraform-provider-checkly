@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 
-	"github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/checkly-go-sdk/v2"
 )
 
 func TestAccDNSMonitorRequiredFields(t *testing.T) {
@@ -399,7 +399,7 @@ var wantDNSMonitor = checkly.DNSMonitor{
 		"bar",
 	},
 	AlertSettings: &checkly.AlertSettings{
-		EscalationType: checkly.RunBased,
+		EscalationType: checkly.EscalationTypeRunBased,
 		RunBasedEscalation: checkly.RunBasedEscalation{
 			FailedRunThreshold: 1,
 		},
@@ -418,7 +418,7 @@ var wantDNSMonitor = checkly.DNSMonitor{
 		Assertions: []checkly.Assertion{
 			{
 				Source:     "RESPONSE_CODE",
-				Comparison: checkly.Equals,
+				Comparison: checkly.AssertionComparisonEquals,
 				Target:     "NOERROR",
 			},
 		},
