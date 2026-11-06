@@ -62,7 +62,7 @@ resource "checkly_traceroute_monitor" "example-traceroute-monitor-2" {
       source     = "RESPONSE_TIME"
       property   = "avg"
       comparison = "LESS_THAN"
-      target     = "2000"
+      target     = "800"
     }
   }
 }

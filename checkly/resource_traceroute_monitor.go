@@ -71,16 +71,16 @@ func resourceTracerouteMonitor() *schema.Resource {
 			"degraded_response_time": {
 				Type:         schema.TypeInt,
 				Optional:     true,
-				Default:      10000,
+				Default:      500,
 				ValidateFunc: validateBetween(0, 30000),
-				Description:  "The response time in milliseconds starting from which a monitor should be considered degraded. Possible values are between 0 and 30000. (Default `10000`).",
+				Description:  "The response time in milliseconds starting from which a monitor should be considered degraded. Possible values are between 0 and 30000. (Default `500`).",
 			},
 			"max_response_time": {
 				Type:         schema.TypeInt,
 				Optional:     true,
-				Default:      20000,
+				Default:      1000,
 				ValidateFunc: validateBetween(0, 30000),
-				Description:  "The response time in milliseconds starting from which a monitor should be considered failing. Possible values are between 0 and 30000. (Default `20000`).",
+				Description:  "The response time in milliseconds starting from which a monitor should be considered failing. Possible values are between 0 and 30000. (Default `1000`).",
 			},
 			"tags": {
 				Type:     schema.TypeSet,

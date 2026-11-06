@@ -7,6 +7,16 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 )
 
+func TestTracerouteMonitorThresholdDefaults(t *testing.T) {
+	s := resourceTracerouteMonitor().Schema
+	if got := s["degraded_response_time"].Default; got != 500 {
+		t.Errorf("degraded_response_time default = %v, want 500", got)
+	}
+	if got := s["max_response_time"].Default; got != 1000 {
+		t.Errorf("max_response_time default = %v, want 1000", got)
+	}
+}
+
 func TestAccTracerouteMonitorRequiredFields(t *testing.T) {
 	config := `resource "checkly_traceroute_monitor" "test" {}`
 	accTestCase(t, []resource.TestStep{
