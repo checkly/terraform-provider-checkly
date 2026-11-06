@@ -291,6 +291,29 @@ func TestCheckToModelResolvesAttributesOfOtherTypes(t *testing.T) {
 		if apiModel.Script != types.StringValue("stored") {
 			t.Errorf("script = %s, want stored", apiModel.Script)
 		}
+
+		request := apiCheckRequestToObject(ctx, checkly.Request{URL: "https://example.com"}, types.ObjectNull(apiCheckRequestAttrTypes), &diags)
+		if diags.HasError() {
+			t.Fatal(diags)
+		}
+		for name, stored := range map[string]checkly.Check{
+			"browser":    &checkly.BrowserCheck{ID: "abc", Script: "code"},
+			"multi-step": &checkly.MultiStepCheck{ID: "abc", Script: "code"},
+		} {
+			model := emptyCheckModel()
+			model.SSLCheckDomain = types.StringValue("example.com")
+			model.Request = request
+			checkToModel(ctx, stored, &model, &diags)
+			if diags.HasError() {
+				t.Fatal(diags)
+			}
+			if model.SSLCheckDomain != types.StringValue("example.com") {
+				t.Errorf("%s: ssl_check_domain = %s, want example.com", name, model.SSLCheckDomain)
+			}
+			if !model.Request.Equal(request) {
+				t.Errorf("%s: request = %s, want the stored one", name, model.Request)
+			}
+		}
 	})
 }
 
