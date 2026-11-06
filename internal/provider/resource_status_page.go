@@ -88,10 +88,11 @@ func (r *StatusPageResource) Schema(ctx context.Context, req resource.SchemaRequ
 			"The `checkly_status_page` resource type is deprecated in favor of `checkly_status_page_v3` and will " +
 			"be removed in a future version of the provider. v3 status pages are separate objects, so an " +
 			"existing page cannot be converted: create a v3 page alongside it instead. Maintenance windows can " +
-			"only be shown on v2 status pages for now.",
+			"be shown on v3 pages too, but `status_page_visibility` on `checkly_maintenance_window` can only link " +
+			"them to v2 status pages for now.",
 		DeprecationMessage: "Use the `checkly_status_page_v3` resource instead. v3 status pages are separate " +
-			"objects, so an existing page cannot be converted; see the v2 upgrade guide. Keep the page if you show " +
-			"maintenance windows on it, which v3 pages do not support yet.",
+			"objects, so an existing page cannot be converted; see the v2 upgrade guide. Keep the page if a maintenance " +
+			"window managed by Terraform appears on it: `status_page_visibility` can't link a window to a v3 page yet.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,

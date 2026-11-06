@@ -291,7 +291,7 @@ Both resource types manage the same check groups, so you can switch a group over
 
 `checkly_status_page` and `checkly_status_page_service` are deprecated in favor of `checkly_status_page_v3`, together with `checkly_status_page_v3_component` and `checkly_status_page_v3_automation_rule`. v3 status pages are separate objects, so an existing page cannot be converted: create a v3 page alongside it, then remove the old one.
 
-Maintenance windows can only be shown on v2 status pages for now: `status_page_visibility` on `checkly_maintenance_window` takes the IDs of `checkly_status_page` and `checkly_status_page_service` resources. Keep the v2 page if you rely on that.
+Maintenance windows can be shown on v3 pages too, but the provider can't link one to a v3 page yet. `status_page_visibility` on `checkly_maintenance_window` links a page through its services, with `status_page_ids` and either `service_ids` or `affect_all_services`, while a v3 page needs the components the window affects, which the attribute can't set. Keep the v2 page if a maintenance window managed by Terraform appears on it.
 
 ## Expected one-time changes
 
