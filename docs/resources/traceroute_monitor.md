@@ -77,7 +77,7 @@ resource "checkly_traceroute_monitor" "example-traceroute-monitor-2" {
       source     = "RESPONSE_TIME"
       property   = "avg"
       comparison = "LESS_THAN"
-      target     = "2000"
+      target     = "800"
     }
   }
 }
@@ -97,13 +97,13 @@ resource "checkly_traceroute_monitor" "example-traceroute-monitor-2" {
 
 - `alert_channel_subscription` (Block Set) An array of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your monitor, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedblock--alert_channel_subscription))
 - `alert_settings` (Block List, Max: 1) Determines the alert escalation policy for the monitor. (see [below for nested schema](#nestedblock--alert_settings))
-- `degraded_response_time` (Number) The response time in milliseconds starting from which a monitor should be considered degraded. Possible values are between 0 and 30000. (Default `10000`).
+- `degraded_response_time` (Number) The response time in milliseconds starting from which a monitor should be considered degraded. Possible values are between 0 and 30000. (Default `500`).
 - `description` (String) A description of the monitor.
 - `frequency_offset` (Number) When `frequency` is `0` (high frequency), `frequency_offset` is required and it alone controls how often the monitor should run. Defined in seconds. The allowed values are `0` (disabled - use `frequency` to define the actual frequency), `10` (10 seconds), `20` (20 seconds) and `30` (30 seconds).
 - `group_id` (Number) The id of the check group this monitor is part of.
 - `group_order` (Number) The position of this monitor in a check group. It determines in what order checks and monitors are run when a group is triggered from the API or from CI/CD.
 - `locations` (Set of String) An array of one or more data center locations where to run this monitor. (Default ["us-east-1"])
-- `max_response_time` (Number) The response time in milliseconds starting from which a monitor should be considered failing. Possible values are between 0 and 30000. (Default `20000`).
+- `max_response_time` (Number) The response time in milliseconds starting from which a monitor should be considered failing. Possible values are between 0 and 30000. (Default `1000`).
 - `muted` (Boolean) Determines if any notifications will be sent out when a monitor fails/degrades/recovers.
 - `retry_strategy` (Block List, Max: 1) A strategy for retrying failed check/monitor runs. (see [below for nested schema](#nestedblock--retry_strategy))
 - `run_parallel` (Boolean) Determines if the monitor should run in all selected locations in parallel or round-robin.
@@ -249,12 +249,12 @@ Each `assertion` block has the shape `{ source, property, comparison, target }`.
 ### Examples
 
 ```terraform
-# Average round-trip time must stay under 2 seconds.
+# Average round-trip time must stay under 800 ms.
 assertion {
   source     = "RESPONSE_TIME"
   property   = "avg"
   comparison = "LESS_THAN"
-  target     = "2000"
+  target     = "800"
 }
 
 # The route must resolve in fewer than 20 hops.

@@ -35,12 +35,12 @@ Each `assertion` block has the shape `{ source, property, comparison, target }`.
 ### Examples
 
 ```terraform
-# Average round-trip time must stay under 2 seconds.
+# Average round-trip time must stay under 800 ms.
 assertion {
   source     = "RESPONSE_TIME"
   property   = "avg"
   comparison = "LESS_THAN"
-  target     = "2000"
+  target     = "800"
 }
 
 # The route must resolve in fewer than 20 hops.
