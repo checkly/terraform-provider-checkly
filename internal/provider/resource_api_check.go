@@ -444,41 +444,45 @@ func (r *APICheckResource) ImportState(ctx context.Context, req resource.ImportS
 
 // MoveState enables `moved` blocks from the deprecated checkly_check resource
 // type. Only checks with type = "API" can be moved; the schemas are otherwise
-// compatible, so the source values are mapped over one-to-one, dropping the
-// attributes that do not apply to API checks (type, script,
-// environment_variable and ssl_check_domain).
+// compatible.
 func (r *APICheckResource) MoveState(ctx context.Context) []resource.StateMover {
-	return checkStateMovers(ctx, checkly.TypeAPI, func(source *CheckResourceModel) APICheckResourceModel {
-		return APICheckResourceModel{
-			ID:                       source.ID,
-			Name:                     source.Name,
-			Description:              source.Description,
-			Frequency:                source.Frequency,
-			FrequencyOffset:          source.FrequencyOffset,
-			Activated:                source.Activated,
-			Muted:                    source.Muted,
-			ShouldFail:               source.ShouldFail,
-			RunParallel:              source.RunParallel,
-			Locations:                source.Locations,
-			DegradedResponseTime:     source.DegradedResponseTime,
-			MaxResponseTime:          source.MaxResponseTime,
-			Tags:                     source.Tags,
-			SetupSnippetID:           source.SetupSnippetID,
-			TeardownSnippetID:        source.TeardownSnippetID,
-			LocalSetupScript:         source.LocalSetupScript,
-			LocalTeardownScript:      source.LocalTeardownScript,
-			RuntimeID:                source.RuntimeID,
-			AlertChannelSubscription: source.AlertChannelSubscription,
-			PrivateLocations:         source.PrivateLocations,
-			AlertSettings:            source.AlertSettings,
-			UseGlobalAlertSettings:   source.UseGlobalAlertSettings,
-			Request:                  source.Request,
-			GroupID:                  source.GroupID,
-			GroupOrder:               source.GroupOrder,
-			RetryStrategy:            source.RetryStrategy,
-			TriggerIncident:          source.TriggerIncident,
-		}
-	})
+	return checkStateMovers(ctx, checkly.TypeAPI, apiCheckModelFromCheckModel)
+}
+
+// apiCheckModelFromCheckModel converts a checkly_check model of an API check.
+// The source values are mapped over one-to-one, dropping the attributes that
+// do not apply to API checks (type, script, environment_variable and
+// ssl_check_domain).
+func apiCheckModelFromCheckModel(source *CheckResourceModel) APICheckResourceModel {
+	return APICheckResourceModel{
+		ID:                       source.ID,
+		Name:                     source.Name,
+		Description:              source.Description,
+		Frequency:                source.Frequency,
+		FrequencyOffset:          source.FrequencyOffset,
+		Activated:                source.Activated,
+		Muted:                    source.Muted,
+		ShouldFail:               source.ShouldFail,
+		RunParallel:              source.RunParallel,
+		Locations:                source.Locations,
+		DegradedResponseTime:     source.DegradedResponseTime,
+		MaxResponseTime:          source.MaxResponseTime,
+		Tags:                     source.Tags,
+		SetupSnippetID:           source.SetupSnippetID,
+		TeardownSnippetID:        source.TeardownSnippetID,
+		LocalSetupScript:         source.LocalSetupScript,
+		LocalTeardownScript:      source.LocalTeardownScript,
+		RuntimeID:                source.RuntimeID,
+		AlertChannelSubscription: source.AlertChannelSubscription,
+		PrivateLocations:         source.PrivateLocations,
+		AlertSettings:            source.AlertSettings,
+		UseGlobalAlertSettings:   source.UseGlobalAlertSettings,
+		Request:                  source.Request,
+		GroupID:                  source.GroupID,
+		GroupOrder:               source.GroupOrder,
+		RetryStrategy:            source.RetryStrategy,
+		TriggerIncident:          source.TriggerIncident,
+	}
 }
 
 var _ resource.ConfigValidator = (*apiCheckFrequencyOffsetConfigValidator)(nil)

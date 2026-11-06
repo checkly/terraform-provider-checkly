@@ -334,38 +334,41 @@ func (r *BrowserCheckResource) ImportState(ctx context.Context, req resource.Imp
 // type. Only BROWSER checks can be moved to this resource type; the other
 // check types have their own dedicated resource types.
 func (r *BrowserCheckResource) MoveState(ctx context.Context) []resource.StateMover {
-	return checkStateMovers(ctx, checkly.TypeBrowser, func(source *CheckResourceModel) BrowserCheckResourceModel {
-		// The frequency_offset, request, response time, snippet and local
-		// script attributes of checkly_check do not exist on
-		// checkly_browser_check and are discarded. The script_path and
-		// dependency attributes are new and have no source value.
-		return BrowserCheckResourceModel{
-			ID:                       source.ID,
-			Name:                     source.Name,
-			Description:              source.Description,
-			Frequency:                source.Frequency,
-			Activated:                source.Activated,
-			Muted:                    source.Muted,
-			ShouldFail:               source.ShouldFail,
-			RunParallel:              source.RunParallel,
-			Locations:                source.Locations,
-			Script:                   source.Script,
-			ScriptPath:               types.StringNull(),
-			Dependency:               types.ListValueMust(types.ObjectType{AttrTypes: scriptDependencyAttrTypes}, []attr.Value{}),
-			EnvironmentVariable:      source.EnvironmentVariable,
-			Tags:                     source.Tags,
-			SSLCheckDomain:           source.SSLCheckDomain,
-			RuntimeID:                source.RuntimeID,
-			AlertChannelSubscription: source.AlertChannelSubscription,
-			PrivateLocations:         source.PrivateLocations,
-			AlertSettings:            source.AlertSettings,
-			UseGlobalAlertSettings:   source.UseGlobalAlertSettings,
-			GroupID:                  source.GroupID,
-			GroupOrder:               source.GroupOrder,
-			RetryStrategy:            source.RetryStrategy,
-			TriggerIncident:          source.TriggerIncident,
-		}
-	})
+	return checkStateMovers(ctx, checkly.TypeBrowser, browserCheckModelFromCheckModel)
+}
+
+// browserCheckModelFromCheckModel converts a checkly_check model of a browser
+// check. The frequency_offset, request, response time, snippet and local
+// script attributes of checkly_check do not exist on checkly_browser_check
+// and are discarded. The script_path and dependency attributes are new and
+// have no source value.
+func browserCheckModelFromCheckModel(source *CheckResourceModel) BrowserCheckResourceModel {
+	return BrowserCheckResourceModel{
+		ID:                       source.ID,
+		Name:                     source.Name,
+		Description:              source.Description,
+		Frequency:                source.Frequency,
+		Activated:                source.Activated,
+		Muted:                    source.Muted,
+		ShouldFail:               source.ShouldFail,
+		RunParallel:              source.RunParallel,
+		Locations:                source.Locations,
+		Script:                   source.Script,
+		ScriptPath:               types.StringNull(),
+		Dependency:               types.ListValueMust(types.ObjectType{AttrTypes: scriptDependencyAttrTypes}, []attr.Value{}),
+		EnvironmentVariable:      source.EnvironmentVariable,
+		Tags:                     source.Tags,
+		SSLCheckDomain:           source.SSLCheckDomain,
+		RuntimeID:                source.RuntimeID,
+		AlertChannelSubscription: source.AlertChannelSubscription,
+		PrivateLocations:         source.PrivateLocations,
+		AlertSettings:            source.AlertSettings,
+		UseGlobalAlertSettings:   source.UseGlobalAlertSettings,
+		GroupID:                  source.GroupID,
+		GroupOrder:               source.GroupOrder,
+		RetryStrategy:            source.RetryStrategy,
+		TriggerIncident:          source.TriggerIncident,
+	}
 }
 
 // browserCheckFromModel converts the resource data model to its API
