@@ -481,6 +481,19 @@ func (r *PlaywrightCheckSuiteResource) Update(ctx context.Context, req resource.
 		return
 	}
 
+	stored, err := readForUpdate(ctx, r.client.GetPlaywrightCheck, plan.ID.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to Update Playwright Check Suite",
+			fmt.Sprintf("Checkly API error: %s", err),
+		)
+		return
+	}
+
+	// Terraform has no attributes for these, and the update would clear them.
+	check.Intent = stored.Intent
+	check.AIAutoRepairEnabled = stored.AIAutoRepairEnabled
+
 	apiCtx, cancel := contextWithAPITimeout(ctx)
 	defer cancel()
 

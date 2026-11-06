@@ -3,12 +3,12 @@
 page_title: "checkly_icmp_monitor Resource - terraform-provider-checkly"
 subcategory: ""
 description: |-
-  Creates an ICMP Monitor to check host availability using ping.
+  Creates an ICMP Monitor to check host availability using ping. This resource does not manage private locations, and keeps the ones a monitor has in Checkly.
 ---
 
 # checkly_icmp_monitor (Resource)
 
-Creates an ICMP Monitor to check host availability using ping.
+Creates an ICMP Monitor to check host availability using ping. This resource does not manage private locations, and keeps the ones a monitor has in Checkly.
 
 ## Example Usage
 

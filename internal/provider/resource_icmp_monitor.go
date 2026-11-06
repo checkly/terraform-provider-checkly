@@ -88,7 +88,7 @@ func (r *ICMPMonitorResource) Metadata(ctx context.Context, req resource.Metadat
 func (r *ICMPMonitorResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Version:     sdkv2SchemaVersion + 1,
-		Description: "Creates an ICMP Monitor to check host availability using ping.",
+		Description: "Creates an ICMP Monitor to check host availability using ping. This resource does not manage private locations, and keeps the ones a monitor has in Checkly.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -368,6 +368,18 @@ func (r *ICMPMonitorResource) Update(ctx context.Context, req resource.UpdateReq
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	stored, err := readForUpdate(ctx, r.client.GetICMPMonitor, monitor.ID)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to Update ICMP Monitor",
+			fmt.Sprintf("Checkly API error: %s", err),
+		)
+		return
+	}
+
+	// Terraform has no attribute for these, and the update would clear them.
+	monitor.PrivateLocations = stored.PrivateLocations
 
 	apiCtx, cancel := contextWithAPITimeout(ctx)
 	defer cancel()

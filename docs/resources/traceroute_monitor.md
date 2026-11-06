@@ -3,12 +3,12 @@
 page_title: "checkly_traceroute_monitor Resource - terraform-provider-checkly"
 subcategory: ""
 description: |-
-  Traceroute monitors trace the network path to a host and measure per-hop latency and packet loss. Traceroute monitors do not support private locations.
+  Traceroute monitors trace the network path to a host and measure per-hop latency and packet loss. This resource does not manage private locations, and keeps the ones a monitor has in Checkly.
 ---
 
 # checkly_traceroute_monitor (Resource)
 
-Traceroute monitors trace the network path to a host and measure per-hop latency and packet loss. Traceroute monitors do not support private locations.
+Traceroute monitors trace the network path to a host and measure per-hop latency and packet loss. This resource does not manage private locations, and keeps the ones a monitor has in Checkly.
 
 ## Example Usage
 

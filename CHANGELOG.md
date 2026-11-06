@@ -18,6 +18,7 @@ need changes. Follow the [upgrade guide](docs/guides/upgrading-to-v2.md).
 - **Breaking:** single nested objects that were blocks are attributes (`alert_settings = { ... }` instead of `alert_settings { ... }`).
 - **Breaking:** the provider serves plugin protocol 6 only and requires Terraform 1.0 or later.
 - **Breaking:** every API key needs an account ID, and it must be a UUID. Account-scoped keys used without `account_id` or `CHECKLY_ACCOUNT_ID` stop with a `Missing Checkly Account ID` error.
+- **Breaking:** the first apply erases values that are set in the web app and absent from your configuration, for the attributes v1.x could not clear. See [Expected one-time changes](docs/guides/upgrading-to-v2.md#expected-one-time-changes) in the upgrade guide.
 - **Breaking:** credentials are sensitive, including nested ones, so Terraform redacts them in plan output. An output that exposes one, such as a heartbeat ping URL built from `ping_token`, must set `sensitive = true`.
 - An invalid `API_CALL_TIMEOUT` is reported as a configuration error instead of crashing the provider.
 - The provider uses `checkly-go-sdk` v2, and `checkly_check` writes through the API endpoint of each check type. Attributes that don't apply to the type (`degraded_response_time`, `max_response_time`, `setup_snippet_id`, `teardown_snippet_id`, `local_setup_script` and `local_teardown_script` on browser and multi-step checks, `script` on API checks and `ssl_check_domain` on multi-step checks) no longer reach the API, so changing one only changes the state.

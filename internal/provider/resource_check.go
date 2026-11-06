@@ -428,7 +428,7 @@ func (r *CheckResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	stored, err := r.readStoredCheck(ctx, plan.ID.ValueString())
+	stored, err := readForUpdate(ctx, r.client.GetCheck, plan.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Update Check",
@@ -633,14 +633,6 @@ func (r *CheckResource) createCheck(ctx context.Context, model *CheckResourceMod
 	default:
 		return nil, plannedCheckTypeError(checkType)
 	}
-}
-
-// readStoredCheck reads a check under its own API timeout.
-func (r *CheckResource) readStoredCheck(ctx context.Context, id string) (checkly.Check, error) {
-	apiCtx, cancel := contextWithAPITimeout(ctx)
-	defer cancel()
-
-	return r.client.GetCheck(apiCtx, id)
 }
 
 // updateCheck updates the check through the endpoint of its planned type,

@@ -176,10 +176,23 @@ func (r *PrivateLocationResource) Update(ctx context.Context, req resource.Updat
 		return
 	}
 
+	stored, err := readForUpdate(ctx, r.client.GetPrivateLocation, plan.ID.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to Update Private Location",
+			fmt.Sprintf("Checkly API error: %s", err),
+		)
+		return
+	}
+
+	// Terraform has no attribute for the proxy, and the update would remove it.
+	location := privateLocationFromModel(&plan)
+	location.ProxyURL = stored.ProxyURL
+
 	apiCtx, cancel := contextWithAPITimeout(ctx)
 	defer cancel()
 
-	_, err := r.client.UpdatePrivateLocation(apiCtx, plan.ID.ValueString(), privateLocationFromModel(&plan))
+	_, err = r.client.UpdatePrivateLocation(apiCtx, plan.ID.ValueString(), location)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Update Private Location",

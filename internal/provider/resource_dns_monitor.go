@@ -102,7 +102,7 @@ func (r *DNSMonitorResource) Metadata(ctx context.Context, req resource.Metadata
 func (r *DNSMonitorResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Version:     sdkv2SchemaVersion + 1,
-		Description: "Creates a DNS Monitor to check DNS record availability and response times.",
+		Description: "Creates a DNS Monitor to check DNS record availability and response times. This resource does not manage private locations, and keeps the ones a monitor has in Checkly.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -401,6 +401,18 @@ func (r *DNSMonitorResource) Update(ctx context.Context, req resource.UpdateRequ
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	stored, err := readForUpdate(ctx, r.client.GetDNSMonitor, monitor.ID)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to Update DNS Monitor",
+			fmt.Sprintf("Checkly API error: %s", err),
+		)
+		return
+	}
+
+	// Terraform has no attribute for these, and the update would clear them.
+	monitor.PrivateLocations = stored.PrivateLocations
 
 	apiCtx, cancel := contextWithAPITimeout(ctx)
 	defer cancel()

@@ -308,9 +308,13 @@ Maintenance windows can be shown on v3 pages too, but the provider can't link on
 - v1.x could not clear these attributes: leaving one out kept the stored value, and every plan showed the same change. v2 clears them, so a value set in the web app and absent from your configuration is erased by the first apply. To keep such a value, add it to your configuration.
   - `checkly_status_page`: `custom_domain`, `logo`, `redirect_to` and `favicon`.
   - `checkly_dashboard`: `custom_domain`, `logo`, `link`, `description` and `favicon`.
-  - `checkly_check`: `tags` and `group_order`, and on API checks only `setup_snippet_id`, `teardown_snippet_id`, `local_setup_script` and `local_teardown_script`.
+  - `checkly_check`: `tags` and `group_order`, and on API checks only `setup_snippet_id`, `teardown_snippet_id`, `local_setup_script`, `local_teardown_script` and `request.basic_auth`.
   - `checkly_check_group`: `setup_snippet_id`, `teardown_snippet_id`, `local_setup_script` and `local_teardown_script`.
   - `checkly_url_monitor`, `checkly_tcp_monitor`, `checkly_tcp_check`, `checkly_dns_monitor`, `checkly_icmp_monitor`, `checkly_grpc_monitor`, `checkly_ssl_monitor` and `checkly_traceroute_monitor`: `tags` and `group_order`.
   - `checkly_heartbeat_monitor` and `checkly_heartbeat`: `tags`.
+  - `checkly_tcp_monitor`, `checkly_tcp_check` and `checkly_traceroute_monitor`: also `request.assertion`.
+  - `checkly_ssl_monitor`: also `request.assertion`, `request.server_name` and `request.client_certificate.client_certificate_id`.
+  - `checkly_grpc_monitor`: also `request.proto_content` with `service_definition = "REFLECTION"`.
+  - Every resource with `alert_settings`: `reminders.amount` and `parallel_run_failure_threshold.enabled`, when the configured object leaves them out.
 - A check or monitor added to a group in the web app, with no `group_id` in its configuration, leaves the group on the first apply, as it did with v1.x.
 - `checkly_client_certificate`: v1.x stored `path` without a trailing slash. If your configuration has one, for example `path = "/partner/api/"`, the first plan shows an in-place update of `path` that does not change the certificate.
