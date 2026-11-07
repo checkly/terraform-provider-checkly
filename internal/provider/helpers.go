@@ -95,18 +95,12 @@ func clientFromProviderData(providerData any, diags *diag.Diagnostics) checkly.C
 }
 
 // isNotFoundError reports whether an error returned by the Checkly API
-// indicates that the resource no longer exists remotely. The SDK formats a
-// 404 response in one of two ways. Matching only those prefixes keeps a "404"
-// elsewhere in the message, such as in a request URL, an ID or an echoed
-// response body, from being taken for a missing resource.
+// indicates that the resource no longer exists remotely: the API answered
+// 404. It checks the status of the SDK's typed *checkly.APIError, also when
+// wrapped, rather than the error text, so a "404" in a request path, an ID or
+// a backend message never counts as a missing resource.
 func isNotFoundError(err error) bool {
-	if err == nil {
-		return false
-	}
-
-	msg := err.Error()
-	return strings.HasPrefix(msg, "unexpected response status 404:") ||
-		strings.HasPrefix(msg, "unexpected response status: 404,")
+	return checkly.IsNotFound(err)
 }
 
 // decodeNumericID parses a numeric resource ID from its string form.
