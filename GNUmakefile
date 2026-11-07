@@ -18,7 +18,7 @@ testacc:
 	TF_ACC=1 go test ./... -v $(TESTARGS) -timeout 120m -parallel 4
 
 local-sdk:
-	go mod edit -replace github.com/checkly/checkly-go-sdk=../checkly-go-sdk
+	go mod edit -replace github.com/checkly/checkly-go-sdk/v2=../checkly-go-sdk
 
 dev:
 	# for dev purposes only, build the provider and install

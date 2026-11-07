@@ -18,7 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/checkly-go-sdk/v2"
 )
 
 var (
@@ -386,7 +386,7 @@ func dashboardFromModel(ctx context.Context, model *DashboardResourceModel, diag
 	showP99 := model.ShowP99.ValueBool()
 
 	return checkly.Dashboard{
-		CustomUrl:          model.CustomURL.ValueString(),
+		CustomURL:          model.CustomURL.ValueString(),
 		CustomDomain:       model.CustomDomain.ValueString(),
 		Logo:               model.Logo.ValueString(),
 		Favicon:            model.Favicon.ValueString(),
@@ -394,9 +394,9 @@ func dashboardFromModel(ctx context.Context, model *DashboardResourceModel, diag
 		Description:        model.Description.ValueString(),
 		Header:             model.Header.ValueString(),
 		ShowHeader:         &showHeader,
-		Width:              model.Width.ValueString(),
+		Width:              checkly.DashboardWidth(model.Width.ValueString()),
 		RefreshRate:        int(model.RefreshRate.ValueInt64()),
-		Paginate:           model.Paginate.ValueBool(),
+		Paginate:           model.Paginate.ValueBoolPointer(),
 		ChecksPerPage:      int(model.ChecksPerPage.ValueInt64()),
 		PaginationRate:     int(model.PaginationRate.ValueInt64()),
 		Tags:               stringsFromSet(ctx, model.Tags, diags),
@@ -418,7 +418,7 @@ func dashboardFromModel(ctx context.Context, model *DashboardResourceModel, diag
 // hold the prior data (the plan during create/update, the state during read)
 // so that values the API omits can be resolved against it.
 func dashboardToModel(ctx context.Context, dashboard *checkly.Dashboard, model *DashboardResourceModel, diags *diag.Diagnostics) {
-	model.CustomURL = types.StringValue(dashboard.CustomUrl)
+	model.CustomURL = types.StringValue(dashboard.CustomURL)
 	// The API returns an empty custom domain when none is configured.
 	model.CustomDomain = stringValueOrPriorEmpty(dashboard.CustomDomain, model.CustomDomain)
 	model.Logo = types.StringValue(dashboard.Logo)
@@ -427,9 +427,9 @@ func dashboardToModel(ctx context.Context, dashboard *checkly.Dashboard, model *
 	model.Description = types.StringValue(dashboard.Description)
 	model.Header = types.StringValue(dashboard.Header)
 	model.ShowHeader = dashboardBoolValue(dashboard.ShowHeader, true)
-	model.Width = types.StringValue(dashboard.Width)
+	model.Width = types.StringValue(string(dashboard.Width))
 	model.RefreshRate = types.Int64Value(int64(dashboard.RefreshRate))
-	model.Paginate = types.BoolValue(dashboard.Paginate)
+	model.Paginate = dashboardBoolValue(dashboard.Paginate, true)
 	model.ChecksPerPage = types.Int64Value(int64(dashboard.ChecksPerPage))
 	model.PaginationRate = types.Int64Value(int64(dashboard.PaginationRate))
 	model.Tags = stringSetFromAPINullIfUnset(ctx, dashboard.Tags, model.Tags, diags)

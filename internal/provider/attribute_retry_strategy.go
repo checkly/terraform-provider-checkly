@@ -16,7 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/checkly-go-sdk/v2"
 )
 
 const retryStrategyAttributeName = "retry_strategy"
@@ -184,14 +184,14 @@ func retryStrategyFromObject(ctx context.Context, obj types.Object, diags *diag.
 		}
 	case "SINGLE_RETRY":
 		return &checkly.RetryStrategy{
-			Type:               kind,
+			Type:               checkly.RetryStrategyType(kind),
 			BaseBackoffSeconds: int(int64AttrValue(attrs["base_backoff_seconds"])),
 			SameRegion:         boolAttrValue(attrs["same_region"]),
 			OnlyOn:             retryStrategyOnlyOnFromValue(attrs["only_on"]),
 		}
 	default:
 		return &checkly.RetryStrategy{
-			Type:               kind,
+			Type:               checkly.RetryStrategyType(kind),
 			BaseBackoffSeconds: int(int64AttrValue(attrs["base_backoff_seconds"])),
 			MaxRetries:         int(int64AttrValue(attrs["max_retries"])),
 			MaxDurationSeconds: int(int64AttrValue(attrs["max_duration_seconds"])),
@@ -201,15 +201,15 @@ func retryStrategyFromObject(ctx context.Context, obj types.Object, diags *diag.
 	}
 }
 
-func retryStrategyOnlyOnFromValue(value attr.Value) []string {
+func retryStrategyOnlyOnFromValue(value attr.Value) []checkly.RetryOnlyOn {
 	obj, ok := value.(types.Object)
 	if !ok || obj.IsNull() || obj.IsUnknown() {
 		return nil
 	}
 
-	var conditions []string
+	var conditions []checkly.RetryOnlyOn
 	if boolAttrValue(obj.Attributes()["network_error"]) {
-		conditions = append(conditions, "NETWORK_ERROR")
+		conditions = append(conditions, checkly.RetryOnlyOnNetworkError)
 	}
 
 	return conditions
@@ -258,7 +258,7 @@ func retryStrategyToObject(ctx context.Context, rs *checkly.RetryStrategy, prior
 	if rs == nil {
 		attrValues["type"] = types.StringValue("NO_RETRIES")
 	} else {
-		attrValues["type"] = types.StringValue(rs.Type)
+		attrValues["type"] = types.StringValue(string(rs.Type))
 
 		switch rs.Type {
 		case "NO_RETRIES":
@@ -287,8 +287,8 @@ func retryStrategyToObject(ctx context.Context, rs *checkly.RetryStrategy, prior
 	return obj
 }
 
-func retryStrategyOnlyOnToValue(conditions []string, prior attr.Value) attr.Value {
-	if len(conditions) == 1 && conditions[0] == "NETWORK_ERROR" {
+func retryStrategyOnlyOnToValue(conditions []checkly.RetryOnlyOn, prior attr.Value) attr.Value {
+	if len(conditions) == 1 && conditions[0] == checkly.RetryOnlyOnNetworkError {
 		return types.ObjectValueMust(retryStrategyOnlyOnAttrTypes, map[string]attr.Value{
 			"network_error": types.BoolValue(true),
 		})

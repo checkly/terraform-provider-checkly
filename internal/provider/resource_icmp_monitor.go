@@ -20,7 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/checkly-go-sdk/v2"
 )
 
 var (
@@ -88,7 +88,7 @@ func (r *ICMPMonitorResource) Metadata(ctx context.Context, req resource.Metadat
 func (r *ICMPMonitorResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Version:     sdkv2SchemaVersion + 1,
-		Description: "Creates an ICMP Monitor to check host availability using ping.",
+		Description: "Creates an ICMP Monitor to check host availability using ping. This resource does not manage private locations, and keeps the ones a monitor has in Checkly.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -369,6 +369,18 @@ func (r *ICMPMonitorResource) Update(ctx context.Context, req resource.UpdateReq
 		return
 	}
 
+	stored, err := readForUpdate(ctx, r.client.GetICMPMonitor, monitor.ID)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to Update ICMP Monitor",
+			fmt.Sprintf("Checkly API error: %s", err),
+		)
+		return
+	}
+
+	// Terraform has no attribute for these, and the update would clear them.
+	monitor.PrivateLocations = stored.PrivateLocations
+
 	apiCtx, cancel := contextWithAPITimeout(ctx)
 	defer cancel()
 
@@ -516,7 +528,7 @@ func icmpMonitorRequestFromObject(ctx context.Context, obj types.Object, diags *
 
 	return checkly.ICMPRequest{
 		Hostname:   model.Hostname.ValueString(),
-		IPFamily:   model.IPFamily.ValueString(),
+		IPFamily:   checkly.IPFamily(model.IPFamily.ValueString()),
 		PingCount:  int(model.PingCount.ValueInt64()),
 		Assertions: assertionsFromSet(ctx, model.Assertions, diags),
 	}
@@ -527,7 +539,7 @@ func icmpMonitorRequestFromObject(ctx context.Context, obj types.Object, diags *
 func icmpMonitorRequestToObject(ctx context.Context, r checkly.ICMPRequest, diags *diag.Diagnostics) types.Object {
 	obj, d := types.ObjectValueFrom(ctx, icmpMonitorRequestAttrTypes, ICMPMonitorRequestModel{
 		Hostname:   types.StringValue(r.Hostname),
-		IPFamily:   types.StringValue(r.IPFamily),
+		IPFamily:   types.StringValue(string(r.IPFamily)),
 		PingCount:  types.Int64Value(int64(r.PingCount)),
 		Assertions: assertionsToSet(ctx, r.Assertions, diags),
 	})

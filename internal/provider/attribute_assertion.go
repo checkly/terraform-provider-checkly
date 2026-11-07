@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/checkly-go-sdk/v2"
 )
 
 // assertionModel describes the data model of an assertion. Checks,
@@ -113,9 +113,9 @@ func assertionsFromSet(ctx context.Context, set types.Set, diags *diag.Diagnosti
 
 	for _, model := range models {
 		assertions = append(assertions, checkly.Assertion{
-			Source:     model.Source.ValueString(),
+			Source:     checkly.AssertionSource(model.Source.ValueString()),
 			Property:   model.Property.ValueString(),
-			Comparison: model.Comparison.ValueString(),
+			Comparison: checkly.AssertionComparison(model.Comparison.ValueString()),
 			Target:     model.Target.ValueString(),
 		})
 	}
@@ -129,9 +129,9 @@ func assertionsToSet(ctx context.Context, assertions []checkly.Assertion, diags 
 	models := make([]assertionModel, len(assertions))
 	for i, assertion := range assertions {
 		models[i] = assertionModel{
-			Source:     types.StringValue(assertion.Source),
+			Source:     types.StringValue(string(assertion.Source)),
 			Property:   types.StringValue(assertion.Property),
-			Comparison: types.StringValue(assertion.Comparison),
+			Comparison: types.StringValue(string(assertion.Comparison)),
 			Target:     types.StringValue(assertion.Target),
 		}
 	}

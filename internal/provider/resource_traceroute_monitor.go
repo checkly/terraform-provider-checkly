@@ -21,7 +21,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/checkly-go-sdk/v2"
 )
 
 var (
@@ -46,8 +46,8 @@ type TracerouteMonitorResource struct {
 }
 
 // TracerouteMonitorResourceModel describes the resource data model. There is
-// no private_locations attribute: the public API forbids private locations
-// for traceroute monitors.
+// no private_locations attribute: Update keeps the private locations a monitor
+// has in Checkly.
 type TracerouteMonitorResourceModel struct {
 	ID                       types.String `tfsdk:"id"`
 	Name                     types.String `tfsdk:"name"`
@@ -105,7 +105,7 @@ func (r *TracerouteMonitorResource) Metadata(ctx context.Context, req resource.M
 func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Version:     sdkv2SchemaVersion + 1,
-		Description: "Traceroute monitors trace the network path to a host and measure per-hop latency and packet loss. Traceroute monitors do not support private locations.",
+		Description: "Traceroute monitors trace the network path to a host and measure per-hop latency and packet loss. This resource does not manage private locations, and keeps the ones a monitor has in Checkly.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -446,6 +446,18 @@ func (r *TracerouteMonitorResource) Update(ctx context.Context, req resource.Upd
 		return
 	}
 
+	stored, err := readForUpdate(ctx, r.client.GetTracerouteMonitor, plan.ID.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to Update Traceroute Monitor",
+			fmt.Sprintf("Checkly API error: %s", err),
+		)
+		return
+	}
+
+	// Terraform has no attribute for these, and the update would clear them.
+	monitor.PrivateLocations = stored.PrivateLocations
+
 	apiCtx, cancel := contextWithAPITimeout(ctx)
 	defer cancel()
 
@@ -500,8 +512,6 @@ func tracerouteMonitorFromModel(ctx context.Context, model *TracerouteMonitorRes
 	// The locations property is serialized even when empty.
 	locations := stringsFromSetOrEmpty(ctx, model.Locations, diags)
 
-	// Traceroute monitors do not support private locations: the public API
-	// marks `privateLocations` forbidden, so the SDK type has no such field.
 	monitor := checkly.TracerouteMonitor{
 		ID:                        model.ID.ValueString(),
 		Name:                      model.Name.ValueString(),
@@ -629,9 +639,9 @@ func tracerouteMonitorRequestFromModel(ctx context.Context, model TracerouteMoni
 
 	request := checkly.TracerouteRequest{
 		URL:            model.URL.ValueString(),
-		Protocol:       model.Protocol.ValueString(),
+		Protocol:       checkly.TracerouteProtocol(model.Protocol.ValueString()),
 		Port:           int(model.Port.ValueInt64()),
-		IPFamily:       model.IPFamily.ValueString(),
+		IPFamily:       checkly.IPFamily(model.IPFamily.ValueString()),
 		MaxHops:        int(model.MaxHops.ValueInt64()),
 		MaxUnknownHops: int(model.MaxUnknownHops.ValueInt64()),
 		PtrLookup:      &ptrLookup,
@@ -670,9 +680,9 @@ func tracerouteMonitorRequestToObject(ctx context.Context, r checkly.TracerouteR
 
 	obj, d := types.ObjectValueFrom(ctx, tracerouteMonitorRequestAttrTypes, TracerouteMonitorRequestModel{
 		URL:            types.StringValue(r.URL),
-		Protocol:       types.StringValue(r.Protocol),
+		Protocol:       types.StringValue(string(r.Protocol)),
 		Port:           types.Int64Value(int64(r.Port)),
-		IPFamily:       types.StringValue(r.IPFamily),
+		IPFamily:       types.StringValue(string(r.IPFamily)),
 		MaxHops:        types.Int64Value(int64(r.MaxHops)),
 		MaxUnknownHops: types.Int64Value(int64(r.MaxUnknownHops)),
 		PtrLookup:      types.BoolValue(ptrLookup),

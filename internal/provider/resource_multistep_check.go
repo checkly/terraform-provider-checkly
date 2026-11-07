@@ -17,7 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/checkly-go-sdk/v2"
 )
 
 var (
@@ -290,6 +290,19 @@ func (r *MultistepCheckResource) Update(ctx context.Context, req resource.Update
 		return
 	}
 
+	stored, err := readForUpdate(ctx, r.client.GetMultiStepCheck, check.ID)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to Update Multi-step Check",
+			fmt.Sprintf("Checkly API error: %s", err),
+		)
+		return
+	}
+
+	// Terraform has no attributes for these, and the update would clear them.
+	check.Intent = stored.Intent
+	check.AIAutoRepairEnabled = stored.AIAutoRepairEnabled
+
 	apiCtx, cancel := contextWithAPITimeout(ctx)
 	defer cancel()
 
@@ -339,37 +352,40 @@ func (r *MultistepCheckResource) ImportState(ctx context.Context, req resource.I
 // type. Only MULTI_STEP checks can be moved to this resource type; the other
 // check types have their own dedicated resource types.
 func (r *MultistepCheckResource) MoveState(ctx context.Context) []resource.StateMover {
-	return checkStateMovers(ctx, "MULTI_STEP", func(source *CheckResourceModel) MultistepCheckResourceModel {
-		// The frequency_offset, request, response time, snippet, local script
-		// and ssl_check_domain attributes of checkly_check do not exist on
-		// checkly_multistep_check and are discarded. The script_path and
-		// dependency attributes are new and have no source value.
-		return MultistepCheckResourceModel{
-			ID:                       source.ID,
-			Name:                     source.Name,
-			Description:              source.Description,
-			Frequency:                source.Frequency,
-			Activated:                source.Activated,
-			Muted:                    source.Muted,
-			ShouldFail:               source.ShouldFail,
-			RunParallel:              source.RunParallel,
-			Locations:                source.Locations,
-			Script:                   source.Script,
-			ScriptPath:               types.StringNull(),
-			Dependency:               types.ListValueMust(types.ObjectType{AttrTypes: scriptDependencyAttrTypes}, []attr.Value{}),
-			EnvironmentVariable:      source.EnvironmentVariable,
-			Tags:                     source.Tags,
-			RuntimeID:                source.RuntimeID,
-			AlertChannelSubscription: source.AlertChannelSubscription,
-			PrivateLocations:         source.PrivateLocations,
-			AlertSettings:            source.AlertSettings,
-			UseGlobalAlertSettings:   source.UseGlobalAlertSettings,
-			GroupID:                  source.GroupID,
-			GroupOrder:               source.GroupOrder,
-			RetryStrategy:            source.RetryStrategy,
-			TriggerIncident:          source.TriggerIncident,
-		}
-	})
+	return checkStateMovers(ctx, checkly.CheckTypeMultiStep, multistepCheckModelFromCheckModel)
+}
+
+// multistepCheckModelFromCheckModel converts a checkly_check model of a
+// multi-step check. The frequency_offset, request, response time, snippet,
+// local script and ssl_check_domain attributes of checkly_check do not exist
+// on checkly_multistep_check and are discarded. The script_path and dependency
+// attributes are new and have no source value.
+func multistepCheckModelFromCheckModel(source *CheckResourceModel) MultistepCheckResourceModel {
+	return MultistepCheckResourceModel{
+		ID:                       source.ID,
+		Name:                     source.Name,
+		Description:              source.Description,
+		Frequency:                source.Frequency,
+		Activated:                source.Activated,
+		Muted:                    source.Muted,
+		ShouldFail:               source.ShouldFail,
+		RunParallel:              source.RunParallel,
+		Locations:                source.Locations,
+		Script:                   source.Script,
+		ScriptPath:               types.StringNull(),
+		Dependency:               types.ListValueMust(types.ObjectType{AttrTypes: scriptDependencyAttrTypes}, []attr.Value{}),
+		EnvironmentVariable:      source.EnvironmentVariable,
+		Tags:                     source.Tags,
+		RuntimeID:                source.RuntimeID,
+		AlertChannelSubscription: source.AlertChannelSubscription,
+		PrivateLocations:         source.PrivateLocations,
+		AlertSettings:            source.AlertSettings,
+		UseGlobalAlertSettings:   source.UseGlobalAlertSettings,
+		GroupID:                  source.GroupID,
+		GroupOrder:               source.GroupOrder,
+		RetryStrategy:            source.RetryStrategy,
+		TriggerIncident:          source.TriggerIncident,
+	}
 }
 
 // validateMultistepCheckRuntimeSupport validates that the configured runtime

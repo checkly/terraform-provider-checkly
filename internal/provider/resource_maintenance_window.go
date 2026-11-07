@@ -17,7 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/checkly-go-sdk/v2"
 )
 
 var (
@@ -310,7 +310,7 @@ func maintenanceWindowFromModel(ctx context.Context, model *MaintenanceWindowRes
 		Name:           model.Name.ValueString(),
 		StartsAt:       model.StartsAt.ValueString(),
 		EndsAt:         model.EndsAt.ValueString(),
-		RepeatUnit:     model.RepeatUnit.ValueString(),
+		RepeatUnit:     checkly.MaintenanceWindowRepeatUnit(model.RepeatUnit.ValueString()),
 		RepeatInterval: int(model.RepeatInterval.ValueInt64()),
 		RepeatEndsAt:   model.RepeatEndsAt.ValueString(),
 		Tags:           stringsFromSet(ctx, model.Tags, diags),
@@ -336,7 +336,7 @@ func maintenanceWindowToModel(ctx context.Context, mw *checkly.MaintenanceWindow
 	model.EndsAt = types.StringValue(mw.EndsAt)
 	// The repeat_unit validator rejects an empty string, so an empty value
 	// from the API always means the attribute is unset.
-	model.RepeatUnit = stringValueOrNull(mw.RepeatUnit)
+	model.RepeatUnit = stringValueOrNull(string(mw.RepeatUnit))
 	model.RepeatInterval = maintenanceWindowRepeatInterval(mw.RepeatInterval, model.RepeatInterval)
 	model.RepeatEndsAt = stringValueOrPriorEmpty(mw.RepeatEndsAt, model.RepeatEndsAt)
 	model.Tags = stringSetFromAPINullIfUnset(ctx, mw.Tags, model.Tags, diags)

@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 
-	"github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/checkly-go-sdk/v2"
 )
 
 func TestAccICMPMonitorRequiredFields(t *testing.T) {
@@ -380,7 +380,7 @@ var wantICMPMonitor = checkly.ICMPMonitor{
 		"foo",
 	},
 	AlertSettings: &checkly.AlertSettings{
-		EscalationType: checkly.RunBased,
+		EscalationType: checkly.EscalationTypeRunBased,
 		RunBasedEscalation: checkly.RunBasedEscalation{
 			FailedRunThreshold: 1,
 		},
@@ -398,7 +398,7 @@ var wantICMPMonitor = checkly.ICMPMonitor{
 			{
 				Source:     "LATENCY",
 				Property:   "avg",
-				Comparison: checkly.LessThan,
+				Comparison: checkly.AssertionComparisonLessThan,
 				Target:     "200",
 			},
 		},

@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/checkly-go-sdk/v2"
 )
 
 // MaintenanceWindowStatusPageVisibilityModel describes the
@@ -151,7 +151,7 @@ func maintenanceWindowStatusPageVisibilityFromObject(ctx context.Context, obj ty
 
 	return checkly.MaintenanceWindowStatusPageVisibility{
 		Enabled:               model.Enabled.ValueBool(),
-		Severity:              model.Severity.ValueString(),
+		Severity:              checkly.IncidentSeverity(model.Severity.ValueString()),
 		AffectAllServices:     model.AffectAllServices.ValueBool(),
 		NotifyOnStart:         model.NotifyOnStart.ValueBool(),
 		NotifyOnEnd:           model.NotifyOnEnd.ValueBool(),
@@ -187,7 +187,7 @@ func maintenanceWindowStatusPageVisibilityToObject(ctx context.Context, v checkl
 
 	obj, d := types.ObjectValueFrom(ctx, maintenanceWindowStatusPageVisibilityAttrTypes, MaintenanceWindowStatusPageVisibilityModel{
 		Enabled:               types.BoolValue(v.Enabled),
-		Severity:              stringValueOrNull(v.Severity),
+		Severity:              stringValueOrNull(string(v.Severity)),
 		AffectAllServices:     types.BoolValue(v.AffectAllServices),
 		NotifyOnStart:         types.BoolValue(v.NotifyOnStart),
 		NotifyOnEnd:           types.BoolValue(v.NotifyOnEnd),

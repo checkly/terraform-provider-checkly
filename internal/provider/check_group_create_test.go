@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/checkly-go-sdk/v2"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
@@ -17,15 +17,6 @@ import (
 // back. Calls to any other method panic through the nil embedded Client.
 type readBackFailingClient struct {
 	checkly.Client
-}
-
-func (readBackFailingClient) CreateGroup(ctx context.Context, group checkly.Group) (*checkly.Group, error) {
-	group.ID = 42
-	return &group, nil
-}
-
-func (readBackFailingClient) GetGroup(ctx context.Context, id int64) (*checkly.Group, error) {
-	return nil, errors.New("502 Bad Gateway")
 }
 
 func (readBackFailingClient) CreateGroupV2(ctx context.Context, group checkly.GroupV2) (*checkly.GroupV2, error) {

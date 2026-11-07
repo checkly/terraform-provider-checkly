@@ -8,6 +8,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
@@ -18,7 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 
-	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/checkly-go-sdk/v2"
 )
 
 const alertSettingsAttributeName = "alert_settings"
@@ -220,7 +222,7 @@ func makeAlertSettingsAttributeSchema(options AlertSettingsAttributeSchemaOption
 func alertSettingsFromObject(ctx context.Context, obj types.Object, diags *diag.Diagnostics) checkly.AlertSettings {
 	if obj.IsNull() || obj.IsUnknown() {
 		return checkly.AlertSettings{
-			EscalationType: checkly.RunBased,
+			EscalationType: checkly.EscalationTypeRunBased,
 			RunBasedEscalation: checkly.RunBasedEscalation{
 				FailedRunThreshold: 1,
 			},
@@ -234,7 +236,7 @@ func alertSettingsFromObject(ctx context.Context, obj types.Object, diags *diag.
 	}
 
 	alertSettings := checkly.AlertSettings{
-		EscalationType: model.EscalationType.ValueString(),
+		EscalationType: checkly.EscalationType(model.EscalationType.ValueString()),
 	}
 
 	if !model.Reminders.IsNull() && !model.Reminders.IsUnknown() {
@@ -255,7 +257,7 @@ func alertSettingsFromObject(ctx context.Context, obj types.Object, diags *diag.
 		}
 	}
 
-	if alertSettings.EscalationType == checkly.RunBased {
+	if alertSettings.EscalationType == checkly.EscalationTypeRunBased {
 		alertSettings.RunBasedEscalation = checkly.RunBasedEscalation{
 			FailedRunThreshold: 1,
 		}
@@ -267,7 +269,7 @@ func alertSettingsFromObject(ctx context.Context, obj types.Object, diags *diag.
 			}
 		}
 	} else {
-		if alertSettings.EscalationType == checkly.TimeBased {
+		if alertSettings.EscalationType == checkly.EscalationTypeTimeBased {
 			// The documented default of time_based_escalation, which the
 			// plan leaves unknown when the object is not configured.
 			alertSettings.TimeBasedEscalation = checkly.TimeBasedEscalation{
@@ -312,9 +314,9 @@ func alertSettingsToObject(ctx context.Context, as checkly.AlertSettings, prior 
 
 	model := priorModel
 
-	model.EscalationType = types.StringValue(as.EscalationType)
+	model.EscalationType = types.StringValue(string(as.EscalationType))
 
-	if as.EscalationType == checkly.RunBased {
+	if as.EscalationType == checkly.EscalationTypeRunBased {
 		escalation, d := types.ObjectValueFrom(ctx, runBasedEscalationAttrTypes, RunBasedEscalationModel{
 			FailedRunThreshold: types.Int64Value(int64(as.RunBasedEscalation.FailedRunThreshold)),
 		})
@@ -357,6 +359,42 @@ func alertSettingsToObject(ctx context.Context, as checkly.AlertSettings, prior 
 	diags.Append(objDiags...)
 
 	return obj
+}
+
+// planUnconfiguredAlertSettingsAsUnknown plans every sub-object that the
+// configuration leaves out of alert_settings as unknown, when the stored
+// alert_settings has an empty escalation_type. A group without alert settings
+// is stored that way, with zero values that are not settings: left to the
+// sub-objects' plan modifiers they would be planned as stored, which the API
+// either rejects or returns differently. Unknown sub-objects are skipped by
+// alertSettingsFromObject and resolved by alertSettingsToObject.
+func planUnconfiguredAlertSettingsAsUnknown(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	if req.Plan.Raw.IsNull() || req.State.Raw.IsNull() {
+		return
+	}
+
+	attributePath := path.Root(alertSettingsAttributeName)
+
+	var state, config types.Object
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, attributePath, &state)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, attributePath, &config)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if state.IsNull() || config.IsNull() || config.IsUnknown() {
+		return
+	}
+	if escalationType, ok := state.Attributes()["escalation_type"].(types.String); !ok || escalationType.ValueString() != "" {
+		return
+	}
+
+	for name, value := range config.Attributes() {
+		subObject, ok := value.(types.Object)
+		if !ok || !subObject.IsNull() {
+			continue
+		}
+		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, attributePath.AtName(name), types.ObjectUnknown(subObject.AttributeTypes(ctx)))...)
+	}
 }
 
 // inactiveEscalationPlanModifier plans the stored value, null included, of

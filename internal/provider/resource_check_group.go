@@ -17,7 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/checkly-go-sdk/v2"
 )
 
 var (
@@ -198,9 +198,12 @@ func (r *CheckGroupResource) Configure(ctx context.Context, req resource.Configu
 // used for these attributes (see the attribute schema for details), so the
 // plan is adjusted here instead. Substituting static values keeps every set
 // element fully known and stable across plans, which set element correlation
-// requires.
+// requires. It also keeps the stored values of a group without alert settings
+// out of a newly configured alert_settings attribute; see
+// planUnconfiguredAlertSettingsAsUnknown.
 func (r *CheckGroupResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
 	planNestedDefaults(ctx, req, resp, path.Root(apiCheckDefaultsAttributeName), objectWithSetDefaults("assertion", assertionsWithPropertyDefault))
+	planUnconfiguredAlertSettingsAsUnknown(ctx, req, resp)
 }
 
 func (r *CheckGroupResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -219,7 +222,7 @@ func (r *CheckGroupResource) Create(ctx context.Context, req resource.CreateRequ
 	apiCtx, cancel := contextWithAPITimeout(ctx)
 	defer cancel()
 
-	result, err := r.client.CreateGroup(apiCtx, group)
+	result, err := r.client.CreateGroupV2(apiCtx, group)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Create Check Group",
@@ -230,7 +233,7 @@ func (r *CheckGroupResource) Create(ctx context.Context, req resource.CreateRequ
 
 	// Re-read the group so that the state is based on a full representation,
 	// which the create response is not guaranteed to be.
-	created, err := r.client.GetGroup(apiCtx, result.ID)
+	created, err := r.client.GetGroupV2(apiCtx, result.ID)
 	if err != nil {
 		// The group exists now. Record it from the create response, so
 		// that Terraform tracks it (as tainted, because of the error)
@@ -272,7 +275,7 @@ func (r *CheckGroupResource) Read(ctx context.Context, req resource.ReadRequest,
 	apiCtx, cancel := contextWithAPITimeout(ctx)
 	defer cancel()
 
-	group, err := r.client.GetGroup(apiCtx, id)
+	group, err := r.client.GetGroupV2(apiCtx, id)
 	if err != nil {
 		if isNotFoundError(err) {
 			resp.State.RemoveResource(ctx)
@@ -309,7 +312,7 @@ func (r *CheckGroupResource) Update(ctx context.Context, req resource.UpdateRequ
 	apiCtx, cancel := contextWithAPITimeout(ctx)
 	defer cancel()
 
-	_, err := r.client.UpdateGroup(apiCtx, group.ID, group)
+	_, err := r.client.UpdateGroupV2(apiCtx, group.ID, group)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Update Check Group",
@@ -320,7 +323,7 @@ func (r *CheckGroupResource) Update(ctx context.Context, req resource.UpdateRequ
 
 	// Re-read the group so that the state is based on a full representation,
 	// which the update response is not guaranteed to be.
-	updated, err := r.client.GetGroup(apiCtx, group.ID)
+	updated, err := r.client.GetGroupV2(apiCtx, group.ID)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Read Check Group After Update",
@@ -357,7 +360,7 @@ func (r *CheckGroupResource) Delete(ctx context.Context, req resource.DeleteRequ
 	apiCtx, cancel := contextWithAPITimeout(ctx)
 	defer cancel()
 
-	err = r.client.DeleteGroup(apiCtx, id)
+	err = r.client.DeleteGroupV2(apiCtx, id)
 	if err != nil {
 		if isNotFoundError(err) {
 			return
@@ -375,33 +378,43 @@ func (r *CheckGroupResource) ImportState(ctx context.Context, req resource.Impor
 }
 
 // checkGroupFromModel converts the resource data model to its API
-// representation.
-func checkGroupFromModel(ctx context.Context, model *CheckGroupResourceModel, diags *diag.Diagnostics) checkly.Group {
+// representation. Every update replaces the whole group, so settings the group
+// does not have are sent as nil to clear them.
+//
+// double_check is not sent: the API's default of false clears a stored flag,
+// and when double_check is true the planned retry_strategy already holds the
+// strategy it stands for.
+func checkGroupFromModel(ctx context.Context, model *CheckGroupResourceModel, diags *diag.Diagnostics) checkly.GroupV2 {
 	var id int64
 	if !model.ID.IsNull() && !model.ID.IsUnknown() {
 		id, _ = decodeNumericID(model.ID.ValueString())
 	}
 
-	group := checkly.Group{
+	group := checkly.GroupV2{
 		ID:                        id,
 		Name:                      model.Name.ValueString(),
 		Concurrency:               int(model.Concurrency.ValueInt64()),
 		Activated:                 model.Activated.ValueBool(),
 		Muted:                     model.Muted.ValueBool(),
-		RunParallel:               model.RunParallel.ValueBool(),
+		RunParallel:               model.RunParallel.ValueBoolPointer(),
 		Locations:                 stringsFromSetOrEmpty(ctx, model.Locations, diags),
 		Tags:                      stringsFromSetOrEmpty(ctx, model.Tags, diags),
 		EnvironmentVariables:      environmentVariablesFromList(ctx, model.EnvironmentVariable, diags),
-		SetupSnippetID:            model.SetupSnippetID.ValueInt64(),
-		TearDownSnippetID:         model.TeardownSnippetID.ValueInt64(),
-		LocalSetupScript:          model.LocalSetupScript.ValueString(),
-		LocalTearDownScript:       model.LocalTeardownScript.ValueString(),
-		AlertSettings:             alertSettingsFromObject(ctx, model.AlertSettings, diags),
-		UseGlobalAlertSettings:    model.UseGlobalAlertSettings.ValueBool(),
-		DoubleCheck:               model.DoubleCheck.ValueBool(),
+		SetupSnippetID:            pointerOrNilWhenZero(model.SetupSnippetID.ValueInt64()),
+		TearDownSnippetID:         pointerOrNilWhenZero(model.TeardownSnippetID.ValueInt64()),
+		LocalSetupScript:          pointerOrNilWhenZero(model.LocalSetupScript.ValueString()),
+		LocalTearDownScript:       pointerOrNilWhenZero(model.LocalTeardownScript.ValueString()),
+		UseGlobalAlertSettings:    model.UseGlobalAlertSettings.ValueBoolPointer(),
 		APICheckDefaults:          apiCheckDefaultsFromObject(ctx, model.APICheckDefaults, diags),
 		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscription, diags),
 		RetryStrategy:             retryStrategyFromObject(ctx, model.RetryStrategy, diags),
+	}
+
+	// An empty escalation_type is what reading a group without alert settings
+	// stores. Nil keeps the group that way, and the API rejects an empty
+	// object.
+	if alertSettings := alertSettingsFromObject(ctx, model.AlertSettings, diags); alertSettings.EscalationType != "" {
+		group.AlertSettings = &alertSettings
 	}
 
 	// An empty runtime ID means the group uses the account default runtime.
@@ -419,13 +432,13 @@ func checkGroupFromModel(ctx context.Context, model *CheckGroupResourceModel, di
 // check group. Values that the API does not track are resolved using the
 // values already present in the model (the plan on create/update, the state
 // on read).
-func checkGroupToModel(ctx context.Context, group *checkly.Group, model *CheckGroupResourceModel, diags *diag.Diagnostics) {
+func checkGroupToModel(ctx context.Context, group *checkly.GroupV2, model *CheckGroupResourceModel, diags *diag.Diagnostics) {
 	model.ID = types.StringValue(encodeNumericID(group.ID))
 	model.Name = types.StringValue(group.Name)
 	model.Concurrency = types.Int64Value(int64(group.Concurrency))
 	model.Activated = types.BoolValue(group.Activated)
 	model.Muted = types.BoolValue(group.Muted)
-	model.RunParallel = types.BoolValue(group.RunParallel)
+	model.RunParallel = types.BoolValue(valueOrZero(group.RunParallel))
 	model.Locations = setFromStrings(ctx, group.Locations, diags)
 
 	if group.PrivateLocations != nil {
@@ -436,10 +449,10 @@ func checkGroupToModel(ctx context.Context, group *checkly.Group, model *CheckGr
 
 	model.Tags = setFromStrings(ctx, group.Tags, diags)
 	model.EnvironmentVariable = environmentVariablesToList(ctx, group.EnvironmentVariables, model.EnvironmentVariable, diags)
-	model.SetupSnippetID = types.Int64Value(group.SetupSnippetID)
-	model.TeardownSnippetID = types.Int64Value(group.TearDownSnippetID)
-	model.LocalSetupScript = types.StringValue(group.LocalSetupScript)
-	model.LocalTeardownScript = types.StringValue(group.LocalTearDownScript)
+	model.SetupSnippetID = types.Int64Value(valueOrZero(group.SetupSnippetID))
+	model.TeardownSnippetID = types.Int64Value(valueOrZero(group.TearDownSnippetID))
+	model.LocalSetupScript = types.StringValue(valueOrZero(group.LocalSetupScript))
+	model.LocalTeardownScript = types.StringValue(valueOrZero(group.LocalTearDownScript))
 
 	// The API reports no runtime ID when the group uses the account default
 	// runtime. In that case the value already present in the model (null or
@@ -451,9 +464,36 @@ func checkGroupToModel(ctx context.Context, group *checkly.Group, model *CheckGr
 	}
 
 	model.AlertChannelSubscription = alertChannelSubscriptionsToSet(ctx, group.AlertChannelSubscriptions, diags)
-	model.AlertSettings = alertSettingsToObject(ctx, group.AlertSettings, model.AlertSettings, diags)
-	model.UseGlobalAlertSettings = types.BoolValue(group.UseGlobalAlertSettings)
-	model.DoubleCheck = types.BoolValue(group.DoubleCheck)
+	model.AlertSettings = alertSettingsToObject(ctx, valueOrZero(group.AlertSettings), model.AlertSettings, diags)
+	model.UseGlobalAlertSettings = types.BoolValue(valueOrZero(group.UseGlobalAlertSettings))
+
+	// The SDK's GroupV2 has no double_check, so the value in the model
+	// stands, and a value that was never set, as on import, is false. A
+	// change made outside Terraform shows up through retry_strategy.
+	model.DoubleCheck = types.BoolValue(model.DoubleCheck.ValueBool())
+
 	model.APICheckDefaults = apiCheckDefaultsToObject(ctx, group.APICheckDefaults, model.APICheckDefaults, diags)
 	model.RetryStrategy = retryStrategyToObject(ctx, group.RetryStrategy, model.RetryStrategy, diags)
+}
+
+// pointerOrNilWhenZero returns a pointer to value, or nil for the zero value
+// of its type.
+func pointerOrNilWhenZero[T comparable](value T) *T {
+	var zero T
+	if value == zero {
+		return nil
+	}
+
+	return &value
+}
+
+// valueOrZero returns the value of pointer, or the zero value of its type
+// when pointer is nil.
+func valueOrZero[T any](pointer *T) T {
+	if pointer == nil {
+		var zero T
+		return zero
+	}
+
+	return *pointer
 }

@@ -19,7 +19,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 
-	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/checkly-go-sdk/v2"
 )
 
 // rateLimitAllowance is how much longer than a single request an API call
@@ -71,6 +71,16 @@ func parseAPIRequestTimeout() (time.Duration, error) {
 // timeout applied.
 func contextWithAPITimeout(ctx context.Context) (context.Context, context.CancelFunc) {
 	return context.WithTimeout(ctx, apiCallTimeout())
+}
+
+// readForUpdate reads the stored object that an update copies the values
+// Terraform does not manage from. The read has its own API timeout, so that
+// one waiting for the rate limit doesn't use up the deadline of the write.
+func readForUpdate[T any](ctx context.Context, read func(context.Context, string) (T, error), id string) (T, error) {
+	apiCtx, cancel := contextWithAPITimeout(ctx)
+	defer cancel()
+
+	return read(apiCtx, id)
 }
 
 // clientFromProviderData extracts the Checkly API client that the provider

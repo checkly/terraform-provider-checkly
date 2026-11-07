@@ -1,11 +1,15 @@
 package provider
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"testing"
 
+	"github.com/checkly/checkly-go-sdk/v2"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
 func TestAccCheckRequiredFields(t *testing.T) {
@@ -75,9 +79,70 @@ func TestAccBrowserCheckMissingScript(t *testing.T) {
 	accTestCase(t, []resource.TestStep{
 		{
 			Config:      config,
-			ExpectError: regexp.MustCompile(`400\s+Bad\s+Request`),
+			ExpectError: regexp.MustCompile(`Missing\s+Check\s+Script`),
 		},
 	})
+}
+
+// TestAccCheckEmptyScript covers every way that a browser check's planned
+// script ends up empty, on create and on update. The API would accept the
+// update and clear the stored script.
+func TestAccCheckEmptyScript(t *testing.T) {
+	// Replacing the terraform_data resource makes its output unknown in the
+	// plan of an update as well.
+	knownOnlyAtApply := func(revision int) string {
+		return fmt.Sprintf(`
+			resource "terraform_data" "empty" {
+				input            = ""
+				triggers_replace = %d
+			}
+		`, revision)
+	}
+
+	cases := map[string]struct {
+		extra  func(revision int) string
+		script string
+	}{
+		"omitted": {extra: func(int) string { return "" }},
+		"null":    {extra: func(int) string { return "" }, script: `script = null`},
+		"known only at apply": {
+			extra:  knownOnlyAtApply,
+			script: `script = terraform_data.empty.output`,
+		},
+	}
+
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			config := func(revision int, script string) string {
+				return c.extra(revision) + fmt.Sprintf(`
+					resource "checkly_check" "test" {
+						name      = "tf-acc-empty-script"
+						type      = "BROWSER"
+						activated = false
+						frequency = 10
+						locations = ["eu-central-1"]
+						use_global_alert_settings = true
+						%s
+					}
+				`, script)
+			}
+			missingScript := regexp.MustCompile(`Missing\s+Check\s+Script`)
+
+			accTestCase(t, []resource.TestStep{
+				{
+					Config:      config(1, c.script),
+					ExpectError: missingScript,
+				},
+				{
+					Config: config(1, `script = "console.log('hi')"`),
+				},
+				{
+					Config:      config(2, c.script),
+					ExpectError: missingScript,
+				},
+			})
+		})
+	}
 }
 
 func TestAccBrowserCheckBasic(t *testing.T) {
@@ -2260,11 +2325,221 @@ func TestAccCheckDoubleCheck(t *testing.T) {
 			),
 		},
 		{
+			ResourceName:            r,
+			ImportState:             true,
+			ImportStateVerify:       true,
+			ImportStateVerifyIgnore: []string{"double_check"},
+		},
+		{
 			Config: config(""),
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(r, "double_check", "false"),
 				resource.TestCheckResourceAttr(r, "retry_strategy.type", "NO_RETRIES"),
 			),
+		},
+	})
+}
+
+// TestAccCheckTypeChangeInPlace changes the type of a stored check with an
+// update, which keeps its ID.
+func TestAccCheckTypeChangeInPlace(t *testing.T) {
+	config := func(checkType, attributes string) string {
+		return fmt.Sprintf(`
+			resource "checkly_check" "test" {
+				name                      = "tf-acc-type-change"
+				type                      = %q
+				activated                 = false
+				frequency                 = 10
+				locations                 = ["eu-central-1"]
+				runtime_id                = "2023.09"
+				use_global_alert_settings = true
+				%s
+			}
+		`, checkType, attributes)
+	}
+	const r = "checkly_check.test"
+	const script = `script = "console.log('hi')"`
+
+	var id string
+	sameID := func(s *terraform.State) error {
+		got := s.RootModule().Resources[r].Primary.ID
+		if id == "" {
+			id = got
+		}
+		if got != id {
+			return fmt.Errorf("id = %s, want %s", got, id)
+		}
+		return nil
+	}
+	updatesInPlace := resource.ConfigPlanChecks{
+		PreApply: []plancheck.PlanCheck{
+			plancheck.ExpectResourceAction(r, plancheck.ResourceActionUpdate),
+		},
+	}
+
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: config("API", `
+				request = {
+					url = "https://api.checklyhq.com/public-stats"
+				}
+			`),
+			Check: sameID,
+		},
+		{
+			Config:           config("BROWSER", script),
+			ConfigPlanChecks: updatesInPlace,
+			Check: resource.ComposeTestCheckFunc(
+				sameID,
+				resource.TestCheckResourceAttr(r, "type", "BROWSER"),
+			),
+		},
+		{
+			Config:           config("MULTI_STEP", script),
+			ConfigPlanChecks: updatesInPlace,
+			Check: resource.ComposeTestCheckFunc(
+				sameID,
+				resource.TestCheckResourceAttr(r, "type", "MULTI_STEP"),
+			),
+		},
+	})
+}
+
+// TestAccCheckUpdateClearsRemovedValues removes values that the API only clears
+// when an update sends them empty. The empty plan after the last step shows
+// that they are gone.
+func TestAccCheckUpdateClearsRemovedValues(t *testing.T) {
+	config := func(values string) string {
+		return fmt.Sprintf(`
+			resource "checkly_snippet" "test" {
+				name   = "tf-acc-check-clear"
+				script = "console.log('hi')"
+			}
+
+			resource "checkly_check_group" "test" {
+				name        = "tf-acc-check-clear"
+				activated   = true
+				concurrency = 1
+				locations   = ["eu-central-1"]
+			}
+
+			resource "checkly_check" "test" {
+				name                      = "tf-acc-check-clear"
+				type                      = "API"
+				activated                 = false
+				frequency                 = 60
+				locations                 = ["eu-central-1"]
+				use_global_alert_settings = true
+				%s
+
+				request = {
+					url = "https://api.checklyhq.com/public-stats"
+				}
+			}
+		`, values)
+	}
+	const r = "checkly_check.test"
+
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: config(`
+				tags                  = ["tf-acc"]
+				setup_snippet_id      = checkly_snippet.test.id
+				teardown_snippet_id   = checkly_snippet.test.id
+				local_setup_script    = "console.log('setup')"
+				local_teardown_script = "console.log('teardown')"
+				group_id              = checkly_check_group.test.id
+				group_order           = 3
+			`),
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(r, "tags.#", "1"),
+				resource.TestCheckResourceAttr(r, "group_order", "3"),
+			),
+		},
+		{
+			Config: config(`group_id = checkly_check_group.test.id`),
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckNoResourceAttr(r, "tags.#"),
+				resource.TestCheckResourceAttr(r, "setup_snippet_id", "0"),
+				resource.TestCheckResourceAttr(r, "teardown_snippet_id", "0"),
+				resource.TestCheckResourceAttr(r, "local_setup_script", ""),
+				resource.TestCheckResourceAttr(r, "local_teardown_script", ""),
+				resource.TestCheckResourceAttr(r, "group_order", "0"),
+			),
+		},
+		{
+			Config: config(""),
+			Check:  resource.TestCheckResourceAttr(r, "group_id", "0"),
+		},
+	})
+}
+
+// TestAccCheckUpdateKeepsUnmanagedValues sets values that checkly_check has no
+// attributes for outside Terraform, which an update has to keep.
+func TestAccCheckUpdateKeepsUnmanagedValues(t *testing.T) {
+	config := func(name string) string {
+		return fmt.Sprintf(`
+			resource "checkly_check" "test" {
+				name                      = %q
+				type                      = "BROWSER"
+				activated                 = false
+				frequency                 = 10
+				locations                 = ["eu-central-1"]
+				use_global_alert_settings = true
+				script                    = "console.log('hi')"
+			}
+		`, name)
+	}
+	const r = "checkly_check.test"
+	intent := "tf-acc: the page keeps loading"
+
+	var id string
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: config("tf-acc-keep-unmanaged"),
+			Check: func(s *terraform.State) error {
+				id = s.RootModule().Resources[r].Primary.ID
+				return nil
+			},
+		},
+		{
+			PreConfig: func() {
+				ctx := context.Background()
+				client := testAccClient()
+				check, err := client.GetBrowserCheck(ctx, id)
+				if err != nil {
+					t.Fatal(err)
+				}
+				aiAutoRepair := false
+				scriptPath := "tests/keep.spec.js"
+				check.AIAutoRepairEnabled = &aiAutoRepair
+				check.Intent = &checkly.CheckIntent{Goal: intent}
+				check.ScriptPath = &scriptPath
+				check.Dependencies = []checkly.ScriptDependency{{Path: "tests/helper.js", Content: "module.exports = {}"}}
+				if _, err := client.UpdateBrowserCheck(ctx, id, *check); err != nil {
+					t.Fatal(err)
+				}
+			},
+			Config: config("tf-acc-keep-unmanaged-renamed"),
+			Check: func(s *terraform.State) error {
+				check, err := testAccClient().GetBrowserCheck(context.Background(), id)
+				if err != nil {
+					return err
+				}
+				if check.Intent == nil || check.Intent.Goal != intent {
+					return fmt.Errorf("intent = %+v, want the goal %q", check.Intent, intent)
+				}
+				if check.AIAutoRepairEnabled == nil || *check.AIAutoRepairEnabled {
+					return fmt.Errorf("aiAutoRepairEnabled = %v, want false", check.AIAutoRepairEnabled)
+				}
+				if check.ScriptPath == nil || *check.ScriptPath != "tests/keep.spec.js" {
+					return fmt.Errorf("scriptPath = %v, want tests/keep.spec.js", check.ScriptPath)
+				}
+				if len(check.Dependencies) != 1 || check.Dependencies[0].Path != "tests/helper.js" {
+					return fmt.Errorf("dependencies = %+v, want tests/helper.js", check.Dependencies)
+				}
+				return nil
+			},
 		},
 	})
 }

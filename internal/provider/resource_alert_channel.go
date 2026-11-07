@@ -25,7 +25,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 
-	checkly "github.com/checkly/checkly-go-sdk"
+	"github.com/checkly/checkly-go-sdk/v2"
 )
 
 var (
@@ -634,14 +634,14 @@ func alertChannelFromModel(ctx context.Context, model *AlertChannelResourceModel
 	}
 
 	if m := objectAs[alertChannelEmailModel](ctx, model.Email, diags); m != nil {
-		ac.Type = checkly.AlertTypeEmail
+		ac.Type = checkly.AlertChannelTypeEmail
 		ac.Email = &checkly.AlertChannelEmail{
 			Address: m.Address.ValueString(),
 		}
 	}
 
 	if m := objectAs[alertChannelSlackModel](ctx, model.Slack, diags); m != nil {
-		ac.Type = checkly.AlertTypeSlack
+		ac.Type = checkly.AlertChannelTypeSlack
 		ac.Slack = &checkly.AlertChannelSlack{
 			WebhookURL: m.URL.ValueString(),
 			Channel:    m.Channel.ValueString(),
@@ -649,14 +649,14 @@ func alertChannelFromModel(ctx context.Context, model *AlertChannelResourceModel
 	}
 
 	if m := objectAs[alertChannelSlackAppModel](ctx, model.SlackApp, diags); m != nil {
-		ac.Type = checkly.AlertTypeSlackApp
+		ac.Type = checkly.AlertChannelTypeSlackApp
 		ac.SlackApp = &checkly.AlertChannelSlackApp{
 			SlackChannels: stringsFromList(ctx, m.SlackChannels, diags),
 		}
 	}
 
 	if m := objectAs[alertChannelSMSModel](ctx, model.SMS, diags); m != nil {
-		ac.Type = checkly.AlertTypeSMS
+		ac.Type = checkly.AlertChannelTypeSMS
 		ac.SMS = &checkly.AlertChannelSMS{
 			Name:   m.Name.ValueString(),
 			Number: m.Number.ValueString(),
@@ -664,7 +664,7 @@ func alertChannelFromModel(ctx context.Context, model *AlertChannelResourceModel
 	}
 
 	if m := objectAs[alertChannelCallModel](ctx, model.Call, diags); m != nil {
-		ac.Type = checkly.AlertTypeCall
+		ac.Type = checkly.AlertChannelTypeCall
 		ac.CALL = &checkly.AlertChannelCall{
 			Name:   m.Name.ValueString(),
 			Number: m.Number.ValueString(),
@@ -672,7 +672,7 @@ func alertChannelFromModel(ctx context.Context, model *AlertChannelResourceModel
 	}
 
 	if m := objectAs[alertChannelWebhookModel](ctx, model.Webhook, diags); m != nil {
-		ac.Type = checkly.AlertTypeWebhook
+		ac.Type = checkly.AlertChannelTypeWebhook
 		ac.Webhook = &checkly.AlertChannelWebhook{
 			Name:            m.Name.ValueString(),
 			Method:          m.Method.ValueString(),
@@ -686,17 +686,17 @@ func alertChannelFromModel(ctx context.Context, model *AlertChannelResourceModel
 	}
 
 	if m := objectAs[alertChannelOpsgenieModel](ctx, model.Opsgenie, diags); m != nil {
-		ac.Type = checkly.AlertTypeOpsgenie
+		ac.Type = checkly.AlertChannelTypeOpsgenie
 		ac.Opsgenie = &checkly.AlertChannelOpsgenie{
 			Name:     m.Name.ValueString(),
 			APIKey:   m.APIKey.ValueString(),
-			Region:   m.Region.ValueString(),
-			Priority: m.Priority.ValueString(),
+			Region:   checkly.OpsgenieRegion(m.Region.ValueString()),
+			Priority: checkly.OpsgeniePriority(m.Priority.ValueString()),
 		}
 	}
 
 	if m := objectAs[alertChannelPagerdutyModel](ctx, model.Pagerduty, diags); m != nil {
-		ac.Type = checkly.AlertTypePagerduty
+		ac.Type = checkly.AlertChannelTypePagerduty
 		ac.Pagerduty = &checkly.AlertChannelPagerduty{
 			Account:     m.Account.ValueString(),
 			ServiceKey:  m.ServiceKey.ValueString(),
@@ -829,8 +829,8 @@ func alertChannelOpsgenieToObject(ctx context.Context, cfg *checkly.AlertChannel
 	return alertChannelObjectFrom(ctx, alertChannelOpsgenieAttrTypes, alertChannelOpsgenieModel{
 		Name:     types.StringValue(cfg.Name),
 		APIKey:   types.StringValue(cfg.APIKey),
-		Region:   types.StringValue(cfg.Region),
-		Priority: types.StringValue(cfg.Priority),
+		Region:   types.StringValue(string(cfg.Region)),
+		Priority: types.StringValue(string(cfg.Priority)),
 	}, diags)
 }
 

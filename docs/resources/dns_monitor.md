@@ -3,12 +3,12 @@
 page_title: "checkly_dns_monitor Resource - terraform-provider-checkly"
 subcategory: ""
 description: |-
-  Creates a DNS Monitor to check DNS record availability and response times.
+  Creates a DNS Monitor to check DNS record availability and response times. This resource does not manage private locations, and keeps the ones a monitor has in Checkly.
 ---
 
 # checkly_dns_monitor (Resource)
 
-Creates a DNS Monitor to check DNS record availability and response times.
+Creates a DNS Monitor to check DNS record availability and response times. This resource does not manage private locations, and keeps the ones a monitor has in Checkly.
 
 ## Example Usage
 
