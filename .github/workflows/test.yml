@@ -17,7 +17,8 @@ on:
 # for each other instead of overlapping there, and a newer pending run replaces
 # an older one. This holds back the build jobs of a new push too, while
 # cancelling a running test leg would leave its resources behind in the
-# account. Runs on different refs can still overlap.
+# account. The test job additionally queues behind the test jobs of every
+# other ref.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
 
@@ -61,6 +62,12 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # Runs on all refs share the account too, so their test legs wait for
+    # each other in one queue. Without a queue, a newer pending leg would
+    # cancel an older pending one.
+    concurrency:
+      group: checkly-acceptance-account
+      queue: max
     strategy:
       # The legs share one Checkly account, so they run one at a time.
       max-parallel: 1
