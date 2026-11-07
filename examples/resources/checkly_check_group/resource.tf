@@ -10,7 +10,7 @@ resource "checkly_check_group" "test_group1" {
     "eu-west-1",
   ]
   concurrency = 3
-  api_check_defaults {
+  api_check_defaults = {
     url = "http://example.com/"
     headers = {
       X-Test = "foo"
@@ -20,21 +20,22 @@ resource "checkly_check_group" "test_group1" {
       query = "foo"
     }
 
-    assertion {
-      source     = "STATUS_CODE"
-      property   = ""
-      comparison = "EQUALS"
-      target     = "200"
-    }
+    assertion = [
+      {
+        source     = "STATUS_CODE"
+        property   = ""
+        comparison = "EQUALS"
+        target     = "200"
+      },
+      {
+        source     = "TEXT_BODY"
+        property   = ""
+        comparison = "CONTAINS"
+        target     = "welcome"
+      },
+    ]
 
-    assertion {
-      source     = "TEXT_BODY"
-      property   = ""
-      comparison = "CONTAINS"
-      target     = "welcome"
-    }
-
-    basic_auth {
+    basic_auth = {
       username = "user"
       password = "pass"
     }
@@ -54,14 +55,14 @@ resource "checkly_check_group" "test_group1" {
 
   use_global_alert_settings = false
 
-  alert_settings {
+  alert_settings = {
     escalation_type = "RUN_BASED"
 
-    run_based_escalation {
+    run_based_escalation = {
       failed_run_threshold = 1
     }
 
-    reminders {
+    reminders = {
       amount   = 2
       interval = 5
     }
@@ -81,7 +82,7 @@ resource "checkly_check" "test_check1" {
     "us-west-1"
   ]
 
-  request {
+  request = {
     url = "https://api.example.com/"
   }
   group_id    = checkly_check_group.test_group1.id
@@ -91,13 +92,13 @@ resource "checkly_check" "test_check1" {
 
 # Using with alert channels
 resource "checkly_alert_channel" "email_ac1" {
-  email {
+  email = {
     address = "info@example.com"
   }
 }
 
 resource "checkly_alert_channel" "email_ac2" {
-  email {
+  email = {
     address = "info2@example.com"
   }
 }

@@ -1,0 +1,39 @@
+{
+    "activated": true,
+    "alert_channel_subscription": [],
+    "alert_settings": [
+        {
+            "escalation_type": "TIME_BASED",
+            "parallel_run_failure_threshold": [],
+            "reminders": [],
+            "run_based_escalation": [],
+            "ssl_certificates": [
+                {
+                    "alert_threshold": 3,
+                    "enabled": false
+                }
+            ],
+            "time_based_escalation": [
+                {
+                    "minutes_failing_threshold": 5
+                }
+            ]
+        }
+    ],
+    "description": null,
+    "heartbeat": [
+        {
+            "grace": 1,
+            "grace_unit": "hours",
+            "period": 1,
+            "period_unit": "days",
+            "ping_token": ""
+        }
+    ],
+    "id": "123",
+    "muted": null,
+    "name": "h",
+    "tags": null,
+    "trigger_incident": [],
+    "use_global_alert_settings": null
+}

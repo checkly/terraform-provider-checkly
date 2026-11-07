@@ -37,7 +37,7 @@ Creates a Playwright check from a code bundle.
 # included as well (recursively - repeat the process until all relevant
 # workspace packages can be resolved).
 resource "checkly_playwright_code_bundle" "playwright-bundle" {
-  prebuilt_archive {
+  prebuilt_archive = {
     file = data.archive_file.playwright-bundle.output_path
   }
 }
@@ -68,7 +68,7 @@ resource "checkly_playwright_check_suite" "example-playwright-check" {
     "eu-west-1"
   ]
 
-  bundle {
+  bundle = {
     id       = checkly_playwright_code_bundle.playwright-bundle.id
     metadata = checkly_playwright_code_bundle.playwright-bundle.metadata
   }
@@ -86,30 +86,31 @@ resource "checkly_playwright_check_suite" "example-playwright-check-custom" {
     "eu-west-1"
   ]
 
-  bundle {
+  bundle = {
     id       = checkly_playwright_code_bundle.playwright-bundle.id
     metadata = checkly_playwright_code_bundle.playwright-bundle.metadata
   }
 
-  runtime {
+  runtime = {
     working_dir = "./packages/e2e"
 
-    steps {
-      test {
+    steps = {
+      test = {
         command = "npx playwright test --config \"playwright.config.ts\""
       }
     }
 
-    playwright {
+    playwright = {
       version = "1.56.1"
 
-      device {
-        type = "chromium"
-      }
-
-      device {
-        type = "firefox"
-      }
+      device = [
+        {
+          type = "chromium"
+        },
+        {
+          type = "firefox"
+        },
+      ]
     }
   }
 }
@@ -121,32 +122,34 @@ resource "checkly_playwright_check_suite" "example-playwright-check-custom" {
 ### Required
 
 - `activated` (Boolean) Determines whether the check will run periodically or not after being deployed.
-- `bundle` (Block List, Min: 1, Max: 1) Attaches a code bundle to the check. (see [below for nested schema](#nestedblock--bundle))
+- `bundle` (Attributes) Attaches a code bundle to the check. (see [below for nested schema](#nestedatt--bundle))
 - `frequency` (Number) Controls how often the check should run. Defined in minutes. The allowed values are `1` (1 minute), `2` (2 minutes), `5` (5 minutes), `10` (10 minutes), `15` (15 minutes), `30` (30 minutes), `60` (1 hour), `120` (2 hours), `180` (3 hours), `360` (6 hours), `720` (12 hours) and `1440` (24 hours).
 - `name` (String) The name of the check.
 
 ### Optional
 
+- `ai_auto_repair_enabled` (Boolean) Overrides the account's automatic repair setting for this check. Leave it out to inherit the account setting. Automatic repair supports browser and multi-step checks only, so this setting has no effect on other check types today, and it needs an `intent` with at least one statement. A repair is saved to the check, so it shows as a change to `script`, and the next apply restores the configured script unless you copy the repaired script into the configuration or add `script` to `ignore_changes`. An override edited in the web app and absent from the configuration is removed by the next apply, every time. To leave it to the web app, add `ai_auto_repair_enabled` to `ignore_changes`.
 - `alert_channel_subscription` (Block Set) An array of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your check, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedblock--alert_channel_subscription))
-- `alert_settings` (Block List, Max: 1) Determines the alert escalation policy for the check. (see [below for nested schema](#nestedblock--alert_settings))
+- `alert_settings` (Attributes) Determines the alert escalation policy for the check. (see [below for nested schema](#nestedatt--alert_settings))
 - `description` (String) A description of the check.
 - `environment_variable` (Block List) Insert environment variables into the execution environment. (see [below for nested schema](#nestedblock--environment_variable))
 - `group_id` (Number) The ID of the check group that this check is part of.
 - `group_order` (Number) The position of the check in the check group. It determines in what order checks and monitors are run when a group is triggered from the API or from CI/CD.
+- `intent` (Attributes) Guidance for root cause analysis and automatic repair: what this check protects, and which changes keep it meaningful. Automatic repair supports browser and multi-step checks only, and refuses an intent with no statements: a `goal` on its own is accepted here, but repair needs at least one statement in either `required_outcomes` or `must_preserve`. An intent edited in the web app and absent from the configuration is removed by the next apply, every time. To leave it to the web app, add `intent` to `ignore_changes`. (see [below for nested schema](#nestedatt--intent))
 - `locations` (Set of String) An array of one or more data center locations where to run the this check.
 - `muted` (Boolean) Determines if any notifications will be sent out when the check fails and/or recovers. (Default `false`).
 - `private_locations` (Set of String) An array of one or more private locations slugs.
 - `run_parallel` (Boolean) Determines whether the check should run on all selected locations in parallel or round-robin. (Default `false`).
-- `runtime` (Block List, Max: 1) Configure the runtime environment of the Playwright check. (see [below for nested schema](#nestedblock--runtime))
+- `runtime` (Attributes) Configure the runtime environment of the Playwright check. (see [below for nested schema](#nestedatt--runtime))
 - `tags` (Set of String) A list of tags for organizing and filtering checks and monitors.
-- `trigger_incident` (Block Set, Max: 1) Create and resolve an incident based on the alert configuration. Useful for status page automation. (see [below for nested schema](#nestedblock--trigger_incident))
+- `trigger_incident` (Attributes) Create and resolve an incident based on the alert configuration. Useful for status page automation. (see [below for nested schema](#nestedatt--trigger_incident))
 - `use_global_alert_settings` (Boolean) When true, the account level alert settings will be used, not the alert setting defined on this check. (Default `true`).
 
 ### Read-Only
 
-- `id` (String) The ID of this resource.
+- `id` (String) The ID of the check.
 
-<a id="nestedblock--bundle"></a>
+<a id="nestedatt--bundle"></a>
 ### Nested Schema for `bundle`
 
 Required:
@@ -164,18 +167,18 @@ Required:
 - `channel_id` (Number) The ID of the alert channel.
 
 
-<a id="nestedblock--alert_settings"></a>
+<a id="nestedatt--alert_settings"></a>
 ### Nested Schema for `alert_settings`
 
 Optional:
 
 - `escalation_type` (String) Determines the type of escalation to use. Possible values are `RUN_BASED` and `TIME_BASED`. (Default `RUN_BASED`).
-- `parallel_run_failure_threshold` (Block List) Configuration for parallel run failure threshold. (see [below for nested schema](#nestedblock--alert_settings--parallel_run_failure_threshold))
-- `reminders` (Block List) Defines how often to send reminder notifications after initial alert. (see [below for nested schema](#nestedblock--alert_settings--reminders))
-- `run_based_escalation` (Block List) Configuration for run-based escalation. (see [below for nested schema](#nestedblock--alert_settings--run_based_escalation))
-- `time_based_escalation` (Block List) Configuration for time-based escalation. (see [below for nested schema](#nestedblock--alert_settings--time_based_escalation))
+- `parallel_run_failure_threshold` (Attributes) Configuration for parallel run failure threshold. (see [below for nested schema](#nestedatt--alert_settings--parallel_run_failure_threshold))
+- `reminders` (Attributes) Defines how often to send reminder notifications after the initial alert. (see [below for nested schema](#nestedatt--alert_settings--reminders))
+- `run_based_escalation` (Attributes) Configuration for run-based escalation. (see [below for nested schema](#nestedatt--alert_settings--run_based_escalation))
+- `time_based_escalation` (Attributes) Configuration for time-based escalation. (see [below for nested schema](#nestedatt--alert_settings--time_based_escalation))
 
-<a id="nestedblock--alert_settings--parallel_run_failure_threshold"></a>
+<a id="nestedatt--alert_settings--parallel_run_failure_threshold"></a>
 ### Nested Schema for `alert_settings.parallel_run_failure_threshold`
 
 Optional:
@@ -184,7 +187,7 @@ Optional:
 - `percentage` (Number) Percentage of runs that must fail to trigger alert. Possible values are `10`, `20`, `30`, `40`, `50`, `60`, `70`, `80`, `90`, and `100`. (Default `10`).
 
 
-<a id="nestedblock--alert_settings--reminders"></a>
+<a id="nestedatt--alert_settings--reminders"></a>
 ### Nested Schema for `alert_settings.reminders`
 
 Optional:
@@ -193,7 +196,7 @@ Optional:
 - `interval` (Number) Interval between reminder notifications in minutes. Possible values are `5`, `10`, `15`, and `30`. (Default `5`).
 
 
-<a id="nestedblock--alert_settings--run_based_escalation"></a>
+<a id="nestedatt--alert_settings--run_based_escalation"></a>
 ### Nested Schema for `alert_settings.run_based_escalation`
 
 Optional:
@@ -201,7 +204,7 @@ Optional:
 - `failed_run_threshold` (Number) Send an alert notification after the given number of consecutive check runs have failed. Possible values are between `1` and `5`. (Default `1`).
 
 
-<a id="nestedblock--alert_settings--time_based_escalation"></a>
+<a id="nestedatt--alert_settings--time_based_escalation"></a>
 ### Nested Schema for `alert_settings.time_based_escalation`
 
 Optional:
@@ -216,7 +219,7 @@ Optional:
 Required:
 
 - `key` (String) The name of the environment variable or secret.
-- `value` (String) The value of the environment variable or secret.
+- `value` (String, Sensitive) The value of the environment variable or secret.
 
 Optional:
 
@@ -224,18 +227,31 @@ Optional:
 - `secret` (Boolean) If true, the value will never be visible. The API never returns secret values, so Terraform keeps the last applied value and does not detect changes made outside Terraform. (Default `false`).
 
 
-<a id="nestedblock--runtime"></a>
+<a id="nestedatt--intent"></a>
+### Nested Schema for `intent`
+
+Required:
+
+- `goal` (String) The user or system outcome the check protects, of 1 to 2000 characters without leading or trailing whitespace.
+
+Optional:
+
+- `must_preserve` (List of String) Guardrails an automatic repair must not weaken or bypass. At most 20 statements of 1 to 1000 characters without leading or trailing whitespace.
+- `required_outcomes` (List of String) Observable outcomes the check must continue to prove. At most 20 statements of 1 to 1000 characters without leading or trailing whitespace.
+
+
+<a id="nestedatt--runtime"></a>
 ### Nested Schema for `runtime`
 
 Optional:
 
 - `auto_detect` (Boolean) Whether to automatically detect appropriate runtime environment configuration from the bundle. (Default `true`).
-- `engine` (Block List, Max: 1) The JavaScript engine used to run the Playwright tests. When `auto_detect` is enabled, no engine is set, and the code bundle has a lockfile at its root, the engine is detected from files at the bundle root. Node is taken from the first of `.node-version`, `.nvmrc`, `.tool-versions`, the `volta.node` pin in `package.json`, then `engines.node` in `package.json`; Bun from the first of `.tool-versions`, `.bun-version`, then `engines.bun`. When both are found, the engine matching the lockfile's package manager wins. `volta.extends` is not followed. (see [below for nested schema](#nestedblock--runtime--engine))
-- `playwright` (Block List, Max: 1) Configure the Playwright capabilities that should be made available to the runtime environment. (see [below for nested schema](#nestedblock--runtime--playwright))
-- `steps` (Block List, Max: 1) Customize the actions taken during test execution. (see [below for nested schema](#nestedblock--runtime--steps))
+- `engine` (Attributes) The JavaScript engine used to run the Playwright tests. When `auto_detect` is enabled, no engine is set, and the code bundle has a lockfile at its root, the engine is detected from files at the bundle root. Node is taken from the first of `.node-version`, `.nvmrc`, `.tool-versions`, the `volta.node` pin in `package.json`, then `engines.node` in `package.json`; Bun from the first of `.tool-versions`, `.bun-version`, then `engines.bun`. When both are found, the engine matching the lockfile's package manager wins. `volta.extends` is not followed. (see [below for nested schema](#nestedatt--runtime--engine))
+- `playwright` (Attributes) Configure the Playwright capabilities that should be made available to the runtime environment. (see [below for nested schema](#nestedatt--runtime--playwright))
+- `steps` (Attributes) Customize the actions taken during test execution. (see [below for nested schema](#nestedatt--runtime--steps))
 - `working_dir` (String) The working directory in which runtime commands are executed. This is useful for monorepos or workspaces where the Playwright project is in a subdirectory. Use "." to explicitly specify the root.
 
-<a id="nestedblock--runtime--engine"></a>
+<a id="nestedatt--runtime--engine"></a>
 ### Nested Schema for `runtime.engine`
 
 Required:
@@ -244,15 +260,15 @@ Required:
 - `version` (String) The engine version (e.g. "22", "24", "26" for node; "1.3", "1.4" for bun). Use "1" for bun to run the newest Bun 1.x available.
 
 
-<a id="nestedblock--runtime--playwright"></a>
+<a id="nestedatt--runtime--playwright"></a>
 ### Nested Schema for `runtime.playwright`
 
 Optional:
 
-- `device` (Block Set) The list of devices that should be made available for Playwright. Defaults to chromium, firefox, and webkit. (see [below for nested schema](#nestedblock--runtime--playwright--device))
+- `device` (Attributes Set) The list of devices that should be made available for Playwright. Defaults to chromium, firefox, and webkit. (see [below for nested schema](#nestedatt--runtime--playwright--device))
 - `version` (String) The Playwright version to use. Defaults to the version detected from the code bundle's lockfile.
 
-<a id="nestedblock--runtime--playwright--device"></a>
+<a id="nestedatt--runtime--playwright--device"></a>
 ### Nested Schema for `runtime.playwright.device`
 
 Required:
@@ -261,15 +277,15 @@ Required:
 
 
 
-<a id="nestedblock--runtime--steps"></a>
+<a id="nestedatt--runtime--steps"></a>
 ### Nested Schema for `runtime.steps`
 
 Optional:
 
-- `install` (Block List, Max: 1) Customize the install step, which is used to initialize the environment prior to starting the test run. (see [below for nested schema](#nestedblock--runtime--steps--install))
-- `test` (Block List, Max: 1) Customize the test step. (see [below for nested schema](#nestedblock--runtime--steps--test))
+- `install` (Attributes) Customize the install step, which is used to initialize the environment prior to starting the test run. (see [below for nested schema](#nestedatt--runtime--steps--install))
+- `test` (Attributes) Customize the test step. (see [below for nested schema](#nestedatt--runtime--steps--test))
 
-<a id="nestedblock--runtime--steps--install"></a>
+<a id="nestedatt--runtime--steps--install"></a>
 ### Nested Schema for `runtime.steps.install`
 
 Optional:
@@ -277,7 +293,7 @@ Optional:
 - `command` (String) The command used to install dependencies prior to running Playwright. The default value is the appropriate install command for your package manager (e.g. `npm install` for `npm`).
 
 
-<a id="nestedblock--runtime--steps--test"></a>
+<a id="nestedatt--runtime--steps--test"></a>
 ### Nested Schema for `runtime.steps.test`
 
 Optional:
@@ -287,7 +303,7 @@ Optional:
 
 
 
-<a id="nestedblock--trigger_incident"></a>
+<a id="nestedatt--trigger_incident"></a>
 ### Nested Schema for `trigger_incident`
 
 Required:
@@ -297,3 +313,15 @@ Required:
 - `notify_subscribers` (Boolean) Whether to notify subscribers when the incident is triggered.
 - `service_id` (String) The status page service that this incident will be associated with.
 - `severity` (String) The severity level of the incident. Possible values are `MINOR`, `MEDIUM`, `MAJOR`, and `CRITICAL`.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# Import an existing Playwright check suite using its check ID.
+# You can find the ID in the check's URL in the Checkly dashboard.
+terraform import checkly_playwright_check_suite.example 3ffee447-5c86-4c56-b95a-2e1b4d1a1234
+```

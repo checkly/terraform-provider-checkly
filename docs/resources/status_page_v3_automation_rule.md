@@ -60,7 +60,7 @@ resource "checkly_status_page_v3_automation_rule" "api_outage" {
 
 ### Read-Only
 
-- `id` (String) The ID of this resource.
+- `id` (String) The ID of the automation rule.
 
 <a id="nestedblock--component"></a>
 ### Nested Schema for `component`
@@ -69,3 +69,15 @@ Required:
 
 - `component_id` (String) The ID of the impacted component. Must be on the same status page.
 - `target_impact` (String) The impact set on the component while the incident is open. The allowed values are `UNDER_MAINTENANCE`, `DEGRADED_PERFORMANCE`, `PARTIAL_OUTAGE` and `MAJOR_OUTAGE`.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# Import an existing status page automation rule using "<status_page_id>/<rule_id>".
+# Both IDs are returned by the Checkly API at GET /v3/status-pages/{status_page_id}/automation-rules.
+terraform import checkly_status_page_v3_automation_rule.example e35f7e14-91b2-4d24-b7b6-e0f9e2f8e51c/5b0a9a1e-8e29-4b71-92e1-0db9b3b41f0a
+```

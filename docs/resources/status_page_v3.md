@@ -20,9 +20,9 @@ resource "checkly_status_page_v3" "example" {
   support_link  = "mailto:support@example.com"
 
   # Optional custom colors (requires custom theme colors on your plan). The
-  # complete palette must be given; leave the block out for the defaults.
-  theme_colors {
-    light {
+  # complete palette must be given; leave the attribute out for the defaults.
+  theme_colors = {
+    light = {
       body_background_color           = "#F9FAFB"
       header_background_color         = "#FFFFFF"
       header_font_color               = "#151A1E"
@@ -36,7 +36,7 @@ resource "checkly_status_page_v3" "example" {
       primary_button_background_color = "#151A1E"
       primary_button_font_color       = "#FFFFFF"
     }
-    dark {
+    dark = {
       body_background_color           = "#14171C"
       header_background_color         = "#171B21"
       header_font_color               = "#FFFFFF"
@@ -99,21 +99,21 @@ resource "checkly_status_page_v3_component" "database" {
 - `redirect_to` (String) The URL the user should be redirected to when clicking the logo.
 - `support_link` (String) A support contact link (http, https or mailto), shown in the page footer.
 - `terms_of_service_link` (String) A link to your terms of service, shown in the page footer.
-- `theme_colors` (Block List, Max: 1) Custom colors for the light and dark theme of the page. Requires custom theme colors to be part of your plan. The complete palette must be given: both `light` and `dark`, each with every color. Leave the block out to use Checkly's default colors; the default palette the API then reports is not tracked, and the block is not populated when importing a page. (see [below for nested schema](#nestedblock--theme_colors))
+- `theme_colors` (Attributes) Custom colors for the light and dark theme of the page. Requires custom theme colors to be part of your plan. The complete palette must be given: both `light` and `dark`, each with every color. Leave the attribute out to use Checkly's default colors; the default palette the API then reports is not tracked, and the attribute is not populated when importing a page. (see [below for nested schema](#nestedatt--theme_colors))
 
 ### Read-Only
 
-- `id` (String) The ID of this resource.
+- `id` (String) The ID of the status page.
 
-<a id="nestedblock--theme_colors"></a>
+<a id="nestedatt--theme_colors"></a>
 ### Nested Schema for `theme_colors`
 
 Required:
 
-- `dark` (Block List, Min: 1, Max: 1) The colors used when the page renders in dark mode. (see [below for nested schema](#nestedblock--theme_colors--dark))
-- `light` (Block List, Min: 1, Max: 1) The colors used when the page renders in light mode. (see [below for nested schema](#nestedblock--theme_colors--light))
+- `dark` (Attributes) The colors used when the page renders in dark mode. (see [below for nested schema](#nestedatt--theme_colors--dark))
+- `light` (Attributes) The colors used when the page renders in light mode. (see [below for nested schema](#nestedatt--theme_colors--light))
 
-<a id="nestedblock--theme_colors--dark"></a>
+<a id="nestedatt--theme_colors--dark"></a>
 ### Nested Schema for `theme_colors.dark`
 
 Required:
@@ -132,7 +132,7 @@ Required:
 - `title_font_color` (String) The color of titles and headings. A hex color such as "#FF0000" or "#F00".
 
 
-<a id="nestedblock--theme_colors--light"></a>
+<a id="nestedatt--theme_colors--light"></a>
 ### Nested Schema for `theme_colors.light`
 
 Required:
@@ -149,3 +149,15 @@ Required:
 - `primary_button_background_color` (String) The background of primary buttons, such as "Subscribe". A hex color such as "#FF0000" or "#F00".
 - `primary_button_font_color` (String) The color of text on primary buttons. A hex color such as "#FF0000" or "#F00".
 - `title_font_color` (String) The color of titles and headings. A hex color such as "#FF0000" or "#F00".
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# Import an existing status page using its ID.
+# The ID is returned by the Checkly API at GET /v3/status-pages.
+terraform import checkly_status_page_v3.example e35f7e14-91b2-4d24-b7b6-e0f9e2f8e51c
+```

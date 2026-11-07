@@ -5,7 +5,7 @@ subcategory: ""
 description: |-
   Use client certificates to authenticate your API checks to APIs that require mutual TLS (mTLS) authentication, or any other authentication scheme where the requester needs to provide a certificate.
   Each client certificate is specific to a host name, e.g. acme.com or a wildcard such as *.acme.com, and will be used automatically by any API checks targeting that host. Set path to limit the certificate to requests under a URL path prefix.
-  Changing the value of any attribute forces a new resource to be created.
+  Changing the value of any attribute forces a new resource to be created, except for adding or removing a trailing / of path, which the API ignores.
 ---
 
 # checkly_client_certificate (Resource)
@@ -14,7 +14,7 @@ Use client certificates to authenticate your API checks to APIs that require mut
 
 Each client certificate is specific to a host name, e.g. `acme.com` or a wildcard such as `*.acme.com`, and will be used automatically by any API checks targeting that host. Set `path` to limit the certificate to requests under a URL path prefix.
 
-Changing the value of any attribute forces a new resource to be created.
+Changing the value of any attribute forces a new resource to be created, except for adding or removing a trailing `/` of `path`, which the API ignores.
 
 ## Example Usage
 
@@ -51,4 +51,16 @@ resource "checkly_client_certificate" "test" {
 
 ### Read-Only
 
-- `id` (String) The ID of this resource.
+- `id` (String) The ID of the client certificate.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# Import an existing client certificate using its ID.
+# The ID is returned by the Checkly API at GET /v1/client-certificates.
+terraform import checkly_client_certificate.example 49a1d5df-b89a-4998-a469-b1358e282ea5
+```

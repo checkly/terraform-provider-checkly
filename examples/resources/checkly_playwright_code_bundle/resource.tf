@@ -10,14 +10,14 @@ data "archive_file" "playwright-bundle" {
 }
 
 resource "checkly_playwright_code_bundle" "example-1" {
-  prebuilt_archive {
+  prebuilt_archive = {
     file = data.archive_file.playwright-bundle.output_path
   }
 }
 
 # Use an existing bundle archive
 resource "checkly_playwright_code_bundle" "example-2" {
-  prebuilt_archive {
+  prebuilt_archive = {
     file = "${path.module}/existing-playwright-bundle.tar.gz"
   }
 }

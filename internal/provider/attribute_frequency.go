@@ -1,0 +1,216 @@
+package provider
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+)
+
+const (
+	frequencyAttributeName       = "frequency"
+	frequencyOffsetAttributeName = "frequency_offset"
+)
+
+// FrequencyAttributeSchemaOptions customizes the frequency attribute schema
+// for a specific resource.
+type FrequencyAttributeSchemaOptions struct {
+	// Monitor adapts descriptions to talk about monitors instead of checks.
+	Monitor bool
+	// AllowHighFrequency permits the value 0, which enables sub-minute
+	// scheduling controlled by the frequency_offset attribute.
+	AllowHighFrequency bool
+	// Disclaimer is prepended to the attribute description.
+	Disclaimer string
+}
+
+// makeFrequencyAttributeSchema returns the schema for the frequency
+// attribute.
+func makeFrequencyAttributeSchema(options FrequencyAttributeSchemaOptions) schema.Int64Attribute {
+	name := "check"
+	if options.Monitor {
+		name = "monitor"
+	}
+
+	allow := allowedValues[int64]{
+		{
+			Value:       0,
+			Description: "high frequency - use `frequency_offset` to define the actual frequency",
+		},
+		{
+			Value:       1,
+			Description: "1 minute",
+		},
+		{
+			Value:       2,
+			Description: "2 minutes",
+		},
+		{
+			Value:       5,
+			Description: "5 minutes",
+		},
+		{
+			Value:       10,
+			Description: "10 minutes",
+		},
+		{
+			Value:       15,
+			Description: "15 minutes",
+		},
+		{
+			Value:       30,
+			Description: "30 minutes",
+		},
+		{
+			Value:       60,
+			Description: "1 hour",
+		},
+		{
+			Value:       120,
+			Description: "2 hours",
+		},
+		{
+			Value:       180,
+			Description: "3 hours",
+		},
+		{
+			Value:       360,
+			Description: "6 hours",
+		},
+		{
+			Value:       720,
+			Description: "12 hours",
+		},
+		{
+			Value:       1440,
+			Description: "24 hours",
+		},
+	}
+
+	if !options.AllowHighFrequency {
+		allow = allow[1:]
+	}
+
+	var disclaimer string
+	if options.Disclaimer != "" {
+		disclaimer = options.Disclaimer + " "
+	}
+
+	return schema.Int64Attribute{
+		Required:    true,
+		Description: disclaimer + fmt.Sprintf("Controls how often the %s should run. Defined in minutes. %s", name, allow.String()),
+		Validators: []validator.Int64{
+			int64validator.OneOf(allow.Values()...),
+		},
+	}
+}
+
+// FrequencyOffsetAttributeSchemaOptions customizes the frequency_offset
+// attribute schema for a specific resource.
+type FrequencyOffsetAttributeSchemaOptions struct {
+	// Monitor adapts descriptions to talk about monitors instead of checks.
+	Monitor bool
+	// Disclaimer is prepended to the attribute description.
+	Disclaimer string
+}
+
+// makeFrequencyOffsetAttributeSchema returns the schema for the
+// frequency_offset attribute.
+func makeFrequencyOffsetAttributeSchema(options FrequencyOffsetAttributeSchemaOptions) schema.Int64Attribute {
+	name := "check"
+	if options.Monitor {
+		name = "monitor"
+	}
+
+	allow := allowedValues[int64]{
+		{
+			Value:       0,
+			Description: "disabled - use `frequency` to define the actual frequency",
+		},
+		{
+			Value:       10,
+			Description: "10 seconds",
+		},
+		{
+			Value:       20,
+			Description: "20 seconds",
+		},
+		{
+			Value:       30,
+			Description: "30 seconds",
+		},
+	}
+
+	var disclaimer string
+	if options.Disclaimer != "" {
+		disclaimer = options.Disclaimer + " "
+	}
+
+	return schema.Int64Attribute{
+		Optional:    true,
+		Description: disclaimer + fmt.Sprintf("When `frequency` is `0` (high frequency), `frequency_offset` is required and it alone controls how often the %s should run. Defined in seconds. %s", name, allow.String()),
+		Validators: []validator.Int64{
+			int64validator.OneOf(allow.Values()...),
+		},
+	}
+}
+
+var _ resource.ConfigValidator = (*frequencyOffsetConfigValidator)(nil)
+
+// frequencyOffsetConfigValidator validates that frequency_offset is set when
+// frequency is 0 (high frequency scheduling), and not set otherwise.
+type frequencyOffsetConfigValidator struct{}
+
+// newFrequencyOffsetConfigValidator returns a resource config validator for
+// resources that have both the frequency and frequency_offset attributes.
+func newFrequencyOffsetConfigValidator() resource.ConfigValidator {
+	return &frequencyOffsetConfigValidator{}
+}
+
+func (v *frequencyOffsetConfigValidator) Description(ctx context.Context) string {
+	return "frequency_offset can only be set, and must be set, when frequency is 0"
+}
+
+func (v *frequencyOffsetConfigValidator) MarkdownDescription(ctx context.Context) string {
+	return v.Description(ctx)
+}
+
+func (v *frequencyOffsetConfigValidator) ValidateResource(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var frequency, offset types.Int64
+
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(frequencyAttributeName), &frequency)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(frequencyOffsetAttributeName), &offset)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if frequency.IsUnknown() || offset.IsUnknown() {
+		return
+	}
+
+	// A frequency_offset of 0 is equivalent to not setting it at all.
+	offsetDisabled := offset.IsNull() || offset.ValueInt64() == 0
+
+	switch {
+	case frequency.IsNull():
+		// Nothing to validate; frequency is a required attribute, so a
+		// missing value is reported separately.
+	case frequency.ValueInt64() > 0 && !offsetDisabled:
+		resp.Diagnostics.AddAttributeError(
+			path.Root(frequencyOffsetAttributeName),
+			"Invalid Attribute Combination",
+			`"frequency_offset" can only be set when "frequency" is 0`,
+		)
+	case frequency.ValueInt64() == 0 && offsetDisabled:
+		resp.Diagnostics.AddAttributeError(
+			path.Root(frequencyOffsetAttributeName),
+			"Missing Required Attribute",
+			`"frequency_offset" is required when "frequency" is 0`,
+		)
+	}
+}

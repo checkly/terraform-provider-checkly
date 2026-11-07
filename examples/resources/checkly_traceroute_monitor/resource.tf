@@ -10,7 +10,7 @@ resource "checkly_traceroute_monitor" "example-traceroute-monitor" {
     "us-west-1"
   ]
 
-  request {
+  request = {
     url = "api.checklyhq.com"
   }
 }
@@ -27,19 +27,19 @@ resource "checkly_traceroute_monitor" "example-traceroute-monitor-2" {
     "ap-northeast-1",
   ]
 
-  alert_settings {
+  alert_settings = {
     escalation_type = "RUN_BASED"
 
-    run_based_escalation {
+    run_based_escalation = {
       failed_run_threshold = 1
     }
 
-    reminders {
+    reminders = {
       amount = 1
     }
   }
 
-  request {
+  request = {
     url      = "api.checklyhq.com"
     protocol = "ICMP"
     # ICMP probes have no port; the API also derives the default port for the
@@ -51,18 +51,19 @@ resource "checkly_traceroute_monitor" "example-traceroute-monitor-2" {
     ptr_lookup       = true
     timeout          = 10
 
-    assertion {
-      source     = "PACKET_LOSS"
-      property   = ""
-      comparison = "LESS_THAN"
-      target     = "10"
-    }
-
-    assertion {
-      source     = "RESPONSE_TIME"
-      property   = "avg"
-      comparison = "LESS_THAN"
-      target     = "2000"
-    }
+    assertion = [
+      {
+        source     = "PACKET_LOSS"
+        property   = ""
+        comparison = "LESS_THAN"
+        target     = "10"
+      },
+      {
+        source     = "RESPONSE_TIME"
+        property   = "avg"
+        comparison = "LESS_THAN"
+        target     = "2000"
+      },
+    ]
   }
 }

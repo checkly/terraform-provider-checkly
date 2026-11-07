@@ -10,7 +10,7 @@ resource "checkly_grpc_monitor" "example-grpc-monitor" {
     "us-west-1"
   ]
 
-  request {
+  request = {
     host      = "grpcb.in"
     port      = 9000
     grpc_mode = "HEALTH"
@@ -31,19 +31,19 @@ resource "checkly_grpc_monitor" "example-grpc-monitor-2" {
     "eu-central-1",
   ]
 
-  alert_settings {
+  alert_settings = {
     escalation_type = "RUN_BASED"
 
-    run_based_escalation {
+    run_based_escalation = {
       failed_run_threshold = 1
     }
 
-    reminders {
+    reminders = {
       amount = 1
     }
   }
 
-  retry_strategy {
+  retry_strategy = {
     type                 = "FIXED"
     base_backoff_seconds = 60
     max_duration_seconds = 600
@@ -51,7 +51,7 @@ resource "checkly_grpc_monitor" "example-grpc-monitor-2" {
     same_region          = false
   }
 
-  request {
+  request = {
     host               = "grpcb.in"
     port               = 9000
     grpc_mode          = "BEHAVIOR"
@@ -61,24 +61,25 @@ resource "checkly_grpc_monitor" "example-grpc-monitor-2" {
     method             = "grpcbin.GRPCBin/DummyUnary"
     message            = jsonencode({ f_string = "hello" })
 
-    metadata {
+    metadata = [{
       key   = "x-api-key"
       value = "supersecret"
-    }
+    }]
 
-    assertion {
-      source     = "GRPC_STATUS_CODE"
-      property   = ""
-      comparison = "EQUALS"
-      target     = "0"
-    }
-
-    assertion {
-      source     = "RESPONSE_TIME"
-      property   = ""
-      comparison = "LESS_THAN"
-      target     = "1000"
-    }
+    assertion = [
+      {
+        source     = "GRPC_STATUS_CODE"
+        property   = ""
+        comparison = "EQUALS"
+        target     = "0"
+      },
+      {
+        source     = "RESPONSE_TIME"
+        property   = ""
+        comparison = "LESS_THAN"
+        target     = "1000"
+      },
+    ]
   }
 }
 
@@ -91,7 +92,7 @@ resource "checkly_grpc_monitor" "example-flatbuffers-monitor" {
   frequency   = 5
   locations   = ["us-west-1"]
 
-  request {
+  request = {
     host         = "grpc.example.com"
     port         = 443
     grpc_mode    = "BEHAVIOR"

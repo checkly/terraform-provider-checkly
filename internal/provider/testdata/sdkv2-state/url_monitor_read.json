@@ -1,0 +1,65 @@
+{
+    "activated": true,
+    "alert_channel_subscription": [],
+    "alert_settings": [
+        {
+            "escalation_type": "RUN_BASED",
+            "parallel_run_failure_threshold": [
+                {
+                    "enabled": false,
+                    "percentage": 0
+                }
+            ],
+            "reminders": [
+                {
+                    "amount": 0,
+                    "interval": 5
+                }
+            ],
+            "run_based_escalation": [
+                {
+                    "failed_run_threshold": 1
+                }
+            ],
+            "time_based_escalation": []
+        }
+    ],
+    "degraded_response_time": 3000,
+    "description": "",
+    "frequency": 10,
+    "frequency_offset": 0,
+    "group_id": 0,
+    "group_order": 0,
+    "id": "123",
+    "locations": [
+        "eu-west-1"
+    ],
+    "max_response_time": 5000,
+    "muted": false,
+    "name": "u",
+    "private_locations": [],
+    "request": [
+        {
+            "assertion": [],
+            "follow_redirects": true,
+            "ip_family": "IPv4",
+            "skip_ssl": false,
+            "url": "https://example.com"
+        }
+    ],
+    "retry_strategy": [
+        {
+            "base_backoff_seconds": 0,
+            "max_duration_seconds": 0,
+            "max_retries": 0,
+            "only_on": [],
+            "same_region": false,
+            "type": "NO_RETRIES"
+        }
+    ],
+    "run_parallel": false,
+    "should_fail": false,
+    "tags": [],
+    "trigger_incident": [],
+    "use_global_alert_settings": true
+}

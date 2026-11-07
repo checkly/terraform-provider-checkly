@@ -4,11 +4,14 @@ page_title: "checkly_status_page_service Resource - terraform-provider-checkly"
 subcategory: ""
 description: |-
   Status page services represent functional pieces of your application or website, such as landing page, API, support portal etc. Services belong to legacy v2 status pages: on new v3 pages, use checkly_status_page_v3_component instead.
+  The checkly_status_page_service resource type is deprecated together with checkly_status_page and will be removed in a future version of the provider. Maintenance windows can be shown on v3 pages too, but status_page_visibility on checkly_maintenance_window can only link them to v2 status pages and their services for now.
 ---
 
 # checkly_status_page_service (Resource)
 
 Status page services represent functional pieces of your application or website, such as landing page, API, support portal etc. Services belong to legacy v2 status pages: on new v3 pages, use `checkly_status_page_v3_component` instead.
+
+The `checkly_status_page_service` resource type is deprecated together with `checkly_status_page` and will be removed in a future version of the provider. Maintenance windows can be shown on v3 pages too, but `status_page_visibility` on `checkly_maintenance_window` can only link them to v2 status pages and their services for now.
 
 ## Example Usage
 
@@ -31,4 +34,17 @@ resource "checkly_status_page_service" "frontend" {
 
 ### Read-Only
 
-- `id` (String) The ID of this resource.
+- `id` (String) The ID of the service.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# checkly_status_page_service is deprecated together with checkly_status_page; services of v3 status pages are checkly_status_page_v3_component resources.
+# Import an existing status page service using its ID.
+# The ID is returned by the Checkly API at GET /v1/status-pages/services.
+terraform import checkly_status_page_service.example 8a894b49-467f-4af6-9230-cd4d3bd452f4
+```

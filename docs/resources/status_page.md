@@ -3,12 +3,15 @@
 page_title: "checkly_status_page Resource - terraform-provider-checkly"
 subcategory: ""
 description: |-
-  Checkly status pages allow you to easily communicate the uptime and health of your applications and services to your customers. This resource creates a legacy v2 status page: the new checkly_status_page_v3 resource should always be preferred for new pages.
+  Checkly status pages allow you to easily communicate the uptime and health of your applications and services to your customers. This resource creates a legacy v2 status page.
+  The checkly_status_page resource type is deprecated in favor of checkly_status_page_v3 and will be removed in a future version of the provider. v3 status pages are separate objects, so an existing page cannot be converted: create a v3 page alongside it instead. Maintenance windows can be shown on v3 pages too, but status_page_visibility on checkly_maintenance_window can only link them to v2 status pages for now.
 ---
 
 # checkly_status_page (Resource)
 
-Checkly status pages allow you to easily communicate the uptime and health of your applications and services to your customers. This resource creates a legacy v2 status page: the new `checkly_status_page_v3` resource should always be preferred for new pages.
+Checkly status pages allow you to easily communicate the uptime and health of your applications and services to your customers. This resource creates a legacy v2 status page.
+
+The `checkly_status_page` resource type is deprecated in favor of `checkly_status_page_v3` and will be removed in a future version of the provider. v3 status pages are separate objects, so an existing page cannot be converted: create a v3 page alongside it instead. Maintenance windows can be shown on v3 pages too, but `status_page_visibility` on `checkly_maintenance_window` can only link them to v2 status pages for now.
 
 ## Example Usage
 
@@ -45,21 +48,21 @@ resource "checkly_status_page" "example" {
 
 ### Required
 
-- `card` (Block List, Min: 1) A list of cards to include on the status page. (see [below for nested schema](#nestedblock--card))
 - `name` (String) The name of the status page.
 - `url` (String) The URL of the status page.
 
 ### Optional
 
+- `card` (Block List) A list of cards to include on the status page. (see [below for nested schema](#nestedblock--card))
 - `custom_domain` (String) A custom user domain, e.g. "status.example.com". See the docs on updating your DNS and SSL usage.
-- `default_theme` (String) Possible values are `AUTO`, `DARK`, and `LIGHT`. (Default `AUTO`).
+- `default_theme` (String) The color theme the status page is shown in. `AUTO` follows the visitor's system preference. Possible values are `AUTO`, `DARK`, and `LIGHT`. (Default `AUTO`).
 - `favicon` (String) A URL to an image file to use as the favicon of the status page.
 - `logo` (String) A URL to an image file to use as the logo for the status page.
 - `redirect_to` (String) The URL the user should be redirected to when clicking the logo.
 
 ### Read-Only
 
-- `id` (String) The ID of this resource.
+- `id` (String) The ID of the status page.
 
 <a id="nestedblock--card"></a>
 ### Nested Schema for `card`
@@ -67,7 +70,10 @@ resource "checkly_status_page" "example" {
 Required:
 
 - `name` (String) The name of the card.
-- `service_attachment` (Block List, Min: 1) A list of services to attach to the card. (see [below for nested schema](#nestedblock--card--service_attachment))
+
+Optional:
+
+- `service_attachment` (Block List) A list of services to attach to the card. (see [below for nested schema](#nestedblock--card--service_attachment))
 
 <a id="nestedblock--card--service_attachment"></a>
 ### Nested Schema for `card.service_attachment`
@@ -75,3 +81,16 @@ Required:
 Required:
 
 - `service_id` (String) The ID of the service.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# checkly_status_page is deprecated; new status pages use checkly_status_page_v3, which manages a different kind of status page.
+# Import an existing status page using its ID.
+# The ID is returned by the Checkly API at GET /v1/status-pages.
+terraform import checkly_status_page.example cd8d05a4-c292-4dc4-a78f-1dea65e5457e
+```

@@ -25,14 +25,14 @@ data "archive_file" "playwright-bundle" {
 }
 
 resource "checkly_playwright_code_bundle" "example-1" {
-  prebuilt_archive {
+  prebuilt_archive = {
     file = data.archive_file.playwright-bundle.output_path
   }
 }
 
 # Use an existing bundle archive
 resource "checkly_playwright_code_bundle" "example-2" {
-  prebuilt_archive {
+  prebuilt_archive = {
     file = "${path.module}/existing-playwright-bundle.tar.gz"
   }
 }
@@ -43,14 +43,14 @@ resource "checkly_playwright_code_bundle" "example-2" {
 
 ### Required
 
-- `prebuilt_archive` (Block List, Min: 1, Max: 1) A prebuilt archive containing the code bundle. (see [below for nested schema](#nestedblock--prebuilt_archive))
+- `prebuilt_archive` (Attributes) A prebuilt archive containing the code bundle. (see [below for nested schema](#nestedatt--prebuilt_archive))
 
 ### Read-Only
 
-- `id` (String) The ID of this resource.
+- `id` (String) The ID of the code bundle.
 - `metadata` (String) An opaque blob of generated metadata. The value is not intended to be user-consumable and should be passed as-is to a Playwright check resource.
 
-<a id="nestedblock--prebuilt_archive"></a>
+<a id="nestedatt--prebuilt_archive"></a>
 ### Nested Schema for `prebuilt_archive`
 
 Required:

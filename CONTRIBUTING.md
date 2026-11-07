@@ -198,7 +198,7 @@ $ make testacc
 
 - `./.github`: contains github (and github actions) related files.
 
-- `./checkly`: contains the provider itself. This is the most important directory and where you will be working most of the time. The file `provider` is the main entry point for the provider, then you will find some helpers and the resource files (i.e. `resource_checkly.go`). Note that each resource has its own `_test` file (i.e. `resource_checkly_test.go`).
+- `./internal/provider`: contains the provider itself, built on the Terraform Plugin Framework. This is the most important directory and where you will be working most of the time. The file `provider.go` is the main entry point for the provider, then you will find some helpers and the resource files (e.g. `resource_api_check.go`). Note that each resource has its own `_test` file (e.g. `resource_api_check_test.go`).
 
 > If you want to learn more about Terraform Providers and resources, [here](https://www.terraform.io/cdktf/concepts/providers-and-resources) is a good place to start.
 

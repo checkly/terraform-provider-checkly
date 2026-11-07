@@ -10,7 +10,7 @@ resource "checkly_tcp_check" "example-tcp-check" {
     "us-west-1"
   ]
 
-  request {
+  request = {
     hostname = "api.checklyhq.com"
     port     = 80
   }
@@ -31,19 +31,19 @@ resource "checkly_tcp_check" "example-tcp-check-2" {
     "ap-south-1",
   ]
 
-  alert_settings {
+  alert_settings = {
     escalation_type = "RUN_BASED"
 
-    run_based_escalation {
+    run_based_escalation = {
       failed_run_threshold = 1
     }
 
-    reminders {
+    reminders = {
       amount = 1
     }
   }
 
-  retry_strategy {
+  retry_strategy = {
     type                 = "FIXED"
     base_backoff_seconds = 60
     max_duration_seconds = 600
@@ -51,23 +51,24 @@ resource "checkly_tcp_check" "example-tcp-check-2" {
     same_region          = false
   }
 
-  request {
+  request = {
     hostname = "api.checklyhq.com"
     port     = 80
     data     = "hello"
 
-    assertion {
-      source     = "RESPONSE_DATA"
-      property   = ""
-      comparison = "CONTAINS"
-      target     = "welcome"
-    }
-
-    assertion {
-      source     = "RESPONSE_TIME"
-      property   = ""
-      comparison = "LESS_THAN"
-      target     = "2000"
-    }
+    assertion = [
+      {
+        source     = "RESPONSE_DATA"
+        property   = ""
+        comparison = "CONTAINS"
+        target     = "welcome"
+      },
+      {
+        source     = "RESPONSE_TIME"
+        property   = ""
+        comparison = "LESS_THAN"
+        target     = "2000"
+      },
+    ]
   }
 }

@@ -25,7 +25,7 @@ resource "checkly_grpc_monitor" "example-grpc-monitor" {
     "us-west-1"
   ]
 
-  request {
+  request = {
     host      = "grpcb.in"
     port      = 9000
     grpc_mode = "HEALTH"
@@ -46,19 +46,19 @@ resource "checkly_grpc_monitor" "example-grpc-monitor-2" {
     "eu-central-1",
   ]
 
-  alert_settings {
+  alert_settings = {
     escalation_type = "RUN_BASED"
 
-    run_based_escalation {
+    run_based_escalation = {
       failed_run_threshold = 1
     }
 
-    reminders {
+    reminders = {
       amount = 1
     }
   }
 
-  retry_strategy {
+  retry_strategy = {
     type                 = "FIXED"
     base_backoff_seconds = 60
     max_duration_seconds = 600
@@ -66,7 +66,7 @@ resource "checkly_grpc_monitor" "example-grpc-monitor-2" {
     same_region          = false
   }
 
-  request {
+  request = {
     host               = "grpcb.in"
     port               = 9000
     grpc_mode          = "BEHAVIOR"
@@ -76,24 +76,25 @@ resource "checkly_grpc_monitor" "example-grpc-monitor-2" {
     method             = "grpcbin.GRPCBin/DummyUnary"
     message            = jsonencode({ f_string = "hello" })
 
-    metadata {
+    metadata = [{
       key   = "x-api-key"
       value = "supersecret"
-    }
+    }]
 
-    assertion {
-      source     = "GRPC_STATUS_CODE"
-      property   = ""
-      comparison = "EQUALS"
-      target     = "0"
-    }
-
-    assertion {
-      source     = "RESPONSE_TIME"
-      property   = ""
-      comparison = "LESS_THAN"
-      target     = "1000"
-    }
+    assertion = [
+      {
+        source     = "GRPC_STATUS_CODE"
+        property   = ""
+        comparison = "EQUALS"
+        target     = "0"
+      },
+      {
+        source     = "RESPONSE_TIME"
+        property   = ""
+        comparison = "LESS_THAN"
+        target     = "1000"
+      },
+    ]
   }
 }
 
@@ -106,7 +107,7 @@ resource "checkly_grpc_monitor" "example-flatbuffers-monitor" {
   frequency   = 5
   locations   = ["us-west-1"]
 
-  request {
+  request = {
     host         = "grpc.example.com"
     port         = 443
     grpc_mode    = "BEHAVIOR"
@@ -127,12 +128,12 @@ resource "checkly_grpc_monitor" "example-flatbuffers-monitor" {
 - `activated` (Boolean) Determines if the monitor is running or not. Possible values `true`, and `false`.
 - `frequency` (Number) Controls how often the monitor should run. Defined in minutes. The allowed values are `0` (high frequency - use `frequency_offset` to define the actual frequency), `1` (1 minute), `2` (2 minutes), `5` (5 minutes), `10` (10 minutes), `15` (15 minutes), `30` (30 minutes), `60` (1 hour), `120` (2 hours), `180` (3 hours), `360` (6 hours), `720` (12 hours) and `1440` (24 hours).
 - `name` (String) The name of the monitor.
-- `request` (Block List, Min: 1, Max: 1) The parameters for the gRPC connection. (see [below for nested schema](#nestedblock--request))
+- `request` (Attributes) The parameters for the gRPC connection. (see [below for nested schema](#nestedatt--request))
 
 ### Optional
 
 - `alert_channel_subscription` (Block Set) An array of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your monitor, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedblock--alert_channel_subscription))
-- `alert_settings` (Block List, Max: 1) Determines the alert escalation policy for the monitor. (see [below for nested schema](#nestedblock--alert_settings))
+- `alert_settings` (Attributes) Determines the alert escalation policy for the monitor. (see [below for nested schema](#nestedatt--alert_settings))
 - `degraded_response_time` (Number) The response time in milliseconds starting from which a monitor should be considered degraded. Possible values are between 0 and 180000. (Default `10000`).
 - `description` (String) A description of the monitor.
 - `frequency_offset` (Number) When `frequency` is `0` (high frequency), `frequency_offset` is required and it alone controls how often the monitor should run. Defined in seconds. The allowed values are `0` (disabled - use `frequency` to define the actual frequency), `10` (10 seconds), `20` (20 seconds) and `30` (30 seconds).
@@ -142,19 +143,19 @@ resource "checkly_grpc_monitor" "example-flatbuffers-monitor" {
 - `max_response_time` (Number) The response time in milliseconds starting from which a monitor should be considered failing. Possible values are between 0 and 180000. (Default `20000`).
 - `muted` (Boolean) Determines if any notifications will be sent out when a monitor fails/degrades/recovers.
 - `private_locations` (Set of String) An array of one or more private locations slugs.
-- `retry_strategy` (Block List, Max: 1) A strategy for retrying failed check/monitor runs. (see [below for nested schema](#nestedblock--retry_strategy))
+- `retry_strategy` (Attributes) A strategy for retrying failed check/monitor runs. (see [below for nested schema](#nestedatt--retry_strategy))
 - `run_parallel` (Boolean) Determines if the monitor should run in all selected locations in parallel or round-robin.
 - `runtime_id` (String) The ID of the runtime to use for this monitor.
 - `should_fail` (Boolean) Allows to invert the behaviour of when a monitor is considered to fail.
 - `tags` (Set of String) A list of tags for organizing and filtering checks and monitors.
-- `trigger_incident` (Block Set, Max: 1) Create and resolve an incident based on the alert configuration. Useful for status page automation. (see [below for nested schema](#nestedblock--trigger_incident))
+- `trigger_incident` (Attributes) Create and resolve an incident based on the alert configuration. Useful for status page automation. (see [below for nested schema](#nestedatt--trigger_incident))
 - `use_global_alert_settings` (Boolean) When true, the account level alert settings will be used, not the alert setting defined on this monitor.
 
 ### Read-Only
 
-- `id` (String) The ID of this resource.
+- `id` (String) The ID of the monitor.
 
-<a id="nestedblock--request"></a>
+<a id="nestedatt--request"></a>
 ### Nested Schema for `request`
 
 Required:
@@ -164,13 +165,13 @@ Required:
 
 Optional:
 
-- `assertion` (Block Set) A request can have multiple assertions. The allowed comparisons, properties, and target formats depend on the assertion source — see the [Assertion Reference](#assertion-reference) below. (see [below for nested schema](#nestedblock--request--assertion))
+- `assertion` (Attributes Set) A request can have multiple assertions. The allowed comparisons, properties, and target formats depend on the assertion source — see the [Assertion Reference](#assertion-reference) below. (see [below for nested schema](#nestedatt--request--assertion))
 - `bfbs_content` (String) A base64-encoded binary FlatBuffers schema (`.bfbs`), at most 100 KiB once encoded. Required when `encoding = "FLATBUFFERS"` and forbidden otherwise. Generate it with `flatc -b --schema --bfbs-builtins schema.fbs` and load it with Terraform's `filebase64()` function.
 - `encoding` (String) The wire encoding used in `BEHAVIOR` mode. Possible values are `PROTOBUF` and `FLATBUFFERS`. (Default `PROTOBUF`).
 - `grpc_mode` (String) The gRPC monitoring mode. `BEHAVIOR` invokes a unary method (requires `method`); `HEALTH` queries the standard gRPC health-check service (allows `service`). (Default `BEHAVIOR`).
 - `ip_family` (String) The IP family to use when executing the gRPC check. The value can be either `IPv4` or `IPv6`. (Default `IPv4`).
 - `message` (String) The JSON request message sent as the gRPC call payload in `BEHAVIOR` mode.
-- `metadata` (Block Set) gRPC metadata (request headers) sent with the call. (see [below for nested schema](#nestedblock--request--metadata))
+- `metadata` (Attributes Set) gRPC metadata (request headers) sent with the call. (see [below for nested schema](#nestedatt--request--metadata))
 - `method` (String) The fully-qualified gRPC method to invoke in `BEHAVIOR` mode (e.g. `package.Service/Method`). Required in `BEHAVIOR` mode; forbidden in `HEALTH` mode.
 - `proto_content` (String) The inline `.proto` file source used when `service_definition = "PROTO_FILE"` in `BEHAVIOR` mode. Forbidden when `encoding = "FLATBUFFERS"`.
 - `service` (String) The service name to query in `HEALTH` mode. An empty value queries overall server health. Forbidden in `BEHAVIOR` mode.
@@ -179,7 +180,7 @@ Optional:
 - `timeout` (Number) The number of seconds to wait for the gRPC call to complete before timing out. Possible values are between 1 and 180. (Default `60`).
 - `tls` (Boolean) Whether to use a TLS-encrypted connection to the gRPC server. (Default `true`).
 
-<a id="nestedblock--request--assertion"></a>
+<a id="nestedatt--request--assertion"></a>
 ### Nested Schema for `request.assertion`
 
 Required:
@@ -193,7 +194,7 @@ Optional:
 - `target` (String) The value to compare against. Must be numeric for `RESPONSE_TIME` (milliseconds), `GRPC_STATUS_CODE` (0-16), and `GRPC_HEALTHCHECK_STATUS` (0-3, where 0=UNKNOWN, 1=SERVING, 2=NOT_SERVING, 3=SERVICE_UNKNOWN).
 
 
-<a id="nestedblock--request--metadata"></a>
+<a id="nestedatt--request--metadata"></a>
 ### Nested Schema for `request.metadata`
 
 Required:
@@ -215,18 +216,18 @@ Required:
 - `channel_id` (Number) The ID of the alert channel.
 
 
-<a id="nestedblock--alert_settings"></a>
+<a id="nestedatt--alert_settings"></a>
 ### Nested Schema for `alert_settings`
 
 Optional:
 
 - `escalation_type` (String) Determines the type of escalation to use. Possible values are `RUN_BASED` and `TIME_BASED`. (Default `RUN_BASED`).
-- `parallel_run_failure_threshold` (Block List) Configuration for parallel run failure threshold. (see [below for nested schema](#nestedblock--alert_settings--parallel_run_failure_threshold))
-- `reminders` (Block List) Defines how often to send reminder notifications after initial alert. (see [below for nested schema](#nestedblock--alert_settings--reminders))
-- `run_based_escalation` (Block List) Configuration for run-based escalation. (see [below for nested schema](#nestedblock--alert_settings--run_based_escalation))
-- `time_based_escalation` (Block List) Configuration for time-based escalation. (see [below for nested schema](#nestedblock--alert_settings--time_based_escalation))
+- `parallel_run_failure_threshold` (Attributes) Configuration for parallel run failure threshold. (see [below for nested schema](#nestedatt--alert_settings--parallel_run_failure_threshold))
+- `reminders` (Attributes) Defines how often to send reminder notifications after the initial alert. (see [below for nested schema](#nestedatt--alert_settings--reminders))
+- `run_based_escalation` (Attributes) Configuration for run-based escalation. (see [below for nested schema](#nestedatt--alert_settings--run_based_escalation))
+- `time_based_escalation` (Attributes) Configuration for time-based escalation. (see [below for nested schema](#nestedatt--alert_settings--time_based_escalation))
 
-<a id="nestedblock--alert_settings--parallel_run_failure_threshold"></a>
+<a id="nestedatt--alert_settings--parallel_run_failure_threshold"></a>
 ### Nested Schema for `alert_settings.parallel_run_failure_threshold`
 
 Optional:
@@ -235,7 +236,7 @@ Optional:
 - `percentage` (Number) Percentage of runs that must fail to trigger alert. Possible values are `10`, `20`, `30`, `40`, `50`, `60`, `70`, `80`, `90`, and `100`. (Default `10`).
 
 
-<a id="nestedblock--alert_settings--reminders"></a>
+<a id="nestedatt--alert_settings--reminders"></a>
 ### Nested Schema for `alert_settings.reminders`
 
 Optional:
@@ -244,7 +245,7 @@ Optional:
 - `interval` (Number) Interval between reminder notifications in minutes. Possible values are `5`, `10`, `15`, and `30`. (Default `5`).
 
 
-<a id="nestedblock--alert_settings--run_based_escalation"></a>
+<a id="nestedatt--alert_settings--run_based_escalation"></a>
 ### Nested Schema for `alert_settings.run_based_escalation`
 
 Optional:
@@ -252,7 +253,7 @@ Optional:
 - `failed_run_threshold` (Number) Send an alert notification after the given number of consecutive monitor runs have failed. Possible values are between `1` and `5`. (Default `1`).
 
 
-<a id="nestedblock--alert_settings--time_based_escalation"></a>
+<a id="nestedatt--alert_settings--time_based_escalation"></a>
 ### Nested Schema for `alert_settings.time_based_escalation`
 
 Optional:
@@ -261,7 +262,7 @@ Optional:
 
 
 
-<a id="nestedblock--retry_strategy"></a>
+<a id="nestedatt--retry_strategy"></a>
 ### Nested Schema for `retry_strategy`
 
 Required:
@@ -270,18 +271,13 @@ Required:
 
 Optional:
 
-- `base_backoff_seconds` (Number) The number of seconds to wait before the first retry attempt. (Default `60`).
+- `base_backoff_seconds` (Number) The number of seconds to wait before the first retry attempt. Not available when `type` is `NO_RETRIES`. (Default `60`).
 - `max_duration_seconds` (Number) The total amount of time to continue retrying the check/monitor (maximum 600 seconds). Available when `type` is `FIXED`, `LINEAR`, or `EXPONENTIAL`. (Default `600`).
 - `max_retries` (Number) The maximum number of times to retry the check/monitor. Value must be between `1` and `10`. Available when `type` is `FIXED`, `LINEAR`, or `EXPONENTIAL`. (Default `2`).
-- `only_on` (Block List, Max: 1) Apply the retry strategy only if the defined conditions match. (see [below for nested schema](#nestedblock--retry_strategy--only_on))
-- `same_region` (Boolean) Whether retries should be run in the same region as the initial check/monitor run. (Default `true`).
-
-<a id="nestedblock--retry_strategy--only_on"></a>
-### Nested Schema for `retry_strategy.only_on`
+- `same_region` (Boolean) Whether retries should be run in the same region as the initial check/monitor run. Not available when `type` is `NO_RETRIES`. (Default `true`).
 
 
-
-<a id="nestedblock--trigger_incident"></a>
+<a id="nestedatt--trigger_incident"></a>
 ### Nested Schema for `trigger_incident`
 
 Required:
@@ -292,9 +288,21 @@ Required:
 - `service_id` (String) The status page service that this incident will be associated with.
 - `severity` (String) The severity level of the incident. Possible values are `MINOR`, `MEDIUM`, `MAJOR`, and `CRITICAL`.
 
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# Import an existing gRPC monitor using its check ID.
+# You can find the ID in the check's URL in the Checkly dashboard.
+terraform import checkly_grpc_monitor.example 3ffee447-5c86-4c56-b95a-2e1b4d1a1234
+```
+
 ## Assertion Reference
 
-Each `assertion` block has the shape `{ source, property, comparison, target }`. Which comparisons are allowed, and what `target` must contain, depend on `source`. The `comparison` and `target` rules are enforced by the Checkly API at apply time; where `property` is marked as ignored, the API accepts any value but does not use it.
+Each element of `request.assertion` has the shape `{ source, property, comparison, target }`. Which comparisons are allowed, and what `target` must contain, depend on `source`. The `comparison` and `target` rules are enforced by the Checkly API at apply time; where `property` is marked as ignored, the API accepts any value but does not use it.
 
 | `source` | `property` | Allowed `comparison` values | `target` |
 |---|---|---|---|
@@ -307,32 +315,36 @@ Each `assertion` block has the shape `{ source, property, comparison, target }`.
 
 ### Examples
 
+The following `assertion` list, placed inside `request`, shows one assertion per source.
+
 ```terraform
-# The unary call must return gRPC status OK.
-assertion {
-  source     = "GRPC_STATUS_CODE"
-  comparison = "EQUALS"
-  target     = "0"
-}
+assertion = [
+  # The unary call must return gRPC status OK.
+  {
+    source     = "GRPC_STATUS_CODE"
+    comparison = "EQUALS"
+    target     = "0"
+  },
 
-# HEALTH mode: the service must report SERVING (numeric target).
-assertion {
-  source     = "GRPC_HEALTHCHECK_STATUS"
-  comparison = "EQUALS"
-  target     = "1"
-}
+  # HEALTH mode: the service must report SERVING (numeric target).
+  {
+    source     = "GRPC_HEALTHCHECK_STATUS"
+    comparison = "EQUALS"
+    target     = "1"
+  },
 
-# A field selected from the response message via JSONPath.
-assertion {
-  source     = "GRPC_RESPONSE"
-  property   = "$.user.id"
-  comparison = "NOT_NULL"
-}
+  # A field selected from the response message via JSONPath.
+  {
+    source     = "GRPC_RESPONSE"
+    property   = "$.user.id"
+    comparison = "NOT_NULL"
+  },
 
-# A response metadata (header) value.
-assertion {
-  source     = "GRPC_METADATA"
-  property   = "x-request-id"
-  comparison = "NOT_EMPTY"
-}
+  # A response metadata (header) value.
+  {
+    source     = "GRPC_METADATA"
+    property   = "x-request-id"
+    comparison = "NOT_EMPTY"
+  },
+]
 ```

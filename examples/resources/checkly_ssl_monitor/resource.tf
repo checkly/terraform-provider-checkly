@@ -10,7 +10,7 @@ resource "checkly_ssl_monitor" "example-ssl-monitor" {
     "us-west-1"
   ]
 
-  request {
+  request = {
     hostname                 = "api.checklyhq.com"
     port                     = 443
     alert_days_before_expiry = 30
@@ -32,19 +32,19 @@ resource "checkly_ssl_monitor" "example-ssl-monitor-2" {
     "eu-central-1",
   ]
 
-  alert_settings {
+  alert_settings = {
     escalation_type = "RUN_BASED"
 
-    run_based_escalation {
+    run_based_escalation = {
       failed_run_threshold = 1
     }
 
-    reminders {
+    reminders = {
       amount = 1
     }
   }
 
-  request {
+  request = {
     hostname                 = "api.checklyhq.com"
     port                     = 443
     server_name              = "api.checklyhq.com"
@@ -55,33 +55,34 @@ resource "checkly_ssl_monitor" "example-ssl-monitor-2" {
 
     # Override individual security-baseline rules; rules that are not listed
     # keep their server defaults.
-    security_baseline {
-      min_tls_version {
+    security_baseline = {
+      min_tls_version = {
         value    = "TLS1.2"
         severity = "fail"
       }
-      min_key_size_bits {
+      min_key_size_bits = {
         value    = 2048
         severity = "fail"
       }
     }
 
-    client_certificate {
+    client_certificate = {
       mode = "account_default"
     }
 
-    assertion {
-      source     = "CERTIFICATE"
-      property   = "daysUntilExpiry"
-      comparison = "GREATER_THAN"
-      target     = "14"
-    }
-
-    assertion {
-      source     = "CONNECTION"
-      property   = "hostnameVerified"
-      comparison = "EQUALS"
-      target     = "true"
-    }
+    assertion = [
+      {
+        source     = "CERTIFICATE"
+        property   = "daysUntilExpiry"
+        comparison = "GREATER_THAN"
+        target     = "14"
+      },
+      {
+        source     = "CONNECTION"
+        property   = "hostnameVerified"
+        comparison = "EQUALS"
+        target     = "true"
+      },
+    ]
   }
 }

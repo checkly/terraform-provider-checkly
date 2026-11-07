@@ -21,10 +21,36 @@ description: |-
 {{- end }}
 
 {{ .SchemaMarkdown | trimspace }}
+{{- if or .HasImport .HasImportIDConfig .HasImportIdentityConfig }}
+
+## Import
+
+Import is supported using the following syntax:
+{{- end }}
+{{- if .HasImportIdentityConfig }}
+
+In Terraform v1.12.0 and later, the [`import` block](https://developer.hashicorp.com/terraform/language/import) can be used with the `identity` attribute, for example:
+
+{{tffile .ImportIdentityConfigFile }}
+
+{{ .IdentitySchemaMarkdown | trimspace }}
+{{- end }}
+{{- if .HasImportIDConfig }}
+
+In Terraform v1.5.0 and later, the [`import` block](https://developer.hashicorp.com/terraform/language/import) can be used with the `id` attribute, for example:
+
+{{tffile .ImportIDConfigFile }}
+{{- end }}
+{{- if .HasImport }}
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+{{codefile "shell" .ImportFile }}
+{{- end }}
 
 ## Assertion Reference
 
-Each `assertion` block has the shape `{ source, property, comparison, target }`. SSL assertions use a property-scoped grammar: for the `CERTIFICATE` and `CONNECTION` sources, `property` selects the fact being asserted, and that property determines which comparisons are allowed. These rules are enforced by the Checkly API at apply time.
+Each element of `request.assertion` has the shape `{ source, property, comparison, target }`. SSL assertions use a property-scoped grammar: for the `CERTIFICATE` and `CONNECTION` sources, `property` selects the fact being asserted, and that property determines which comparisons are allowed. These rules are enforced by the Checkly API at apply time.
 
 ### Source `CERTIFICATE`
 
@@ -69,28 +95,32 @@ Each `assertion` block has the shape `{ source, property, comparison, target }`.
 
 ### Examples
 
+The following `assertion` list, placed inside `request`, shows assertions on the certificate, the connection and the check result.
+
 ```terraform
-# The certificate must be valid for at least 14 more days.
-assertion {
-  source     = "CERTIFICATE"
-  property   = "daysUntilExpiry"
-  comparison = "GREATER_THAN"
-  target     = "14"
-}
+assertion = [
+  # The certificate must be valid for at least 14 more days.
+  {
+    source     = "CERTIFICATE"
+    property   = "daysUntilExpiry"
+    comparison = "GREATER_THAN"
+    target     = "14"
+  },
 
-# The certificate chain must be trusted (booleans allow EQUALS only).
-assertion {
-  source     = "CONNECTION"
-  property   = "chainTrusted"
-  comparison = "EQUALS"
-  target     = "true"
-}
+  # The certificate chain must be trusted (booleans allow EQUALS only).
+  {
+    source     = "CONNECTION"
+    property   = "chainTrusted"
+    comparison = "EQUALS"
+    target     = "true"
+  },
 
-# A value selected from the check result via JSONPath.
-assertion {
-  source     = "JSON_RESPONSE"
-  property   = "$.certificate.keySizeBits"
-  comparison = "GREATER_THAN"
-  target     = "2048"
-}
+  # A value selected from the check result via JSONPath.
+  {
+    source     = "JSON_RESPONSE"
+    property   = "$.certificate.keySizeBits"
+    comparison = "GREATER_THAN"
+    target     = "2048"
+  },
+]
 ```

@@ -15,7 +15,7 @@ Allows you to define alerting channels for the checks and groups in your account
 ```terraform
 # An Email alert channel
 resource "checkly_alert_channel" "email_ac" {
-  email {
+  email = {
     address = "john@example.com"
   }
   send_recovery        = true
@@ -27,7 +27,7 @@ resource "checkly_alert_channel" "email_ac" {
 
 # A SMS alert channel
 resource "checkly_alert_channel" "sms_ac" {
-  sms {
+  sms = {
     name   = "john"
     number = "+5491100001111"
   }
@@ -37,15 +37,15 @@ resource "checkly_alert_channel" "sms_ac" {
 
 # A Slack App alert channel, using the Checkly Slack App
 resource "checkly_alert_channel" "slack_app_ac" {
-  slack_app {
+  slack_app = {
     slack_channels = ["#checkly-notifications", "@john"]
   }
 }
 
 # A legacy Slack alert channel, using a Slack webhook URL.
-# Deprecated: use the slack_app block instead.
+# Deprecated: use the slack_app attribute instead.
 resource "checkly_alert_channel" "slack_ac" {
-  slack {
+  slack = {
     channel = "#checkly-notifications"
     url     = "https://hooks.slack.com/services/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"
   }
@@ -53,7 +53,7 @@ resource "checkly_alert_channel" "slack_ac" {
 
 # An Opsgenie alert channel
 resource "checkly_alert_channel" "opsgenie_ac" {
-  opsgenie {
+  opsgenie = {
     name     = "opsalerts"
     api_key  = "fookey"
     region   = "fooregion"
@@ -63,7 +63,7 @@ resource "checkly_alert_channel" "opsgenie_ac" {
 
 # A Pagerduty alert channel
 resource "checkly_alert_channel" "pagerduty_ac" {
-  pagerduty {
+  pagerduty = {
     account      = "checkly"
     service_key  = "key1"
     service_name = "pdalert"
@@ -72,7 +72,7 @@ resource "checkly_alert_channel" "pagerduty_ac" {
 
 # A Webhook alert channel
 resource "checkly_alert_channel" "webhook_ac" {
-  webhook {
+  webhook = {
     name           = "foo"
     method         = "get"
     template       = "footemplate"
@@ -83,7 +83,7 @@ resource "checkly_alert_channel" "webhook_ac" {
 
 # A Firehydran alert channel integration
 resource "checkly_alert_channel" "firehydrant_ac" {
-  webhook {
+  webhook = {
     name         = "firehydrant"
     method       = "post"
     template     = <<EOT
@@ -105,7 +105,7 @@ resource "checkly_alert_channel" "firehydrant_ac" {
 # A Rootly alert channel — In-App Routing mode.
 # Alerts are sent to Rootly and routed internally via Rootly Alert Routes.
 resource "checkly_alert_channel" "rootly_inapp_ac" {
-  webhook {
+  webhook = {
     name           = "Rootly (In-App Routing)"
     method         = "POST"
     url            = "https://webhooks.rootly.com/webhooks/incoming/checkly_webhooks"
@@ -133,7 +133,7 @@ EOT
 # Type is one of: Service, Group (for Teams), EscalationPolicy, Functionality.
 # The target ID can be found in the Rootly UI for the chosen resource.
 resource "checkly_alert_channel" "rootly_direct_ac" {
-  webhook {
+  webhook = {
     name           = "Rootly (Direct Routing)"
     method         = "POST"
     url            = "https://webhooks.rootly.com/webhooks/incoming/checkly_webhooks/notify/EscalationPolicy/<rootly-escalation-policy-id>"
@@ -157,7 +157,7 @@ EOT
 }
 
 # Connecting the alert channel to a check
-resource "checkly_check" "example_check" {
+resource "checkly_api_check" "example_check" {
   name = "Example check"
 
   alert_channel_subscription {
@@ -177,25 +177,25 @@ resource "checkly_check" "example_check" {
 
 ### Optional
 
-- `call` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--call))
-- `email` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--email))
-- `opsgenie` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--opsgenie))
-- `pagerduty` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--pagerduty))
-- `send_degraded` (Boolean) (Default `false`)
-- `send_failure` (Boolean) (Default `true`)
-- `send_recovery` (Boolean) (Default `true`)
-- `slack` (Block Set, Max: 1, Deprecated) (see [below for nested schema](#nestedblock--slack))
-- `slack_app` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--slack_app))
-- `sms` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--sms))
-- `ssl_expiry` (Boolean) (Default `false`)
-- `ssl_expiry_threshold` (Number) Value must be between 1 and 30 (Default `30`)
-- `webhook` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--webhook))
+- `call` (Attributes) Sends alerts as phone calls. (see [below for nested schema](#nestedatt--call))
+- `email` (Attributes) Sends alerts by email. (see [below for nested schema](#nestedatt--email))
+- `opsgenie` (Attributes) Creates alerts in Opsgenie. (see [below for nested schema](#nestedatt--opsgenie))
+- `pagerduty` (Attributes) Sends alerts to a PagerDuty service. (see [below for nested schema](#nestedatt--pagerduty))
+- `send_degraded` (Boolean) Whether to send an alert when a check is degraded. (Default `false`).
+- `send_failure` (Boolean) Whether to send an alert when a check fails. (Default `true`).
+- `send_recovery` (Boolean) Whether to send an alert when a check recovers. (Default `true`).
+- `slack` (Attributes, Deprecated) Sends alerts to a Slack channel through a legacy Slack incoming webhook. (see [below for nested schema](#nestedatt--slack))
+- `slack_app` (Attributes) Sends alerts to Slack channels or users through the Checkly Slack app. (see [below for nested schema](#nestedatt--slack_app))
+- `sms` (Attributes) Sends alerts as SMS messages. (see [below for nested schema](#nestedatt--sms))
+- `ssl_expiry` (Boolean) Whether to send an alert for expiring SSL certificates. (Default `false`).
+- `ssl_expiry_threshold` (Number) How many days before an SSL certificate expires to start sending alerts, when `ssl_expiry` is enabled. Value must be between 1 and 30. (Default `30`).
+- `webhook` (Attributes) Sends alerts as HTTP requests to a webhook. (see [below for nested schema](#nestedatt--webhook))
 
 ### Read-Only
 
-- `id` (String) The ID of this resource.
+- `id` (String) The ID of the alert channel.
 
-<a id="nestedblock--call"></a>
+<a id="nestedatt--call"></a>
 ### Nested Schema for `call`
 
 Required:
@@ -204,7 +204,7 @@ Required:
 - `number` (String) The mobile number to receive the alerts
 
 
-<a id="nestedblock--email"></a>
+<a id="nestedatt--email"></a>
 ### Nested Schema for `email`
 
 Required:
@@ -212,40 +212,40 @@ Required:
 - `address` (String) The email address of this email alert channel.
 
 
-<a id="nestedblock--opsgenie"></a>
+<a id="nestedatt--opsgenie"></a>
 ### Nested Schema for `opsgenie`
 
 Required:
 
-- `api_key` (String)
-- `name` (String)
-- `priority` (String)
-- `region` (String)
+- `api_key` (String, Sensitive) The API key of the Opsgenie integration to create alerts with.
+- `name` (String) The name of this alert channel.
+- `priority` (String) The priority of the alerts created in Opsgenie. Possible values are `P1`, `P2`, `P3`, `P4` and `P5`.
+- `region` (String) The region of the Opsgenie account, which selects the Opsgenie API to call. Possible values are `EU` and `US`.
 
 
-<a id="nestedblock--pagerduty"></a>
+<a id="nestedatt--pagerduty"></a>
 ### Nested Schema for `pagerduty`
 
 Required:
 
-- `service_key` (String)
+- `service_key` (String, Sensitive) The integration key of the PagerDuty service to send alerts to.
 
 Optional:
 
-- `account` (String)
-- `service_name` (String)
+- `account` (String) The name of the PagerDuty account.
+- `service_name` (String) The name of the PagerDuty service.
 
 
-<a id="nestedblock--slack"></a>
+<a id="nestedatt--slack"></a>
 ### Nested Schema for `slack`
 
 Required:
 
 - `channel` (String) The name of the alert's Slack channel
-- `url` (String) The Slack webhook URL
+- `url` (String, Sensitive) The Slack webhook URL
 
 
-<a id="nestedblock--slack_app"></a>
+<a id="nestedatt--slack_app"></a>
 ### Nested Schema for `slack_app`
 
 Required:
@@ -253,7 +253,7 @@ Required:
 - `slack_channels` (List of String) The Slack channels or users to notify, e.g. `["#ops", "@John"]`.
 
 
-<a id="nestedblock--sms"></a>
+<a id="nestedatt--sms"></a>
 ### Nested Schema for `sms`
 
 Required:
@@ -262,19 +262,31 @@ Required:
 - `number` (String) The mobile number to receive the alerts
 
 
-<a id="nestedblock--webhook"></a>
+<a id="nestedatt--webhook"></a>
 ### Nested Schema for `webhook`
 
 Required:
 
-- `name` (String)
-- `url` (String)
+- `name` (String) The name of this alert channel.
+- `url` (String, Sensitive) The URL to send the webhook request to.
 
 Optional:
 
-- `headers` (Map of String)
-- `method` (String) (Default `POST`)
-- `query_parameters` (Map of String)
-- `template` (String)
-- `webhook_secret` (String)
+- `headers` (Map of String, Sensitive) HTTP headers to send with the webhook request, as a map of header names to values.
+- `method` (String) The HTTP method of the webhook request. Possible values are `GET`, `POST`, `PUT`, `HEAD`, `DELETE` and `PATCH`. (Default `POST`).
+- `query_parameters` (Map of String, Sensitive) Query parameters to add to the webhook URL, as a map of parameter names to values.
+- `template` (String) The body of the webhook request, which can contain template variables such as `{{ALERT_TITLE}}` and `{{RESULT_LINK}}`. When not set, Checkly sends its default JSON payload.
+- `webhook_secret` (String, Sensitive) A secret to sign webhook requests with. When set, Checkly sends an HMAC-SHA256 signature of the request body, keyed with this secret, in the `x-checkly-signature` header.
 - `webhook_type` (String) Type of the webhook. The allowed values are `WEBHOOK_CORALOGIX`, `WEBHOOK_DISCORD`, `WEBHOOK_FIREHYDRANT`, `WEBHOOK_GITLAB_ALERT`, `WEBHOOK_ILERT`, `WEBHOOK_INCIDENTIO`, `WEBHOOK_MSTEAMS`, `WEBHOOK_ROOTLY`, `WEBHOOK_SPIKESH`, `WEBHOOK_SPLUNK` and `WEBHOOK_TELEGRAM`.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# Import an existing alert channel using its numeric ID.
+# The ID is returned by the Checkly API at GET /v1/alert-channels.
+terraform import checkly_alert_channel.example 12345
+```
