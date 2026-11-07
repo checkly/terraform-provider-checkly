@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"fmt"
 	"regexp"
 	"testing"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
@@ -70,12 +72,15 @@ func TestAccCheckGroupV2Folder(t *testing.T) {
 }
 
 func TestAccCheckGroupV2EnforceLocations(t *testing.T) {
+	// Private location slugs are unique per account and limited to 30
+	// characters, so a short random suffix avoids collisions between runs.
+	slug := fmt.Sprintf("tf-enforce-locations-%d", acctest.RandInt()%100000)
 	accTestCase(t, []resource.TestStep{
 		{
-			Config: `
+			Config: fmt.Sprintf(`
 				resource "checkly_private_location" "test" {
-					name      = "enforce-locations-pl"
-					slug_name = "enforce-locations-pl"
+					name      = %[1]q
+					slug_name = %[1]q
 					icon      = "bell-fill"
 				}
 
@@ -88,7 +93,7 @@ func TestAccCheckGroupV2EnforceLocations(t *testing.T) {
 						private_locations = [checkly_private_location.test.slug_name]
 					}
 				}
-			`,
+			`, slug),
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					checkGroupV2Resource,
@@ -118,22 +123,22 @@ func TestAccCheckGroupV2EnforceLocations(t *testing.T) {
 				testCheckResourceAttrExpr(
 					checkGroupV2Resource,
 					"enforce_locations.private_locations.*",
-					"enforce-locations-pl",
+					slug,
 				),
 			),
 		},
 		{
-			Config: `
+			Config: fmt.Sprintf(`
 				resource "checkly_private_location" "test" {
-					name      = "enforce-locations-pl"
-					slug_name = "enforce-locations-pl"
+					name      = %[1]q
+					slug_name = %[1]q
 					icon      = "bell-fill"
 				}
 
 				resource "checkly_check_group_v2" "test" {
 					name = "enforce-locations-test"
 				}
-			`,
+			`, slug),
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					checkGroupV2Resource,

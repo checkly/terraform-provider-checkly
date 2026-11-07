@@ -2,12 +2,14 @@ package provider
 
 import (
 	"context"
+	"fmt"
 	"regexp"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 
 	"github.com/checkly/checkly-go-sdk/v2"
@@ -1795,12 +1797,15 @@ func TestAccURLMonitorUnsetSweepLocations(t *testing.T) {
 // TestAccURLMonitorUnsetSweepPrivateLocations verifies that removing the
 // private_locations attribute clears the private locations on the server.
 func TestAccURLMonitorUnsetSweepPrivateLocations(t *testing.T) {
-	privateLocation := `
+	// Private location slugs are unique per account and limited to 30
+	// characters, so a short random suffix avoids collisions between runs.
+	slug := fmt.Sprintf("tf-url-unset-%d", acctest.RandInt()%100000)
+	privateLocation := fmt.Sprintf(`
 		resource "checkly_private_location" "url_sweep" {
-			name      = "URL Monitor Unset Sweep"
-			slug_name = "tf-url-monitor-unset-sweep"
+			name      = %[1]q
+			slug_name = %[1]q
 		}
-	`
+	`, slug)
 	accTestCase(t, []resource.TestStep{
 		{
 			Config: privateLocation + `

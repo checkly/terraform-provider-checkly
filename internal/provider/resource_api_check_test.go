@@ -1,9 +1,11 @@
 package provider
 
 import (
+	"fmt"
 	"regexp"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
@@ -884,13 +886,16 @@ func TestAccApiCheckUnsetSweepScalars(t *testing.T) {
 // clears the values remotely (the post-apply refresh would report remote
 // leftovers as drift and fail the step).
 func TestAccApiCheckUnsetSweepCollections(t *testing.T) {
-	privateLocation := `
+	// Private location slugs are unique per account and limited to 30
+	// characters, so a short random suffix avoids collisions between runs.
+	slug := fmt.Sprintf("tf-api-unset-%d", acctest.RandInt()%100000)
+	privateLocation := fmt.Sprintf(`
 		resource "checkly_private_location" "sweep" {
-			name      = "api-check-unset-sweep-pl"
-			slug_name = "api-check-unset-sweep-pl"
+			name      = %[1]q
+			slug_name = %[1]q
 			icon      = "bell-fill"
 		}
-	`
+	`, slug)
 	accTestCase(t, []resource.TestStep{
 		{
 			Config: privateLocation + `
