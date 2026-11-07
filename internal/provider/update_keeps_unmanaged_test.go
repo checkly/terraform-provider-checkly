@@ -25,22 +25,6 @@ type failingReadClient struct {
 
 var errFailingRead = errors.New("502 Bad Gateway")
 
-func (failingReadClient) GetAPICheck(context.Context, string) (*checkly.APICheck, error) {
-	return nil, errFailingRead
-}
-
-func (failingReadClient) GetBrowserCheck(context.Context, string) (*checkly.BrowserCheck, error) {
-	return nil, errFailingRead
-}
-
-func (failingReadClient) GetMultiStepCheck(context.Context, string) (*checkly.MultiStepCheck, error) {
-	return nil, errFailingRead
-}
-
-func (failingReadClient) GetPlaywrightCheck(context.Context, string) (*checkly.PlaywrightCheck, error) {
-	return nil, errFailingRead
-}
-
 func (failingReadClient) GetDNSMonitor(context.Context, string) (*checkly.DNSMonitor, error) {
 	return nil, errFailingRead
 }
@@ -62,14 +46,10 @@ func TestUpdateSendsNoWriteWhenTheReadFails(t *testing.T) {
 	ctx := context.Background()
 
 	cases := map[string]resource.Resource{
-		"checkly_api_check":              &APICheckResource{client: failingReadClient{}},
-		"checkly_browser_check":          &BrowserCheckResource{client: failingReadClient{}},
-		"checkly_multistep_check":        &MultistepCheckResource{client: failingReadClient{}},
-		"checkly_playwright_check_suite": &PlaywrightCheckSuiteResource{client: failingReadClient{}},
-		"checkly_dns_monitor":            &DNSMonitorResource{client: failingReadClient{}},
-		"checkly_icmp_monitor":           &ICMPMonitorResource{client: failingReadClient{}},
-		"checkly_traceroute_monitor":     &TracerouteMonitorResource{client: failingReadClient{}},
-		"checkly_private_location":       &PrivateLocationResource{client: failingReadClient{}},
+		"checkly_dns_monitor":        &DNSMonitorResource{client: failingReadClient{}},
+		"checkly_icmp_monitor":       &ICMPMonitorResource{client: failingReadClient{}},
+		"checkly_traceroute_monitor": &TracerouteMonitorResource{client: failingReadClient{}},
+		"checkly_private_location":   &PrivateLocationResource{client: failingReadClient{}},
 	}
 
 	for name, r := range cases {
@@ -130,181 +110,6 @@ func testAccUpdateKeepsUnmanaged(t *testing.T, c keepsUnmanagedCase) {
 			Check: func(*terraform.State) error {
 				return c.check(context.Background(), testAccClient(), id)
 			},
-		},
-	})
-}
-
-const keptIntentGoal = "tf-acc: the page keeps loading"
-
-var keptIntent = &checkly.CheckIntent{Goal: keptIntentGoal}
-
-func checkKeptIntent(intent *checkly.CheckIntent, aiAutoRepairEnabled *bool) error {
-	if intent == nil || intent.Goal != keptIntentGoal {
-		return fmt.Errorf("intent = %+v, want the goal %q", intent, keptIntentGoal)
-	}
-	if aiAutoRepairEnabled == nil || *aiAutoRepairEnabled {
-		return fmt.Errorf("aiAutoRepairEnabled = %v, want false", aiAutoRepairEnabled)
-	}
-	return nil
-}
-
-func TestAccAPICheckUpdateKeepsUnmanagedValues(t *testing.T) {
-	testAccUpdateKeepsUnmanaged(t, keepsUnmanagedCase{
-		resource: "checkly_api_check.test",
-		config: func(name string) string {
-			return fmt.Sprintf(`
-				resource "checkly_api_check" "test" {
-					name      = %q
-					activated = false
-					locations = ["eu-central-1"]
-					request = {
-						url = "https://api.checklyhq.com/public-stats"
-					}
-				}
-			`, name)
-		},
-		set: func(ctx context.Context, client checkly.Client, id string) error {
-			check, err := client.GetAPICheck(ctx, id)
-			if err != nil {
-				return err
-			}
-			aiAutoRepair := false
-			check.Intent, check.AIAutoRepairEnabled = keptIntent, &aiAutoRepair
-			_, err = client.UpdateAPICheck(ctx, id, *check)
-			return err
-		},
-		check: func(ctx context.Context, client checkly.Client, id string) error {
-			check, err := client.GetAPICheck(ctx, id)
-			if err != nil {
-				return err
-			}
-			return checkKeptIntent(check.Intent, check.AIAutoRepairEnabled)
-		},
-	})
-}
-
-func TestAccBrowserCheckUpdateKeepsUnmanagedValues(t *testing.T) {
-	testAccUpdateKeepsUnmanaged(t, keepsUnmanagedCase{
-		resource: "checkly_browser_check.test",
-		config: func(name string) string {
-			return fmt.Sprintf(`
-				resource "checkly_browser_check" "test" {
-					name      = %q
-					activated = false
-					locations = ["eu-central-1"]
-					script    = "console.log('test')"
-				}
-			`, name)
-		},
-		set: func(ctx context.Context, client checkly.Client, id string) error {
-			check, err := client.GetBrowserCheck(ctx, id)
-			if err != nil {
-				return err
-			}
-			aiAutoRepair := false
-			check.Intent, check.AIAutoRepairEnabled = keptIntent, &aiAutoRepair
-			_, err = client.UpdateBrowserCheck(ctx, id, *check)
-			return err
-		},
-		check: func(ctx context.Context, client checkly.Client, id string) error {
-			check, err := client.GetBrowserCheck(ctx, id)
-			if err != nil {
-				return err
-			}
-			return checkKeptIntent(check.Intent, check.AIAutoRepairEnabled)
-		},
-	})
-}
-
-func TestAccMultistepCheckUpdateKeepsUnmanagedValues(t *testing.T) {
-	testAccUpdateKeepsUnmanaged(t, keepsUnmanagedCase{
-		resource: "checkly_multistep_check.test",
-		config: func(name string) string {
-			return fmt.Sprintf(`
-				resource "checkly_multistep_check" "test" {
-					name      = %q
-					activated = false
-					locations = ["eu-central-1"]
-					script    = "console.log('test')"
-				}
-			`, name)
-		},
-		set: func(ctx context.Context, client checkly.Client, id string) error {
-			check, err := client.GetMultiStepCheck(ctx, id)
-			if err != nil {
-				return err
-			}
-			aiAutoRepair := false
-			check.Intent, check.AIAutoRepairEnabled = keptIntent, &aiAutoRepair
-			_, err = client.UpdateMultiStepCheck(ctx, id, *check)
-			return err
-		},
-		check: func(ctx context.Context, client checkly.Client, id string) error {
-			check, err := client.GetMultiStepCheck(ctx, id)
-			if err != nil {
-				return err
-			}
-			return checkKeptIntent(check.Intent, check.AIAutoRepairEnabled)
-		},
-	})
-}
-
-func TestAccPlaywrightCheckSuiteUpdateKeepsUnmanagedValues(t *testing.T) {
-	testAccUpdateKeepsUnmanaged(t, keepsUnmanagedCase{
-		resource: "checkly_playwright_check_suite.test",
-		config: func(name string) string {
-			return playwrightCheckSuiteBase + fmt.Sprintf(`
-				resource "checkly_playwright_check_suite" "test" {
-					name                      = %q
-					activated                 = false
-					frequency                 = 720
-					use_global_alert_settings = true
-					locations                 = ["us-east-1"]
-
-					bundle = {
-						id       = checkly_playwright_code_bundle.test.id
-						metadata = checkly_playwright_code_bundle.test.metadata
-					}
-
-					runtime = {
-						steps = {
-							install = {
-								command = "pnpm i"
-							}
-
-							test = {
-								command = "pnpm playwright test"
-							}
-						}
-
-						playwright = {
-							version = "1.56.1"
-							device = [
-								{
-									type = "chromium"
-								},
-							]
-						}
-					}
-				}
-			`, name)
-		},
-		set: func(ctx context.Context, client checkly.Client, id string) error {
-			check, err := client.GetPlaywrightCheck(ctx, id)
-			if err != nil {
-				return err
-			}
-			aiAutoRepair := false
-			check.Intent, check.AIAutoRepairEnabled = keptIntent, &aiAutoRepair
-			_, err = client.UpdatePlaywrightCheck(ctx, id, *check)
-			return err
-		},
-		check: func(ctx context.Context, client checkly.Client, id string) error {
-			check, err := client.GetPlaywrightCheck(ctx, id)
-			if err != nil {
-				return err
-			}
-			return checkKeptIntent(check.Intent, check.AIAutoRepairEnabled)
 		},
 	})
 }

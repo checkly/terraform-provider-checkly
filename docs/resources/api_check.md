@@ -192,6 +192,7 @@ moved {
 ### Optional
 
 - `activated` (Boolean) Determines if the check is running or not. Possible values `true`, and `false`. (Default `true`).
+- `ai_auto_repair_enabled` (Boolean) Overrides the account's automatic repair setting for this check. Leave it out to inherit the account setting. Automatic repair supports browser and multi-step checks only, so this setting has no effect on other check types today, and it needs an `intent` with at least one statement. A repair is saved to the check, so it shows as a change to `script`, and the next apply restores the configured script unless you copy the repaired script into the configuration or add `script` to `ignore_changes`. An override edited in the web app and absent from the configuration is removed by the next apply, every time. To leave it to the web app, add `ai_auto_repair_enabled` to `ignore_changes`.
 - `alert_channel_subscription` (Block Set) An array of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your check, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedblock--alert_channel_subscription))
 - `alert_settings` (Attributes) Determines the alert escalation policy for the check. (see [below for nested schema](#nestedatt--alert_settings))
 - `degraded_response_time` (Number) The response time in milliseconds starting from which a check should be considered degraded. Possible values are between 0 and 30000. (Default `5000`).
@@ -200,6 +201,7 @@ moved {
 - `frequency_offset` (Number) Spreads the scheduling of the check within its frequency window, defined in seconds. When `frequency` is `0` (high frequency), `frequency_offset` is required and defines how often the check runs; the allowed values are `10`, `20` and `30` seconds. For frequencies of 1 minute and above, `frequency_offset` is optional and offsets the run schedule to spread out load; the allowed range is 1 to `frequency * 10` when `frequency` is at most `60`, and 1 to `ceil(frequency / 5)` otherwise.
 - `group_id` (Number) The id of the check group this check is part of.
 - `group_order` (Number) The position of this check in a check group. It determines in what order checks are run when a group is triggered from the API or from CI/CD.
+- `intent` (Attributes) Guidance for root cause analysis and automatic repair: what this check protects, and which changes keep it meaningful. Automatic repair supports browser and multi-step checks only, and refuses an intent with no statements: a `goal` on its own is accepted here, but repair needs at least one statement in either `required_outcomes` or `must_preserve`. An intent edited in the web app and absent from the configuration is removed by the next apply, every time. To leave it to the web app, add `intent` to `ignore_changes`. (see [below for nested schema](#nestedatt--intent))
 - `local_setup_script` (String) A valid piece of Node.js code to run in the setup phase.
 - `local_teardown_script` (String) A valid piece of Node.js code to run in the teardown phase.
 - `locations` (Set of String) An array of one or more data center locations where to run the this check. (Default ["us-east-1"])
@@ -317,6 +319,19 @@ Optional:
 
 - `minutes_failing_threshold` (Number) Send an alert notification after the check has been failing for the given amount of time (in minutes). Possible values are `5`, `10`, `15`, and `30`. (Default `5`).
 
+
+
+<a id="nestedatt--intent"></a>
+### Nested Schema for `intent`
+
+Required:
+
+- `goal` (String) The user or system outcome the check protects, of 1 to 2000 characters without leading or trailing whitespace.
+
+Optional:
+
+- `must_preserve` (List of String) Guardrails an automatic repair must not weaken or bypass. At most 20 statements of 1 to 1000 characters without leading or trailing whitespace.
+- `required_outcomes` (List of String) Observable outcomes the check must continue to prove. At most 20 statements of 1 to 1000 characters without leading or trailing whitespace.
 
 
 <a id="nestedatt--retry_strategy"></a>

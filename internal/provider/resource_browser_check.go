@@ -63,6 +63,8 @@ type BrowserCheckResourceModel struct {
 	GroupOrder               types.Int64  `tfsdk:"group_order"`
 	RetryStrategy            types.Object `tfsdk:"retry_strategy"`
 	TriggerIncident          types.Object `tfsdk:"trigger_incident"`
+	Intent                   types.Object `tfsdk:"intent"`
+	AIAutoRepairEnabled      types.Bool   `tfsdk:"ai_auto_repair_enabled"`
 }
 
 func (r *BrowserCheckResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -161,8 +163,10 @@ func (r *BrowserCheckResource) Schema(ctx context.Context, req resource.SchemaRe
 				Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})),
 				Description: "An array of one or more private locations slugs.",
 			},
-			triggerIncidentAttributeName: makeTriggerIncidentSchema(),
-			alertSettingsAttributeName:   makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{}),
+			triggerIncidentAttributeName:     makeTriggerIncidentSchema(),
+			checkIntentAttributeName:         makeCheckIntentSchema(),
+			aiAutoRepairEnabledAttributeName: makeAIAutoRepairEnabledSchema(),
+			alertSettingsAttributeName:       makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{}),
 			"use_global_alert_settings": schema.BoolAttribute{
 				Optional:    true,
 				Computed:    true,
@@ -285,19 +289,6 @@ func (r *BrowserCheckResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
-	stored, err := readForUpdate(ctx, r.client.GetBrowserCheck, check.ID)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Update Browser Check",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
-		return
-	}
-
-	// Terraform has no attributes for these, and the update would clear them.
-	check.Intent = stored.Intent
-	check.AIAutoRepairEnabled = stored.AIAutoRepairEnabled
-
 	apiCtx, cancel := contextWithAPITimeout(ctx)
 	defer cancel()
 
@@ -381,6 +372,8 @@ func browserCheckModelFromCheckModel(source *CheckResourceModel) BrowserCheckRes
 		GroupOrder:               source.GroupOrder,
 		RetryStrategy:            source.RetryStrategy,
 		TriggerIncident:          source.TriggerIncident,
+		Intent:                   types.ObjectNull(checkIntentAttrTypes),
+		AIAutoRepairEnabled:      types.BoolNull(),
 	}
 }
 
@@ -425,6 +418,8 @@ func browserCheckFromModel(ctx context.Context, model *BrowserCheckResourceModel
 		PrivateLocations:          &privateLocations,
 		RetryStrategy:             retryStrategyFromObject(ctx, model.RetryStrategy, diags),
 		TriggerIncident:           triggerIncidentFromObject(ctx, model.TriggerIncident, diags),
+		Intent:                    checkIntentFromObject(ctx, model.Intent, diags),
+		AIAutoRepairEnabled:       model.AIAutoRepairEnabled.ValueBoolPointer(),
 	}
 
 	if runtimeID := model.RuntimeID.ValueString(); runtimeID != "" {
@@ -529,4 +524,6 @@ func browserCheckToModel(ctx context.Context, c *checkly.BrowserCheck, model *Br
 	model.GroupOrder = types.Int64Value(int64(c.GroupOrder))
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, prior.RetryStrategy, diags)
 	model.TriggerIncident = triggerIncidentToObject(ctx, c.TriggerIncident, diags)
+	model.Intent = checkIntentToObject(ctx, c.Intent, prior.Intent, diags)
+	model.AIAutoRepairEnabled = types.BoolPointerValue(c.AIAutoRepairEnabled)
 }

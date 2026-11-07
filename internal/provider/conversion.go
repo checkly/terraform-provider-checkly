@@ -98,6 +98,19 @@ func listFromStrings(ctx context.Context, values []string, diags *diag.Diagnosti
 	return list
 }
 
+// stringListFromAPINullIfUnset converts a string slice from the API to a list
+// of strings. The API reports an unset collection as an empty array, so an
+// empty value converts to null when the prior value (planned or previously
+// stored) is null or unknown. An optional attribute absent from the
+// configuration thus stays null instead of drifting to an empty list.
+func stringListFromAPINullIfUnset(ctx context.Context, values []string, prior types.List, diags *diag.Diagnostics) types.List {
+	if len(values) == 0 && (prior.IsNull() || prior.IsUnknown()) {
+		return types.ListNull(types.StringType)
+	}
+
+	return listFromStrings(ctx, values, diags)
+}
+
 // optionalStringPointer converts an optional string value to a *string,
 // returning nil for null and unknown values.
 func optionalStringPointer(value types.String) *string {

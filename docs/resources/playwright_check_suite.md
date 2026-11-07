@@ -128,12 +128,14 @@ resource "checkly_playwright_check_suite" "example-playwright-check-custom" {
 
 ### Optional
 
+- `ai_auto_repair_enabled` (Boolean) Overrides the account's automatic repair setting for this check. Leave it out to inherit the account setting. Automatic repair supports browser and multi-step checks only, so this setting has no effect on other check types today, and it needs an `intent` with at least one statement. A repair is saved to the check, so it shows as a change to `script`, and the next apply restores the configured script unless you copy the repaired script into the configuration or add `script` to `ignore_changes`. An override edited in the web app and absent from the configuration is removed by the next apply, every time. To leave it to the web app, add `ai_auto_repair_enabled` to `ignore_changes`.
 - `alert_channel_subscription` (Block Set) An array of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your check, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedblock--alert_channel_subscription))
 - `alert_settings` (Attributes) Determines the alert escalation policy for the check. (see [below for nested schema](#nestedatt--alert_settings))
 - `description` (String) A description of the check.
 - `environment_variable` (Block List) Insert environment variables into the execution environment. (see [below for nested schema](#nestedblock--environment_variable))
 - `group_id` (Number) The ID of the check group that this check is part of.
 - `group_order` (Number) The position of the check in the check group. It determines in what order checks and monitors are run when a group is triggered from the API or from CI/CD.
+- `intent` (Attributes) Guidance for root cause analysis and automatic repair: what this check protects, and which changes keep it meaningful. Automatic repair supports browser and multi-step checks only, and refuses an intent with no statements: a `goal` on its own is accepted here, but repair needs at least one statement in either `required_outcomes` or `must_preserve`. An intent edited in the web app and absent from the configuration is removed by the next apply, every time. To leave it to the web app, add `intent` to `ignore_changes`. (see [below for nested schema](#nestedatt--intent))
 - `locations` (Set of String) An array of one or more data center locations where to run the this check.
 - `muted` (Boolean) Determines if any notifications will be sent out when the check fails and/or recovers. (Default `false`).
 - `private_locations` (Set of String) An array of one or more private locations slugs.
@@ -223,6 +225,19 @@ Optional:
 
 - `locked` (Boolean) If true, the value is not shown by default, but it can be accessed. (Default `false`).
 - `secret` (Boolean) If true, the value will never be visible. The API never returns secret values, so Terraform keeps the last applied value and does not detect changes made outside Terraform. (Default `false`).
+
+
+<a id="nestedatt--intent"></a>
+### Nested Schema for `intent`
+
+Required:
+
+- `goal` (String) The user or system outcome the check protects, of 1 to 2000 characters without leading or trailing whitespace.
+
+Optional:
+
+- `must_preserve` (List of String) Guardrails an automatic repair must not weaken or bypass. At most 20 statements of 1 to 1000 characters without leading or trailing whitespace.
+- `required_outcomes` (List of String) Observable outcomes the check must continue to prove. At most 20 statements of 1 to 1000 characters without leading or trailing whitespace.
 
 
 <a id="nestedatt--runtime"></a>
