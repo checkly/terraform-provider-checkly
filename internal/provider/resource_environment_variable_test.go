@@ -26,10 +26,13 @@ func TestAccEnvVarCheckRequiredFields(t *testing.T) {
 }
 
 func TestAccEnvVarSuccess(t *testing.T) {
-	config := `resource "checkly_environment_variable" "test" {
-		key     = "API_URL"
+	// Environment variable keys are unique per account, so a random suffix
+	// avoids collisions between runs.
+	key := fmt.Sprintf("TF_ACC_API_URL_%d", acctest.RandInt())
+	config := fmt.Sprintf(`resource "checkly_environment_variable" "test" {
+		key     = %q
 		value   = "https://api.checklyhq.com"
-	}`
+	}`, key)
 	accTestCase(t, []resource.TestStep{
 		{
 			Config: config,
@@ -37,7 +40,7 @@ func TestAccEnvVarSuccess(t *testing.T) {
 				resource.TestCheckResourceAttr(
 					"checkly_environment_variable.test",
 					"key",
-					"API_URL",
+					key,
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_environment_variable.test",
@@ -55,13 +58,14 @@ func TestAccEnvVarSuccess(t *testing.T) {
 }
 
 func TestAccSecretEnvVarSuccess(t *testing.T) {
+	key := fmt.Sprintf("TF_ACC_SECRET_%d", acctest.RandInt())
 	accTestCase(t, []resource.TestStep{
 		{
-			Config: `resource "checkly_environment_variable" "test" {
-				key     = "SECRET"
+			Config: fmt.Sprintf(`resource "checkly_environment_variable" "test" {
+				key     = %q
 				value   = "https://api.checklyhq.com"
 				secret  = true
-			}`,
+			}`, key),
 		},
 		{
 			ResourceName:      "checkly_environment_variable.test",

@@ -60,7 +60,7 @@ func accTestCase(t *testing.T, steps []resource.TestStep) {
 // when the account lacks setup the test depends on (e.g. a connected
 // integration) rather than failing.
 func accTestCaseWithErrorCheck(t *testing.T, steps []resource.TestStep, errorCheck resource.ErrorCheckFunc) {
-	resource.ParallelTest(t, resource.TestCase{
+	accTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
 		},
@@ -70,6 +70,37 @@ func accTestCaseWithErrorCheck(t *testing.T, steps []resource.TestStep, errorChe
 		TerraformVersionChecks:   terraformVersionChecks(steps),
 		Steps:                    steps,
 	})
+}
+
+// alertChannelResource matches a configuration that declares an alert
+// channel, but not one that only subscribes to an existing channel.
+var alertChannelResource = regexp.MustCompile(`(?m)^\s*resource\s+"checkly_alert_channel"\s`)
+
+// createsAlertChannel reports whether any step declares an alert channel.
+func createsAlertChannel(steps []resource.TestStep) bool {
+	for _, step := range steps {
+		if alertChannelResource.MatchString(step.Config) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// accTest runs testCase in parallel with other tests, unless its steps
+// create an alert channel. Creating an alert channel subscribes it to every
+// group in the account and to every check outside a group, so a check or
+// group test running at the same time would find a subscription it never
+// configured. Go runs the sequential top-level tests one at a time before it
+// starts the parallel ones, so no other test of this package has resources
+// in the account while a channel is created. Acceptance tests must run
+// through accTest, not call resource.ParallelTest directly.
+func accTest(t *testing.T, testCase resource.TestCase) {
+	if createsAlertChannel(testCase.Steps) {
+		resource.Test(t, testCase)
+	} else {
+		resource.ParallelTest(t, testCase)
+	}
 }
 
 // configBlockVersionChecks lists the configuration blocks that need a newer

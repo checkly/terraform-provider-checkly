@@ -1122,13 +1122,16 @@ func TestAccCheckGroupUnsetSweepSnippets(t *testing.T) {
 }
 
 func TestAccCheckGroupUnsetSweepPrivateLocations(t *testing.T) {
+	// Private location slugs are unique per account and limited to 30
+	// characters, so a short random suffix avoids collisions between runs.
+	slug := fmt.Sprintf("tf-group-v1-sweep-%d", acctest.RandInt()%100000)
 	accTestCase(t, []resource.TestStep{
 		// Step 1: assign a private location.
 		{
-			Config: `
+			Config: fmt.Sprintf(`
 				resource "checkly_private_location" "test" {
-					name      = "group-v1-sweep-pl"
-					slug_name = "group-v1-sweep-pl"
+					name      = %[1]q
+					slug_name = %[1]q
 					icon      = "bell-fill"
 				}
 
@@ -1140,18 +1143,18 @@ func TestAccCheckGroupUnsetSweepPrivateLocations(t *testing.T) {
 
 					private_locations = [checkly_private_location.test.slug_name]
 				}
-			`,
+			`, slug),
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr("checkly_check_group.test", "private_locations.#", "1"),
-				testCheckResourceAttrExpr("checkly_check_group.test", "private_locations.*", "group-v1-sweep-pl"),
+				testCheckResourceAttrExpr("checkly_check_group.test", "private_locations.*", slug),
 			),
 		},
 		// Step 2: remove the private location assignment.
 		{
-			Config: `
+			Config: fmt.Sprintf(`
 				resource "checkly_private_location" "test" {
-					name      = "group-v1-sweep-pl"
-					slug_name = "group-v1-sweep-pl"
+					name      = %[1]q
+					slug_name = %[1]q
 					icon      = "bell-fill"
 				}
 
@@ -1161,7 +1164,7 @@ func TestAccCheckGroupUnsetSweepPrivateLocations(t *testing.T) {
 					concurrency = 1
 					locations   = ["eu-central-1"]
 				}
-			`,
+			`, slug),
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr("checkly_check_group.test", "private_locations.#", "0"),
 			),

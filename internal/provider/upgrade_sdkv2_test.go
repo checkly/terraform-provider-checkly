@@ -62,7 +62,7 @@ func TestAccUpgradeFromSDKv2(t *testing.T) {
 				steps = append(steps, upgradeStep(c.config, ""))
 			}
 
-			resource.ParallelTest(t, resource.TestCase{
+			accTest(t, resource.TestCase{
 				PreCheck: func() {
 					testAccPreCheck(t)
 				},

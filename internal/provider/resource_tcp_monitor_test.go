@@ -1,9 +1,11 @@
 package provider
 
 import (
+	"fmt"
 	"regexp"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
@@ -1305,12 +1307,15 @@ func TestAccTCPMonitorUnsetSweepResponseTimes(t *testing.T) {
 }
 
 func TestAccTCPMonitorUnsetSweepLocations(t *testing.T) {
+	// Private location slugs are unique per account and limited to 30
+	// characters, so a short random suffix avoids collisions between runs.
+	slug := fmt.Sprintf("tf-tcp-unset-%d", acctest.RandInt()%100000)
 	accTestCase(t, []resource.TestStep{
 		{
-			Config: `
+			Config: fmt.Sprintf(`
 				resource "checkly_private_location" "test" {
-					name      = "tcp-unset-sweep-pl"
-					slug_name = "tf-acc-tcp-unset-sweep-pl"
+					name      = %[1]q
+					slug_name = %[1]q
 				}
 
 				resource "checkly_tcp_monitor" "test" {
@@ -1324,7 +1329,7 @@ func TestAccTCPMonitorUnsetSweepLocations(t *testing.T) {
 						port     = 443
 					}
 				}
-			`,
+			`, slug),
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_tcp_monitor.test",
@@ -1341,10 +1346,10 @@ func TestAccTCPMonitorUnsetSweepLocations(t *testing.T) {
 		// Removing locations while the monitor still runs on a private
 		// location must clear the public locations server-side.
 		{
-			Config: `
+			Config: fmt.Sprintf(`
 				resource "checkly_private_location" "test" {
-					name      = "tcp-unset-sweep-pl"
-					slug_name = "tf-acc-tcp-unset-sweep-pl"
+					name      = %[1]q
+					slug_name = %[1]q
 				}
 
 				resource "checkly_tcp_monitor" "test" {
@@ -1357,7 +1362,7 @@ func TestAccTCPMonitorUnsetSweepLocations(t *testing.T) {
 						port     = 443
 					}
 				}
-			`,
+			`, slug),
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckNoResourceAttr(
 					"checkly_tcp_monitor.test",
@@ -1373,10 +1378,10 @@ func TestAccTCPMonitorUnsetSweepLocations(t *testing.T) {
 		// Removing private locations while public locations are configured
 		// must clear the private locations server-side.
 		{
-			Config: `
+			Config: fmt.Sprintf(`
 				resource "checkly_private_location" "test" {
-					name      = "tcp-unset-sweep-pl"
-					slug_name = "tf-acc-tcp-unset-sweep-pl"
+					name      = %[1]q
+					slug_name = %[1]q
 				}
 
 				resource "checkly_tcp_monitor" "test" {
@@ -1389,7 +1394,7 @@ func TestAccTCPMonitorUnsetSweepLocations(t *testing.T) {
 						port     = 443
 					}
 				}
-			`,
+			`, slug),
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_tcp_monitor.test",
