@@ -316,5 +316,6 @@ Maintenance windows can be shown on v3 pages too, but the provider can't link on
   - `checkly_ssl_monitor`: also `request.assertion`, `request.server_name` and `request.client_certificate.client_certificate_id`.
   - `checkly_grpc_monitor`: also `request.proto_content` with `service_definition = "REFLECTION"`.
   - Every resource with `alert_settings`: `reminders.amount` and `parallel_run_failure_threshold.enabled`, when the configured object leaves them out.
+- `checkly_playwright_check_suite`, and checks moved from `checkly_check` to the per-type resources: an `intent` or `ai_auto_repair_enabled` value set outside Terraform and absent from your configuration is removed by the first apply, which the plan shows. To keep such a value, add it to your configuration, or add the attribute to `ignore_changes` to leave it to the web app.
 - A check or monitor added to a group in the web app, with no `group_id` in its configuration, leaves the group on the first apply, as it did with v1.x.
 - `checkly_client_certificate`: v1.x stored `path` without a trailing slash. If your configuration has one, for example `path = "/partner/api/"`, the first plan shows an in-place update of `path` that does not change the certificate.

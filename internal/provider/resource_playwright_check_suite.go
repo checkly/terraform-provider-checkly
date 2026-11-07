@@ -73,6 +73,8 @@ type PlaywrightCheckSuiteResourceModel struct {
 	GroupID                  types.Int64  `tfsdk:"group_id"`
 	GroupOrder               types.Int64  `tfsdk:"group_order"`
 	TriggerIncident          types.Object `tfsdk:"trigger_incident"`
+	Intent                   types.Object `tfsdk:"intent"`
+	AIAutoRepairEnabled      types.Bool   `tfsdk:"ai_auto_repair_enabled"`
 }
 
 // PlaywrightCheckSuiteBundleModel describes the bundle attribute data model.
@@ -225,7 +227,9 @@ func (r *PlaywrightCheckSuiteResource) Schema(ctx context.Context, req resource.
 				ElementType: types.StringType,
 				Description: "An array of one or more private locations slugs.",
 			},
-			triggerIncidentAttributeName: makeTriggerIncidentSchema(),
+			triggerIncidentAttributeName:     makeTriggerIncidentSchema(),
+			checkIntentAttributeName:         makeCheckIntentSchema(),
+			aiAutoRepairEnabledAttributeName: makeAIAutoRepairEnabledSchema(),
 			alertSettingsAttributeName: makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{
 				Monitor: false,
 			}),
@@ -481,19 +485,6 @@ func (r *PlaywrightCheckSuiteResource) Update(ctx context.Context, req resource.
 		return
 	}
 
-	stored, err := readForUpdate(ctx, r.client.GetPlaywrightCheck, plan.ID.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Update Playwright Check Suite",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
-		return
-	}
-
-	// Terraform has no attributes for these, and the update would clear them.
-	check.Intent = stored.Intent
-	check.AIAutoRepairEnabled = stored.AIAutoRepairEnabled
-
 	apiCtx, cancel := contextWithAPITimeout(ctx)
 	defer cancel()
 
@@ -563,6 +554,8 @@ func playwrightCheckSuiteFromModel(
 		GroupOrder:                int(model.GroupOrder.ValueInt64()),
 		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscription, diags),
 		TriggerIncident:           triggerIncidentFromObject(ctx, model.TriggerIncident, diags),
+		Intent:                    checkIntentFromObject(ctx, model.Intent, diags),
+		AIAutoRepairEnabled:       model.AIAutoRepairEnabled.ValueBoolPointer(),
 		EnvironmentVariables:      environmentVariablesFromList(ctx, model.EnvironmentVariable, diags),
 	}
 
@@ -764,6 +757,8 @@ func playwrightCheckSuiteToModel(
 	}
 
 	model.TriggerIncident = triggerIncidentToObject(ctx, check.TriggerIncident, diags)
+	model.Intent = checkIntentToObject(ctx, check.Intent, model.Intent, diags)
+	model.AIAutoRepairEnabled = types.BoolPointerValue(check.AIAutoRepairEnabled)
 
 	alertSettings := check.AlertSettings
 	if alertSettings == nil {

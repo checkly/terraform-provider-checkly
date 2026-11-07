@@ -122,3 +122,35 @@ moved {
   from = checkly_check.example_5
   to   = checkly_browser_check.example_5
 }
+
+# A check with an intent, which guides root cause analysis and automatic repair
+resource "checkly_browser_check" "example_6" {
+  name      = "Example browser check 6"
+  frequency = 10
+
+  locations = [
+    "us-west-1"
+  ]
+
+  intent = {
+    goal = "Customers can sign in to their account."
+
+    required_outcomes = [
+      "The dashboard is shown after signing in.",
+    ]
+
+    must_preserve = [
+      "The check signs in through the public login page.",
+    ]
+  }
+
+  ai_auto_repair_enabled = true
+
+  script = "console.log('test')"
+
+  # The configured script would otherwise replace a saved repair on the next
+  # apply. Changes to script in this configuration are then ignored too.
+  lifecycle {
+    ignore_changes = [script]
+  }
+}

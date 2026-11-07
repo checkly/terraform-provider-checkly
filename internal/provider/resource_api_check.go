@@ -70,6 +70,8 @@ type APICheckResourceModel struct {
 	GroupOrder               types.Int64  `tfsdk:"group_order"`
 	RetryStrategy            types.Object `tfsdk:"retry_strategy"`
 	TriggerIncident          types.Object `tfsdk:"trigger_incident"`
+	Intent                   types.Object `tfsdk:"intent"`
+	AIAutoRepairEnabled      types.Bool   `tfsdk:"ai_auto_repair_enabled"`
 }
 
 func (r *APICheckResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -271,8 +273,10 @@ func (r *APICheckResource) Schema(ctx context.Context, req resource.SchemaReques
 				Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})),
 				Description: "An array of one or more private locations slugs.",
 			},
-			triggerIncidentAttributeName: makeTriggerIncidentSchema(),
-			alertSettingsAttributeName:   makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{}),
+			triggerIncidentAttributeName:     makeTriggerIncidentSchema(),
+			checkIntentAttributeName:         makeCheckIntentSchema(),
+			aiAutoRepairEnabledAttributeName: makeAIAutoRepairEnabledSchema(),
+			alertSettingsAttributeName:       makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{}),
 			"use_global_alert_settings": schema.BoolAttribute{
 				Optional:    true,
 				Computed:    true,
@@ -397,19 +401,6 @@ func (r *APICheckResource) Update(ctx context.Context, req resource.UpdateReques
 		return
 	}
 
-	stored, err := readForUpdate(ctx, r.client.GetAPICheck, check.ID)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Update API Check",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
-		return
-	}
-
-	// Terraform has no attributes for these, and the update would clear them.
-	check.Intent = stored.Intent
-	check.AIAutoRepairEnabled = stored.AIAutoRepairEnabled
-
 	apiCtx, cancel := contextWithAPITimeout(ctx)
 	defer cancel()
 
@@ -495,6 +486,8 @@ func apiCheckModelFromCheckModel(source *CheckResourceModel) APICheckResourceMod
 		GroupOrder:               source.GroupOrder,
 		RetryStrategy:            source.RetryStrategy,
 		TriggerIncident:          source.TriggerIncident,
+		Intent:                   types.ObjectNull(checkIntentAttrTypes),
+		AIAutoRepairEnabled:      types.BoolNull(),
 	}
 }
 
@@ -641,6 +634,8 @@ func apiCheckFromModel(ctx context.Context, model *APICheckResourceModel, diags 
 		PrivateLocations:          &privateLocations,
 		RetryStrategy:             retryStrategyFromObject(ctx, model.RetryStrategy, diags),
 		TriggerIncident:           triggerIncidentFromObject(ctx, model.TriggerIncident, diags),
+		Intent:                    checkIntentFromObject(ctx, model.Intent, diags),
+		AIAutoRepairEnabled:       model.AIAutoRepairEnabled.ValueBoolPointer(),
 	}
 
 	if runtimeID := model.RuntimeID.ValueString(); runtimeID != "" {
@@ -741,4 +736,6 @@ func apiCheckToModel(ctx context.Context, c *checkly.APICheck, model *APICheckRe
 	model.GroupOrder = types.Int64Value(int64(c.GroupOrder))
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, prior.RetryStrategy, diags)
 	model.TriggerIncident = triggerIncidentToObject(ctx, c.TriggerIncident, diags)
+	model.Intent = checkIntentToObject(ctx, c.Intent, prior.Intent, diags)
+	model.AIAutoRepairEnabled = types.BoolPointerValue(c.AIAutoRepairEnabled)
 }
