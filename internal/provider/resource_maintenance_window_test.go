@@ -640,20 +640,6 @@ func TestAccMaintenanceWindowV3ComponentLinks(t *testing.T) {
 		return nil
 	}
 
-	// Settings managed by Terraform next to component links left to the web
-	// app.
-	ignoringComponentConfigs := window(`
-		status_page_visibility = {
-			enabled         = true
-			severity        = "MINOR"
-			status_page_ids = [checkly_status_page_v3.test.id]
-		}
-
-		lifecycle {
-			ignore_changes = [status_page_visibility.component_configs]
-		}
-	`)
-
 	// linkOutsideTerraform links component A to the window through the API.
 	linkOutsideTerraform := func() {
 		_, mw, err := storedComponentStatuses(windowID)
@@ -741,17 +727,6 @@ func TestAccMaintenanceWindowV3ComponentLinks(t *testing.T) {
 			),
 		},
 		{
-			// Ignoring only component_configs keeps the links while the rest of
-			// status_page_visibility follows the configuration.
-			Config: ignoringComponentConfigs,
-			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(r, "status_page_visibility.severity", "MINOR"),
-				stored(func() map[string]map[string]string {
-					return map[string]map[string]string{pageID: {componentA: "UNDER_MAINTENANCE"}}
-				}),
-			),
-		},
-		{
 			// A component link made outside Terraform shows as a change and
 			// is removed by the apply.
 			PreConfig: linkOutsideTerraform,
@@ -762,6 +737,91 @@ func TestAccMaintenanceWindowV3ComponentLinks(t *testing.T) {
 				},
 			},
 			Check: unlinked,
+		},
+	})
+}
+
+// Ignoring only status_page_visibility.component_configs keeps a window's
+// component links while the rest of status_page_visibility follows the
+// configuration.
+func TestAccMaintenanceWindowIgnoreComponentConfigs(t *testing.T) {
+	// Requires an account with the status page maintenance windows
+	// entitlement.
+	rInt := acctest.RandInt()
+	window := func(statusPageVisibility string) string {
+		return fmt.Sprintf(`
+			resource "checkly_status_page_v3" "test" {
+				name = "Maintenance Window Status Page %d"
+				url  = "mw-ignore-status-page-v3-%d"
+			}
+
+			resource "checkly_status_page_v3_component" "a" {
+				status_page_id = checkly_status_page_v3.test.id
+				name           = "API"
+				display_order  = 0
+			}
+
+			resource "checkly_maintenance_window" "test" {
+				name      = "Maintenance Window %d"
+				starts_at = "2099-01-01T09:00:00.000Z"
+				ends_at   = "2099-01-01T10:00:00.000Z"
+				%s
+			}
+		`, rInt, rInt, rInt, statusPageVisibility)
+	}
+
+	const r = "checkly_maintenance_window.test"
+	var windowID, pageID, componentA string
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: window(`
+				status_page_visibility = {
+					enabled         = true
+					status_page_ids = [checkly_status_page_v3.test.id]
+
+					component_configs = [{
+						status_page_id = checkly_status_page_v3.test.id
+						components = [{
+							component_id = checkly_status_page_v3_component.a.id
+							status       = "MAJOR_OUTAGE"
+						}]
+					}]
+				}
+			`),
+			Check: func(s *terraform.State) error {
+				resources := s.RootModule().Resources
+				windowID = resources[r].Primary.ID
+				pageID = resources["checkly_status_page_v3.test"].Primary.ID
+				componentA = resources["checkly_status_page_v3_component.a"].Primary.ID
+				return nil
+			},
+		},
+		{
+			Config: window(`
+				status_page_visibility = {
+					enabled         = true
+					severity        = "MINOR"
+					status_page_ids = [checkly_status_page_v3.test.id]
+				}
+
+				lifecycle {
+					ignore_changes = [status_page_visibility.component_configs]
+				}
+			`),
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(r, "status_page_visibility.severity", "MINOR"),
+				func(*terraform.State) error {
+					got, _, err := storedComponentStatuses(windowID)
+					if err != nil {
+						return err
+					}
+					want := map[string]map[string]string{pageID: {componentA: "MAJOR_OUTAGE"}}
+					if !reflect.DeepEqual(got, want) {
+						return fmt.Errorf("stored component configs = %v, want %v", got, want)
+					}
+					return nil
+				},
+			),
 		},
 	})
 }
