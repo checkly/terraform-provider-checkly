@@ -30,6 +30,7 @@ need changes. Follow the [upgrade guide](docs/guides/upgrading-to-v2.md).
 ### Added
 - `checkly_api_check`, `checkly_browser_check` and `checkly_multistep_check`, which replace `checkly_check`.
 - `checkly_maintenance_window`, which replaces `checkly_maintenance_windows`.
+- `component_configs` on `status_page_visibility` of `checkly_maintenance_window` and `checkly_maintenance_windows`, which shows a maintenance window on v3 status pages with the affected components. Leaving it out removes the window's component links, including ones set in the web app; see the upgrade guide.
 - `intent` and `ai_auto_repair_enabled` on `checkly_api_check`, `checkly_browser_check`, `checkly_multistep_check` and `checkly_playwright_check_suite`. A value set outside Terraform and absent from the configuration is removed by the next apply, and `ignore_changes` leaves it to the web app.
 - `private_locations` on `checkly_dns_monitor`, `checkly_icmp_monitor` and `checkly_traceroute_monitor`, and `proxy_url` on `checkly_private_location`. A value set outside Terraform and absent from the configuration is removed by the next apply, and `ignore_changes` leaves it to the web app.
 - Import instructions on every importable resource's documentation page.

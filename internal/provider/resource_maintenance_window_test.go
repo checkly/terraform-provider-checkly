@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -15,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/checkly/checkly-go-sdk/v2"
 )
@@ -106,6 +108,7 @@ func defaultStatusPageVisibility(t *testing.T) types.Object {
 		ShowAffectedServices:  types.BoolValue(true),
 		StatusPageIDs:         types.SetNull(types.StringType),
 		ServiceIDs:            types.SetNull(types.StringType),
+		ComponentConfigs:      types.SetNull(types.ObjectType{AttrTypes: maintenanceWindowComponentConfigAttrTypes}),
 	})
 	diags.Append(d...)
 	if diags.HasError() {
@@ -232,6 +235,7 @@ func TestMaintenanceWindowFromModelResetsOmittedAttributes(t *testing.T) {
 			"showAffectedServices":  true,
 			"statusPageIds":         []any{},
 			"serviceIds":            []any{},
+			"componentConfigs":      []any{},
 		},
 	}
 	// Compared whole, so a key the SDK leaves out (which would keep the
@@ -261,6 +265,7 @@ func TestMaintenanceWindowFromModelStatusPageVisibility(t *testing.T) {
 		ShowAffectedServices:  types.BoolValue(false),
 		StatusPageIDs:         types.SetValueMust(types.StringType, []attr.Value{types.StringValue("page")}),
 		ServiceIDs:            types.SetValueMust(types.StringType, []attr.Value{types.StringValue("service")}),
+		ComponentConfigs:      types.SetNull(types.ObjectType{AttrTypes: maintenanceWindowComponentConfigAttrTypes}),
 	})
 	diags.Append(d...)
 	model := nullMaintenanceWindowModel()
@@ -281,6 +286,8 @@ func TestMaintenanceWindowFromModelStatusPageVisibility(t *testing.T) {
 		ShowAffectedServices:  &falseValue,
 		StatusPageIDs:         []string{"page"},
 		ServiceIDs:            []string{"service"},
+		// Sent empty, so configs set outside Terraform are removed.
+		ComponentConfigs: []checkly.MaintenanceWindowComponentConfig{},
 	}
 	if !reflect.DeepEqual(window.StatusPageVisibility, want) {
 		t.Errorf("StatusPageVisibility = %+v, want %+v", window.StatusPageVisibility, want)
@@ -480,6 +487,281 @@ func TestAccMaintenanceWindowControlsAllFields(t *testing.T) {
 				},
 			},
 			Check: resource.TestCheckResourceAttr(r, "status_page_visibility.enabled", "false"),
+		},
+	})
+}
+
+// storedComponentStatuses returns the component configs the API stores for a
+// maintenance window, as the statuses of the affected components by status
+// page ID, with "*" standing for affect_all_components.
+func storedComponentStatuses(windowID string) (map[string]map[string]string, *checkly.MaintenanceWindow, error) {
+	id, err := decodeNumericID(windowID)
+	if err != nil {
+		return nil, nil, err
+	}
+	mw, err := testAccClient().GetMaintenanceWindow(context.Background(), id)
+	if err != nil {
+		return nil, nil, err
+	}
+	stored := map[string]map[string]string{}
+	for _, config := range mw.StatusPageVisibility.ComponentConfigs {
+		statuses := map[string]string{}
+		if config.AffectAllComponents {
+			statuses["*"] = ""
+		}
+		for _, component := range config.Components {
+			statuses[component.ComponentID] = string(component.Status)
+		}
+		stored[config.StatusPageID] = statuses
+	}
+	return stored, mw, nil
+}
+
+func TestAccMaintenanceWindowV3ComponentLinks(t *testing.T) {
+	// Requires an account with the status page maintenance windows
+	// entitlement.
+	rInt := acctest.RandInt()
+	page := fmt.Sprintf(`
+		resource "checkly_status_page_v3" "test" {
+			name = "Maintenance Window Status Page %d"
+			url  = "mw-status-page-v3-%d"
+		}
+
+		resource "checkly_status_page_v3_component" "a" {
+			status_page_id = checkly_status_page_v3.test.id
+			name           = "API"
+			display_order  = 0
+		}
+
+		resource "checkly_status_page_v3_component" "b" {
+			status_page_id = checkly_status_page_v3.test.id
+			name           = "Database"
+			display_order  = 1
+		}
+	`, rInt, rInt)
+	window := func(statusPageVisibility string) string {
+		return page + fmt.Sprintf(`
+			resource "checkly_maintenance_window" "test" {
+				name      = "Maintenance Window %d"
+				starts_at = "2099-01-01T09:00:00.000Z"
+				ends_at   = "2099-01-01T10:00:00.000Z"
+				%s
+			}
+		`, rInt, statusPageVisibility)
+	}
+	withComponents := window(`
+		status_page_visibility = {
+			enabled         = true
+			status_page_ids = [checkly_status_page_v3.test.id]
+
+			component_configs = [{
+				status_page_id = checkly_status_page_v3.test.id
+				components = [
+					{
+						component_id = checkly_status_page_v3_component.a.id
+						status       = "MAJOR_OUTAGE"
+					},
+					{
+						component_id = checkly_status_page_v3_component.b.id
+					},
+				]
+			}]
+		}
+	`)
+	withAllComponents := window(`
+		status_page_visibility = {
+			enabled         = true
+			status_page_ids = [checkly_status_page_v3.test.id]
+
+			component_configs = [{
+				status_page_id        = checkly_status_page_v3.test.id
+				affect_all_components = true
+			}]
+		}
+	`)
+	withoutLinks := window("")
+	// A renamed window that leaves status_page_visibility to the web app.
+	ignoringLinks := page + fmt.Sprintf(`
+		resource "checkly_maintenance_window" "test" {
+			name      = "Maintenance Window %d renamed"
+			starts_at = "2099-01-01T09:00:00.000Z"
+			ends_at   = "2099-01-01T10:00:00.000Z"
+
+			lifecycle {
+				ignore_changes = [status_page_visibility]
+			}
+		}
+	`, rInt)
+	// The page is linked through component_configs but missing from
+	// status_page_ids, which validation rejects at plan time.
+	unlinkedComponentConfig := window(`
+		status_page_visibility = {
+			enabled = true
+
+			component_configs = [{
+				status_page_id        = checkly_status_page_v3.test.id
+				affect_all_components = true
+			}]
+		}
+	`)
+
+	const r = "checkly_maintenance_window.test"
+	var windowID, pageID, componentA, componentB string
+	captureIDs := func(s *terraform.State) error {
+		resources := s.RootModule().Resources
+		windowID = resources[r].Primary.ID
+		pageID = resources["checkly_status_page_v3.test"].Primary.ID
+		componentA = resources["checkly_status_page_v3_component.a"].Primary.ID
+		componentB = resources["checkly_status_page_v3_component.b"].Primary.ID
+		return nil
+	}
+	// stored checks the component configs the API holds for the window;
+	// want builds the expected value from the captured IDs.
+	stored := func(want func() map[string]map[string]string) resource.TestCheckFunc {
+		return func(*terraform.State) error {
+			got, _, err := storedComponentStatuses(windowID)
+			if err != nil {
+				return err
+			}
+			if !reflect.DeepEqual(got, want()) {
+				return fmt.Errorf("stored component configs = %v, want %v", got, want())
+			}
+			return nil
+		}
+	}
+	unlinked := func(*terraform.State) error {
+		got, mw, err := storedComponentStatuses(windowID)
+		if err != nil {
+			return err
+		}
+		if len(got) != 0 || len(mw.StatusPageVisibility.StatusPageIDs) != 0 {
+			return fmt.Errorf("window still linked: status pages %v, component configs %v", mw.StatusPageVisibility.StatusPageIDs, got)
+		}
+		return nil
+	}
+
+	// Settings managed by Terraform next to component links left to the web
+	// app.
+	ignoringComponentConfigs := window(`
+		status_page_visibility = {
+			enabled         = true
+			severity        = "MINOR"
+			status_page_ids = [checkly_status_page_v3.test.id]
+		}
+
+		lifecycle {
+			ignore_changes = [status_page_visibility.component_configs]
+		}
+	`)
+
+	// linkOutsideTerraform links component A to the window through the API.
+	linkOutsideTerraform := func() {
+		_, mw, err := storedComponentStatuses(windowID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		mw.StatusPageVisibility.Enabled = true
+		mw.StatusPageVisibility.StatusPageIDs = []string{pageID}
+		mw.StatusPageVisibility.ComponentConfigs = []checkly.MaintenanceWindowComponentConfig{{
+			StatusPageID: pageID,
+			Components:   []checkly.MaintenanceWindowComponentImpact{{ComponentID: componentA}},
+		}}
+		if _, err := testAccClient().UpdateMaintenanceWindow(context.Background(), mw.ID, *mw); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	accTestCase(t, []resource.TestStep{
+		{
+			// The component IDs are unknown at plan time, so the defaults
+			// are only filled in at apply and are checked here rather than
+			// in the plan.
+			Config: withComponents,
+			Check: resource.ComposeTestCheckFunc(
+				captureIDs,
+				resource.TestCheckResourceAttr(r, "status_page_visibility.component_configs.#", "1"),
+				resource.TestCheckTypeSetElemNestedAttrs(r, "status_page_visibility.component_configs.*", map[string]string{
+					"affect_all_components": "false",
+					"components.#":          "2",
+				}),
+				stored(func() map[string]map[string]string {
+					return map[string]map[string]string{pageID: {
+						componentA: "MAJOR_OUTAGE",
+						componentB: "UNDER_MAINTENANCE",
+					}}
+				}),
+			),
+		},
+		{
+			// Importing explicit components, one with a defaulted status,
+			// reads back what the configuration plans.
+			ResourceName:      r,
+			ImportState:       true,
+			ImportStateVerify: true,
+		},
+		{
+			Config:      unlinkedComponentConfig,
+			PlanOnly:    true,
+			ExpectError: regexp.MustCompile("Unlinked Status Page in Component Configs"),
+		},
+		{
+			Config: withAllComponents,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckTypeSetElemNestedAttrs(r, "status_page_visibility.component_configs.*", map[string]string{
+					"affect_all_components": "true",
+				}),
+				stored(func() map[string]map[string]string {
+					return map[string]map[string]string{pageID: {"*": ""}}
+				}),
+			),
+		},
+		{
+			ResourceName:      r,
+			ImportState:       true,
+			ImportStateVerify: true,
+		},
+		{
+			// Leaving the links out of the configuration removes them.
+			Config: withoutLinks,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckNoResourceAttr(r, "status_page_visibility"),
+				unlinked,
+			),
+		},
+		{
+			// With status_page_visibility ignored, an update of another attribute
+			// sends the links made outside Terraform back unchanged.
+			PreConfig: linkOutsideTerraform,
+			Config:    ignoringLinks,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(r, "name", fmt.Sprintf("Maintenance Window %d renamed", rInt)),
+				stored(func() map[string]map[string]string {
+					return map[string]map[string]string{pageID: {componentA: "UNDER_MAINTENANCE"}}
+				}),
+			),
+		},
+		{
+			// Ignoring only component_configs keeps the links while the rest of
+			// status_page_visibility follows the configuration.
+			Config: ignoringComponentConfigs,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(r, "status_page_visibility.severity", "MINOR"),
+				stored(func() map[string]map[string]string {
+					return map[string]map[string]string{pageID: {componentA: "UNDER_MAINTENANCE"}}
+				}),
+			),
+		},
+		{
+			// A component link made outside Terraform shows as a change and
+			// is removed by the apply.
+			PreConfig: linkOutsideTerraform,
+			Config:    withoutLinks,
+			ConfigPlanChecks: resource.ConfigPlanChecks{
+				PreApply: []plancheck.PlanCheck{
+					plancheck.ExpectResourceAction(r, plancheck.ResourceActionUpdate),
+				},
+			},
+			Check: unlinked,
 		},
 	})
 }

@@ -2,12 +2,14 @@ package provider
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -31,6 +33,33 @@ type MaintenanceWindowStatusPageVisibilityModel struct {
 	ShowAffectedServices  types.Bool   `tfsdk:"show_affected_services"`
 	StatusPageIDs         types.Set    `tfsdk:"status_page_ids"`
 	ServiceIDs            types.Set    `tfsdk:"service_ids"`
+	ComponentConfigs      types.Set    `tfsdk:"component_configs"`
+}
+
+// MaintenanceWindowComponentConfigModel describes the data model of a
+// status_page_visibility.component_configs element.
+type MaintenanceWindowComponentConfigModel struct {
+	StatusPageID        types.String `tfsdk:"status_page_id"`
+	AffectAllComponents types.Bool   `tfsdk:"affect_all_components"`
+	Components          types.Set    `tfsdk:"components"`
+}
+
+// MaintenanceWindowComponentImpactModel describes the data model of a
+// status_page_visibility.component_configs.components element.
+type MaintenanceWindowComponentImpactModel struct {
+	ComponentID types.String `tfsdk:"component_id"`
+	Status      types.String `tfsdk:"status"`
+}
+
+var maintenanceWindowComponentImpactAttrTypes = map[string]attr.Type{
+	"component_id": types.StringType,
+	"status":       types.StringType,
+}
+
+var maintenanceWindowComponentConfigAttrTypes = map[string]attr.Type{
+	"status_page_id":        types.StringType,
+	"affect_all_components": types.BoolType,
+	"components":            types.SetType{ElemType: types.ObjectType{AttrTypes: maintenanceWindowComponentImpactAttrTypes}},
 }
 
 var maintenanceWindowStatusPageVisibilityAttrTypes = map[string]attr.Type{
@@ -46,6 +75,7 @@ var maintenanceWindowStatusPageVisibilityAttrTypes = map[string]attr.Type{
 	"show_affected_services":  types.BoolType,
 	"status_page_ids":         types.SetType{ElemType: types.StringType},
 	"service_ids":             types.SetType{ElemType: types.StringType},
+	"component_configs":       types.SetType{ElemType: types.ObjectType{AttrTypes: maintenanceWindowComponentConfigAttrTypes}},
 }
 
 // maintenanceWindowStatusPageVisibilitySchema is deliberately an optional
@@ -53,15 +83,18 @@ var maintenanceWindowStatusPageVisibilityAttrTypes = map[string]attr.Type{
 // status page settings rather than keep the ones stored by the API. The
 // nested defaults are safe because the object is not a set element; defaults
 // inside set elements break the framework's lookup of configured element
-// values.
+// values. The optional+computed attributes of component_configs are therefore
+// defaulted in ModifyPlan instead; see
+// maintenanceWindowComponentConfigsWithDefaults.
 func maintenanceWindowStatusPageVisibilitySchema() schema.SingleNestedAttribute {
 	return schema.SingleNestedAttribute{
 		Optional: true,
 		Description: "Whether and how the maintenance window appears on status pages. " +
 			"Omitting the attribute hides the window and unlinks it from all status pages and services. " +
-			"Only service-based status page links are supported; links to status page components can't be managed here. " +
 			"An account without the status page maintenance windows entitlement can only change `enabled` to `false`: " +
-			"keep the rest of the attribute as it is, because removing it also changes the other settings, which is rejected.",
+			"keep the rest of the attribute as it is, because removing it also changes the other settings, which is rejected. " +
+			"For the same reason, such an account must copy the window's existing component links into `component_configs`, " +
+			"since removing them is a change it can't make.",
 		Attributes: map[string]schema.Attribute{
 			"enabled": schema.BoolAttribute{
 				Optional:    true,
@@ -80,7 +113,7 @@ func maintenanceWindowStatusPageVisibilitySchema() schema.SingleNestedAttribute 
 				Optional:    true,
 				Computed:    true,
 				Default:     booldefault.StaticBool(false),
-				Description: "Mark every service on the linked status pages as affected. Can't be combined with `service_ids`. (Default `false`).",
+				Description: "Mark every service on the linked v2 status pages (`checkly_status_page`) as affected. Can't be combined with `service_ids`. v3 status pages use `component_configs` instead. (Default `false`).",
 			},
 			"notify_on_start": schema.BoolAttribute{
 				Optional:    true,
@@ -130,23 +163,80 @@ func maintenanceWindowStatusPageVisibilitySchema() schema.SingleNestedAttribute 
 			"status_page_ids": schema.SetAttribute{
 				Optional:    true,
 				ElementType: types.StringType,
-				Description: "The IDs of the status pages (`checkly_status_page`) to show the maintenance window on. Requires `service_ids` or `affect_all_services`.",
+				Description: "The IDs of the status pages to show the maintenance window on. " +
+					"A v2 status page (`checkly_status_page`) requires `service_ids` or `affect_all_services`, " +
+					"and a v3 status page (`checkly_status_page_v3`) requires an entry in `component_configs`.",
 			},
 			"service_ids": schema.SetAttribute{
 				Optional:    true,
 				ElementType: types.StringType,
-				Description: "The IDs of the affected status page services (`checkly_status_page_service`). Each service must be on one of the linked status pages.",
+				Description: "The IDs of the affected status page services (`checkly_status_page_service`). Each service must be on one of the linked v2 status pages.",
+			},
+			"component_configs": schema.SetNestedAttribute{
+				Optional: true,
+				Description: "The affected components of each linked v3 status page (`checkly_status_page_v3`), at most one entry per page. " +
+					"Omitting the attribute removes the window's component links.",
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"status_page_id": schema.StringAttribute{
+							Required:    true,
+							Description: "The ID of a v3 status page (`checkly_status_page_v3`). The page must also be listed in `status_page_ids`.",
+						},
+						"affect_all_components": schema.BoolAttribute{
+							Optional:    true,
+							Computed:    true,
+							Description: "Mark every component of the status page as affected, including components added later. Can't be combined with `components`. (Default `false`).",
+						},
+						"components": schema.SetNestedAttribute{
+							Optional:    true,
+							Description: "The affected components of the status page, each with the status it shows while the maintenance is in progress. Required unless `affect_all_components` is `true`, and can't be an empty set: leave it out instead.",
+							// The API reports an entry without components with an
+							// empty list, which can't be told apart from an unset
+							// attribute on import, so only null means none.
+							Validators: []validator.Set{
+								setvalidator.SizeAtLeast(1),
+							},
+							NestedObject: schema.NestedAttributeObject{
+								Attributes: map[string]schema.Attribute{
+									"component_id": schema.StringAttribute{
+										Required:    true,
+										Description: "The ID of a component (`checkly_status_page_v3_component`) on the status page.",
+									},
+									"status": schema.StringAttribute{
+										Optional:    true,
+										Computed:    true,
+										Description: "The status the component shows while the maintenance is in progress. Possible values are `OPERATIONAL`, `UNDER_MAINTENANCE`, `DEGRADED_PERFORMANCE`, `PARTIAL_OUTAGE` and `MAJOR_OUTAGE`. (Default `UNDER_MAINTENANCE`).",
+										Validators: []validator.String{
+											stringvalidator.OneOf(
+												string(checkly.StatusPageComponentStatusV3Operational),
+												string(checkly.StatusPageComponentStatusV3UnderMaintenance),
+												string(checkly.StatusPageComponentStatusV3DegradedPerformance),
+												string(checkly.StatusPageComponentStatusV3PartialOutage),
+												string(checkly.StatusPageComponentStatusV3MajorOutage),
+											),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
 			},
 		},
 	}
 }
 
 // maintenanceWindowStatusPageVisibilityFromObject returns the zero value for a
-// missing attribute, which the SDK sends as the API's defaults.
+// missing attribute, which the SDK sends as the API's defaults. Component
+// configs are always sent, as an empty list when none are configured: the API
+// keeps the stored ones when the field is left out, so removing them from the
+// configuration must send the empty list to remove them.
 func maintenanceWindowStatusPageVisibilityFromObject(ctx context.Context, obj types.Object, diags *diag.Diagnostics) checkly.MaintenanceWindowStatusPageVisibility {
 	model := objectAs[MaintenanceWindowStatusPageVisibilityModel](ctx, obj, diags)
 	if model == nil {
-		return checkly.MaintenanceWindowStatusPageVisibility{}
+		return checkly.MaintenanceWindowStatusPageVisibility{
+			ComponentConfigs: []checkly.MaintenanceWindowComponentConfig{},
+		}
 	}
 
 	return checkly.MaintenanceWindowStatusPageVisibility{
@@ -162,6 +252,7 @@ func maintenanceWindowStatusPageVisibilityFromObject(ctx context.Context, obj ty
 		ShowAffectedServices:  boolPointerOrNil(model.ShowAffectedServices),
 		StatusPageIDs:         stringsFromSet(ctx, model.StatusPageIDs, diags),
 		ServiceIDs:            stringsFromSet(ctx, model.ServiceIDs, diags),
+		ComponentConfigs:      maintenanceWindowComponentConfigsFromSet(ctx, model.ComponentConfigs, diags),
 	}
 }
 
@@ -182,6 +273,7 @@ func maintenanceWindowStatusPageVisibilityToObject(ctx context.Context, v checkl
 			ReminderMinutesBefore: types.SetNull(types.Int64Type),
 			StatusPageIDs:         types.SetNull(types.StringType),
 			ServiceIDs:            types.SetNull(types.StringType),
+			ComponentConfigs:      types.SetNull(types.ObjectType{AttrTypes: maintenanceWindowComponentConfigAttrTypes}),
 		}
 	}
 
@@ -198,6 +290,7 @@ func maintenanceWindowStatusPageVisibilityToObject(ctx context.Context, v checkl
 		ShowAffectedServices:  types.BoolValue(v.ShowAffectedServices == nil || *v.ShowAffectedServices),
 		StatusPageIDs:         stringSetFromAPINullIfUnset(ctx, v.StatusPageIDs, priorModel.StatusPageIDs, diags),
 		ServiceIDs:            stringSetFromAPINullIfUnset(ctx, v.ServiceIDs, priorModel.ServiceIDs, diags),
+		ComponentConfigs:      maintenanceWindowComponentConfigsToSet(ctx, v.ComponentConfigs, priorModel.ComponentConfigs, diags),
 	})
 	diags.Append(d...)
 
@@ -216,7 +309,8 @@ func isDefaultMaintenanceWindowStatusPageVisibility(v checkly.MaintenanceWindowS
 		(v.AutoEnd == nil || *v.AutoEnd) &&
 		(v.ShowAffectedServices == nil || *v.ShowAffectedServices) &&
 		len(v.StatusPageIDs) == 0 &&
-		len(v.ServiceIDs) == 0
+		len(v.ServiceIDs) == 0 &&
+		len(v.ComponentConfigs) == 0
 }
 
 // boolPointerOrNil returns nil for null and unknown values, which the SDK
@@ -264,4 +358,230 @@ func int64SetFromInts(ctx context.Context, values []int, prior types.Set, diags 
 	diags.Append(d...)
 
 	return set
+}
+
+// maintenanceWindowComponentConfigsFromSet converts the component_configs
+// set to its API representation. Null and unknown sets convert to an empty
+// (non-nil) slice, which removes the stored component configs. An entry
+// without components sends none, which the SDK leaves out of the request.
+func maintenanceWindowComponentConfigsFromSet(ctx context.Context, set types.Set, diags *diag.Diagnostics) []checkly.MaintenanceWindowComponentConfig {
+	configs := []checkly.MaintenanceWindowComponentConfig{}
+	if set.IsNull() || set.IsUnknown() {
+		return configs
+	}
+
+	var models []MaintenanceWindowComponentConfigModel
+	diags.Append(set.ElementsAs(ctx, &models, false)...)
+	if diags.HasError() {
+		return configs
+	}
+
+	for _, model := range models {
+		var components []checkly.MaintenanceWindowComponentImpact
+		if !model.Components.IsNull() && !model.Components.IsUnknown() {
+			var impacts []MaintenanceWindowComponentImpactModel
+			diags.Append(model.Components.ElementsAs(ctx, &impacts, false)...)
+			for _, impact := range impacts {
+				components = append(components, checkly.MaintenanceWindowComponentImpact{
+					ComponentID: impact.ComponentID.ValueString(),
+					Status:      checkly.StatusPageComponentStatusV3(impact.Status.ValueString()),
+				})
+			}
+		}
+
+		configs = append(configs, checkly.MaintenanceWindowComponentConfig{
+			StatusPageID:        model.StatusPageID.ValueString(),
+			AffectAllComponents: model.AffectAllComponents.ValueBool(),
+			Components:          components,
+		})
+	}
+
+	return configs
+}
+
+// maintenanceWindowComponentConfigsToSet converts the component configs from
+// the API to a set. The API reports no configs as an empty list, which
+// converts to null when the prior value is null, so an omitted attribute
+// doesn't drift to an empty set. An entry that affects all components reports
+// an empty components list, which always converts to null: validation rejects
+// a configured empty components set, so null is the only matching
+// configuration, and an import reads back what that configuration plans.
+func maintenanceWindowComponentConfigsToSet(ctx context.Context, configs []checkly.MaintenanceWindowComponentConfig, prior types.Set, diags *diag.Diagnostics) types.Set {
+	configType := types.ObjectType{AttrTypes: maintenanceWindowComponentConfigAttrTypes}
+	if len(configs) == 0 && (prior.IsNull() || prior.IsUnknown()) {
+		return types.SetNull(configType)
+	}
+
+	impactType := types.ObjectType{AttrTypes: maintenanceWindowComponentImpactAttrTypes}
+	models := make([]MaintenanceWindowComponentConfigModel, len(configs))
+	for i, config := range configs {
+		components := types.SetNull(impactType)
+		if len(config.Components) > 0 {
+			impacts := make([]MaintenanceWindowComponentImpactModel, len(config.Components))
+			for j, component := range config.Components {
+				impacts[j] = MaintenanceWindowComponentImpactModel{
+					ComponentID: types.StringValue(component.ComponentID),
+					Status:      types.StringValue(string(component.Status)),
+				}
+			}
+			var d diag.Diagnostics
+			components, d = types.SetValueFrom(ctx, impactType, impacts)
+			diags.Append(d...)
+		}
+
+		models[i] = MaintenanceWindowComponentConfigModel{
+			StatusPageID:        types.StringValue(config.StatusPageID),
+			AffectAllComponents: types.BoolValue(config.AffectAllComponents),
+			Components:          components,
+		}
+	}
+
+	set, d := types.SetValueFrom(ctx, configType, models)
+	diags.Append(d...)
+
+	return set
+}
+
+// maintenanceWindowComponentConfigsWithDefaults applies the default values of
+// the optional+computed component_configs attributes during plan
+// modification, where schema defaults cannot be used because the attributes
+// are nested in set elements: affect_all_components defaults to false and a
+// component's status to UNDER_MAINTENANCE, as in the API.
+func maintenanceWindowComponentConfigsWithDefaults(ctx context.Context, set types.Set, diags *diag.Diagnostics) types.Set {
+	if set.IsNull() || set.IsUnknown() {
+		return set
+	}
+
+	var models []MaintenanceWindowComponentConfigModel
+	diags.Append(set.ElementsAs(ctx, &models, false)...)
+	if diags.HasError() {
+		return set
+	}
+
+	for i, model := range models {
+		if model.AffectAllComponents.IsNull() || model.AffectAllComponents.IsUnknown() {
+			models[i].AffectAllComponents = types.BoolValue(false)
+		}
+		models[i].Components = maintenanceWindowComponentsWithDefaults(ctx, model.Components, diags)
+	}
+
+	result, d := types.SetValueFrom(ctx, types.ObjectType{AttrTypes: maintenanceWindowComponentConfigAttrTypes}, models)
+	diags.Append(d...)
+
+	return result
+}
+
+// maintenanceWindowComponentsWithDefaults applies the default status to the
+// elements of a component_configs.components set.
+func maintenanceWindowComponentsWithDefaults(ctx context.Context, set types.Set, diags *diag.Diagnostics) types.Set {
+	if set.IsNull() || set.IsUnknown() {
+		return set
+	}
+
+	var models []MaintenanceWindowComponentImpactModel
+	diags.Append(set.ElementsAs(ctx, &models, false)...)
+	if diags.HasError() {
+		return set
+	}
+
+	for i, model := range models {
+		models[i].Status = stringOrDefault(model.Status, string(checkly.StatusPageComponentStatusV3UnderMaintenance))
+	}
+
+	result, d := types.SetValueFrom(ctx, types.ObjectType{AttrTypes: maintenanceWindowComponentImpactAttrTypes}, models)
+	diags.Append(d...)
+
+	return result
+}
+
+// validateMaintenanceWindowComponentConfigs rejects component_configs that
+// the API would reject on apply. obj is the configured status_page_visibility
+// value; checks that depend on values not yet known are skipped.
+func validateMaintenanceWindowComponentConfigs(ctx context.Context, obj types.Object, diags *diag.Diagnostics) {
+	visibility := objectAs[MaintenanceWindowStatusPageVisibilityModel](ctx, obj, diags)
+	if visibility == nil || visibility.ComponentConfigs.IsNull() || visibility.ComponentConfigs.IsUnknown() {
+		return
+	}
+
+	// The linked pages are only compared once all of them are known.
+	var linked map[string]bool
+	if !valueContainsUnknown(ctx, visibility.StatusPageIDs) {
+		linked = map[string]bool{}
+		for _, id := range stringsFromSet(ctx, visibility.StatusPageIDs, diags) {
+			linked[id] = true
+		}
+	}
+
+	configsPath := path.Root("status_page_visibility").AtName("component_configs")
+	seenPages := map[string]bool{}
+	for _, element := range visibility.ComponentConfigs.Elements() {
+		entryObj, ok := element.(types.Object)
+		if !ok {
+			continue
+		}
+		entry := objectAs[MaintenanceWindowComponentConfigModel](ctx, entryObj, diags)
+		if entry == nil {
+			continue
+		}
+		entryPath := configsPath.AtSetValue(element)
+
+		if !entry.StatusPageID.IsNull() && !entry.StatusPageID.IsUnknown() {
+			pageID := entry.StatusPageID.ValueString()
+			if linked != nil && !linked[pageID] {
+				diags.AddAttributeError(
+					entryPath.AtName("status_page_id"),
+					"Unlinked Status Page in Component Configs",
+					fmt.Sprintf("status_page_visibility.component_configs lists status page %q, which must also be listed in status_page_visibility.status_page_ids.", pageID),
+				)
+			}
+			if seenPages[pageID] {
+				diags.AddAttributeError(
+					entryPath.AtName("status_page_id"),
+					"Duplicate Status Page in Component Configs",
+					fmt.Sprintf("status_page_visibility.component_configs lists status page %q more than once; combine its components into one entry.", pageID),
+				)
+			}
+			seenPages[pageID] = true
+		}
+
+		if !entry.AffectAllComponents.IsUnknown() && !entry.Components.IsUnknown() {
+			affectAll := entry.AffectAllComponents.ValueBool()
+			hasComponents := len(entry.Components.Elements()) > 0
+			switch {
+			case affectAll && hasComponents:
+				diags.AddAttributeError(
+					entryPath.AtName("components"),
+					"Conflicting Component Configuration",
+					"status_page_visibility.component_configs.components can't be set when status_page_visibility.component_configs.affect_all_components is true.",
+				)
+			case !affectAll && !hasComponents:
+				diags.AddAttributeError(
+					entryPath,
+					"Missing Components",
+					"Each status_page_visibility.component_configs entry needs affect_all_components = true or at least one element in components.",
+				)
+			}
+		}
+
+		seenComponents := map[string]bool{}
+		for _, componentElement := range entry.Components.Elements() {
+			componentObj, ok := componentElement.(types.Object)
+			if !ok {
+				continue
+			}
+			component := objectAs[MaintenanceWindowComponentImpactModel](ctx, componentObj, diags)
+			if component == nil || component.ComponentID.IsNull() || component.ComponentID.IsUnknown() {
+				continue
+			}
+			componentID := component.ComponentID.ValueString()
+			if seenComponents[componentID] {
+				diags.AddAttributeError(
+					entryPath.AtName("components").AtSetValue(componentElement),
+					"Duplicate Component in Component Configs",
+					fmt.Sprintf("status_page_visibility.component_configs.components lists component %q more than once.", componentID),
+				)
+			}
+			seenComponents[componentID] = true
+		}
+	}
 }
