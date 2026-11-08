@@ -45,9 +45,7 @@ type TracerouteMonitorResource struct {
 	client checkly.Client
 }
 
-// TracerouteMonitorResourceModel describes the resource data model. There is
-// no private_locations attribute: Update keeps the private locations a monitor
-// has in Checkly.
+// TracerouteMonitorResourceModel describes the resource data model.
 type TracerouteMonitorResourceModel struct {
 	ID                       types.String `tfsdk:"id"`
 	Name                     types.String `tfsdk:"name"`
@@ -62,6 +60,7 @@ type TracerouteMonitorResourceModel struct {
 	DegradedResponseTime     types.Int64  `tfsdk:"degraded_response_time"`
 	MaxResponseTime          types.Int64  `tfsdk:"max_response_time"`
 	Tags                     types.Set    `tfsdk:"tags"`
+	PrivateLocations         types.Set    `tfsdk:"private_locations"`
 	RuntimeID                types.String `tfsdk:"runtime_id"`
 	AlertSettings            types.Object `tfsdk:"alert_settings"`
 	UseGlobalAlertSettings   types.Bool   `tfsdk:"use_global_alert_settings"`
@@ -105,7 +104,7 @@ func (r *TracerouteMonitorResource) Metadata(ctx context.Context, req resource.M
 func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Version:     sdkv2SchemaVersion + 1,
-		Description: "Traceroute monitors trace the network path to a host and measure per-hop latency and packet loss. This resource does not manage private locations, and keeps the ones a monitor has in Checkly.",
+		Description: "Traceroute monitors trace the network path to a host and measure per-hop latency and packet loss.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -180,6 +179,11 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 				Optional:    true,
 				ElementType: types.StringType,
 				Description: "A list of tags for organizing and filtering checks and monitors.",
+			},
+			"private_locations": schema.SetAttribute{
+				Optional:    true,
+				ElementType: types.StringType,
+				Description: "The slugs of the private locations to run the monitor from. A private location runs traceroute monitors with agent v8.4.0 or later and the `NET_RAW` capability.",
 			},
 			"runtime_id": schema.StringAttribute{
 				Optional:    true,
@@ -446,18 +450,6 @@ func (r *TracerouteMonitorResource) Update(ctx context.Context, req resource.Upd
 		return
 	}
 
-	stored, err := readForUpdate(ctx, r.client.GetTracerouteMonitor, plan.ID.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Update Traceroute Monitor",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
-		return
-	}
-
-	// Terraform has no attribute for these, and the update would clear them.
-	monitor.PrivateLocations = stored.PrivateLocations
-
 	apiCtx, cancel := contextWithAPITimeout(ctx)
 	defer cancel()
 
@@ -512,6 +504,8 @@ func tracerouteMonitorFromModel(ctx context.Context, model *TracerouteMonitorRes
 	// The locations property is serialized even when empty.
 	locations := stringsFromSetOrEmpty(ctx, model.Locations, diags)
 
+	privateLocations := stringsFromSetOrEmpty(ctx, model.PrivateLocations, diags)
+
 	monitor := checkly.TracerouteMonitor{
 		ID:                        model.ID.ValueString(),
 		Name:                      model.Name.ValueString(),
@@ -525,6 +519,7 @@ func tracerouteMonitorFromModel(ctx context.Context, model *TracerouteMonitorRes
 		DegradedResponseTime:      int(model.DegradedResponseTime.ValueInt64()),
 		MaxResponseTime:           int(model.MaxResponseTime.ValueInt64()),
 		Tags:                      stringsFromSet(ctx, model.Tags, diags),
+		PrivateLocations:          &privateLocations,
 		UseGlobalAlertSettings:    model.UseGlobalAlertSettings.ValueBool(),
 		GroupID:                   model.GroupID.ValueInt64(),
 		GroupOrder:                int(model.GroupOrder.ValueInt64()),
@@ -582,6 +577,12 @@ func tracerouteMonitorToModel(ctx context.Context, c *checkly.TracerouteMonitor,
 	model.DegradedResponseTime = types.Int64Value(int64(c.DegradedResponseTime))
 	model.MaxResponseTime = types.Int64Value(int64(c.MaxResponseTime))
 	model.Tags = stringSetFromAPINullIfUnset(ctx, c.Tags, model.Tags, diags)
+
+	var privateLocations []string
+	if c.PrivateLocations != nil {
+		privateLocations = *c.PrivateLocations
+	}
+	model.PrivateLocations = stringSetFromAPINullIfUnset(ctx, privateLocations, model.PrivateLocations, diags)
 
 	// The API does not track a runtime ID for monitors using the default
 	// runtime. A prior empty string is preserved because it converts to the

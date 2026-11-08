@@ -3,12 +3,12 @@
 page_title: "checkly_traceroute_monitor Resource - terraform-provider-checkly"
 subcategory: ""
 description: |-
-  Traceroute monitors trace the network path to a host and measure per-hop latency and packet loss. This resource does not manage private locations, and keeps the ones a monitor has in Checkly.
+  Traceroute monitors trace the network path to a host and measure per-hop latency and packet loss.
 ---
 
 # checkly_traceroute_monitor (Resource)
 
-Traceroute monitors trace the network path to a host and measure per-hop latency and packet loss. This resource does not manage private locations, and keeps the ones a monitor has in Checkly.
+Traceroute monitors trace the network path to a host and measure per-hop latency and packet loss.
 
 ## Example Usage
 
@@ -106,6 +106,7 @@ resource "checkly_traceroute_monitor" "example-traceroute-monitor-2" {
 - `locations` (Set of String) An array of one or more data center locations where to run this monitor. (Default ["us-east-1"])
 - `max_response_time` (Number) The response time in milliseconds starting from which a monitor should be considered failing. Possible values are between 0 and 30000. (Default `20000`).
 - `muted` (Boolean) Determines if any notifications will be sent out when a monitor fails/degrades/recovers.
+- `private_locations` (Set of String) The slugs of the private locations to run the monitor from. A private location runs traceroute monitors with agent v8.4.0 or later and the `NET_RAW` capability.
 - `retry_strategy` (Attributes) A strategy for retrying failed check/monitor runs. (see [below for nested schema](#nestedatt--retry_strategy))
 - `run_parallel` (Boolean) Determines if the monitor should run in all selected locations in parallel or round-robin.
 - `runtime_id` (String) The ID of the runtime to use for this monitor.

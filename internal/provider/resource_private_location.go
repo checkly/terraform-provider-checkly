@@ -40,6 +40,7 @@ type PrivateLocationResourceModel struct {
 	SlugName types.String `tfsdk:"slug_name"`
 	Icon     types.String `tfsdk:"icon"`
 	Keys     types.Set    `tfsdk:"keys"`
+	ProxyURL types.String `tfsdk:"proxy_url"`
 }
 
 func (r *PrivateLocationResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -82,6 +83,11 @@ func (r *PrivateLocationResource) Schema(ctx context.Context, req resource.Schem
 				PlanModifiers: []planmodifier.Set{
 					setplanmodifier.UseStateForUnknown(),
 				},
+			},
+			"proxy_url": schema.StringAttribute{
+				Optional:    true,
+				Sensitive:   true,
+				Description: "The proxy that API checks running in the private location send their HTTP requests through, such as `https://user:password@proxy.example.com:3128`. It can hold credentials.",
 			},
 		},
 	}
@@ -159,11 +165,7 @@ func (r *PrivateLocationResource) Read(ctx context.Context, req resource.ReadReq
 		return
 	}
 
-	state.Name = types.StringValue(pl.Name)
-	state.SlugName = types.StringValue(pl.SlugName)
-	state.Icon = types.StringValue(pl.Icon)
-	// The API never returns raw key material after creation, so the keys
-	// already present in state are kept as-is.
+	privateLocationToModel(pl, &state)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
@@ -176,23 +178,10 @@ func (r *PrivateLocationResource) Update(ctx context.Context, req resource.Updat
 		return
 	}
 
-	stored, err := readForUpdate(ctx, r.client.GetPrivateLocation, plan.ID.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Update Private Location",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
-		return
-	}
-
-	// Terraform has no attribute for the proxy, and the update would remove it.
-	location := privateLocationFromModel(&plan)
-	location.ProxyURL = stored.ProxyURL
-
 	apiCtx, cancel := contextWithAPITimeout(ctx)
 	defer cancel()
 
-	_, err = r.client.UpdatePrivateLocation(apiCtx, plan.ID.ValueString(), location)
+	_, err := r.client.UpdatePrivateLocation(apiCtx, plan.ID.ValueString(), privateLocationFromModel(&plan))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Update Private Location",
@@ -237,5 +226,23 @@ func privateLocationFromModel(model *PrivateLocationResourceModel) checkly.Priva
 		Name:     model.Name.ValueString(),
 		SlugName: model.SlugName.ValueString(),
 		Icon:     model.Icon.ValueString(),
+		ProxyURL: optionalStringPointer(model.ProxyURL),
 	}
+}
+
+// privateLocationToModel updates the model to match the API representation of
+// the private location. The API never returns raw key material after
+// creation, so the keys already present in the model are kept as-is.
+func privateLocationToModel(pl *checkly.PrivateLocation, model *PrivateLocationResourceModel) {
+	model.Name = types.StringValue(pl.Name)
+	model.SlugName = types.StringValue(pl.SlugName)
+	model.Icon = types.StringValue(pl.Icon)
+
+	// The API stores an empty proxy as null, so a configured "" is kept
+	// rather than refreshed to null.
+	var proxyURL string
+	if pl.ProxyURL != nil {
+		proxyURL = *pl.ProxyURL
+	}
+	model.ProxyURL = stringValueOrPriorEmpty(proxyURL, model.ProxyURL)
 }

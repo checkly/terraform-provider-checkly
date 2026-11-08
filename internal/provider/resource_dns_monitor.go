@@ -56,6 +56,7 @@ type DNSMonitorResourceModel struct {
 	DegradedResponseTime      types.Int64  `tfsdk:"degraded_response_time"`
 	MaxResponseTime           types.Int64  `tfsdk:"max_response_time"`
 	Tags                      types.Set    `tfsdk:"tags"`
+	PrivateLocations          types.Set    `tfsdk:"private_locations"`
 	AlertChannelSubscriptions types.Set    `tfsdk:"alert_channel_subscription"`
 	AlertSettings             types.Object `tfsdk:"alert_settings"`
 	UseGlobalAlertSettings    types.Bool   `tfsdk:"use_global_alert_settings"`
@@ -102,7 +103,7 @@ func (r *DNSMonitorResource) Metadata(ctx context.Context, req resource.Metadata
 func (r *DNSMonitorResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Version:     sdkv2SchemaVersion + 1,
-		Description: "Creates a DNS Monitor to check DNS record availability and response times. This resource does not manage private locations, and keeps the ones a monitor has in Checkly.",
+		Description: "Creates a DNS Monitor to check DNS record availability and response times.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -171,6 +172,11 @@ func (r *DNSMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 				Optional:    true,
 				ElementType: types.StringType,
 				Description: "A list of tags for organizing and filtering checks and monitors.",
+			},
+			"private_locations": schema.SetAttribute{
+				Optional:    true,
+				ElementType: types.StringType,
+				Description: "The slugs of the private locations to run the monitor from. A private location runs DNS monitors with agent v7.0.0 or later.",
 			},
 			triggerIncidentAttributeName: makeTriggerIncidentSchema(),
 			alertSettingsAttributeName: makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{
@@ -402,18 +408,6 @@ func (r *DNSMonitorResource) Update(ctx context.Context, req resource.UpdateRequ
 		return
 	}
 
-	stored, err := readForUpdate(ctx, r.client.GetDNSMonitor, monitor.ID)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Update DNS Monitor",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
-		return
-	}
-
-	// Terraform has no attribute for these, and the update would clear them.
-	monitor.PrivateLocations = stored.PrivateLocations
-
 	apiCtx, cancel := contextWithAPITimeout(ctx)
 	defer cancel()
 
@@ -475,6 +469,8 @@ func dnsMonitorFromModel(ctx context.Context, model *DNSMonitorResourceModel, di
 	// The locations property is serialized even when empty.
 	locations := stringsFromSetOrEmpty(ctx, model.Locations, diags)
 
+	privateLocations := stringsFromSetOrEmpty(ctx, model.PrivateLocations, diags)
+
 	alertSettings := alertSettingsFromObject(ctx, model.AlertSettings, diags)
 
 	return checkly.DNSMonitor{
@@ -490,6 +486,7 @@ func dnsMonitorFromModel(ctx context.Context, model *DNSMonitorResourceModel, di
 		DegradedResponseTime:      int(model.DegradedResponseTime.ValueInt64()),
 		MaxResponseTime:           int(model.MaxResponseTime.ValueInt64()),
 		Tags:                      stringsFromSet(ctx, model.Tags, diags),
+		PrivateLocations:          &privateLocations,
 		AlertSettings:             &alertSettings,
 		UseGlobalAlertSettings:    model.UseGlobalAlertSettings.ValueBool(),
 		Request:                   dnsMonitorRequestFromObject(ctx, model.Request, diags),
@@ -535,6 +532,12 @@ func dnsMonitorToModel(ctx context.Context, c *checkly.DNSMonitor, model *DNSMon
 	model.DegradedResponseTime = types.Int64Value(int64(c.DegradedResponseTime))
 	model.MaxResponseTime = types.Int64Value(int64(c.MaxResponseTime))
 	model.Tags = stringSetFromAPINullIfUnset(ctx, c.Tags, model.Tags, diags)
+
+	var privateLocations []string
+	if c.PrivateLocations != nil {
+		privateLocations = *c.PrivateLocations
+	}
+	model.PrivateLocations = stringSetFromAPINullIfUnset(ctx, privateLocations, model.PrivateLocations, diags)
 
 	if c.AlertSettings != nil {
 		model.AlertSettings = alertSettingsToObject(ctx, *c.AlertSettings, model.AlertSettings, diags)

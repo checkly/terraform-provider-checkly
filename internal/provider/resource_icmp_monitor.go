@@ -56,6 +56,7 @@ type ICMPMonitorResourceModel struct {
 	DegradedPacketLossThreshold types.Int64  `tfsdk:"degraded_packet_loss_threshold"`
 	MaxPacketLossThreshold      types.Int64  `tfsdk:"max_packet_loss_threshold"`
 	Tags                        types.Set    `tfsdk:"tags"`
+	PrivateLocations            types.Set    `tfsdk:"private_locations"`
 	AlertChannelSubscriptions   types.Set    `tfsdk:"alert_channel_subscription"`
 	AlertSettings               types.Object `tfsdk:"alert_settings"`
 	UseGlobalAlertSettings      types.Bool   `tfsdk:"use_global_alert_settings"`
@@ -88,7 +89,7 @@ func (r *ICMPMonitorResource) Metadata(ctx context.Context, req resource.Metadat
 func (r *ICMPMonitorResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Version:     sdkv2SchemaVersion + 1,
-		Description: "Creates an ICMP Monitor to check host availability using ping. This resource does not manage private locations, and keeps the ones a monitor has in Checkly.",
+		Description: "Creates an ICMP Monitor to check host availability using ping.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -161,6 +162,11 @@ func (r *ICMPMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 				Optional:    true,
 				ElementType: types.StringType,
 				Description: "A list of tags for organizing and filtering checks and monitors.",
+			},
+			"private_locations": schema.SetAttribute{
+				Optional:    true,
+				ElementType: types.StringType,
+				Description: "The slugs of the private locations to run the monitor from. A private location runs ICMP monitors with agent v7.0.0 or later and the `NET_RAW` capability.",
 			},
 			triggerIncidentAttributeName: makeTriggerIncidentSchema(),
 			alertSettingsAttributeName: makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{
@@ -369,18 +375,6 @@ func (r *ICMPMonitorResource) Update(ctx context.Context, req resource.UpdateReq
 		return
 	}
 
-	stored, err := readForUpdate(ctx, r.client.GetICMPMonitor, monitor.ID)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Update ICMP Monitor",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
-		return
-	}
-
-	// Terraform has no attribute for these, and the update would clear them.
-	monitor.PrivateLocations = stored.PrivateLocations
-
 	apiCtx, cancel := contextWithAPITimeout(ctx)
 	defer cancel()
 
@@ -442,6 +436,8 @@ func icmpMonitorFromModel(ctx context.Context, model *ICMPMonitorResourceModel, 
 	// The locations property is serialized even when empty.
 	locations := stringsFromSetOrEmpty(ctx, model.Locations, diags)
 
+	privateLocations := stringsFromSetOrEmpty(ctx, model.PrivateLocations, diags)
+
 	alertSettings := alertSettingsFromObject(ctx, model.AlertSettings, diags)
 
 	return checkly.ICMPMonitor{
@@ -457,6 +453,7 @@ func icmpMonitorFromModel(ctx context.Context, model *ICMPMonitorResourceModel, 
 		DegradedPacketLossThreshold: int(model.DegradedPacketLossThreshold.ValueInt64()),
 		MaxPacketLossThreshold:      int(model.MaxPacketLossThreshold.ValueInt64()),
 		Tags:                        stringsFromSet(ctx, model.Tags, diags),
+		PrivateLocations:            &privateLocations,
 		AlertSettings:               &alertSettings,
 		UseGlobalAlertSettings:      model.UseGlobalAlertSettings.ValueBool(),
 		Request:                     icmpMonitorRequestFromObject(ctx, model.Request, diags),
@@ -502,6 +499,12 @@ func icmpMonitorToModel(ctx context.Context, c *checkly.ICMPMonitor, model *ICMP
 	model.DegradedPacketLossThreshold = types.Int64Value(int64(c.DegradedPacketLossThreshold))
 	model.MaxPacketLossThreshold = types.Int64Value(int64(c.MaxPacketLossThreshold))
 	model.Tags = stringSetFromAPINullIfUnset(ctx, c.Tags, model.Tags, diags)
+
+	var privateLocations []string
+	if c.PrivateLocations != nil {
+		privateLocations = *c.PrivateLocations
+	}
+	model.PrivateLocations = stringSetFromAPINullIfUnset(ctx, privateLocations, model.PrivateLocations, diags)
 
 	if c.AlertSettings != nil {
 		model.AlertSettings = alertSettingsToObject(ctx, *c.AlertSettings, model.AlertSettings, diags)
