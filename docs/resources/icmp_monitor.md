@@ -3,12 +3,12 @@
 page_title: "checkly_icmp_monitor Resource - terraform-provider-checkly"
 subcategory: ""
 description: |-
-  Creates an ICMP Monitor to check host availability using ping. This resource does not manage private locations, and keeps the ones a monitor has in Checkly.
+  Creates an ICMP Monitor to check host availability using ping.
 ---
 
 # checkly_icmp_monitor (Resource)
 
-Creates an ICMP Monitor to check host availability using ping. This resource does not manage private locations, and keeps the ones a monitor has in Checkly.
+Creates an ICMP Monitor to check host availability using ping.
 
 ## Example Usage
 
@@ -60,6 +60,7 @@ resource "checkly_icmp_monitor" "example-icmp-monitor" {
 - `locations` (Set of String) An array of one or more data center locations where to run this monitor.
 - `max_packet_loss_threshold` (Number) The packet loss percentage where the monitor should be considered failing. Possible values are between `1` and `100`. (Default `20`).
 - `muted` (Boolean) Determines if any notifications will be sent out when the monitor fails and/or recovers. (Default `false`).
+- `private_locations` (Set of String) The slugs of the private locations to run the monitor from. A private location runs ICMP monitors with agent v7.0.0 or later and the `NET_RAW` capability.
 - `retry_strategy` (Attributes) A strategy for retrying failed check/monitor runs. (see [below for nested schema](#nestedatt--retry_strategy))
 - `run_parallel` (Boolean) Determines whether the monitor should run on all selected locations in parallel or round-robin. (Default `false`).
 - `tags` (Set of String) A list of tags for organizing and filtering checks and monitors.

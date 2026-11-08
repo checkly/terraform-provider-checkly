@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"fmt"
 	"regexp"
 	"testing"
 
@@ -379,6 +380,7 @@ var wantICMPMonitor = checkly.ICMPMonitor{
 		"bar",
 		"foo",
 	},
+	PrivateLocations: &[]string{"my-private-location"},
 	AlertSettings: &checkly.AlertSettings{
 		EscalationType: checkly.EscalationTypeRunBased,
 		RunBasedEscalation: checkly.RunBasedEscalation{
@@ -1386,6 +1388,44 @@ func TestAccICMPMonitorRetryStrategyRemoval(t *testing.T) {
 					"NO_RETRIES",
 				),
 			),
+		},
+	})
+}
+
+func TestAccICMPMonitorPrivateLocations(t *testing.T) {
+	testAccMonitorPrivateLocations(t, monitorPrivateLocationsCase{
+		resource: "checkly_icmp_monitor.test",
+		config: func(name, attributes string) string {
+			return fmt.Sprintf(`
+				resource "checkly_icmp_monitor" "test" {
+					name                      = %q
+					frequency                 = 60
+					activated                 = false
+					locations                 = ["eu-central-1"]
+					use_global_alert_settings = true
+
+					request = {
+						hostname = "example.com"
+					}
+					%s
+				}
+			`, name, attributes)
+		},
+		set: func(ctx context.Context, client checkly.Client, id string, privateLocations []string) error {
+			monitor, err := client.GetICMPMonitor(ctx, id)
+			if err != nil {
+				return err
+			}
+			monitor.PrivateLocations = &privateLocations
+			_, err = client.UpdateICMPMonitor(ctx, id, *monitor)
+			return err
+		},
+		read: func(ctx context.Context, client checkly.Client, id string) (*[]string, error) {
+			monitor, err := client.GetICMPMonitor(ctx, id)
+			if err != nil {
+				return nil, err
+			}
+			return monitor.PrivateLocations, nil
 		},
 	})
 }
