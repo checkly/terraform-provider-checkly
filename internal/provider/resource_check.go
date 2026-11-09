@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -248,7 +249,7 @@ func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 			}),
 			doubleCheckAttributeName: doubleCheckAttributeSchema(),
 			"request": apiCheckRequestAttributeSchema(apiCheckRequestAttributeSchemaOptions{
-				Description: "An API check might have one request config.",
+				Description: "An API check might have one request config. Only relevant when `type` is `API`.",
 			}),
 		},
 		Blocks: map[string]schema.Block{
@@ -296,15 +297,19 @@ func (r *CheckResource) ValidateConfig(ctx context.Context, req resource.Validat
 		)
 	}
 
-	// SSL certificate checks are only available for browser checks.
+	// SSL certificate checks are only available for browser checks. An
+	// empty domain passes the API, which doesn't store it either.
 	if checkType.ValueString() == string(checkly.CheckTypeAPI) &&
-		!sslCheckDomain.IsNull() && !sslCheckDomain.IsUnknown() &&
-		sslCheckDomain.ValueString() != "" {
-		resp.Diagnostics.AddAttributeError(
-			path.Root("ssl_check_domain"),
-			"Invalid Attribute Combination",
-			"ssl_check_domain is allowed only for Browser checks",
-		)
+		!sslCheckDomain.IsNull() && !sslCheckDomain.IsUnknown() {
+		if sslCheckDomain.ValueString() != "" {
+			resp.Diagnostics.AddAttributeError(
+				path.Root("ssl_check_domain"),
+				"Invalid Attribute Combination",
+				"ssl_check_domain is allowed only for Browser checks",
+			)
+		} else {
+			addIgnoredCheckAttributeWarning(&resp.Diagnostics, "ssl_check_domain", checkType.ValueString())
+		}
 	}
 
 	// The API ignores environment variables of API checks, so they would
@@ -318,6 +323,51 @@ func (r *CheckResource) ValidateConfig(ctx context.Context, req resource.Validat
 				"shows them as a change. Remove the environment_variable blocks from this check.",
 		)
 	}
+
+	for _, name := range checkIgnoredAttributes[checkly.CheckType(checkType.ValueString())] {
+		var value attr.Value
+		resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(name), &value)...)
+		if value == nil || value.IsNull() || value.IsUnknown() {
+			continue
+		}
+		addIgnoredCheckAttributeWarning(&resp.Diagnostics, name, checkType.ValueString())
+	}
+}
+
+// checkAPIOnlyAttributes are the checkly_check attributes that only API
+// checks use.
+var checkAPIOnlyAttributes = []string{
+	"request",
+	frequencyOffsetAttributeName,
+	"degraded_response_time",
+	"max_response_time",
+	"setup_snippet_id",
+	"teardown_snippet_id",
+	"local_setup_script",
+	"local_teardown_script",
+}
+
+// checkIgnoredAttributes lists, for each check type, the checkly_check
+// attributes that the API endpoint of that type has no field for (see
+// apiCheckModelFromCheckModel and its siblings), so a configured value only
+// changes the state. environment_variable and ssl_check_domain on API checks
+// have diagnostics of their own.
+var checkIgnoredAttributes = map[checkly.CheckType][]string{
+	checkly.CheckTypeAPI:       {"script"},
+	checkly.CheckTypeBrowser:   checkAPIOnlyAttributes,
+	checkly.CheckTypeMultiStep: append(slices.Clone(checkAPIOnlyAttributes), "ssl_check_domain"),
+}
+
+// addIgnoredCheckAttributeWarning warns that a configured attribute has no
+// effect on checks of the given type.
+func addIgnoredCheckAttributeWarning(diags *diag.Diagnostics, name string, checkType string) {
+	detail := fmt.Sprintf(`%s checks don't use %q: checkly_check doesn't send it to the API, so changing it only changes the state. `+
+		`Remove it from this check, or move the check to %s, which only has the attributes of its check type.`,
+		checkType, name, checkResourceTypeForCheckType(checkly.CheckType(checkType)))
+	if name == frequencyOffsetAttributeName {
+		detail += ` High frequency scheduling ("frequency" 0), which needs "frequency_offset", is only available for API checks.`
+	}
+	diags.AddAttributeWarning(path.Root(name), "Attribute Has No Effect", detail)
 }
 
 // UpgradeState upgrades state written by the provider's SDK v2
@@ -338,6 +388,19 @@ func (r *CheckResource) Configure(ctx context.Context, req resource.ConfigureReq
 // requires.
 func (r *CheckResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
 	planNestedDefaults(ctx, req, resp, path.Root("request"), objectWithSetDefaults("assertion", assertionsWithPropertyAndTargetDefaults))
+
+	// An empty script is reported in the plan when it is known there.
+	// Create and Update check again for a script known only at apply time.
+	if req.Plan.Raw.IsNull() {
+		return
+	}
+	var planned CheckResourceModel
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("type"), &planned.Type)...)
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("script"), &planned.Script)...)
+	if resp.Diagnostics.HasError() || planned.Type.IsNull() || planned.Type.IsUnknown() || planned.Script.IsUnknown() {
+		return
+	}
+	validateCheckScript(&planned, &resp.Diagnostics)
 }
 
 func (r *CheckResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -588,10 +651,12 @@ func (r *CheckResource) validateCheckRuntimeSupport(ctx context.Context, model *
 }
 
 // validateCheckScript rejects a browser or multi-step check with an empty
-// planned script before any request. The API would accept the null that an
-// empty script is sent as, and clear a stored script. The planned value is
-// what counts: the configuration can't show a value known only at apply time,
-// and with ignore_changes = [script] the plan holds the stored script.
+// planned script. The API would accept the null that an empty script is sent
+// as, and clear a stored script. The planned value is what counts: the
+// configuration can't show a value known only at apply time, and with
+// ignore_changes = [script] the plan holds the stored script. ModifyPlan
+// calls it for a script known at plan time, and Create and Update before any
+// request.
 func validateCheckScript(model *CheckResourceModel, diags *diag.Diagnostics) {
 	checkType := model.Type.ValueString()
 	if checkType == string(checkly.CheckTypeAPI) || model.Script.ValueString() != "" {

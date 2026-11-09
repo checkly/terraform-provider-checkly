@@ -85,7 +85,8 @@ func TestAccBrowserCheckMissingScript(t *testing.T) {
 }
 
 // TestAccCheckEmptyScript covers every way that a browser check's planned
-// script ends up empty, on create and on update. The API would accept the
+// script ends up empty, on create and on update: the plan reports an omitted
+// or null script, and the apply one known only then. The API would accept the
 // update and clear the stored script.
 func TestAccCheckEmptyScript(t *testing.T) {
 	// Replacing the terraform_data resource makes its output unknown in the

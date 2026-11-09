@@ -182,8 +182,9 @@ func TestCheckUpdateRejectsOtherStoredTypes(t *testing.T) {
 }
 
 // An empty planned script fails before any request, which the nil client of
-// the resource would turn into a panic. The omitted, null and apply-time
-// values all reach the provider as this plan, as the acceptance test shows.
+// the resource would turn into a panic. ModifyPlan reports an omitted or null
+// script at plan time already; a script known only at apply time reaches
+// Create and Update as this plan, as the acceptance test shows.
 func TestCheckEmptyScriptSendsNoRequest(t *testing.T) {
 	ctx := context.Background()
 
