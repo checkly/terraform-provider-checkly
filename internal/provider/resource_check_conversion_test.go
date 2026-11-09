@@ -3,10 +3,12 @@ package provider
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/checkly/checkly-go-sdk/v2"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -46,7 +48,7 @@ func (c *checkWriteClient) UpdateMultiStepCheck(ctx context.Context, id string, 
 }
 
 // checkPlan returns a plan of checkly_check with the given attributes set.
-func checkPlan(t *testing.T, r *CheckResource, attributes map[string]string) tfsdk.Plan {
+func checkPlan(t *testing.T, r *CheckResource, attributes map[string]any) tfsdk.Plan {
 	t.Helper()
 	ctx := context.Background()
 
@@ -63,7 +65,7 @@ func checkPlan(t *testing.T, r *CheckResource, attributes map[string]string) tfs
 	return plan
 }
 
-func updateCheck(t *testing.T, client *checkWriteClient, attributes map[string]string) diag.Diagnostics {
+func updateCheck(t *testing.T, client *checkWriteClient, attributes map[string]any) diag.Diagnostics {
 	t.Helper()
 	ctx := context.Background()
 
@@ -77,8 +79,8 @@ func updateCheck(t *testing.T, client *checkWriteClient, attributes map[string]s
 func TestCheckUpdateKeepsUnmanagedFields(t *testing.T) {
 	scriptPath := "tests/main.spec.js"
 	dependencies := []checkly.ScriptDependency{{Path: "tests/helper.js", Content: "helper"}}
-	intent := &checkly.CheckIntent{Goal: "stay up"}
-	aiAutoRepair := true
+	storedIntent := &checkly.CheckIntent{Goal: "stored"}
+	storedAIAutoRepair := true
 
 	cases := map[string]struct {
 		plannedType string
@@ -90,14 +92,14 @@ func TestCheckUpdateKeepsUnmanagedFields(t *testing.T) {
 	}{
 		"api": {
 			plannedType: "API",
-			stored:      &checkly.APICheck{Intent: intent, AIAutoRepairEnabled: &aiAutoRepair},
+			stored:      &checkly.APICheck{Intent: storedIntent, AIAutoRepairEnabled: &storedAIAutoRepair},
 			update: func(c *checkWriteClient) (*string, []checkly.ScriptDependency, *checkly.CheckIntent, *bool) {
 				return nil, nil, c.updatedAPI.Intent, c.updatedAPI.AIAutoRepairEnabled
 			},
 		},
 		"browser": {
 			plannedType: "BROWSER",
-			stored:      &checkly.BrowserCheck{ScriptPath: &scriptPath, Dependencies: dependencies, Intent: intent, AIAutoRepairEnabled: &aiAutoRepair},
+			stored:      &checkly.BrowserCheck{ScriptPath: &scriptPath, Dependencies: dependencies, Intent: storedIntent, AIAutoRepairEnabled: &storedAIAutoRepair},
 			wantScript:  true,
 			update: func(c *checkWriteClient) (*string, []checkly.ScriptDependency, *checkly.CheckIntent, *bool) {
 				return c.updatedBrowser.ScriptPath, c.updatedBrowser.Dependencies, c.updatedBrowser.Intent, c.updatedBrowser.AIAutoRepairEnabled
@@ -105,7 +107,7 @@ func TestCheckUpdateKeepsUnmanagedFields(t *testing.T) {
 		},
 		"multi-step": {
 			plannedType: "MULTI_STEP",
-			stored:      &checkly.MultiStepCheck{ScriptPath: &scriptPath, Dependencies: dependencies, Intent: intent, AIAutoRepairEnabled: &aiAutoRepair},
+			stored:      &checkly.MultiStepCheck{ScriptPath: &scriptPath, Dependencies: dependencies, Intent: storedIntent, AIAutoRepairEnabled: &storedAIAutoRepair},
 			wantScript:  true,
 			update: func(c *checkWriteClient) (*string, []checkly.ScriptDependency, *checkly.CheckIntent, *bool) {
 				return c.updatedMulti.ScriptPath, c.updatedMulti.Dependencies, c.updatedMulti.Intent, c.updatedMulti.AIAutoRepairEnabled
@@ -113,14 +115,14 @@ func TestCheckUpdateKeepsUnmanagedFields(t *testing.T) {
 		},
 		"an API check changing type dispatches on the planned type": {
 			plannedType: "BROWSER",
-			stored:      &checkly.APICheck{Intent: intent, AIAutoRepairEnabled: &aiAutoRepair},
+			stored:      &checkly.APICheck{Intent: storedIntent, AIAutoRepairEnabled: &storedAIAutoRepair},
 			update: func(c *checkWriteClient) (*string, []checkly.ScriptDependency, *checkly.CheckIntent, *bool) {
 				return c.updatedBrowser.ScriptPath, c.updatedBrowser.Dependencies, c.updatedBrowser.Intent, c.updatedBrowser.AIAutoRepairEnabled
 			},
 		},
 		"a browser check changing type dispatches on the planned type": {
 			plannedType: "MULTI_STEP",
-			stored:      &checkly.BrowserCheck{ScriptPath: &scriptPath, Dependencies: dependencies, Intent: intent, AIAutoRepairEnabled: &aiAutoRepair},
+			stored:      &checkly.BrowserCheck{ScriptPath: &scriptPath, Dependencies: dependencies, Intent: storedIntent, AIAutoRepairEnabled: &storedAIAutoRepair},
 			wantScript:  true,
 			update: func(c *checkWriteClient) (*string, []checkly.ScriptDependency, *checkly.CheckIntent, *bool) {
 				return c.updatedMulti.ScriptPath, c.updatedMulti.Dependencies, c.updatedMulti.Intent, c.updatedMulti.AIAutoRepairEnabled
@@ -128,31 +130,50 @@ func TestCheckUpdateKeepsUnmanagedFields(t *testing.T) {
 		},
 	}
 
-	for name, c := range cases {
-		t.Run(name, func(t *testing.T) {
-			client := &checkWriteClient{stored: c.stored}
-			diags := updateCheck(t, client, map[string]string{"id": "abc", "type": c.plannedType, "script": "code"})
-			if diags.HasError() {
-				t.Fatal(diags)
-			}
+	plannedIntent := types.ObjectValueMust(checkIntentAttrTypes, map[string]attr.Value{
+		"goal":              types.StringValue("planned"),
+		"required_outcomes": types.ListNull(types.StringType),
+		"must_preserve":     types.ListNull(types.StringType),
+	})
 
-			gotPath, gotDependencies, gotIntent, gotAIAutoRepair := c.update(client)
-			if gotIntent != intent {
-				t.Errorf("intent = %+v, want the stored one", gotIntent)
-			}
-			if gotAIAutoRepair != &aiAutoRepair {
-				t.Errorf("aiAutoRepairEnabled = %v, want the stored one", gotAIAutoRepair)
-			}
-			if c.wantScript && (gotPath != &scriptPath || len(gotDependencies) != 1) {
-				t.Errorf("script path = %v, dependencies = %+v, want the stored ones", gotPath, gotDependencies)
-			}
-		})
+	for name, c := range cases {
+		// The intent and the automatic repair override come from the plan,
+		// whether it sets them or leaves them out, never from the stored check.
+		for _, planned := range []bool{true, false} {
+			t.Run(fmt.Sprintf("%s/planned=%v", name, planned), func(t *testing.T) {
+				attributes := map[string]any{"id": "abc", "type": c.plannedType, "script": "code"}
+				if planned {
+					attributes[checkIntentAttributeName] = plannedIntent
+					attributes[aiAutoRepairEnabledAttributeName] = types.BoolValue(false)
+				}
+				client := &checkWriteClient{stored: c.stored}
+				diags := updateCheck(t, client, attributes)
+				if diags.HasError() {
+					t.Fatal(diags)
+				}
+
+				gotPath, gotDependencies, gotIntent, gotAIAutoRepair := c.update(client)
+				if planned {
+					if gotIntent == nil || gotIntent.Goal != "planned" {
+						t.Errorf("intent = %+v, want the planned one", gotIntent)
+					}
+					if gotAIAutoRepair == nil || *gotAIAutoRepair {
+						t.Errorf("aiAutoRepairEnabled = %v, want the planned false", gotAIAutoRepair)
+					}
+				} else if gotIntent != nil || gotAIAutoRepair != nil {
+					t.Errorf("intent = %+v, aiAutoRepairEnabled = %v, want both cleared", gotIntent, gotAIAutoRepair)
+				}
+				if c.wantScript && (gotPath != &scriptPath || len(gotDependencies) != 1) {
+					t.Errorf("script path = %v, dependencies = %+v, want the stored ones", gotPath, gotDependencies)
+				}
+			})
+		}
 	}
 }
 
 func TestCheckUpdateSendsNoUpdateWhenTheReadFails(t *testing.T) {
 	client := &checkWriteClient{err: errors.New("502 Bad Gateway")}
-	diags := updateCheck(t, client, map[string]string{"id": "abc", "type": "API"})
+	diags := updateCheck(t, client, map[string]any{"id": "abc", "type": "API"})
 
 	if !diags.HasError() {
 		t.Fatal("expected an error diagnostic")
@@ -167,7 +188,7 @@ func TestCheckUpdateSendsNoUpdateWhenTheReadFails(t *testing.T) {
 
 func TestCheckUpdateRejectsOtherStoredTypes(t *testing.T) {
 	client := &checkWriteClient{stored: &checkly.TCPMonitor{}}
-	diags := updateCheck(t, client, map[string]string{"id": "abc", "type": "API"})
+	diags := updateCheck(t, client, map[string]any{"id": "abc", "type": "API"})
 
 	if !diags.HasError() {
 		t.Fatal("expected an error diagnostic")
@@ -191,7 +212,7 @@ func TestCheckEmptyScriptSendsNoRequest(t *testing.T) {
 	for _, checkType := range []string{"BROWSER", "MULTI_STEP"} {
 		t.Run(checkType, func(t *testing.T) {
 			r := &CheckResource{}
-			plan := checkPlan(t, r, map[string]string{"id": "abc", "type": checkType, "script": ""})
+			plan := checkPlan(t, r, map[string]any{"id": "abc", "type": checkType, "script": ""})
 
 			create := resource.CreateResponse{State: tfsdk.State{Schema: plan.Schema, Raw: plan.Raw}}
 			r.Create(ctx, resource.CreateRequest{Plan: plan}, &create)

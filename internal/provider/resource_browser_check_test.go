@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 )
 
 func TestAccBrowserCheckResourceBasic(t *testing.T) {
@@ -380,6 +381,10 @@ func TestAccBrowserCheckResourceMovedFromCheck(t *testing.T) {
 				use_global_alert_settings = true
 				locations                 = ["us-east-1"]
 				script                    = "console.log('test')"
+				ai_auto_repair_enabled    = false
+				intent = {
+					goal = "tf-acc: the page keeps loading"
+				}
 			}`,
 		},
 		{
@@ -391,6 +396,10 @@ func TestAccBrowserCheckResourceMovedFromCheck(t *testing.T) {
 					use_global_alert_settings = true
 					locations                 = ["us-east-1"]
 					script                    = "console.log('test')"
+					ai_auto_repair_enabled    = false
+					intent = {
+						goal = "tf-acc: the page keeps loading"
+					}
 				}
 
 				moved {
@@ -398,7 +407,16 @@ func TestAccBrowserCheckResourceMovedFromCheck(t *testing.T) {
 					to   = checkly_browser_check.test
 				}
 			`,
+			// The move carries the intent and the automatic repair override
+			// over, so it changes nothing.
+			ConfigPlanChecks: resource.ConfigPlanChecks{
+				PreApply: []plancheck.PlanCheck{
+					plancheck.ExpectResourceAction("checkly_browser_check.test", plancheck.ResourceActionNoop),
+				},
+			},
 			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_browser_check.test", "intent.goal", "tf-acc: the page keeps loading"),
+				resource.TestCheckResourceAttr("checkly_browser_check.test", "ai_auto_repair_enabled", "false"),
 				resource.TestCheckResourceAttr(
 					"checkly_browser_check.test",
 					"name",

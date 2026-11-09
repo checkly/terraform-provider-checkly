@@ -78,6 +78,8 @@ type CheckResourceModel struct {
 	GroupOrder               types.Int64  `tfsdk:"group_order"`
 	RetryStrategy            types.Object `tfsdk:"retry_strategy"`
 	TriggerIncident          types.Object `tfsdk:"trigger_incident"`
+	Intent                   types.Object `tfsdk:"intent"`
+	AIAutoRepairEnabled      types.Bool   `tfsdk:"ai_auto_repair_enabled"`
 }
 
 func (r *CheckResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -247,7 +249,9 @@ func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 				SupportsOnlyOnNetworkError: true,
 				DoubleCheck:                true,
 			}),
-			doubleCheckAttributeName: doubleCheckAttributeSchema(),
+			doubleCheckAttributeName:         doubleCheckAttributeSchema(),
+			checkIntentAttributeName:         makeCheckIntentSchema(),
+			aiAutoRepairEnabledAttributeName: makeAIAutoRepairEnabledSchema(),
 			"request": apiCheckRequestAttributeSchema(apiCheckRequestAttributeSchemaOptions{
 				Description: "An API check might have one request config. Only relevant when `type` is `API`.",
 			}),
@@ -701,10 +705,11 @@ func (r *CheckResource) createCheck(ctx context.Context, model *CheckResourceMod
 }
 
 // updateCheck updates the check through the endpoint of its planned type,
-// which also changes the type of a stored check of another type. What
-// checkly_check has no attributes for, and the per-type updates would clear
-// when sent empty, is copied from stored. With an error in diags, it returns
-// nil values without sending a request.
+// which also changes the type of a stored check of another type. The script
+// path and dependencies of browser and multi-step checks, which checkly_check
+// has no attributes for and the per-type updates would clear when sent empty,
+// are copied from stored. With an error in diags, it returns nil values
+// without sending a request.
 func (r *CheckResource) updateCheck(ctx context.Context, model *CheckResourceModel, stored commonCheckFields, diags *diag.Diagnostics) (checkly.Check, error) {
 	id := model.ID.ValueString()
 
@@ -715,8 +720,6 @@ func (r *CheckResource) updateCheck(ctx context.Context, model *CheckResourceMod
 		if diags.HasError() {
 			return nil, nil
 		}
-		check.Intent = stored.Intent
-		check.AIAutoRepairEnabled = stored.AIAutoRepairEnabled
 		return r.client.UpdateAPICheck(ctx, id, check)
 	case checkly.CheckTypeBrowser:
 		target := browserCheckModelFromCheckModel(model)
@@ -726,8 +729,6 @@ func (r *CheckResource) updateCheck(ctx context.Context, model *CheckResourceMod
 		}
 		check.ScriptPath = stored.ScriptPath
 		check.Dependencies = stored.Dependencies
-		check.Intent = stored.Intent
-		check.AIAutoRepairEnabled = stored.AIAutoRepairEnabled
 		return r.client.UpdateBrowserCheck(ctx, id, check)
 	case checkly.CheckTypeMultiStep:
 		target := multistepCheckModelFromCheckModel(model)
@@ -737,8 +738,6 @@ func (r *CheckResource) updateCheck(ctx context.Context, model *CheckResourceMod
 		}
 		check.ScriptPath = stored.ScriptPath
 		check.Dependencies = stored.Dependencies
-		check.Intent = stored.Intent
-		check.AIAutoRepairEnabled = stored.AIAutoRepairEnabled
 		return r.client.UpdateMultiStepCheck(ctx, id, check)
 	default:
 		return nil, plannedCheckTypeError(checkType)
@@ -956,6 +955,8 @@ func checkToModel(ctx context.Context, check checkly.Check, model *CheckResource
 	model.GroupOrder = types.Int64Value(int64(c.GroupOrder))
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, prior.RetryStrategy, diags)
 	model.TriggerIncident = triggerIncidentToObject(ctx, c.TriggerIncident, diags)
+	model.Intent = checkIntentToObject(ctx, c.Intent, prior.Intent, diags)
+	model.AIAutoRepairEnabled = types.BoolPointerValue(c.AIAutoRepairEnabled)
 
 	switch typed := check.(type) {
 	case *checkly.APICheck:

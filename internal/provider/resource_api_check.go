@@ -486,8 +486,8 @@ func apiCheckModelFromCheckModel(source *CheckResourceModel) APICheckResourceMod
 		GroupOrder:               source.GroupOrder,
 		RetryStrategy:            source.RetryStrategy,
 		TriggerIncident:          source.TriggerIncident,
-		Intent:                   types.ObjectNull(checkIntentAttrTypes),
-		AIAutoRepairEnabled:      types.BoolNull(),
+		Intent:                   source.Intent,
+		AIAutoRepairEnabled:      source.AIAutoRepairEnabled,
 	}
 }
 
