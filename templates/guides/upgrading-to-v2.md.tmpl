@@ -17,7 +17,7 @@ Existing state is upgraded automatically: you do not need to import or recreate 
 
 ## Recommended procedure
 
-1. Upgrade Terraform to 1.8 or later, if you haven't already. The v1.x releases of the provider work with it.
+1. Upgrade Terraform to 1.8 or later, if you haven't already. Do this before upgrading the provider: the v1.x releases you're on today already work with Terraform 1.8, so Terraform and the provider don't have to change at the same time.
 1. Run `terraform plan` with the latest v1.x release and apply any pending changes, so that you start from a clean plan.
 1. If you use `checkly_trigger_check` or `checkly_trigger_group`, take them out of your configuration and state, as described in [Removed resource types](#removed-resource-types).
 1. Back up your state, for example with `terraform state pull > backup.tfstate`. Once v2 has refreshed the state, v1.x can no longer read it; to go back to v1.x, restore the backup.
