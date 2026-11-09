@@ -109,6 +109,37 @@ jobs:
         # IP's GitHub API rate limit with other jobs.
         token: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: Mirror the SDK v2 provider release
+      # The upgrade tests install the last SDK v2 release of the provider in
+      # every subtest, and a single failed request to GitHub or the registry
+      # fails that subtest. Downloading it once, with retries, into a local
+      # mirror that Terraform must install it from keeps the tests off the
+      # network for it.
+      run: |
+        set -euo pipefail
+        version=$(sed -n 's/^const sdkv2ProviderVersion = "\(.*\)"$/\1/p' internal/provider/upgrade_sdkv2_test.go)
+        test -n "$version"
+        mirror="$RUNNER_TEMP/terraform-provider-mirror"
+        dir="$mirror/registry.terraform.io/checkly/checkly"
+        zip="terraform-provider-checkly_${version}_linux_amd64.zip"
+        base="https://github.com/checkly/terraform-provider-checkly/releases/download/v${version}"
+        mkdir -p "$dir"
+        curl -fsSL --retry 10 --retry-all-errors --retry-delay 10 -o "$RUNNER_TEMP/SHA256SUMS" "$base/terraform-provider-checkly_${version}_SHA256SUMS"
+        curl -fsSL --retry 10 --retry-all-errors --retry-delay 10 -o "$dir/$zip" "$base/$zip"
+        (cd "$dir" && grep " $zip\$" "$RUNNER_TEMP/SHA256SUMS" | sha256sum -c -)
+        cat > "$RUNNER_TEMP/terraform.tfrc" <<EOF
+        provider_installation {
+          filesystem_mirror {
+            path    = "$mirror"
+            include = ["registry.terraform.io/checkly/checkly"]
+          }
+          direct {
+            exclude = ["registry.terraform.io/checkly/checkly"]
+          }
+        }
+        EOF
+        echo "TF_CLI_CONFIG_FILE=$RUNNER_TEMP/terraform.tfrc" >> "$GITHUB_ENV"
+
     - name: TF acceptance tests
       timeout-minutes: 10
       # Limit parallelism to 4 to avoid hitting Checkly API rate limits.

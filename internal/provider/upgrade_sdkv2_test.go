@@ -16,7 +16,10 @@ import (
 )
 
 // sdkv2ProviderVersion is the last release of the provider built on the
-// Terraform Plugin SDK v2.
+// Terraform Plugin SDK v2. The Build & Test workflow reads this line to fill
+// a provider mirror, and CI installs registry.terraform.io/checkly/checkly
+// only from that mirror, so keep the line's format and don't test against
+// other releases without adding them to the mirror.
 const sdkv2ProviderVersion = "1.32.0"
 
 // sdkv2UpgradeCase describes the same objects twice: as configured for the
