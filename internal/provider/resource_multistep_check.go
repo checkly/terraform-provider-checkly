@@ -376,8 +376,8 @@ func multistepCheckModelFromCheckModel(source *CheckResourceModel) MultistepChec
 		GroupOrder:               source.GroupOrder,
 		RetryStrategy:            source.RetryStrategy,
 		TriggerIncident:          source.TriggerIncident,
-		Intent:                   types.ObjectNull(checkIntentAttrTypes),
-		AIAutoRepairEnabled:      types.BoolNull(),
+		Intent:                   source.Intent,
+		AIAutoRepairEnabled:      source.AIAutoRepairEnabled,
 	}
 }
 

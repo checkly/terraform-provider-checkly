@@ -276,6 +276,8 @@ func TestUpgradeSDKv2State(t *testing.T) {
 		state := upgradeSDKv2Fixture(t, NewCheckResource(), "check")
 		requireStateValue(t, state, path.Root("type"), types.StringValue("API"))
 		requireStateValue(t, state, path.Root("double_check"), types.BoolValue(true))
+		requireStateNull(t, state, path.Root(checkIntentAttributeName))
+		requireStateNull(t, state, path.Root(aiAutoRepairEnabledAttributeName))
 		requireStateValue(t, state, path.Root("retry_strategy").AtName("type"), types.StringValue("FIXED"))
 		requireSDKv2CheckRequest(t, state)
 	})
@@ -389,6 +391,12 @@ func TestMoveSDKv2State(t *testing.T) {
 			}
 			requireStateValue(t, resp.TargetState, path.Root("id"), types.StringValue("123"))
 			requireStateValue(t, resp.TargetState, c.attr, c.want)
+			// v1 had no intent or automatic repair override, so a check moved
+			// from its state has neither.
+			if c.sourceType == "checkly_check" {
+				requireStateNull(t, resp.TargetState, path.Root(checkIntentAttributeName))
+				requireStateNull(t, resp.TargetState, path.Root(aiAutoRepairEnabledAttributeName))
+			}
 			if c.check != nil {
 				c.check(t, resp.TargetState)
 			}

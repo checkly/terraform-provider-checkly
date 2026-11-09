@@ -254,35 +254,44 @@ func TestCheckIntentStatementValidators(t *testing.T) {
 	}
 }
 
-// checkly_check has no intent attributes, so a model derived from it holds
-// typed nulls: writing an untyped object to the state of a per-type resource
-// fails.
-func TestCheckModelsFromCheckModelHaveNoIntent(t *testing.T) {
-	source := &CheckResourceModel{}
-	want := types.ObjectNull(checkIntentAttrTypes)
+// A model derived from checkly_check carries its intent and automatic repair
+// override, so a create, an update and a move keep them.
+func TestCheckModelsFromCheckModelCarryIntent(t *testing.T) {
+	intent := types.ObjectValueMust(checkIntentAttrTypes, map[string]attr.Value{
+		"goal":              types.StringValue("stay up"),
+		"required_outcomes": types.ListValueMust(types.StringType, []attr.Value{types.StringValue("it loads")}),
+		"must_preserve":     types.ListNull(types.StringType),
+	})
 
-	api := apiCheckModelFromCheckModel(source)
-	browser := browserCheckModelFromCheckModel(source)
-	multistep := multistepCheckModelFromCheckModel(source)
-
-	cases := map[string]struct {
-		intent       types.Object
-		aiAutoRepair types.Bool
-	}{
-		"api":        {api.Intent, api.AIAutoRepairEnabled},
-		"browser":    {browser.Intent, browser.AIAutoRepairEnabled},
-		"multi-step": {multistep.Intent, multistep.AIAutoRepairEnabled},
+	sources := map[string]*CheckResourceModel{
+		"set":   {Intent: intent, AIAutoRepairEnabled: types.BoolValue(false)},
+		"unset": {Intent: types.ObjectNull(checkIntentAttrTypes), AIAutoRepairEnabled: types.BoolNull()},
 	}
 
-	for name, c := range cases {
-		t.Run(name, func(t *testing.T) {
-			if !c.intent.Equal(want) {
-				t.Errorf("intent = %#v, want a typed null", c.intent)
-			}
-			if !c.aiAutoRepair.IsNull() {
-				t.Errorf("ai_auto_repair_enabled = %s, want null", c.aiAutoRepair)
-			}
-		})
+	for sourceName, source := range sources {
+		api := apiCheckModelFromCheckModel(source)
+		browser := browserCheckModelFromCheckModel(source)
+		multistep := multistepCheckModelFromCheckModel(source)
+
+		cases := map[string]struct {
+			intent       types.Object
+			aiAutoRepair types.Bool
+		}{
+			"api":        {api.Intent, api.AIAutoRepairEnabled},
+			"browser":    {browser.Intent, browser.AIAutoRepairEnabled},
+			"multi-step": {multistep.Intent, multistep.AIAutoRepairEnabled},
+		}
+
+		for name, c := range cases {
+			t.Run(sourceName+"/"+name, func(t *testing.T) {
+				if !c.intent.Equal(source.Intent) {
+					t.Errorf("intent = %#v, want %#v", c.intent, source.Intent)
+				}
+				if !c.aiAutoRepair.Equal(source.AIAutoRepairEnabled) {
+					t.Errorf("ai_auto_repair_enabled = %s, want %s", c.aiAutoRepair, source.AIAutoRepairEnabled)
+				}
+			})
+		}
 	}
 }
 
@@ -292,6 +301,7 @@ func TestCheckResourcesHaveIntentAttributes(t *testing.T) {
 	ctx := context.Background()
 
 	cases := map[string]resource.Resource{
+		"checkly_check":                  NewCheckResource(),
 		"checkly_api_check":              NewAPICheckResource(),
 		"checkly_browser_check":          NewBrowserCheckResource(),
 		"checkly_multistep_check":        NewMultistepCheckResource(),
@@ -501,6 +511,42 @@ func TestAccAPICheckIntent(t *testing.T) {
 		},
 		read: func(ctx context.Context, client checkly.Client, id string) (*checkly.CheckIntent, *bool, error) {
 			check, err := client.GetAPICheck(ctx, id)
+			if err != nil {
+				return nil, nil, err
+			}
+			return check.Intent, check.AIAutoRepairEnabled, nil
+		},
+	})
+}
+
+func TestAccCheckIntent(t *testing.T) {
+	testAccCheckIntent(t, checkIntentCase{
+		resource: "checkly_check.test",
+		config: func(name, attributes string) string {
+			return fmt.Sprintf(`
+				resource "checkly_check" "test" {
+					name                      = %q
+					type                      = "BROWSER"
+					activated                 = false
+					frequency                 = 10
+					locations                 = ["eu-central-1"]
+					use_global_alert_settings = true
+					script                    = "console.log('test')"
+					%s
+				}
+			`, name, attributes)
+		},
+		set: func(ctx context.Context, client checkly.Client, id string, intent *checkly.CheckIntent, aiAutoRepair *bool) error {
+			check, err := client.GetBrowserCheck(ctx, id)
+			if err != nil {
+				return err
+			}
+			check.Intent, check.AIAutoRepairEnabled = intent, aiAutoRepair
+			_, err = client.UpdateBrowserCheck(ctx, id, *check)
+			return err
+		},
+		read: func(ctx context.Context, client checkly.Client, id string) (*checkly.CheckIntent, *bool, error) {
+			check, err := client.GetBrowserCheck(ctx, id)
 			if err != nil {
 				return nil, nil, err
 			}

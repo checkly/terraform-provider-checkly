@@ -2492,7 +2492,6 @@ func TestAccCheckUpdateKeepsUnmanagedValues(t *testing.T) {
 		`, name)
 	}
 	const r = "checkly_check.test"
-	intent := "tf-acc: the page keeps loading"
 
 	var id string
 	accTestCase(t, []resource.TestStep{
@@ -2511,10 +2510,7 @@ func TestAccCheckUpdateKeepsUnmanagedValues(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				aiAutoRepair := false
 				scriptPath := "tests/keep.spec.js"
-				check.AIAutoRepairEnabled = &aiAutoRepair
-				check.Intent = &checkly.CheckIntent{Goal: intent}
 				check.ScriptPath = &scriptPath
 				check.Dependencies = []checkly.ScriptDependency{{Path: "tests/helper.js", Content: "module.exports = {}"}}
 				if _, err := client.UpdateBrowserCheck(ctx, id, *check); err != nil {
@@ -2526,12 +2522,6 @@ func TestAccCheckUpdateKeepsUnmanagedValues(t *testing.T) {
 				check, err := testAccClient().GetBrowserCheck(context.Background(), id)
 				if err != nil {
 					return err
-				}
-				if check.Intent == nil || check.Intent.Goal != intent {
-					return fmt.Errorf("intent = %+v, want the goal %q", check.Intent, intent)
-				}
-				if check.AIAutoRepairEnabled == nil || *check.AIAutoRepairEnabled {
-					return fmt.Errorf("aiAutoRepairEnabled = %v, want false", check.AIAutoRepairEnabled)
 				}
 				if check.ScriptPath == nil || *check.ScriptPath != "tests/keep.spec.js" {
 					return fmt.Errorf("scriptPath = %v, want tests/keep.spec.js", check.ScriptPath)
