@@ -42,17 +42,17 @@ type HeartbeatMonitorResource struct {
 
 // HeartbeatMonitorResourceModel describes the resource data model.
 type HeartbeatMonitorResourceModel struct {
-	ID                       types.String `tfsdk:"id"`
-	Name                     types.String `tfsdk:"name"`
-	Description              types.String `tfsdk:"description"`
-	Activated                types.Bool   `tfsdk:"activated"`
-	Muted                    types.Bool   `tfsdk:"muted"`
-	Tags                     types.Set    `tfsdk:"tags"`
-	AlertSettings            types.Object `tfsdk:"alert_settings"`
-	UseGlobalAlertSettings   types.Bool   `tfsdk:"use_global_alert_settings"`
-	Heartbeat                types.Object `tfsdk:"heartbeat"`
-	AlertChannelSubscription types.Set    `tfsdk:"alert_channel_subscription"`
-	TriggerIncident          types.Object `tfsdk:"trigger_incident"`
+	ID                        types.String `tfsdk:"id"`
+	Name                      types.String `tfsdk:"name"`
+	Description               types.String `tfsdk:"description"`
+	Activated                 types.Bool   `tfsdk:"activated"`
+	Muted                     types.Bool   `tfsdk:"muted"`
+	Tags                      types.Set    `tfsdk:"tags"`
+	AlertSettings             types.Object `tfsdk:"alert_settings"`
+	UseGlobalAlertSettings    types.Bool   `tfsdk:"use_global_alert_settings"`
+	Heartbeat                 types.Object `tfsdk:"heartbeat"`
+	AlertChannelSubscriptions types.Set    `tfsdk:"alert_channel_subscriptions"`
+	TriggerIncident           types.Object `tfsdk:"trigger_incident"`
 }
 
 // HeartbeatMonitorHeartbeatModel describes the heartbeat attribute data model.
@@ -163,8 +163,6 @@ func (r *HeartbeatMonitorResource) Schema(ctx context.Context, req resource.Sche
 					},
 				},
 			},
-		},
-		Blocks: map[string]schema.Block{
 			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{
 				Monitor: true,
 			}),
@@ -328,7 +326,7 @@ func heartbeatMonitorFromModel(ctx context.Context, model *HeartbeatMonitorResou
 		AlertSettings:             alertSettingsFromObject(ctx, model.AlertSettings, diags),
 		UseGlobalAlertSettings:    model.UseGlobalAlertSettings.ValueBool(),
 		Heartbeat:                 heartbeatMonitorHeartbeatFromObject(ctx, model.Heartbeat, diags),
-		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscription, diags),
+		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscriptions, diags),
 		TriggerIncident:           triggerIncidentFromObject(ctx, model.TriggerIncident, diags),
 	}
 
@@ -364,7 +362,7 @@ func heartbeatMonitorToModel(ctx context.Context, c *checkly.HeartbeatMonitor, m
 	model.AlertSettings = alertSettingsToObject(ctx, c.AlertSettings, model.AlertSettings, diags)
 	model.UseGlobalAlertSettings = types.BoolValue(c.UseGlobalAlertSettings)
 	model.Heartbeat = heartbeatMonitorHeartbeatToObject(ctx, c.Heartbeat, diags)
-	model.AlertChannelSubscription = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, diags)
+	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, model.AlertChannelSubscriptions, diags)
 	model.TriggerIncident = triggerIncidentToObject(ctx, c.TriggerIncident, diags)
 }
 

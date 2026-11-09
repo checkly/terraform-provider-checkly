@@ -63,7 +63,7 @@ resource "checkly_check_group_v2" "production-api" {
     }
 
     # Subscribe alert channels to this group.
-    alert_channel_subscription = [
+    alert_channel_subscriptions = [
       {
         channel_id = 1234
         activated  = true
@@ -226,7 +226,7 @@ resource "checkly_check_group_v2" "with-alert-channels" {
       }
     }
 
-    alert_channel_subscription = [
+    alert_channel_subscriptions = [
       {
         channel_id = checkly_alert_channel.email.id
         activated  = true

@@ -519,10 +519,12 @@ func TestAccGRPCMonitorUnsetAllAttributes(t *testing.T) {
 				private_locations         = [checkly_private_location.test.slug_name]
 				runtime_id                = "2023.09"
 
-				alert_channel_subscription {
-					channel_id = checkly_alert_channel.test.id
-					activated  = true
-				}
+				alert_channel_subscriptions = [
+					{
+						channel_id = checkly_alert_channel.test.id
+						activated  = true
+					},
+				]
 
 				retry_strategy = {
 					type = "LINEAR"
@@ -555,7 +557,7 @@ func TestAccGRPCMonitorUnsetAllAttributes(t *testing.T) {
 			`),
 			Check: resource.ComposeAggregateTestCheckFunc(
 				resource.TestCheckResourceAttr(name, "description", "description"),
-				resource.TestCheckResourceAttr(name, "alert_channel_subscription.#", "1"),
+				resource.TestCheckResourceAttr(name, "alert_channel_subscriptions.#", "1"),
 				resource.TestCheckResourceAttr(name, "trigger_incident.%", "5"),
 				resource.TestCheckResourceAttr(name, "private_locations.#", "1"),
 				resource.TestCheckResourceAttr(name, "runtime_id", "2023.09"),
@@ -575,7 +577,7 @@ func TestAccGRPCMonitorUnsetAllAttributes(t *testing.T) {
 				resource.TestCheckResourceAttr(name, "run_parallel", "false"),
 				resource.TestCheckResourceAttr(name, "group_id", "0"),
 				resource.TestCheckResourceAttr(name, "use_global_alert_settings", "false"),
-				resource.TestCheckResourceAttr(name, "alert_channel_subscription.#", "0"),
+				resource.TestCheckResourceAttr(name, "alert_channel_subscriptions.#", "0"),
 				resource.TestCheckResourceAttr(name, "retry_strategy.type", "NO_RETRIES"),
 				resource.TestCheckNoResourceAttr(name, "trigger_incident"),
 				resource.TestCheckNoResourceAttr(name, "private_locations.#"),

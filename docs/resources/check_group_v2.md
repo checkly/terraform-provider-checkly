@@ -83,7 +83,7 @@ resource "checkly_check_group_v2" "production-api" {
     }
 
     # Subscribe alert channels to this group.
-    alert_channel_subscription = [
+    alert_channel_subscriptions = [
       {
         channel_id = 1234
         activated  = true
@@ -246,7 +246,7 @@ resource "checkly_check_group_v2" "with-alert-channels" {
       }
     }
 
-    alert_channel_subscription = [
+    alert_channel_subscriptions = [
       {
         channel_id = checkly_alert_channel.email.id
         activated  = true
@@ -370,12 +370,12 @@ Required:
 
 Optional:
 
-- `alert_channel_subscription` (Attributes Set) An array of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your group, we won't be able to alert you even if a check in the group starts failing. (see [below for nested schema](#nestedatt--enforce_alert_settings--alert_channel_subscription))
+- `alert_channel_subscriptions` (Attributes Set) A set of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your group, we won't be able to alert you even if a check in the group starts failing. (see [below for nested schema](#nestedatt--enforce_alert_settings--alert_channel_subscriptions))
 - `alert_settings` (Attributes) Determines the alert escalation policy for the check. (see [below for nested schema](#nestedatt--enforce_alert_settings--alert_settings))
 - `use_global_alert_settings` (Boolean) Whether to use account level alert settings instead of the group's alert settings.Default (`false`).
 
-<a id="nestedatt--enforce_alert_settings--alert_channel_subscription"></a>
-### Nested Schema for `enforce_alert_settings.alert_channel_subscription`
+<a id="nestedatt--enforce_alert_settings--alert_channel_subscriptions"></a>
+### Nested Schema for `enforce_alert_settings.alert_channel_subscriptions`
 
 Required:
 

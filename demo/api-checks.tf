@@ -254,13 +254,14 @@ resource "checkly_api_check" "check-with-alert-channels" {
     }]
   }
 
-  alert_channel_subscription {
-    channel_id = checkly_alert_channel.email_ac.id
-    activated  = true
-  }
-
-  alert_channel_subscription {
-    channel_id = checkly_alert_channel.sms_ac.id
-    activated  = true
-  }
+  alert_channel_subscriptions = [
+    {
+      channel_id = checkly_alert_channel.email_ac.id
+      activated  = true
+    },
+    {
+      channel_id = checkly_alert_channel.sms_ac.id
+      activated  = true
+    },
+  ]
 }

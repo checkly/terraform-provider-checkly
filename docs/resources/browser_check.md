@@ -183,7 +183,7 @@ resource "checkly_browser_check" "example_6" {
 
 - `activated` (Boolean) Determines if the check is running or not. Possible values `true`, and `false`. (Default `true`).
 - `ai_auto_repair_enabled` (Boolean) Overrides the account's automatic repair setting for this check. Leave it out to inherit the account setting. Automatic repair supports browser and multi-step checks only, so this setting has no effect on other check types today, and it needs an `intent` with at least one statement. A repair is saved to the check, so it shows as a change to `script`, and the next apply restores the configured script unless you copy the repaired script into the configuration or add `script` to `ignore_changes`. An override edited in the web app and absent from the configuration is removed by the next apply, every time. To leave it to the web app, add `ai_auto_repair_enabled` to `ignore_changes`.
-- `alert_channel_subscription` (Block Set) An array of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your check, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedblock--alert_channel_subscription))
+- `alert_channel_subscriptions` (Attributes Set) A set of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your check, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedatt--alert_channel_subscriptions))
 - `alert_settings` (Attributes) Determines the alert escalation policy for the check. (see [below for nested schema](#nestedatt--alert_settings))
 - `dependency` (Block List) Script dependency files for editor-style multi-file scripts. Use together with `script_path` to mirror a multi-file layout. (see [below for nested schema](#nestedblock--dependency))
 - `description` (String) A description of the check.
@@ -209,8 +209,8 @@ resource "checkly_browser_check" "example_6" {
 
 - `id` (String) The ID of the check.
 
-<a id="nestedblock--alert_channel_subscription"></a>
-### Nested Schema for `alert_channel_subscription`
+<a id="nestedatt--alert_channel_subscriptions"></a>
+### Nested Schema for `alert_channel_subscriptions`
 
 Required:
 

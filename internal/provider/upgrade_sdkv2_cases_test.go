@@ -291,10 +291,12 @@ resource "checkly_check" "test" {
     }
   }
 
-  alert_channel_subscription {
-    channel_id = checkly_alert_channel.email.id
-    activated  = true
-  }
+  alert_channel_subscriptions = [
+    {
+      channel_id = checkly_alert_channel.email.id
+      activated  = true
+    },
+  ]
 }
 `),
 
@@ -609,10 +611,12 @@ resource "checkly_heartbeat_monitor" "test" {
     notify_subscribers = true
   }
 
-  alert_channel_subscription {
-    channel_id = checkly_alert_channel.email.id
-    activated  = true
-  }
+  alert_channel_subscriptions = [
+    {
+      channel_id = checkly_alert_channel.email.id
+      activated  = true
+    },
+  ]
 }
 `),
 
@@ -955,10 +959,12 @@ resource "checkly_check_group" "test" {
     }
   }
 
-  alert_channel_subscription {
-    channel_id = checkly_alert_channel.email.id
-    activated  = true
-  }
+  alert_channel_subscriptions = [
+    {
+      channel_id = checkly_alert_channel.email.id
+      activated  = true
+    },
+  ]
 }
 `),
 
@@ -1170,7 +1176,7 @@ resource "checkly_check_group_v2" "test" {
         percentage = 50
       }
     }
-    alert_channel_subscription = [
+    alert_channel_subscriptions = [
       {
         channel_id = checkly_alert_channel.email.id
         activated  = true
@@ -2015,10 +2021,12 @@ resource "checkly_url_monitor" "test" {
     notify_subscribers = false
   }
 
-  alert_channel_subscription {
-    channel_id = checkly_alert_channel.email.id
-    activated  = true
-  }
+  alert_channel_subscriptions = [
+    {
+      channel_id = checkly_alert_channel.email.id
+      activated  = true
+    },
+  ]
 }
 `),
 

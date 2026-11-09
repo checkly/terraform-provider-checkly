@@ -102,12 +102,14 @@ resource "checkly_check_group" "group-with-alert-channels" {
     "eu-west-2",
   ]
 
-  alert_channel_subscription {
-    channel_id = checkly_alert_channel.email_ac.id
-    activated  = true
-  }
-  alert_channel_subscription {
-    channel_id = checkly_alert_channel.sms_ac.id
-    activated  = false
-  }
+  alert_channel_subscriptions = [
+    {
+      channel_id = checkly_alert_channel.email_ac.id
+      activated  = true
+    },
+    {
+      channel_id = checkly_alert_channel.sms_ac.id
+      activated  = false
+    },
+  ]
 }

@@ -39,32 +39,32 @@ type BrowserCheckResource struct {
 
 // BrowserCheckResourceModel describes the resource data model.
 type BrowserCheckResourceModel struct {
-	ID                       types.String `tfsdk:"id"`
-	Name                     types.String `tfsdk:"name"`
-	Description              types.String `tfsdk:"description"`
-	Frequency                types.Int64  `tfsdk:"frequency"`
-	Activated                types.Bool   `tfsdk:"activated"`
-	Muted                    types.Bool   `tfsdk:"muted"`
-	ShouldFail               types.Bool   `tfsdk:"should_fail"`
-	RunParallel              types.Bool   `tfsdk:"run_parallel"`
-	Locations                types.Set    `tfsdk:"locations"`
-	Script                   types.String `tfsdk:"script"`
-	ScriptPath               types.String `tfsdk:"script_path"`
-	Dependency               types.List   `tfsdk:"dependency"`
-	EnvironmentVariable      types.List   `tfsdk:"environment_variable"`
-	Tags                     types.Set    `tfsdk:"tags"`
-	SSLCheckDomain           types.String `tfsdk:"ssl_check_domain"`
-	RuntimeID                types.String `tfsdk:"runtime_id"`
-	AlertChannelSubscription types.Set    `tfsdk:"alert_channel_subscription"`
-	PrivateLocations         types.Set    `tfsdk:"private_locations"`
-	AlertSettings            types.Object `tfsdk:"alert_settings"`
-	UseGlobalAlertSettings   types.Bool   `tfsdk:"use_global_alert_settings"`
-	GroupID                  types.Int64  `tfsdk:"group_id"`
-	GroupOrder               types.Int64  `tfsdk:"group_order"`
-	RetryStrategy            types.Object `tfsdk:"retry_strategy"`
-	TriggerIncident          types.Object `tfsdk:"trigger_incident"`
-	Intent                   types.Object `tfsdk:"intent"`
-	AIAutoRepairEnabled      types.Bool   `tfsdk:"ai_auto_repair_enabled"`
+	ID                        types.String `tfsdk:"id"`
+	Name                      types.String `tfsdk:"name"`
+	Description               types.String `tfsdk:"description"`
+	Frequency                 types.Int64  `tfsdk:"frequency"`
+	Activated                 types.Bool   `tfsdk:"activated"`
+	Muted                     types.Bool   `tfsdk:"muted"`
+	ShouldFail                types.Bool   `tfsdk:"should_fail"`
+	RunParallel               types.Bool   `tfsdk:"run_parallel"`
+	Locations                 types.Set    `tfsdk:"locations"`
+	Script                    types.String `tfsdk:"script"`
+	ScriptPath                types.String `tfsdk:"script_path"`
+	Dependency                types.List   `tfsdk:"dependency"`
+	EnvironmentVariable       types.List   `tfsdk:"environment_variable"`
+	Tags                      types.Set    `tfsdk:"tags"`
+	SSLCheckDomain            types.String `tfsdk:"ssl_check_domain"`
+	RuntimeID                 types.String `tfsdk:"runtime_id"`
+	AlertChannelSubscriptions types.Set    `tfsdk:"alert_channel_subscriptions"`
+	PrivateLocations          types.Set    `tfsdk:"private_locations"`
+	AlertSettings             types.Object `tfsdk:"alert_settings"`
+	UseGlobalAlertSettings    types.Bool   `tfsdk:"use_global_alert_settings"`
+	GroupID                   types.Int64  `tfsdk:"group_id"`
+	GroupOrder                types.Int64  `tfsdk:"group_order"`
+	RetryStrategy             types.Object `tfsdk:"retry_strategy"`
+	TriggerIncident           types.Object `tfsdk:"trigger_incident"`
+	Intent                    types.Object `tfsdk:"intent"`
+	AIAutoRepairEnabled       types.Bool   `tfsdk:"ai_auto_repair_enabled"`
 }
 
 func (r *BrowserCheckResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -188,6 +188,7 @@ func (r *BrowserCheckResource) Schema(ctx context.Context, req resource.SchemaRe
 			retryStrategyAttributeName: makeRetryStrategyAttributeSchema(RetryStrategyAttributeSchemaOptions{
 				SupportsOnlyOnNetworkError: true,
 			}),
+			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{}),
 		},
 		Blocks: map[string]schema.Block{
 			"dependency": schema.ListNestedBlock{
@@ -208,7 +209,6 @@ func (r *BrowserCheckResource) Schema(ctx context.Context, req resource.SchemaRe
 			environmentVariableAttributeName: makeEnvironmentVariableSchema(EnvironmentVariableAttributeSchemaOptions{
 				Description: "Insert environment variables into the runtime environment. Use global environment variables whenever possible.",
 			}),
-			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{}),
 		},
 	}
 }
@@ -348,32 +348,32 @@ func (r *BrowserCheckResource) MoveState(ctx context.Context) []resource.StateMo
 // have no source value.
 func browserCheckModelFromCheckModel(source *CheckResourceModel) BrowserCheckResourceModel {
 	return BrowserCheckResourceModel{
-		ID:                       source.ID,
-		Name:                     source.Name,
-		Description:              source.Description,
-		Frequency:                source.Frequency,
-		Activated:                source.Activated,
-		Muted:                    source.Muted,
-		ShouldFail:               source.ShouldFail,
-		RunParallel:              source.RunParallel,
-		Locations:                source.Locations,
-		Script:                   source.Script,
-		ScriptPath:               types.StringNull(),
-		Dependency:               types.ListValueMust(types.ObjectType{AttrTypes: scriptDependencyAttrTypes}, []attr.Value{}),
-		EnvironmentVariable:      source.EnvironmentVariable,
-		Tags:                     source.Tags,
-		SSLCheckDomain:           source.SSLCheckDomain,
-		RuntimeID:                source.RuntimeID,
-		AlertChannelSubscription: source.AlertChannelSubscription,
-		PrivateLocations:         source.PrivateLocations,
-		AlertSettings:            source.AlertSettings,
-		UseGlobalAlertSettings:   source.UseGlobalAlertSettings,
-		GroupID:                  source.GroupID,
-		GroupOrder:               source.GroupOrder,
-		RetryStrategy:            source.RetryStrategy,
-		TriggerIncident:          source.TriggerIncident,
-		Intent:                   source.Intent,
-		AIAutoRepairEnabled:      source.AIAutoRepairEnabled,
+		ID:                        source.ID,
+		Name:                      source.Name,
+		Description:               source.Description,
+		Frequency:                 source.Frequency,
+		Activated:                 source.Activated,
+		Muted:                     source.Muted,
+		ShouldFail:                source.ShouldFail,
+		RunParallel:               source.RunParallel,
+		Locations:                 source.Locations,
+		Script:                    source.Script,
+		ScriptPath:                types.StringNull(),
+		Dependency:                types.ListValueMust(types.ObjectType{AttrTypes: scriptDependencyAttrTypes}, []attr.Value{}),
+		EnvironmentVariable:       source.EnvironmentVariable,
+		Tags:                      source.Tags,
+		SSLCheckDomain:            source.SSLCheckDomain,
+		RuntimeID:                 source.RuntimeID,
+		AlertChannelSubscriptions: source.AlertChannelSubscriptions,
+		PrivateLocations:          source.PrivateLocations,
+		AlertSettings:             source.AlertSettings,
+		UseGlobalAlertSettings:    source.UseGlobalAlertSettings,
+		GroupID:                   source.GroupID,
+		GroupOrder:                source.GroupOrder,
+		RetryStrategy:             source.RetryStrategy,
+		TriggerIncident:           source.TriggerIncident,
+		Intent:                    source.Intent,
+		AIAutoRepairEnabled:       source.AIAutoRepairEnabled,
 	}
 }
 
@@ -414,7 +414,7 @@ func browserCheckFromModel(ctx context.Context, model *BrowserCheckResourceModel
 		UseGlobalAlertSettings:    model.UseGlobalAlertSettings.ValueBool(),
 		GroupID:                   model.GroupID.ValueInt64(),
 		GroupOrder:                int(model.GroupOrder.ValueInt64()),
-		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscription, diags),
+		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscriptions, diags),
 		PrivateLocations:          &privateLocations,
 		RetryStrategy:             retryStrategyFromObject(ctx, model.RetryStrategy, diags),
 		TriggerIncident:           triggerIncidentFromObject(ctx, model.TriggerIncident, diags),
@@ -505,7 +505,7 @@ func browserCheckToModel(ctx context.Context, c *checkly.BrowserCheck, model *Br
 		model.RuntimeID = types.StringNull()
 	}
 
-	model.AlertChannelSubscription = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, diags)
+	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, prior.AlertChannelSubscriptions, diags)
 
 	if c.PrivateLocations != nil {
 		model.PrivateLocations = setFromStrings(ctx, *c.PrivateLocations, diags)

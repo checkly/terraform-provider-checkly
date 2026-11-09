@@ -134,15 +134,16 @@ resource "checkly_api_check" "example_check_3" {
     url = "https://api.example.com/"
   }
 
-  alert_channel_subscription {
-    channel_id = checkly_alert_channel.email_ac1.id
-    activated  = true
-  }
-
-  alert_channel_subscription {
-    channel_id = checkly_alert_channel.email_ac2.id
-    activated  = true
-  }
+  alert_channel_subscriptions = [
+    {
+      channel_id = checkly_alert_channel.email_ac1.id
+      activated  = true
+    },
+    {
+      channel_id = checkly_alert_channel.email_ac2.id
+      activated  = true
+    },
+  ]
 }
 
 # Migrating an existing checkly_check resource with type = "API" without

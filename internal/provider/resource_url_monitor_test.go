@@ -11,6 +11,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 
 	"github.com/checkly/checkly-go-sdk/v2"
 )
@@ -1490,32 +1493,33 @@ func TestAccURLMonitorAlertChannelSubscriptions(t *testing.T) {
 						}]
 					}
 
-					alert_channel_subscription {
-						channel_id = checkly_alert_channel.email_1.id
-						activated  = true
-					}
-
-					alert_channel_subscription {
-						channel_id = checkly_alert_channel.email_2.id
-						activated  = false
-					}
+					alert_channel_subscriptions = [
+						{
+							channel_id = checkly_alert_channel.email_1.id
+							activated  = true
+						},
+						{
+							channel_id = checkly_alert_channel.email_2.id
+							activated  = false
+						},
+					]
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_url_monitor.test",
-					"alert_channel_subscription.#",
+					"alert_channel_subscriptions.#",
 					"2",
 				),
 				testCheckAlertChannelSubscription(
 					"checkly_url_monitor.test",
-					"alert_channel_subscription",
+					"alert_channel_subscriptions",
 					"checkly_alert_channel.email_1",
 					"true",
 				),
 				testCheckAlertChannelSubscription(
 					"checkly_url_monitor.test",
-					"alert_channel_subscription",
+					"alert_channel_subscriptions",
 					"checkly_alert_channel.email_2",
 					"false",
 				),
@@ -1558,49 +1562,106 @@ func TestAccURLMonitorAlertChannelSubscriptions(t *testing.T) {
 						}]
 					}
 
-					alert_channel_subscription {
-						channel_id = checkly_alert_channel.email_1.id
-						activated  = false
-					}
-
-					alert_channel_subscription {
-						channel_id = checkly_alert_channel.email_2.id
-						activated  = true
-					}
-
-					alert_channel_subscription {
-						channel_id = checkly_alert_channel.email_3.id
-						activated  = true
-					}
+					alert_channel_subscriptions = [
+						{
+							channel_id = checkly_alert_channel.email_1.id
+							activated  = false
+						},
+						{
+							channel_id = checkly_alert_channel.email_2.id
+							activated  = true
+						},
+						{
+							channel_id = checkly_alert_channel.email_3.id
+							activated  = true
+						},
+					]
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_url_monitor.test",
-					"alert_channel_subscription.#",
+					"alert_channel_subscriptions.#",
 					"3",
 				),
 				testCheckAlertChannelSubscription(
 					"checkly_url_monitor.test",
-					"alert_channel_subscription",
+					"alert_channel_subscriptions",
 					"checkly_alert_channel.email_1",
 					"false",
 				),
 				testCheckAlertChannelSubscription(
 					"checkly_url_monitor.test",
-					"alert_channel_subscription",
+					"alert_channel_subscriptions",
 					"checkly_alert_channel.email_2",
 					"true",
 				),
 				testCheckAlertChannelSubscription(
 					"checkly_url_monitor.test",
-					"alert_channel_subscription",
+					"alert_channel_subscriptions",
 					"checkly_alert_channel.email_3",
 					"true",
 				),
 			),
 		},
-		// Step 3: Remove all alert channel subscriptions.
+		// Step 3: Configure an empty set, which removes all subscriptions
+		// and is stored as an empty set, not null; otherwise the post-apply
+		// plan would not be empty.
+		{
+			Config: `
+				resource "checkly_alert_channel" "email_1" {
+					email = {
+						address = "url-acs-1@example.com"
+					}
+				}
+
+				resource "checkly_alert_channel" "email_2" {
+					email = {
+						address = "url-acs-2@example.com"
+					}
+				}
+
+				resource "checkly_alert_channel" "email_3" {
+					email = {
+						address = "url-acs-3@example.com"
+					}
+				}
+
+				resource "checkly_url_monitor" "test" {
+					name      = "url-alert-channel-sub-test"
+					frequency = 60
+					activated = true
+					locations = ["eu-central-1"]
+
+					request = {
+						url = "https://api.checklyhq.com"
+
+						assertion = [{
+							source     = "STATUS_CODE"
+							comparison = "EQUALS"
+							target     = "200"
+						}]
+					}
+
+					alert_channel_subscriptions = []
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_url_monitor.test",
+					"alert_channel_subscriptions.#",
+					"0",
+				),
+			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue(
+					"checkly_url_monitor.test",
+					tfjsonpath.New("alert_channel_subscriptions"),
+					knownvalue.SetExact([]knownvalue.Check{}),
+				),
+			},
+		},
+		// Step 4: Leave the attribute out, which stores null.
 		{
 			Config: `
 				resource "checkly_alert_channel" "email_1" {
@@ -1639,10 +1700,11 @@ func TestAccURLMonitorAlertChannelSubscriptions(t *testing.T) {
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
+				// Unlike a check of the element count, which also passes
+				// for an empty set, this fails unless the value is null.
+				resource.TestCheckNoResourceAttr(
 					"checkly_url_monitor.test",
-					"alert_channel_subscription.#",
-					"0",
+					"alert_channel_subscriptions",
 				),
 			),
 		},

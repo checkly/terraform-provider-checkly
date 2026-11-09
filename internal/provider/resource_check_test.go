@@ -2132,32 +2132,33 @@ func TestAccCheckAlertChannelSubscriptions(t *testing.T) {
 						url    = "https://api.checklyhq.com/public-stats"
 					}
 
-					alert_channel_subscription {
-						channel_id = checkly_alert_channel.email_1.id
-						activated  = true
-					}
-
-					alert_channel_subscription {
-						channel_id = checkly_alert_channel.email_2.id
-						activated  = false
-					}
+					alert_channel_subscriptions = [
+						{
+							channel_id = checkly_alert_channel.email_1.id
+							activated  = true
+						},
+						{
+							channel_id = checkly_alert_channel.email_2.id
+							activated  = false
+						},
+					]
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_check.test",
-					"alert_channel_subscription.#",
+					"alert_channel_subscriptions.#",
 					"2",
 				),
 				testCheckAlertChannelSubscription(
 					"checkly_check.test",
-					"alert_channel_subscription",
+					"alert_channel_subscriptions",
 					"checkly_alert_channel.email_1",
 					"true",
 				),
 				testCheckAlertChannelSubscription(
 					"checkly_check.test",
-					"alert_channel_subscription",
+					"alert_channel_subscriptions",
 					"checkly_alert_channel.email_2",
 					"false",
 				),
@@ -2196,43 +2197,43 @@ func TestAccCheckAlertChannelSubscriptions(t *testing.T) {
 						url    = "https://api.checklyhq.com/public-stats"
 					}
 
-					alert_channel_subscription {
-						channel_id = checkly_alert_channel.email_1.id
-						activated  = false
-					}
-
-					alert_channel_subscription {
-						channel_id = checkly_alert_channel.email_2.id
-						activated  = true
-					}
-
-					alert_channel_subscription {
-						channel_id = checkly_alert_channel.email_3.id
-						activated  = true
-					}
+					alert_channel_subscriptions = [
+						{
+							channel_id = checkly_alert_channel.email_1.id
+							activated  = false
+						},
+						{
+							channel_id = checkly_alert_channel.email_2.id
+							activated  = true
+						},
+						{
+							channel_id = checkly_alert_channel.email_3.id
+							activated  = true
+						},
+					]
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_check.test",
-					"alert_channel_subscription.#",
+					"alert_channel_subscriptions.#",
 					"3",
 				),
 				testCheckAlertChannelSubscription(
 					"checkly_check.test",
-					"alert_channel_subscription",
+					"alert_channel_subscriptions",
 					"checkly_alert_channel.email_1",
 					"false",
 				),
 				testCheckAlertChannelSubscription(
 					"checkly_check.test",
-					"alert_channel_subscription",
+					"alert_channel_subscriptions",
 					"checkly_alert_channel.email_2",
 					"true",
 				),
 				testCheckAlertChannelSubscription(
 					"checkly_check.test",
-					"alert_channel_subscription",
+					"alert_channel_subscriptions",
 					"checkly_alert_channel.email_3",
 					"true",
 				),
@@ -2275,7 +2276,7 @@ func TestAccCheckAlertChannelSubscriptions(t *testing.T) {
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_check.test",
-					"alert_channel_subscription.#",
+					"alert_channel_subscriptions.#",
 					"0",
 				),
 			),

@@ -689,10 +689,12 @@ func TestAccBrowserCheckUnsetSweepGroupAndAlerts(t *testing.T) {
 					group_id    = checkly_check_group.sweep.id
 					group_order = 2
 
-					alert_channel_subscription {
-						channel_id = checkly_alert_channel.sweep.id
-						activated  = true
-					}
+					alert_channel_subscriptions = [
+						{
+							channel_id = checkly_alert_channel.sweep.id
+							activated  = true
+						},
+					]
 
 					trigger_incident = {
 						service_id         = checkly_status_page_service.sweep.id
@@ -722,7 +724,7 @@ func TestAccBrowserCheckUnsetSweepGroupAndAlerts(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_browser_check.test",
-					"alert_channel_subscription.#",
+					"alert_channel_subscriptions.#",
 					"1",
 				),
 				resource.TestCheckResourceAttr(
@@ -749,10 +751,12 @@ func TestAccBrowserCheckUnsetSweepGroupAndAlerts(t *testing.T) {
 					script    = "console.log('test')"
 					group_id  = checkly_check_group.sweep.id
 
-					alert_channel_subscription {
-						channel_id = checkly_alert_channel.sweep.id
-						activated  = true
-					}
+					alert_channel_subscriptions = [
+						{
+							channel_id = checkly_alert_channel.sweep.id
+							activated  = true
+						},
+					]
 
 					trigger_incident = {
 						service_id         = checkly_status_page_service.sweep.id
@@ -808,7 +812,7 @@ func TestAccBrowserCheckUnsetSweepGroupAndAlerts(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_browser_check.test",
-					"alert_channel_subscription.#",
+					"alert_channel_subscriptions.#",
 					"0",
 				),
 				resource.TestCheckNoResourceAttr(

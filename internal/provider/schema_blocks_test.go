@@ -20,33 +20,17 @@ import (
 // one of is a single nested attribute (`x = { ... }`) instead. An entry that no schema
 // uses any more fails the test, so the list stays exact.
 var repeatedBlocks = map[string]bool{
-	"checkly_api_check.alert_channel_subscription":              true,
-	"checkly_browser_check.alert_channel_subscription":          true,
-	"checkly_browser_check.dependency":                          true,
-	"checkly_browser_check.environment_variable":                true,
-	"checkly_check.alert_channel_subscription":                  true,
-	"checkly_check.environment_variable":                        true,
-	"checkly_check_group.alert_channel_subscription":            true,
-	"checkly_check_group.environment_variable":                  true,
-	"checkly_check_group_v2.environment_variable":               true,
-	"checkly_dns_monitor.alert_channel_subscription":            true,
-	"checkly_grpc_monitor.alert_channel_subscription":           true,
-	"checkly_heartbeat.alert_channel_subscription":              true,
-	"checkly_heartbeat_monitor.alert_channel_subscription":      true,
-	"checkly_icmp_monitor.alert_channel_subscription":           true,
-	"checkly_multistep_check.alert_channel_subscription":        true,
-	"checkly_multistep_check.dependency":                        true,
-	"checkly_multistep_check.environment_variable":              true,
-	"checkly_playwright_check_suite.alert_channel_subscription": true,
-	"checkly_playwright_check_suite.environment_variable":       true,
-	"checkly_ssl_monitor.alert_channel_subscription":            true,
-	"checkly_status_page.card":                                  true,
-	"checkly_status_page.card.service_attachment":               true,
-	"checkly_status_page_v3_automation_rule.component":          true,
-	"checkly_tcp_check.alert_channel_subscription":              true,
-	"checkly_tcp_monitor.alert_channel_subscription":            true,
-	"checkly_traceroute_monitor.alert_channel_subscription":     true,
-	"checkly_url_monitor.alert_channel_subscription":            true,
+	"checkly_browser_check.dependency":                    true,
+	"checkly_browser_check.environment_variable":          true,
+	"checkly_check.environment_variable":                  true,
+	"checkly_check_group.environment_variable":            true,
+	"checkly_check_group_v2.environment_variable":         true,
+	"checkly_multistep_check.dependency":                  true,
+	"checkly_multistep_check.environment_variable":        true,
+	"checkly_playwright_check_suite.environment_variable": true,
+	"checkly_status_page.card":                            true,
+	"checkly_status_page.card.service_attachment":         true,
+	"checkly_status_page_v3_automation_rule.component":    true,
 }
 
 // singleElementLimit matches the description of a size validator that caps a
@@ -147,7 +131,7 @@ func walkDataSourceAttributes(t *testing.T, where string, attrs map[string]datas
 
 // TestOnlyRepeatedBlocks keeps every object that a resource or data source
 // can hold at most one of a single nested attribute: blocks are reserved for
-// repeated objects such as alert_channel_subscription, and no block or nested
+// repeated objects such as environment_variable, and no block or nested
 // list or set attribute, at any depth, is capped at one element.
 func TestOnlyRepeatedBlocks(t *testing.T) {
 	seen := make(map[string]bool)

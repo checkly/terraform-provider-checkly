@@ -46,40 +46,40 @@ type CheckResource struct {
 
 // CheckResourceModel describes the resource data model.
 type CheckResourceModel struct {
-	ID                       types.String `tfsdk:"id"`
-	Name                     types.String `tfsdk:"name"`
-	Description              types.String `tfsdk:"description"`
-	Type                     types.String `tfsdk:"type"`
-	Frequency                types.Int64  `tfsdk:"frequency"`
-	FrequencyOffset          types.Int64  `tfsdk:"frequency_offset"`
-	Activated                types.Bool   `tfsdk:"activated"`
-	Muted                    types.Bool   `tfsdk:"muted"`
-	ShouldFail               types.Bool   `tfsdk:"should_fail"`
-	RunParallel              types.Bool   `tfsdk:"run_parallel"`
-	Locations                types.Set    `tfsdk:"locations"`
-	Script                   types.String `tfsdk:"script"`
-	DegradedResponseTime     types.Int64  `tfsdk:"degraded_response_time"`
-	MaxResponseTime          types.Int64  `tfsdk:"max_response_time"`
-	EnvironmentVariable      types.List   `tfsdk:"environment_variable"`
-	Tags                     types.Set    `tfsdk:"tags"`
-	SSLCheckDomain           types.String `tfsdk:"ssl_check_domain"`
-	SetupSnippetID           types.Int64  `tfsdk:"setup_snippet_id"`
-	TeardownSnippetID        types.Int64  `tfsdk:"teardown_snippet_id"`
-	LocalSetupScript         types.String `tfsdk:"local_setup_script"`
-	LocalTeardownScript      types.String `tfsdk:"local_teardown_script"`
-	RuntimeID                types.String `tfsdk:"runtime_id"`
-	AlertChannelSubscription types.Set    `tfsdk:"alert_channel_subscription"`
-	PrivateLocations         types.Set    `tfsdk:"private_locations"`
-	AlertSettings            types.Object `tfsdk:"alert_settings"`
-	UseGlobalAlertSettings   types.Bool   `tfsdk:"use_global_alert_settings"`
-	DoubleCheck              types.Bool   `tfsdk:"double_check"`
-	Request                  types.Object `tfsdk:"request"`
-	GroupID                  types.Int64  `tfsdk:"group_id"`
-	GroupOrder               types.Int64  `tfsdk:"group_order"`
-	RetryStrategy            types.Object `tfsdk:"retry_strategy"`
-	TriggerIncident          types.Object `tfsdk:"trigger_incident"`
-	Intent                   types.Object `tfsdk:"intent"`
-	AIAutoRepairEnabled      types.Bool   `tfsdk:"ai_auto_repair_enabled"`
+	ID                        types.String `tfsdk:"id"`
+	Name                      types.String `tfsdk:"name"`
+	Description               types.String `tfsdk:"description"`
+	Type                      types.String `tfsdk:"type"`
+	Frequency                 types.Int64  `tfsdk:"frequency"`
+	FrequencyOffset           types.Int64  `tfsdk:"frequency_offset"`
+	Activated                 types.Bool   `tfsdk:"activated"`
+	Muted                     types.Bool   `tfsdk:"muted"`
+	ShouldFail                types.Bool   `tfsdk:"should_fail"`
+	RunParallel               types.Bool   `tfsdk:"run_parallel"`
+	Locations                 types.Set    `tfsdk:"locations"`
+	Script                    types.String `tfsdk:"script"`
+	DegradedResponseTime      types.Int64  `tfsdk:"degraded_response_time"`
+	MaxResponseTime           types.Int64  `tfsdk:"max_response_time"`
+	EnvironmentVariable       types.List   `tfsdk:"environment_variable"`
+	Tags                      types.Set    `tfsdk:"tags"`
+	SSLCheckDomain            types.String `tfsdk:"ssl_check_domain"`
+	SetupSnippetID            types.Int64  `tfsdk:"setup_snippet_id"`
+	TeardownSnippetID         types.Int64  `tfsdk:"teardown_snippet_id"`
+	LocalSetupScript          types.String `tfsdk:"local_setup_script"`
+	LocalTeardownScript       types.String `tfsdk:"local_teardown_script"`
+	RuntimeID                 types.String `tfsdk:"runtime_id"`
+	AlertChannelSubscriptions types.Set    `tfsdk:"alert_channel_subscriptions"`
+	PrivateLocations          types.Set    `tfsdk:"private_locations"`
+	AlertSettings             types.Object `tfsdk:"alert_settings"`
+	UseGlobalAlertSettings    types.Bool   `tfsdk:"use_global_alert_settings"`
+	DoubleCheck               types.Bool   `tfsdk:"double_check"`
+	Request                   types.Object `tfsdk:"request"`
+	GroupID                   types.Int64  `tfsdk:"group_id"`
+	GroupOrder                types.Int64  `tfsdk:"group_order"`
+	RetryStrategy             types.Object `tfsdk:"retry_strategy"`
+	TriggerIncident           types.Object `tfsdk:"trigger_incident"`
+	Intent                    types.Object `tfsdk:"intent"`
+	AIAutoRepairEnabled       types.Bool   `tfsdk:"ai_auto_repair_enabled"`
 }
 
 func (r *CheckResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -255,12 +255,12 @@ func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 			"request": apiCheckRequestAttributeSchema(apiCheckRequestAttributeSchemaOptions{
 				Description: "An API check might have one request config. Only relevant when `type` is `API`.",
 			}),
+			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{}),
 		},
 		Blocks: map[string]schema.Block{
 			environmentVariableAttributeName: makeEnvironmentVariableSchema(EnvironmentVariableAttributeSchemaOptions{
 				Description: "Insert environment variables into the runtime environment. Only relevant for browser checks. Use global environment variables whenever possible.",
 			}),
-			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{}),
 		},
 	}
 }
@@ -914,7 +914,7 @@ func checkToModel(ctx context.Context, check checkly.Check, model *CheckResource
 	model.Locations = stringSetFromAPIEmptyIfUnknown(ctx, c.Locations, prior.Locations, diags)
 	model.Tags = stringSetFromAPIEmptyIfUnknown(ctx, c.Tags, prior.Tags, diags)
 	model.RuntimeID = stringValueOrNull(valueOrZero(c.RuntimeID))
-	model.AlertChannelSubscription = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, diags)
+	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, prior.AlertChannelSubscriptions, diags)
 	model.PrivateLocations = setFromStrings(ctx, valueOrZero(c.PrivateLocations), diags)
 	model.AlertSettings = alertSettingsToObject(ctx, valueOrZero(c.AlertSettings), prior.AlertSettings, diags)
 	model.UseGlobalAlertSettings = types.BoolValue(c.UseGlobalAlertSettings)

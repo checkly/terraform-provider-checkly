@@ -227,7 +227,7 @@ func (r *CheckGroupV2Resource) Schema(ctx context.Context, req resource.SchemaRe
 					},
 					alertChannelSubscriptionAttributeName: schema.SetNestedAttribute{
 						Optional: true,
-						Description: "An array of channel IDs and whether they're activated or not. If you don't " +
+						Description: "A set of channel IDs and whether they're activated or not. If you don't " +
 							"set at least one alert channel subscription for your group, we won't be able to alert " +
 							"you even if a check in the group starts failing.",
 						NestedObject: schema.NestedAttributeObject{
@@ -891,7 +891,7 @@ func checkGroupV2EnforceAlertSettingsToObject(ctx context.Context, group *checkl
 		}
 
 		if len(group.AlertChannelSubscriptions) != 0 {
-			subscriptions = alertChannelSubscriptionsToSet(ctx, group.AlertChannelSubscriptions, diags)
+			subscriptions = alertChannelSubscriptionsToSet(ctx, group.AlertChannelSubscriptions, subscriptions, diags)
 		} else if !subscriptions.IsNull() && len(subscriptions.Elements()) != 0 {
 			// The API reports no subscriptions, so the prior non-empty value
 			// is stale.

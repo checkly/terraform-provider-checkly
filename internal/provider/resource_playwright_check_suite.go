@@ -54,27 +54,27 @@ type PlaywrightCheckSuiteResource struct {
 
 // PlaywrightCheckSuiteResourceModel describes the resource data model.
 type PlaywrightCheckSuiteResourceModel struct {
-	ID                       types.String `tfsdk:"id"`
-	Name                     types.String `tfsdk:"name"`
-	Description              types.String `tfsdk:"description"`
-	Frequency                types.Int64  `tfsdk:"frequency"`
-	Activated                types.Bool   `tfsdk:"activated"`
-	Muted                    types.Bool   `tfsdk:"muted"`
-	RunParallel              types.Bool   `tfsdk:"run_parallel"`
-	Locations                types.Set    `tfsdk:"locations"`
-	EnvironmentVariable      types.List   `tfsdk:"environment_variable"`
-	Tags                     types.Set    `tfsdk:"tags"`
-	AlertChannelSubscription types.Set    `tfsdk:"alert_channel_subscription"`
-	PrivateLocations         types.Set    `tfsdk:"private_locations"`
-	AlertSettings            types.Object `tfsdk:"alert_settings"`
-	UseGlobalAlertSettings   types.Bool   `tfsdk:"use_global_alert_settings"`
-	Bundle                   types.Object `tfsdk:"bundle"`
-	Runtime                  types.Object `tfsdk:"runtime"`
-	GroupID                  types.Int64  `tfsdk:"group_id"`
-	GroupOrder               types.Int64  `tfsdk:"group_order"`
-	TriggerIncident          types.Object `tfsdk:"trigger_incident"`
-	Intent                   types.Object `tfsdk:"intent"`
-	AIAutoRepairEnabled      types.Bool   `tfsdk:"ai_auto_repair_enabled"`
+	ID                        types.String `tfsdk:"id"`
+	Name                      types.String `tfsdk:"name"`
+	Description               types.String `tfsdk:"description"`
+	Frequency                 types.Int64  `tfsdk:"frequency"`
+	Activated                 types.Bool   `tfsdk:"activated"`
+	Muted                     types.Bool   `tfsdk:"muted"`
+	RunParallel               types.Bool   `tfsdk:"run_parallel"`
+	Locations                 types.Set    `tfsdk:"locations"`
+	EnvironmentVariable       types.List   `tfsdk:"environment_variable"`
+	Tags                      types.Set    `tfsdk:"tags"`
+	AlertChannelSubscriptions types.Set    `tfsdk:"alert_channel_subscriptions"`
+	PrivateLocations          types.Set    `tfsdk:"private_locations"`
+	AlertSettings             types.Object `tfsdk:"alert_settings"`
+	UseGlobalAlertSettings    types.Bool   `tfsdk:"use_global_alert_settings"`
+	Bundle                    types.Object `tfsdk:"bundle"`
+	Runtime                   types.Object `tfsdk:"runtime"`
+	GroupID                   types.Int64  `tfsdk:"group_id"`
+	GroupOrder                types.Int64  `tfsdk:"group_order"`
+	TriggerIncident           types.Object `tfsdk:"trigger_incident"`
+	Intent                    types.Object `tfsdk:"intent"`
+	AIAutoRepairEnabled       types.Bool   `tfsdk:"ai_auto_repair_enabled"`
 }
 
 // PlaywrightCheckSuiteBundleModel describes the bundle attribute data model.
@@ -385,12 +385,12 @@ func (r *PlaywrightCheckSuiteResource) Schema(ctx context.Context, req resource.
 					},
 				},
 			},
+			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{}),
 		},
 		Blocks: map[string]schema.Block{
 			environmentVariableAttributeName: makeEnvironmentVariableSchema(EnvironmentVariableAttributeSchemaOptions{
 				Description: "Insert environment variables into the execution environment.",
 			}),
-			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{}),
 		},
 	}
 }
@@ -552,7 +552,7 @@ func playwrightCheckSuiteFromModel(
 		UseGlobalAlertSettings:    model.UseGlobalAlertSettings.ValueBool(),
 		GroupID:                   model.GroupID.ValueInt64(),
 		GroupOrder:                int(model.GroupOrder.ValueInt64()),
-		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscription, diags),
+		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscriptions, diags),
 		TriggerIncident:           triggerIncidentFromObject(ctx, model.TriggerIncident, diags),
 		Intent:                    checkIntentFromObject(ctx, model.Intent, diags),
 		AIAutoRepairEnabled:       model.AIAutoRepairEnabled.ValueBoolPointer(),
@@ -750,11 +750,7 @@ func playwrightCheckSuiteToModel(
 		model.EnvironmentVariable = environmentVariablesToList(ctx, check.EnvironmentVariables, model.EnvironmentVariable, diags)
 	}
 
-	if len(check.AlertChannelSubscriptions) == 0 && model.AlertChannelSubscription.IsNull() {
-		// Keep null; an absent block list stays absent.
-	} else {
-		model.AlertChannelSubscription = alertChannelSubscriptionsToSet(ctx, check.AlertChannelSubscriptions, diags)
-	}
+	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, check.AlertChannelSubscriptions, model.AlertChannelSubscriptions, diags)
 
 	model.TriggerIncident = triggerIncidentToObject(ctx, check.TriggerIncident, diags)
 	model.Intent = checkIntentToObject(ctx, check.Intent, model.Intent, diags)

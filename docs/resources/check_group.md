@@ -126,15 +126,16 @@ resource "checkly_alert_channel" "email_ac2" {
 resource "checkly_check_group" "test_group1" {
   name = "My test group 1"
 
-  alert_channel_subscription {
-    channel_id = checkly_alert_channel.email_ac1.id
-    activated  = true
-  }
-
-  alert_channel_subscription {
-    channel_id = checkly_alert_channel.email_ac2.id
-    activated  = true
-  }
+  alert_channel_subscriptions = [
+    {
+      channel_id = checkly_alert_channel.email_ac1.id
+      activated  = true
+    },
+    {
+      channel_id = checkly_alert_channel.email_ac2.id
+      activated  = true
+    },
+  ]
 }
 ```
 
@@ -149,7 +150,7 @@ resource "checkly_check_group" "test_group1" {
 
 ### Optional
 
-- `alert_channel_subscription` (Block Set) An array of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your check, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedblock--alert_channel_subscription))
+- `alert_channel_subscriptions` (Attributes Set) A set of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your check, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedatt--alert_channel_subscriptions))
 - `alert_settings` (Attributes) Determines the alert escalation policy for the check. (see [below for nested schema](#nestedatt--alert_settings))
 - `api_check_defaults` (Attributes) Default settings for API checks in this group. (see [below for nested schema](#nestedatt--api_check_defaults))
 - `double_check` (Boolean, Deprecated) Setting this to `true` will trigger a retry when a check fails from the failing region and another, randomly selected region before marking the check as failed. (Default `false`).
@@ -171,8 +172,8 @@ resource "checkly_check_group" "test_group1" {
 
 - `id` (String) The ID of the check group.
 
-<a id="nestedblock--alert_channel_subscription"></a>
-### Nested Schema for `alert_channel_subscription`
+<a id="nestedatt--alert_channel_subscriptions"></a>
+### Nested Schema for `alert_channel_subscriptions`
 
 Required:
 

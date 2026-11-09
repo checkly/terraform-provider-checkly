@@ -57,7 +57,7 @@ type URLMonitorResourceModel struct {
 	DegradedResponseTime      types.Int64  `tfsdk:"degraded_response_time"`
 	MaxResponseTime           types.Int64  `tfsdk:"max_response_time"`
 	Tags                      types.Set    `tfsdk:"tags"`
-	AlertChannelSubscriptions types.Set    `tfsdk:"alert_channel_subscription"`
+	AlertChannelSubscriptions types.Set    `tfsdk:"alert_channel_subscriptions"`
 	PrivateLocations          types.Set    `tfsdk:"private_locations"`
 	AlertSettings             types.Object `tfsdk:"alert_settings"`
 	UseGlobalAlertSettings    types.Bool   `tfsdk:"use_global_alert_settings"`
@@ -272,8 +272,6 @@ func (r *URLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 					},
 				},
 			},
-		},
-		Blocks: map[string]schema.Block{
 			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{
 				Monitor: true,
 			}),
@@ -529,7 +527,7 @@ func urlMonitorToModel(ctx context.Context, c *checkly.URLMonitor, model *URLMon
 	}
 	model.PrivateLocations = stringSetFromAPINullIfUnset(ctx, privateLocations, model.PrivateLocations, diags)
 
-	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, diags)
+	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, model.AlertChannelSubscriptions, diags)
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, model.RetryStrategy, diags)
 	model.TriggerIncident = triggerIncidentToObject(ctx, c.TriggerIncident, diags)
 }

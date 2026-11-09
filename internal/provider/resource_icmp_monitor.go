@@ -57,7 +57,7 @@ type ICMPMonitorResourceModel struct {
 	MaxPacketLossThreshold      types.Int64  `tfsdk:"max_packet_loss_threshold"`
 	Tags                        types.Set    `tfsdk:"tags"`
 	PrivateLocations            types.Set    `tfsdk:"private_locations"`
-	AlertChannelSubscriptions   types.Set    `tfsdk:"alert_channel_subscription"`
+	AlertChannelSubscriptions   types.Set    `tfsdk:"alert_channel_subscriptions"`
 	AlertSettings               types.Object `tfsdk:"alert_settings"`
 	UseGlobalAlertSettings      types.Bool   `tfsdk:"use_global_alert_settings"`
 	Request                     types.Object `tfsdk:"request"`
@@ -262,8 +262,6 @@ func (r *ICMPMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 					},
 				},
 			},
-		},
-		Blocks: map[string]schema.Block{
 			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{
 				Monitor: true,
 			}),
@@ -516,7 +514,7 @@ func icmpMonitorToModel(ctx context.Context, c *checkly.ICMPMonitor, model *ICMP
 	model.Request = icmpMonitorRequestToObject(ctx, c.Request, diags)
 	model.GroupID = types.Int64Value(c.GroupID)
 	model.GroupOrder = types.Int64Value(int64(c.GroupOrder))
-	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, diags)
+	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, model.AlertChannelSubscriptions, diags)
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, model.RetryStrategy, diags)
 	model.TriggerIncident = triggerIncidentToObject(ctx, c.TriggerIncident, diags)
 }

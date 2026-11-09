@@ -70,6 +70,32 @@ func upgradeSDKv2Raw(t *testing.T, r resource.Resource, raw string) tfsdk.State 
 	return tfsdk.State{Schema: schemaResp.Schema, Raw: value}
 }
 
+// sdkv2FixtureWith returns the JSON of the SDK v2 state fixture name after
+// edit has changed its decoded object.
+func sdkv2FixtureWith(t *testing.T, name string, edit func(obj map[string]any)) string {
+	t.Helper()
+
+	obj := decodeSDKv2TestJSON(t, string(readSDKv2StateFixture(t, name).JSON))
+	edit(obj)
+	b, err := json.Marshal(obj)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(b)
+}
+
+// alertChannelSubscriptionsSet returns an alert_channel_subscriptions value
+// with a single subscription.
+func alertChannelSubscriptionsSet(channelID int64, activated bool) types.Set {
+	return types.SetValueMust(
+		types.ObjectType{AttrTypes: alertChannelSubscriptionAttrTypes},
+		[]attr.Value{types.ObjectValueMust(alertChannelSubscriptionAttrTypes, map[string]attr.Value{
+			"channel_id": types.Int64Value(channelID),
+			"activated":  types.BoolValue(activated),
+		})},
+	)
+}
+
 func requireStateValue(t *testing.T, state tfsdk.State, p path.Path, want attr.Value) {
 	t.Helper()
 
@@ -119,9 +145,20 @@ func TestUpgradeSDKv2State(t *testing.T) {
 		))
 	})
 
+	t.Run("url_monitor with alert channel subscriptions", func(t *testing.T) {
+		raw := sdkv2FixtureWith(t, "url_monitor", func(obj map[string]any) {
+			obj["alert_channel_subscription"] = []any{map[string]any{"channel_id": 7, "activated": true}}
+		})
+		state := upgradeSDKv2Raw(t, NewURLMonitorResource(), raw)
+		requireStateValue(t, state, path.Root(alertChannelSubscriptionAttributeName), alertChannelSubscriptionsSet(7, true))
+	})
+
 	t.Run("url_monitor without optional blocks", func(t *testing.T) {
 		state := upgradeSDKv2Fixture(t, NewURLMonitorResource(), "url_monitor_minimal")
 		requireStateNull(t, state, path.Root("alert_settings"))
+		// SDK v2 stored no subscriptions as an empty alert_channel_subscription
+		// list.
+		requireStateNull(t, state, path.Root(alertChannelSubscriptionAttributeName))
 		// SDK v2 stores no assertions as an empty list, which upgrades to
 		// the empty set the attribute defaults to.
 		requireStateValue(t, state, path.Root("request").AtName("assertion"), types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{}))
@@ -163,6 +200,20 @@ func TestUpgradeSDKv2State(t *testing.T) {
 		requireStateValue(t, state, path.Root("setup_script").AtName("inline_script"), types.StringValue("console.log('x')"))
 		requireStateNull(t, state, path.Root("setup_script").AtName("snippet_id"))
 		requireStateNull(t, state, path.Root("teardown_script"))
+	})
+
+	t.Run("check_group_v2 with enforced alert channel subscriptions", func(t *testing.T) {
+		// SDK v2 stored the subscriptions of enforce_alert_settings under
+		// the singular name, empty when there are none.
+		subscriptions := path.Root("enforce_alert_settings").AtName(alertChannelSubscriptionAttributeName)
+		requireStateNull(t, upgradeSDKv2Fixture(t, NewCheckGroupV2Resource(), "check_group_v2"), subscriptions)
+
+		raw := sdkv2FixtureWith(t, "check_group_v2", func(obj map[string]any) {
+			settings := obj["enforce_alert_settings"].([]any)[0].(map[string]any)
+			settings["alert_channel_subscription"] = []any{map[string]any{"channel_id": 7, "activated": true}}
+		})
+		state := upgradeSDKv2Raw(t, NewCheckGroupV2Resource(), raw)
+		requireStateValue(t, state, subscriptions, alertChannelSubscriptionsSet(7, true))
 	})
 
 	t.Run("playwright_check_suite", func(t *testing.T) {
@@ -284,6 +335,7 @@ func TestUpgradeSDKv2State(t *testing.T) {
 		requireStateNull(t, state, path.Root(aiAutoRepairEnabledAttributeName))
 		requireStateValue(t, state, path.Root("retry_strategy").AtName("type"), types.StringValue("FIXED"))
 		requireSDKv2CheckRequest(t, state)
+		requireStateNull(t, state, path.Root(alertChannelSubscriptionAttributeName))
 	})
 
 	t.Run("check_browser", func(t *testing.T) {

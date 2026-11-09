@@ -160,15 +160,16 @@ EOT
 resource "checkly_api_check" "example_check" {
   name = "Example check"
 
-  alert_channel_subscription {
-    channel_id = checkly_alert_channel.email_ac.id
-    activated  = true
-  }
-
-  alert_channel_subscription {
-    channel_id = checkly_alert_channel.sms_ac.id
-    activated  = true
-  }
+  alert_channel_subscriptions = [
+    {
+      channel_id = checkly_alert_channel.email_ac.id
+      activated  = true
+    },
+    {
+      channel_id = checkly_alert_channel.sms_ac.id
+      activated  = true
+    },
+  ]
 }
 ```
 

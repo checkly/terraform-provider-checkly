@@ -667,7 +667,7 @@ func TestAccCheckGroupV2AlertChannelSubscriptions(t *testing.T) {
 							}
 						}
 
-						alert_channel_subscription = [
+						alert_channel_subscriptions = [
 							{
 								channel_id = checkly_alert_channel.email_1.id
 								activated  = true
@@ -683,18 +683,18 @@ func TestAccCheckGroupV2AlertChannelSubscriptions(t *testing.T) {
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					checkGroupV2Resource,
-					"enforce_alert_settings.alert_channel_subscription.#",
+					"enforce_alert_settings.alert_channel_subscriptions.#",
 					"2",
 				),
 				testCheckAlertChannelSubscription(
 					checkGroupV2Resource,
-					"enforce_alert_settings.alert_channel_subscription",
+					"enforce_alert_settings.alert_channel_subscriptions",
 					"checkly_alert_channel.email_1",
 					"true",
 				),
 				testCheckAlertChannelSubscription(
 					checkGroupV2Resource,
-					"enforce_alert_settings.alert_channel_subscription",
+					"enforce_alert_settings.alert_channel_subscriptions",
 					"checkly_alert_channel.email_2",
 					"false",
 				),
@@ -740,7 +740,7 @@ func TestAccCheckGroupV2AlertChannelSubscriptions(t *testing.T) {
 							}
 						}
 
-						alert_channel_subscription = [
+						alert_channel_subscriptions = [
 							{
 								channel_id = checkly_alert_channel.email_1.id
 								activated  = false
@@ -760,24 +760,24 @@ func TestAccCheckGroupV2AlertChannelSubscriptions(t *testing.T) {
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					checkGroupV2Resource,
-					"enforce_alert_settings.alert_channel_subscription.#",
+					"enforce_alert_settings.alert_channel_subscriptions.#",
 					"3",
 				),
 				testCheckAlertChannelSubscription(
 					checkGroupV2Resource,
-					"enforce_alert_settings.alert_channel_subscription",
+					"enforce_alert_settings.alert_channel_subscriptions",
 					"checkly_alert_channel.email_1",
 					"false",
 				),
 				testCheckAlertChannelSubscription(
 					checkGroupV2Resource,
-					"enforce_alert_settings.alert_channel_subscription",
+					"enforce_alert_settings.alert_channel_subscriptions",
 					"checkly_alert_channel.email_2",
 					"true",
 				),
 				testCheckAlertChannelSubscription(
 					checkGroupV2Resource,
-					"enforce_alert_settings.alert_channel_subscription",
+					"enforce_alert_settings.alert_channel_subscriptions",
 					"checkly_alert_channel.email_3",
 					"true",
 				),
@@ -828,7 +828,7 @@ func TestAccCheckGroupV2AlertChannelSubscriptions(t *testing.T) {
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckNoResourceAttr(
 					checkGroupV2Resource,
-					"enforce_alert_settings.alert_channel_subscription.#",
+					"enforce_alert_settings.alert_channel_subscriptions.#",
 				),
 			),
 		},
@@ -1602,7 +1602,7 @@ func TestAccCheckGroupV2UnsetSweepAlertChannelSubscriptions(t *testing.T) {
 							}
 						}
 
-						alert_channel_subscription = [
+						alert_channel_subscriptions = [
 							{
 								channel_id = checkly_alert_channel.email.id
 								activated  = true
@@ -1619,12 +1619,12 @@ func TestAccCheckGroupV2UnsetSweepAlertChannelSubscriptions(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					checkGroupV2Resource,
-					"enforce_alert_settings.alert_channel_subscription.#",
+					"enforce_alert_settings.alert_channel_subscriptions.#",
 					"1",
 				),
 				testCheckAlertChannelSubscription(
 					checkGroupV2Resource,
-					"enforce_alert_settings.alert_channel_subscription",
+					"enforce_alert_settings.alert_channel_subscriptions",
 					"checkly_alert_channel.email",
 					"true",
 				),
@@ -1669,7 +1669,7 @@ func TestAccCheckGroupV2UnsetSweepAlertChannelSubscriptions(t *testing.T) {
 				),
 				resource.TestCheckNoResourceAttr(
 					checkGroupV2Resource,
-					"enforce_alert_settings.alert_channel_subscription.#",
+					"enforce_alert_settings.alert_channel_subscriptions.#",
 				),
 			),
 		},
@@ -1695,7 +1695,7 @@ func TestAccCheckGroupV2UnsetSweepAlertChannelSubscriptions(t *testing.T) {
 				),
 				resource.TestCheckNoResourceAttr(
 					checkGroupV2Resource,
-					"enforce_alert_settings.alert_channel_subscription.#",
+					"enforce_alert_settings.alert_channel_subscriptions.#",
 				),
 			),
 		},
