@@ -7,12 +7,10 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 
 	"github.com/checkly/checkly-go-sdk/v2"
 )
@@ -68,7 +66,6 @@ func accTestCaseWithErrorCheck(t *testing.T, steps []resource.TestStep, errorChe
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		CheckDestroy:             nil,
 		ErrorCheck:               errorCheck,
-		TerraformVersionChecks:   terraformVersionChecks(steps),
 		Steps:                    steps,
 	})
 }
@@ -102,41 +99,6 @@ func accTest(t *testing.T, testCase resource.TestCase) {
 	} else {
 		resource.ParallelTest(t, testCase)
 	}
-}
-
-// configBlockVersionChecks lists the configuration blocks that need a newer
-// Terraform than the provider's minimum of 1.0, with a check that skips the
-// versions which cannot run them as the tests use them.
-var configBlockVersionChecks = []struct {
-	block *regexp.Regexp
-	check tfversion.TerraformVersionCheck
-}{
-	// moved blocks between resource types.
-	{regexp.MustCompile(`(?m)^\s*moved\s*\{`), tfversion.SkipBelow(tfversion.Version1_8_0)},
-	{regexp.MustCompile(`(?m)^\s*removed\s*\{`), tfversion.SkipBelow(tfversion.Version1_7_0)},
-	// import blocks whose id refers to another resource.
-	{regexp.MustCompile(`(?m)^\s*import\s*\{`), tfversion.SkipBelow(tfversion.Version1_6_0)},
-	// The built-in resource whose output is known only at apply time.
-	{regexp.MustCompile(`(?m)^\s*resource\s+"terraform_data"`), tfversion.SkipBelow(tfversion.Version1_4_0)},
-	// ignore_changes paths into a nested attribute, which Terraform before
-	// 1.2.7 rejects as an unsupported attribute.
-	{regexp.MustCompile(`(?m)^\s*ignore_changes\s*=\s*\[[^\]]*\w\.\w`), tfversion.SkipBelow(version.Must(version.NewVersion("1.2.7")))},
-}
-
-// terraformVersionChecks skips a test on Terraform versions that cannot run
-// the configuration blocks its steps use.
-func terraformVersionChecks(steps []resource.TestStep) []tfversion.TerraformVersionCheck {
-	var checks []tfversion.TerraformVersionCheck
-	for _, b := range configBlockVersionChecks {
-		for _, step := range steps {
-			if b.block.MatchString(step.Config) {
-				checks = append(checks, b.check)
-				break
-			}
-		}
-	}
-
-	return checks
 }
 
 // testCheckResourceAttrExpr tests resource attributes using regular

@@ -82,7 +82,7 @@ The development branch is `main`. This is the branch that all pull requests shou
 > ⚠️ Before you start, is recommended to have a good understanding on how the provider works, the resources it has and its different configurations. Here are the ["getting started"](https://github.com/checkly/terraform-provider-checkly#getting-started) guides.
 
 ### Pre-requirements
-- [Terraform](https://learn.hashicorp.com/tutorials/terraform/install-cli) >= v1.2.2
+- [Terraform](https://learn.hashicorp.com/tutorials/terraform/install-cli) >= v1.8
 - [Go](https://go.dev/doc/install) >= 1.26
 
 After you have installed Terraform and Go, you can clone the repository and start working on the `main` branch.

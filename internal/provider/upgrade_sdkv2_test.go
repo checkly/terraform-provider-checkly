@@ -69,8 +69,7 @@ func TestAccUpgradeFromSDKv2(t *testing.T) {
 				PreCheck: func() {
 					testAccPreCheck(t)
 				},
-				TerraformVersionChecks: terraformVersionChecks(steps),
-				Steps:                  steps,
+				Steps: steps,
 			})
 		})
 	}

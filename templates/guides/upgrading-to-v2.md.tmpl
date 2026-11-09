@@ -12,12 +12,12 @@ Existing state is upgraded automatically: you do not need to import or recreate 
 
 ## Requirements
 
-- Terraform 1.0 or later. The provider now uses version 6 of the Terraform plugin protocol.
-- Terraform 1.8 or later to move resources between resource types with `moved` blocks (see [Deprecated resource types](#deprecated-resource-types)).
+- Terraform 1.8 or later. It is the first version that can move resources between resource types with `moved` blocks, which switch the [deprecated resource types](#deprecated-resource-types) to their replacements.
 - An account ID, for every API key (see [Account ID](#account-id)).
 
 ## Recommended procedure
 
+1. Upgrade Terraform to 1.8 or later, if you haven't already. Do this before upgrading the provider: the v1.x releases you're on today already work with Terraform 1.8, so Terraform and the provider don't have to change at the same time.
 1. Run `terraform plan` with the latest v1.x release and apply any pending changes, so that you start from a clean plan.
 1. If you use `checkly_trigger_check` or `checkly_trigger_group`, take them out of your configuration and state, as described in [Removed resource types](#removed-resource-types).
 1. Back up your state, for example with `terraform state pull > backup.tfstate`. Once v2 has refreshed the state, v1.x can no longer read it; to go back to v1.x, restore the backup.
@@ -204,7 +204,7 @@ The `CHECKLY_DEBUG_LOG` environment variable no longer writes API requests and r
 v2 fails to plan while these resource types are in state. Remove them from your configuration, then either:
 
 - Delete the triggers by running `terraform apply` while still on v1.x.
-- Keep the trigger URLs working for now by removing the resources from state only. While still on v1.x, with Terraform 1.7 or later, add a `removed` block for each resource and run `terraform apply`:
+- Keep the trigger URLs working for now by removing the resources from state only. While still on v1.x, add a `removed` block for each resource and run `terraform apply`:
 
   ```terraform
   removed {
@@ -245,7 +245,7 @@ When moving an API check from `checkly_check` to `checkly_api_check`, note that 
 
 `checkly_check_group` is deprecated in favor of `checkly_check_group_v2`. A v1 group always applies its locations, alert settings, retry strategy and scheduling strategy to its checks; a v2 group only applies the settings you enforce with its `enforce_*` attributes.
 
-Both resource types manage the same check groups, so you can switch a group over without recreating it or its checks. This needs Terraform 1.7 or later:
+Both resource types manage the same check groups, so you can switch a group over without recreating it or its checks:
 
 1. Add a `checkly_check_group_v2` resource with an `import` block that takes the ID of the existing group. To keep the group's behavior, enforce the settings that the v1 group applies:
 
@@ -340,5 +340,5 @@ resource "checkly_maintenance_window" "example" {
 - `checkly_playwright_check_suite`, and checks moved from `checkly_check` to the per-type resources: an `intent` or `ai_auto_repair_enabled` value set outside Terraform and absent from your configuration is removed by the first apply, which the plan shows. To keep such a value, add it to your configuration, or add the attribute to `ignore_changes` to leave it to the web app.
 - `checkly_dns_monitor`, `checkly_icmp_monitor` and `checkly_traceroute_monitor`: `private_locations` set outside Terraform and absent from your configuration are removed by the first apply, which the plan shows. The same goes for `proxy_url` on `checkly_private_location`. To keep such a value, add it to your configuration, or add the attribute to `ignore_changes` to leave it to the web app.
 - A check or monitor added to a group in the web app, with no `group_id` in its configuration, leaves the group on the first apply, as it did with v1.x.
-- `checkly_maintenance_window` and `checkly_maintenance_windows`: links to v3 status page components set in the web app and absent from your configuration are removed by the first apply, which the plan shows. If the v3 page stays in `status_page_ids` without an entry in `component_configs`, the apply is rejected instead. To keep the links, add them to `component_configs`, or leave them to the web app with `ignore_changes`: `status_page_visibility.component_configs` when your configuration sets `status_page_visibility` and you use Terraform 1.2.7 or later, or `status_page_visibility` as a whole otherwise, which leaves all its settings to the web app. An account without the status page maintenance windows entitlement can't remove the links, so every update of such a window is rejected until they are in the configuration or ignored.
+- `checkly_maintenance_window` and `checkly_maintenance_windows`: links to v3 status page components set in the web app and absent from your configuration are removed by the first apply, which the plan shows. If the v3 page stays in `status_page_ids` without an entry in `component_configs`, the apply is rejected instead. To keep the links, add them to `component_configs`, or leave them to the web app with `ignore_changes`: `status_page_visibility.component_configs` when your configuration sets `status_page_visibility`, or `status_page_visibility` as a whole otherwise, which leaves all its settings to the web app. An account without the status page maintenance windows entitlement can't remove the links, so every update of such a window is rejected until they are in the configuration or ignored.
 - `checkly_client_certificate`: v1.x stored `path` without a trailing slash. If your configuration has one, for example `path = "/partner/api/"`, the first plan shows an in-place update of `path` that does not change the certificate.

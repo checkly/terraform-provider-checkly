@@ -75,12 +75,9 @@ jobs:
       # the remaining legs.
       fail-fast: false
       matrix:
-        # The provider supports Terraform 1.0 or later. Tests that use
-        # moved, removed or import blocks skip the versions that lack them,
-        # so 1.8, the oldest version that can move resources between
-        # resource types, runs those.
+        # The provider supports Terraform 1.8 or later, the oldest version
+        # that can move resources between resource types.
         terraform:
-          - '1.0.*'
           - '1.8.*'
           - '1.*'
     steps:
