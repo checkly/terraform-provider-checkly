@@ -1,9 +1,12 @@
 package provider
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -11,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
@@ -300,6 +304,180 @@ func requireSDKv2CheckRequest(t *testing.T, state tfsdk.State) {
 	requireStateNull(t, state, request.AtName("headers"))
 	requireStateNull(t, state, request.AtName("query_parameters"))
 	requireStateValue(t, state, request.AtName("basic_auth").AtName("username"), types.StringValue("u"))
+}
+
+// decodeSDKv2TestJSON decodes JSON the way upgradeSDKv2RawState does.
+func decodeSDKv2TestJSON(t *testing.T, s string) map[string]any {
+	t.Helper()
+
+	decoder := json.NewDecoder(bytes.NewReader([]byte(s)))
+	decoder.UseNumber()
+	var obj map[string]any
+	if err := decoder.Decode(&obj); err != nil {
+		t.Fatalf("decoding %s: %v", s, err)
+	}
+	return obj
+}
+
+// requireNormalizedSDKv2Object normalizes the SDK v2 state raw against attrs
+// and compares the result with the JSON object want.
+func requireNormalizedSDKv2Object(t *testing.T, attrs map[string]schema.Attribute, raw, want string) {
+	t.Helper()
+
+	obj := decodeSDKv2TestJSON(t, raw)
+	normalizeSDKv2Object(obj, attrs, nil)
+	if wantObj := decodeSDKv2TestJSON(t, want); !reflect.DeepEqual(obj, wantObj) {
+		got, _ := json.Marshal(obj)
+		t.Errorf("got %s, want %s", got, want)
+	}
+}
+
+// Collections that SDK v2 stored under a singular name move to their plural
+// name, at any depth. The schemas are reduced to the attributes involved.
+func TestNormalizeSDKv2PluralRenames(t *testing.T) {
+	subscriptions := schema.SetNestedAttribute{
+		Optional: true,
+		NestedObject: schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{
+			"channel_id": schema.Int64Attribute{Required: true},
+			"activated":  schema.BoolAttribute{Required: true},
+		}},
+	}
+	named := schema.ListNestedAttribute{
+		Optional: true,
+		NestedObject: schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{
+			"name": schema.StringAttribute{Required: true},
+		}},
+	}
+
+	t.Run("top level", func(t *testing.T) {
+		requireNormalizedSDKv2Object(t,
+			map[string]schema.Attribute{"alert_channel_subscriptions": subscriptions},
+			`{"alert_channel_subscription":[{"channel_id":1,"activated":true}]}`,
+			`{"alert_channel_subscriptions":[{"channel_id":1,"activated":true}]}`,
+		)
+	})
+
+	t.Run("an empty collection becomes null", func(t *testing.T) {
+		requireNormalizedSDKv2Object(t,
+			map[string]schema.Attribute{"alert_channel_subscriptions": subscriptions},
+			`{"alert_channel_subscription":[]}`,
+			`{"alert_channel_subscriptions":null}`,
+		)
+	})
+
+	t.Run("inside a list nested attribute", func(t *testing.T) {
+		cards := schema.ListNestedAttribute{
+			Required: true,
+			NestedObject: schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{
+				"name":                schema.StringAttribute{Required: true},
+				"service_attachments": named,
+			}},
+		}
+		requireNormalizedSDKv2Object(t,
+			map[string]schema.Attribute{"cards": cards},
+			`{"card":[{"name":"a","service_attachment":[{"name":"s"}]},{"name":"b","service_attachment":[]}]}`,
+			`{"cards":[{"name":"a","service_attachments":[{"name":"s"}]},{"name":"b","service_attachments":null}]}`,
+		)
+	})
+
+	t.Run("inside a single nested attribute", func(t *testing.T) {
+		request := schema.SingleNestedAttribute{
+			Required: true,
+			Attributes: map[string]schema.Attribute{
+				"url":        schema.StringAttribute{Required: true},
+				"assertions": named,
+			},
+		}
+		requireNormalizedSDKv2Object(t,
+			map[string]schema.Attribute{"request": request},
+			`{"request":[{"url":"u","assertion":[{"name":"a"}]}]}`,
+			`{"request":{"url":"u","assertions":[{"name":"a"}]}}`,
+		)
+	})
+
+	t.Run("a value under the plural name is kept", func(t *testing.T) {
+		requireNormalizedSDKv2Object(t,
+			map[string]schema.Attribute{"devices": named},
+			`{"devices":[{"name":"new"}],"device":[{"name":"old"}]}`,
+			`{"devices":[{"name":"new"}]}`,
+		)
+	})
+
+	t.Run("a null value under the plural name is replaced", func(t *testing.T) {
+		requireNormalizedSDKv2Object(t,
+			map[string]schema.Attribute{"devices": named},
+			`{"devices":null,"device":[{"name":"old"}]}`,
+			`{"devices":[{"name":"old"}]}`,
+		)
+	})
+
+	t.Run("not renamed where the schema has no plural name", func(t *testing.T) {
+		requireNormalizedSDKv2Object(t,
+			map[string]schema.Attribute{"device": named},
+			`{"device":[{"name":"d"}]}`,
+			`{"device":[{"name":"d"}]}`,
+		)
+	})
+}
+
+// The deprecated SDK v2 environment_variables map is folded into the
+// environment variable list.
+func TestNormalizeSDKv2EnvironmentVariables(t *testing.T) {
+	attrs := map[string]schema.Attribute{
+		"environment_variables": schema.ListNestedAttribute{
+			Optional: true,
+			NestedObject: schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{
+				"key":    schema.StringAttribute{Required: true},
+				"value":  schema.StringAttribute{Required: true},
+				"locked": schema.BoolAttribute{Optional: true, Computed: true},
+				"secret": schema.BoolAttribute{Optional: true, Computed: true},
+			}},
+		},
+	}
+	list := `[{"key":"K","value":"v","locked":true,"secret":false}]`
+
+	for name, c := range map[string]struct{ raw, want string }{
+		"map": {
+			raw: `{"environment_variables":{"B":"2","A":"1"},"environment_variable":[]}`,
+			want: `{"environment_variables":[` +
+				`{"key":"A","value":"1","locked":false,"secret":false},` +
+				`{"key":"B","value":"2","locked":false,"secret":false}]}`,
+		},
+		"list and an empty map": {
+			raw:  `{"environment_variables":{},"environment_variable":` + list + `}`,
+			want: `{"environment_variables":` + list + `}`,
+		},
+		"list and a null map": {
+			raw:  `{"environment_variables":null,"environment_variable":` + list + `}`,
+			want: `{"environment_variables":` + list + `}`,
+		},
+		"neither": {
+			raw:  `{"environment_variables":{},"environment_variable":[]}`,
+			want: `{"environment_variables":null}`,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			requireNormalizedSDKv2Object(t, attrs, c.raw, c.want)
+		})
+	}
+}
+
+// Only the environment_variables map is converted to a list. SDK v2 never
+// stored a JSON object at any other list position, so such state fails to
+// upgrade instead of being dropped.
+func TestUpgradeSDKv2ObjectAtListPosition(t *testing.T) {
+	s := schema.Schema{Attributes: map[string]schema.Attribute{
+		"cards": schema.ListNestedAttribute{
+			Optional: true,
+			NestedObject: schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{
+				"name": schema.StringAttribute{Required: true},
+			}},
+		},
+	}}
+	raw := &tfprotov6.RawState{JSON: []byte(`{"cards":{"name":"a"}}`)}
+	if _, err := upgradeSDKv2RawState(context.Background(), raw, s); err == nil {
+		t.Fatal("expected an error")
+	}
 }
 
 // A `moved` block can move a resource whose state the SDK v2 implementation
