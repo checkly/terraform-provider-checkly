@@ -10,7 +10,7 @@ This Terraform provider enables users to handle [Checkly](https://checklyhq.com)
 ## Installation
 Please take a look at the [installation guide](https://github.com/checkly/terraform-provider-checkly/blob/main/docs/guides/getting-started.md)
 
-> The provider requires Terraform 1.0 or later. If you are upgrading from v1.x of the provider, read the [upgrade guide](https://github.com/checkly/terraform-provider-checkly/blob/main/docs/guides/upgrading-to-v2.md).
+> The provider requires Terraform 1.8 or later. If you are upgrading from v1.x of the provider, read the [upgrade guide](https://github.com/checkly/terraform-provider-checkly/blob/main/docs/guides/upgrading-to-v2.md).
 
 ## Getting started
 For documentation and example usage see:

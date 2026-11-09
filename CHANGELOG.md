@@ -16,7 +16,7 @@ need changes. Follow the [upgrade guide](docs/guides/upgrading-to-v2.md).
 
 ### Changed
 - **Breaking:** single nested objects that were blocks are attributes (`alert_settings = { ... }` instead of `alert_settings { ... }`).
-- **Breaking:** the provider serves plugin protocol 6 only and requires Terraform 1.0 or later.
+- **Breaking:** the provider serves plugin protocol 6 only and requires Terraform 1.8 or later.
 - **Breaking:** every API key needs an account ID, and it must be a UUID. Account-scoped keys used without `account_id` or `CHECKLY_ACCOUNT_ID` stop with a `Missing Checkly Account ID` error.
 - **Breaking:** the first apply erases values that are set in the web app and absent from your configuration, for the attributes v1.x could not clear. See [Expected one-time changes](docs/guides/upgrading-to-v2.md#expected-one-time-changes) in the upgrade guide.
 - **Breaking:** credentials are sensitive, including nested ones, so Terraform redacts them in plan output. An output that exposes one, such as a heartbeat ping URL built from `ping_token`, must set `sensitive = true`.
@@ -37,7 +37,7 @@ need changes. Follow the [upgrade guide](docs/guides/upgrading-to-v2.md).
 
 ### Deprecated
 - `checkly_check`, in favor of the per-type check resources.
-- `checkly_heartbeat`, `checkly_tcp_check` and `checkly_maintenance_windows`, in favor of `checkly_heartbeat_monitor`, `checkly_tcp_monitor` and `checkly_maintenance_window`. They keep working, and `moved` blocks (Terraform 1.8 or later) switch them without recreating them.
+- `checkly_heartbeat`, `checkly_tcp_check` and `checkly_maintenance_windows`, in favor of `checkly_heartbeat_monitor`, `checkly_tcp_monitor` and `checkly_maintenance_window`. They keep working, and `moved` blocks switch them without recreating them.
 - `checkly_check_group`, in favor of `checkly_check_group_v2`.
 - `checkly_status_page` and `checkly_status_page_service`, in favor of the v3 status page resources.
 - `slack` on `checkly_alert_channel`, in favor of `slack_app`.
