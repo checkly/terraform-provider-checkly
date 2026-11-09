@@ -104,6 +104,10 @@ jobs:
 
     - name: Set up gotestfmt
       uses: gotesttools/gotestfmt-action@eba2ac97f623e866e7b1b117c99f18b43cd36d18 # v2.3.0
+      with:
+        # Looking up the latest release without a token shares the runner
+        # IP's GitHub API rate limit with other jobs.
+        token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: TF acceptance tests
       timeout-minutes: 10
