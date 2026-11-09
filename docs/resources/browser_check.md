@@ -187,7 +187,7 @@ resource "checkly_browser_check" "example_6" {
 - `alert_settings` (Attributes) Determines the alert escalation policy for the check. (see [below for nested schema](#nestedatt--alert_settings))
 - `dependency` (Block List) Script dependency files for editor-style multi-file scripts. Use together with `script_path` to mirror a multi-file layout. (see [below for nested schema](#nestedblock--dependency))
 - `description` (String) A description of the check.
-- `environment_variable` (Block List) Insert environment variables into the runtime environment. Use global environment variables whenever possible. (see [below for nested schema](#nestedblock--environment_variable))
+- `environment_variable` (Block List) Insert environment variables into the runtime environment. Use global environment variables whenever possible. At most 200 variables. (see [below for nested schema](#nestedblock--environment_variable))
 - `frequency` (Number) Controls how often the check should run. Defined in minutes. The allowed values are `1` (1 minute), `2` (2 minutes), `5` (5 minutes), `10` (10 minutes), `15` (15 minutes), `30` (30 minutes), `60` (1 hour), `120` (2 hours), `180` (3 hours), `360` (6 hours), `720` (12 hours) and `1440` (24 hours). (Default `10`).
 - `group_id` (Number) The id of the check group this check is part of.
 - `group_order` (Number) The position of this check in a check group. It determines in what order checks are run when a group is triggered from the API or from CI/CD.
@@ -279,7 +279,7 @@ Required:
 Required:
 
 - `key` (String) The name of the environment variable or secret.
-- `value` (String, Sensitive) The value of the environment variable or secret.
+- `value` (String, Sensitive) The value of the environment variable or secret. At most 64000 bytes in UTF-8, or 31744 bytes for a secret or locked variable.
 
 Optional:
 
@@ -292,12 +292,12 @@ Optional:
 
 Required:
 
-- `goal` (String) The user or system outcome the check protects, of 1 to 2000 characters without leading or trailing whitespace.
+- `goal` (String) The user or system outcome the check protects, of 1 to 2000 UTF-16 code units without leading or trailing whitespace. Most characters count as one; emoji and other characters outside the Basic Multilingual Plane count as two.
 
 Optional:
 
-- `must_preserve` (List of String) Guardrails an automatic repair must not weaken or bypass. At most 20 statements of 1 to 1000 characters without leading or trailing whitespace.
-- `required_outcomes` (List of String) Observable outcomes the check must continue to prove. At most 20 statements of 1 to 1000 characters without leading or trailing whitespace.
+- `must_preserve` (List of String) Guardrails an automatic repair must not weaken or bypass. At most 20 statements of 1 to 1000 UTF-16 code units without leading or trailing whitespace. Most characters count as one; emoji and other characters outside the Basic Multilingual Plane count as two.
+- `required_outcomes` (List of String) Observable outcomes the check must continue to prove. At most 20 statements of 1 to 1000 UTF-16 code units without leading or trailing whitespace. Most characters count as one; emoji and other characters outside the Basic Multilingual Plane count as two.
 
 
 <a id="nestedatt--retry_strategy"></a>

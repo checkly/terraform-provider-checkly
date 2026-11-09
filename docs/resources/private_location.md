@@ -39,7 +39,7 @@ resource "checkly_private_location" "location-with-proxy" {
 ### Required
 
 - `name` (String) The private location name.
-- `slug_name` (String) Valid slug name.
+- `slug_name` (String) The slug name of the private location: 1 to 30 letters, digits and dashes, not starting with the ID of a public location such as `eu-central-1`.
 
 ### Optional
 

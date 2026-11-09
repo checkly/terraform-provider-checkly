@@ -25,6 +25,20 @@ func TestAccEnvVarCheckRequiredFields(t *testing.T) {
 	})
 }
 
+func TestAccEnvVarValueTooLong(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `resource "checkly_environment_variable" "test" {
+				key    = "TF_ACC_VALUE_TOO_LONG"
+				value  = format("%031745d", 0)
+				secret = true
+			}`,
+			PlanOnly:    true,
+			ExpectError: regexp.MustCompile(`at\s+most\s+31744\s+bytes`),
+		},
+	})
+}
+
 func TestAccEnvVarSuccess(t *testing.T) {
 	// Environment variable keys are unique per account, so a random suffix
 	// avoids collisions between runs.

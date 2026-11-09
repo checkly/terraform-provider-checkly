@@ -203,7 +203,7 @@ resource "checkly_check" "example_check" {
 - `degraded_response_time` (Number) The response time in milliseconds starting from which a check should be considered degraded. Possible values are between 0 and 30000. Only relevant when `type` is `API`. (Default `15000`).
 - `description` (String) A description of the check.
 - `double_check` (Boolean, Deprecated) Setting this to `true` will trigger a retry when a check fails from the failing region and another, randomly selected region before marking the check as failed. (Default `false`).
-- `environment_variable` (Block List) Insert environment variables into the runtime environment. Only relevant for browser checks. Use global environment variables whenever possible. (see [below for nested schema](#nestedblock--environment_variable))
+- `environment_variable` (Block List) Insert environment variables into the runtime environment. Only relevant for browser checks. Use global environment variables whenever possible. At most 200 variables. (see [below for nested schema](#nestedblock--environment_variable))
 - `frequency_offset` (Number) Only relevant when `type` is `API`. When `frequency` is `0` (high frequency), `frequency_offset` is required and it alone controls how often the check should run. Defined in seconds. The allowed values are `0` (disabled - use `frequency` to define the actual frequency), `10` (10 seconds), `20` (20 seconds) and `30` (30 seconds).
 - `group_id` (Number) The id of the check group this check is part of.
 - `group_order` (Number) The position of this check in a check group. It determines in what order checks are run when a group is triggered from the API or from CI/CD.
@@ -292,7 +292,7 @@ Optional:
 Required:
 
 - `key` (String) The name of the environment variable or secret.
-- `value` (String, Sensitive) The value of the environment variable or secret.
+- `value` (String, Sensitive) The value of the environment variable or secret. At most 64000 bytes in UTF-8, or 31744 bytes for a secret or locked variable.
 
 Optional:
 
@@ -305,12 +305,12 @@ Optional:
 
 Required:
 
-- `goal` (String) The user or system outcome the check protects, of 1 to 2000 characters without leading or trailing whitespace.
+- `goal` (String) The user or system outcome the check protects, of 1 to 2000 UTF-16 code units without leading or trailing whitespace. Most characters count as one; emoji and other characters outside the Basic Multilingual Plane count as two.
 
 Optional:
 
-- `must_preserve` (List of String) Guardrails an automatic repair must not weaken or bypass. At most 20 statements of 1 to 1000 characters without leading or trailing whitespace.
-- `required_outcomes` (List of String) Observable outcomes the check must continue to prove. At most 20 statements of 1 to 1000 characters without leading or trailing whitespace.
+- `must_preserve` (List of String) Guardrails an automatic repair must not weaken or bypass. At most 20 statements of 1 to 1000 UTF-16 code units without leading or trailing whitespace. Most characters count as one; emoji and other characters outside the Basic Multilingual Plane count as two.
+- `required_outcomes` (List of String) Observable outcomes the check must continue to prove. At most 20 statements of 1 to 1000 UTF-16 code units without leading or trailing whitespace. Most characters count as one; emoji and other characters outside the Basic Multilingual Plane count as two.
 
 
 <a id="nestedatt--request"></a>

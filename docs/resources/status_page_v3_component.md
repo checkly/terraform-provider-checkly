@@ -41,7 +41,7 @@ resource "checkly_status_page_v3_component" "api" {
 ### Required
 
 - `display_order` (Number) The position among siblings; lower comes first.
-- `name` (String) The name shown on the status page.
+- `name` (String) The name shown on the status page, of 1 to 255 UTF-16 code units without leading or trailing whitespace. Most characters count as one; emoji and other characters outside the Basic Multilingual Plane count as two.
 - `status_page_id` (String) The ID of the v3 status page the component belongs to. A component cannot be moved to another page.
 
 ### Optional

@@ -153,7 +153,7 @@ resource "checkly_check_group" "test_group1" {
 - `alert_settings` (Attributes) Determines the alert escalation policy for the check. (see [below for nested schema](#nestedatt--alert_settings))
 - `api_check_defaults` (Attributes) Default settings for API checks in this group. (see [below for nested schema](#nestedatt--api_check_defaults))
 - `double_check` (Boolean, Deprecated) Setting this to `true` will trigger a retry when a check fails from the failing region and another, randomly selected region before marking the check as failed. (Default `false`).
-- `environment_variable` (Block List) Insert environment variables into the runtime environment. Only relevant for browser checks. Use global environment variables whenever possible. (see [below for nested schema](#nestedblock--environment_variable))
+- `environment_variable` (Block List) Insert environment variables into the runtime environment. Only relevant for browser checks. Use global environment variables whenever possible. At most 200 variables. (see [below for nested schema](#nestedblock--environment_variable))
 - `local_setup_script` (String) A valid piece of Node.js code to run in the setup phase of an API check in this group.
 - `local_teardown_script` (String) A valid piece of Node.js code to run in the teardown phase of an API check in this group.
 - `locations` (Set of String) An array of one or more data center locations where to run the checks.
@@ -270,7 +270,7 @@ Required:
 Required:
 
 - `key` (String) The name of the environment variable or secret.
-- `value` (String, Sensitive) The value of the environment variable or secret.
+- `value` (String, Sensitive) The value of the environment variable or secret. At most 64000 bytes in UTF-8, or 31744 bytes for a secret or locked variable.
 
 Optional:
 

@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/checkly/checkly-go-sdk/v2"
@@ -69,7 +70,10 @@ func (r *EnvironmentVariableResource) Schema(ctx context.Context, req resource.S
 			"value": schema.StringAttribute{
 				Required:    true,
 				Sensitive:   true,
-				Description: "The value of the environment variable.",
+				Description: "The value of the environment variable. " + environmentVariableValueDescription,
+				Validators: []validator.String{
+					environmentVariableValueValidator{},
+				},
 			},
 			"locked": schema.BoolAttribute{
 				Optional:    true,

@@ -2,12 +2,8 @@ package provider
 
 import (
 	"context"
-	"fmt"
-	"strings"
-	"unicode"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
-	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -35,40 +31,6 @@ var checkIntentAttrTypes = map[string]attr.Type{
 	"must_preserve":     types.ListType{ElemType: types.StringType},
 }
 
-// trimmedStringValidator rejects leading and trailing whitespace, including
-// U+FEFF, which the API's trim removes and unicode.IsSpace doesn't report. The
-// API trims these values, so an untrimmed one, such as a heredoc with its
-// final newline, would read back different from the configuration.
-type trimmedStringValidator struct{}
-
-var _ validator.String = trimmedStringValidator{}
-
-func (v trimmedStringValidator) Description(ctx context.Context) string {
-	return "value must not have leading or trailing whitespace"
-}
-
-func (v trimmedStringValidator) MarkdownDescription(ctx context.Context) string {
-	return v.Description(ctx)
-}
-
-func (v trimmedStringValidator) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
-	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
-		return
-	}
-
-	value := req.ConfigValue.ValueString()
-	trimmed := strings.TrimFunc(value, func(r rune) bool {
-		return unicode.IsSpace(r) || r == '\uFEFF'
-	})
-	if value != trimmed {
-		resp.Diagnostics.AddAttributeError(
-			req.Path,
-			"Invalid Attribute Value",
-			fmt.Sprintf("%s must not have leading or trailing whitespace, which the API removes. Use trimspace() to remove it, for example on a heredoc.", req.Path),
-		)
-	}
-}
-
 // makeCheckIntentStatementsSchema returns the schema for a list of intent
 // statements.
 func makeCheckIntentStatementsSchema(description string) schema.ListAttribute {
@@ -80,7 +42,7 @@ func makeCheckIntentStatementsSchema(description string) schema.ListAttribute {
 			listvalidator.SizeAtMost(20),
 			listvalidator.NoNullValues(),
 			listvalidator.ValueStringsAre(
-				stringvalidator.UTF8LengthBetween(1, 1000),
+				utf16LengthBetween(1, 1000),
 				trimmedStringValidator{},
 			),
 		},
@@ -97,14 +59,14 @@ func makeCheckIntentSchema() schema.SingleNestedAttribute {
 		Attributes: map[string]schema.Attribute{
 			"goal": schema.StringAttribute{
 				Required:    true,
-				Description: "The user or system outcome the check protects, of 1 to 2000 characters without leading or trailing whitespace.",
+				Description: "The user or system outcome the check protects, of 1 to 2000 UTF-16 code units without leading or trailing whitespace. " + utf16CountingExplanation,
 				Validators: []validator.String{
-					stringvalidator.UTF8LengthBetween(1, 2000),
+					utf16LengthBetween(1, 2000),
 					trimmedStringValidator{},
 				},
 			},
-			"required_outcomes": makeCheckIntentStatementsSchema("Observable outcomes the check must continue to prove. At most 20 statements of 1 to 1000 characters without leading or trailing whitespace."),
-			"must_preserve":     makeCheckIntentStatementsSchema("Guardrails an automatic repair must not weaken or bypass. At most 20 statements of 1 to 1000 characters without leading or trailing whitespace."),
+			"required_outcomes": makeCheckIntentStatementsSchema("Observable outcomes the check must continue to prove. At most 20 statements of 1 to 1000 UTF-16 code units without leading or trailing whitespace. " + utf16CountingExplanation),
+			"must_preserve":     makeCheckIntentStatementsSchema("Guardrails an automatic repair must not weaken or bypass. At most 20 statements of 1 to 1000 UTF-16 code units without leading or trailing whitespace. " + utf16CountingExplanation),
 		},
 	}
 }

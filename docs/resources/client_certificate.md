@@ -40,12 +40,12 @@ resource "checkly_client_certificate" "test" {
 ### Required
 
 - `certificate` (String) The client certificate in PEM format.
-- `host` (String) The host domain that the certificate should be used for. Wildcards are supported, e.g. `*.acme.com`.
+- `host` (String) The host domain that the certificate should be used for, of at most 255 characters. Wildcards are supported, e.g. `*.acme.com`.
 - `private_key` (String, Sensitive) The private key for the certificate in PEM format.
 
 ### Optional
 
-- `passphrase` (String, Sensitive) Passphrase for the private key.
+- `passphrase` (String, Sensitive) Passphrase for the private key, of at most 95 bytes in UTF-8.
 - `path` (String) Optional URL path prefix that limits the certificate to requests under that path, e.g. `/partner/api`. Matching is on whole path segments: `/partner` applies to `/partner` and `/partner/orders` but not to `/partnership`. Must start with `/` and must not be a bare `/`; a trailing `/` is ignored. API checks and Multistep checks match on path; gRPC, SSL and TCP monitors only use certificates without a path. Omit it to use the certificate for every path on the host.
 - `trusted_ca` (String) PEM formatted bundle of CA certificates that the client should trust. The bundle may contain many CA certificates.
 

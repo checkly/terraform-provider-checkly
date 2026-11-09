@@ -2,11 +2,14 @@ package provider
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/checkly/checkly-go-sdk/v2"
@@ -39,9 +42,17 @@ type EnvironmentVariableAttributeSchemaOptions struct {
 
 // makeEnvironmentVariableSchema returns the schema for the
 // environment_variable block.
+//
+// The validators enforce the API's limits on the number of variables and the
+// length of their values. The API doesn't reject a check or check group
+// variable that exceeds them: it drops the variable, so the apply would fail
+// with a result inconsistent with the plan.
 func makeEnvironmentVariableSchema(options EnvironmentVariableAttributeSchemaOptions) schema.ListNestedBlock {
 	return schema.ListNestedBlock{
-		Description: options.Description,
+		Description: fmt.Sprintf("%s At most %d variables.", options.Description, maxEnvironmentVariables),
+		Validators: []validator.List{
+			listvalidator.SizeAtMost(maxEnvironmentVariables),
+		},
 		NestedObject: schema.NestedBlockObject{
 			Attributes: map[string]schema.Attribute{
 				"key": schema.StringAttribute{
@@ -51,7 +62,10 @@ func makeEnvironmentVariableSchema(options EnvironmentVariableAttributeSchemaOpt
 				"value": schema.StringAttribute{
 					Required:    true,
 					Sensitive:   true,
-					Description: "The value of the environment variable or secret.",
+					Description: "The value of the environment variable or secret. " + environmentVariableValueDescription,
+					Validators: []validator.String{
+						environmentVariableValueValidator{},
+					},
 				},
 				"locked": schema.BoolAttribute{
 					Optional:    true,
