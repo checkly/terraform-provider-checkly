@@ -1352,12 +1352,16 @@ resource "checkly_status_page" "test" {
   name = "tf-upgrade-{{id}}-maintenance"
   url  = "tf-upgrade-mw-{{id}}"
 
-  card {
-    name = "Card"
-    service_attachment {
-      service_id = checkly_status_page_service.test.id
-    }
-  }
+  cards = [
+    {
+      name = "Card"
+      service_attachments = [
+        {
+          service_id = checkly_status_page_service.test.id
+        },
+      ]
+    },
+  ]
 }
 
 resource "checkly_maintenance_windows" "test" {
@@ -1700,12 +1704,16 @@ resource "checkly_status_page" "test" {
   redirect_to   = "https://example.com"
   default_theme = "DARK"
 
-  card {
-    name = "Card"
-    service_attachment {
-      service_id = checkly_status_page_service.test.id
-    }
-  }
+  cards = [
+    {
+      name = "Card"
+      service_attachments = [
+        {
+          service_id = checkly_status_page_service.test.id
+        },
+      ]
+    },
+  ]
 }
 `),
 
@@ -1917,10 +1925,12 @@ resource "checkly_status_page_v3_automation_rule" "test" {
   cool_down_window_minutes = 30
   tags                     = ["tf-upgrade-api"]
 
-  component {
-    component_id  = checkly_status_page_v3_component.api.id
-    target_impact = "MAJOR_OUTAGE"
-  }
+  components = [
+    {
+      component_id  = checkly_status_page_v3_component.api.id
+      target_impact = "MAJOR_OUTAGE"
+    },
+  ]
 }
 `),
 

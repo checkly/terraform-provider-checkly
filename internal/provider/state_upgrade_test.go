@@ -311,6 +311,44 @@ func TestUpgradeSDKv2State(t *testing.T) {
 		requireStateNull(t, upgrade(`[]`), path.Root("request").AtName("name_server"))
 	})
 
+	t.Run("status_page", func(t *testing.T) {
+		// SDK v2 stored cards and their service attachments as repeated
+		// blocks under the singular names.
+		raw := `{"id":"1","name":"p","url":"p","custom_domain":"","logo":"","redirect_to":"","favicon":"","default_theme":"AUTO",` +
+			`"card":[{"name":"c","service_attachment":[{"service_id":"s1"},{"service_id":"s2"}]}]}`
+		state := upgradeSDKv2Raw(t, NewStatusPageResource(), raw)
+		attachmentType := types.ObjectType{AttrTypes: statusPageServiceAttachmentAttrTypes}
+		attachment := func(id string) attr.Value {
+			return types.ObjectValueMust(statusPageServiceAttachmentAttrTypes, map[string]attr.Value{"service_id": types.StringValue(id)})
+		}
+		requireStateValue(t, state, path.Root("cards"), types.ListValueMust(
+			types.ObjectType{AttrTypes: statusPageCardAttrTypes},
+			[]attr.Value{types.ObjectValueMust(statusPageCardAttrTypes, map[string]attr.Value{
+				"name":                types.StringValue("c"),
+				"service_attachments": types.ListValueMust(attachmentType, []attr.Value{attachment("s1"), attachment("s2")}),
+			})},
+		))
+	})
+
+	t.Run("status_page_v3_automation_rule", func(t *testing.T) {
+		// SDK v2 stored components as a repeated block under the singular
+		// name, empty when there are none.
+		upgrade := func(components string) tfsdk.State {
+			raw := `{"id":"r","status_page_id":"p","name":"n","enabled":true,"first_update":"a","last_update":"b",` +
+				`"notify_subscribers":true,"cool_down_window_minutes":5,"tags":["t"],"component":` + components + `}`
+			return upgradeSDKv2Raw(t, NewStatusPageV3AutomationRuleResource(), raw)
+		}
+		state := upgrade(`[{"component_id":"c","target_impact":"MAJOR_OUTAGE"}]`)
+		requireStateValue(t, state, path.Root("components"), types.SetValueMust(
+			types.ObjectType{AttrTypes: statusPageV3AutomationRuleComponentAttrTypes},
+			[]attr.Value{types.ObjectValueMust(statusPageV3AutomationRuleComponentAttrTypes, map[string]attr.Value{
+				"component_id":  types.StringValue("c"),
+				"target_impact": types.StringValue("MAJOR_OUTAGE"),
+			})},
+		))
+		requireStateNull(t, upgrade(`[]`), path.Root("components"))
+	})
+
 	t.Run("ssl_monitor after refresh", func(t *testing.T) {
 		state := upgradeSDKv2Fixture(t, NewSSLMonitorResource(), "ssl_monitor_read")
 		requireStateNull(t, state, path.Root("request").AtName("client_certificate").AtName("client_certificate_id"))
@@ -402,7 +440,7 @@ func requireNormalizedSDKv2Object(t *testing.T, attrs map[string]schema.Attribut
 	t.Helper()
 
 	obj := decodeSDKv2TestJSON(t, raw)
-	normalizeSDKv2Object(obj, attrs, nil)
+	normalizeSDKv2Object(obj, attrs)
 	if wantObj := decodeSDKv2TestJSON(t, want); !reflect.DeepEqual(obj, wantObj) {
 		got, _ := json.Marshal(obj)
 		t.Errorf("got %s, want %s", got, want)

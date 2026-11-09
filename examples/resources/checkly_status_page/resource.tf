@@ -11,15 +11,18 @@ resource "checkly_status_page" "example" {
   url           = "my-example-status-page"
   default_theme = "DARK"
 
-  card {
-    name = "Services"
+  cards = [
+    {
+      name = "Services"
 
-    service_attachment {
-      service_id = checkly_status_page_service.api.id
-    }
-
-    service_attachment {
-      service_id = checkly_status_page_service.database.id
-    }
-  }
+      service_attachments = [
+        {
+          service_id = checkly_status_page_service.api.id
+        },
+        {
+          service_id = checkly_status_page_service.database.id
+        },
+      ]
+    },
+  ]
 }

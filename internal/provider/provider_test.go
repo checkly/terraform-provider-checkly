@@ -112,33 +112,25 @@ func TestSensitiveAttributes(t *testing.T) {
 	}
 }
 
-// schemaAttributeAtPath looks up an attribute by the names of the attributes
-// and blocks that lead to it, skipping over list and set elements.
+// schemaAttributeAtPath looks up an attribute by the names of the nested
+// attributes that lead to it, skipping over list and set elements.
 func schemaAttributeAtPath(s schema.Schema, names []string) (schema.Attribute, bool) {
-	attributes, blocks := s.Attributes, s.Blocks
+	attributes := s.Attributes
 	for i, name := range names {
-		if attr, ok := attributes[name]; ok {
-			if i == len(names)-1 {
-				return attr, true
-			}
-			switch attr := attr.(type) {
-			case schema.SingleNestedAttribute:
-				attributes, blocks = attr.Attributes, nil
-			case schema.ListNestedAttribute:
-				attributes, blocks = attr.NestedObject.Attributes, nil
-			case schema.SetNestedAttribute:
-				attributes, blocks = attr.NestedObject.Attributes, nil
-			default:
-				return nil, false
-			}
-			continue
+		attr, ok := attributes[name]
+		if !ok {
+			return nil, false
 		}
-
-		switch block := blocks[name].(type) {
-		case schema.ListNestedBlock:
-			attributes, blocks = block.NestedObject.Attributes, block.NestedObject.Blocks
-		case schema.SetNestedBlock:
-			attributes, blocks = block.NestedObject.Attributes, block.NestedObject.Blocks
+		if i == len(names)-1 {
+			return attr, true
+		}
+		switch attr := attr.(type) {
+		case schema.SingleNestedAttribute:
+			attributes = attr.Attributes
+		case schema.ListNestedAttribute:
+			attributes = attr.NestedObject.Attributes
+		case schema.SetNestedAttribute:
+			attributes = attr.NestedObject.Attributes
 		default:
 			return nil, false
 		}

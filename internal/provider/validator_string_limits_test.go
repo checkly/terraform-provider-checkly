@@ -332,7 +332,7 @@ func checkEnvironmentVariableValueErrors(t *testing.T, c environmentVariableValu
 	}
 }
 
-func TestEnvironmentVariableBlockValueLimit(t *testing.T) {
+func TestEnvironmentVariableAttributeValueLimit(t *testing.T) {
 	for name, c := range environmentVariableValueCases {
 		t.Run(name, func(t *testing.T) {
 			errors := validateResourceConfig(t, NewCheckGroupV2Resource(), "checkly_check_group_v2", environmentVariableAttributeName, func(objectType tftypes.Object) tftypes.Value {

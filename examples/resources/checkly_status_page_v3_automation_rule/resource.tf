@@ -18,8 +18,10 @@ resource "checkly_status_page_v3_automation_rule" "api_outage" {
   last_update    = "The issue has been resolved."
   tags           = ["api"]
 
-  component {
-    component_id  = checkly_status_page_v3_component.api.id
-    target_impact = "MAJOR_OUTAGE"
-  }
+  components = [
+    {
+      component_id  = checkly_status_page_v3_component.api.id
+      target_impact = "MAJOR_OUTAGE"
+    },
+  ]
 }

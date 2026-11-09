@@ -21,15 +21,13 @@ func TestAccStatusPageCheckRequiredFields(t *testing.T) {
 			ExpectError: regexp.MustCompile(`The argument "url" is required`),
 		},
 		{
-			// name and url must be present for validation to proceed far
-			// enough to surface the missing-card error.
 			Config: `
 				resource "checkly_status_page" "test" {
 					name = "foo"
 					url  = "foo"
 				}
 			`,
-			ExpectError: regexp.MustCompile(`Block card must have a configuration value`),
+			ExpectError: regexp.MustCompile(`The argument "cards" is required`),
 		},
 	})
 }
@@ -40,19 +38,20 @@ func TestAccStatusPageCardServiceAttachmentCheckRequiredFields(t *testing.T) {
 			name = "foo"
 			url  = "foo"
 
-			card {
-				name = "foo"
+			cards = [
+				{
+					name = "foo"
 
-				service_attachment {
-				}
-			}
+					service_attachments = [{}]
+				},
+			]
 		}
 	`
 
 	accTestCase(t, []resource.TestStep{
 		{
 			Config:      config,
-			ExpectError: regexp.MustCompile(`The argument "service_id" is required`),
+			ExpectError: regexp.MustCompile(`attribute "service_id" is required`),
 		},
 	})
 }
@@ -70,13 +69,17 @@ func TestAccStatusPageHappyPath(t *testing.T) {
 					name = "foo"
 					url  = "status-page-%d"
 
-					card {
-						name = "baz"
+					cards = [
+						{
+							name = "baz"
 
-						service_attachment {
-							service_id = checkly_status_page_service.test.id
-						}
-					}
+							service_attachments = [
+								{
+									service_id = checkly_status_page_service.test.id
+								},
+							]
+						},
+					]
 				}
 			`, rInt),
 			Check: resource.ComposeTestCheckFunc(
@@ -92,22 +95,22 @@ func TestAccStatusPageHappyPath(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_status_page.test",
-					"card.#",
+					"cards.#",
 					"1",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_status_page.test",
-					"card.0.name",
+					"cards.0.name",
 					"baz",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_status_page.test",
-					"card.0.service_attachment.#",
+					"cards.0.service_attachments.#",
 					"1",
 				),
 				resource.TestCheckResourceAttrPair(
 					"checkly_status_page.test",
-					"card.0.service_attachment.0.service_id",
+					"cards.0.service_attachments.0.service_id",
 					"checkly_status_page_service.test",
 					"id",
 				),
@@ -128,13 +131,17 @@ func TestAccStatusPageHappyPath(t *testing.T) {
 					favicon       = "https://example.org/favicon.png"
 					default_theme = "DARK"
 
-					card {
-						name = "baz"
+					cards = [
+						{
+							name = "baz"
 
-						service_attachment {
-							service_id = checkly_status_page_service.test.id
-						}
-					}
+							service_attachments = [
+								{
+									service_id = checkly_status_page_service.test.id
+								},
+							]
+						},
+					]
 				}
 			`, rInt, rInt),
 			Check: resource.ComposeTestCheckFunc(
@@ -175,22 +182,22 @@ func TestAccStatusPageHappyPath(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_status_page.test",
-					"card.#",
+					"cards.#",
 					"1",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_status_page.test",
-					"card.0.name",
+					"cards.0.name",
 					"baz",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_status_page.test",
-					"card.0.service_attachment.#",
+					"cards.0.service_attachments.#",
 					"1",
 				),
 				resource.TestCheckResourceAttrPair(
 					"checkly_status_page.test",
-					"card.0.service_attachment.0.service_id",
+					"cards.0.service_attachments.0.service_id",
 					"checkly_status_page_service.test",
 					"id",
 				),
@@ -229,13 +236,17 @@ func TestAccStatusPageUnsupportedCustomDomains(t *testing.T) {
 					url           = "status-page-%d"
 					custom_domain = "%s"
 
-					card {
-						name = "baz"
+					cards = [
+						{
+							name = "baz"
 
-						service_attachment {
-							service_id = checkly_status_page_service.test.id
-						}
-					}
+							service_attachments = [
+								{
+									service_id = checkly_status_page_service.test.id
+								},
+							]
+						},
+					]
 				}
 			`, rInt, domain),
 
@@ -262,13 +273,17 @@ func TestAccStatusPageUpdateClearsRemovedValues(t *testing.T) {
 				url  = "status-page-clear-%d"
 				%s
 
-				card {
-					name = "baz"
+				cards = [
+					{
+						name = "baz"
 
-					service_attachment {
-						service_id = checkly_status_page_service.test.id
-					}
-				}
+						service_attachments = [
+							{
+								service_id = checkly_status_page_service.test.id
+							},
+						]
+					},
+				]
 			}
 		`, rInt, values)
 	}

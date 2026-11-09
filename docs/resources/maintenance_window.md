@@ -39,13 +39,17 @@ resource "checkly_status_page" "example" {
   name = "Example Application"
   url  = "my-example-status-page"
 
-  card {
-    name = "Services"
+  cards = [
+    {
+      name = "Services"
 
-    service_attachment {
-      service_id = checkly_status_page_service.api.id
-    }
-  }
+      service_attachments = [
+        {
+          service_id = checkly_status_page_service.api.id
+        },
+      ]
+    },
+  ]
 }
 
 resource "checkly_maintenance_window" "maintenance-2" {

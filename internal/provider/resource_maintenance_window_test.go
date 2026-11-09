@@ -359,13 +359,17 @@ func TestAccMaintenanceWindowControlsAllFields(t *testing.T) {
 			name = "Maintenance Window Status Page %d"
 			url  = "mw-status-page-%d"
 
-			card {
-				name = "Card"
+			cards = [
+				{
+					name = "Card"
 
-				service_attachment {
-					service_id = checkly_status_page_service.test.id
-				}
-			}
+					service_attachments = [
+						{
+							service_id = checkly_status_page_service.test.id
+						},
+					]
+				},
+			]
 		}
 	`, rInt, rInt, rInt)
 	withEverything := statusPage + fmt.Sprintf(`

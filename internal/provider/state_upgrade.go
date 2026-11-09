@@ -20,7 +20,7 @@ import (
 // sdkv2SchemaVersion is the schema version of all state written by the
 // provider's Terraform Plugin SDK v2 implementation (releases before v2.0.0).
 //
-// That state differs from what the framework implementation writes in two
+// That state differs from what the framework implementation writes in three
 // ways:
 //
 //   - Single nested objects were blocks limited to one element, which SDK v2
@@ -30,8 +30,9 @@ import (
 //     state refreshed by it holds `""`, `0`, `[]` or `{}` instead. Several Read
 //     implementations keep such prior values, so they would never become
 //     null again and every plan would propose removing them.
-//   - Collections have plural names now, where SDK v2 used the singular name
-//     of a repeated block or attribute (see sdkv2PluralRenames), and the
+//   - Repeated blocks are list or set nested attributes now, and every
+//     collection has a plural name where SDK v2 used the singular name of a
+//     repeated block or attribute (see sdkv2PluralRenames). The
 //     deprecated environment_variables map has been folded into the
 //     environment_variables list.
 //
@@ -97,7 +98,7 @@ func upgradeSDKv2RawState(ctx context.Context, raw *tfprotov6.RawState, s schema
 		return tftypes.Value{}, fmt.Errorf("decoding state JSON: %w", err)
 	}
 
-	normalizeSDKv2Object(obj, s.Attributes, s.Blocks)
+	normalizeSDKv2Object(obj, s.Attributes)
 
 	upgraded, err := json.Marshal(obj)
 	if err != nil {
@@ -120,10 +121,9 @@ func upgradeSDKv2RawState(ctx context.Context, raw *tfprotov6.RawState, s schema
 // (see renameSDKv2Collections), every single nested attribute described by
 // attrs holds an object (or null) instead of a list of at most one object,
 // and every optional, non-computed attribute holds null instead of an empty
-// string, zero number or empty collection. The remaining blocks are all
-// repeated; they keep their empty lists, which is how the framework stores
-// absent blocks too, and only their elements are normalized.
-func normalizeSDKv2Object(obj map[string]any, attrs map[string]schema.Attribute, blocks map[string]schema.Block) {
+// string, zero number or empty collection. The current schemas have no
+// blocks, so attrs describes everything obj may hold.
+func normalizeSDKv2Object(obj map[string]any, attrs map[string]schema.Attribute) {
 	renameSDKv2Collections(obj, attrs)
 
 	for name, attr := range attrs {
@@ -136,21 +136,21 @@ func normalizeSDKv2Object(obj map[string]any, attrs map[string]schema.Attribute,
 		case schema.SingleNestedAttribute:
 			value = unwrapList(value)
 			if nested, ok := value.(map[string]any); ok {
-				normalizeSDKv2Object(nested, attr.Attributes, nil)
+				normalizeSDKv2Object(nested, attr.Attributes)
 			}
 		case schema.ListNestedAttribute:
 			forEachObject(value, func(nested map[string]any) {
-				normalizeSDKv2Object(nested, attr.NestedObject.Attributes, nil)
+				normalizeSDKv2Object(nested, attr.NestedObject.Attributes)
 			})
 		case schema.SetNestedAttribute:
 			forEachObject(value, func(nested map[string]any) {
-				normalizeSDKv2Object(nested, attr.NestedObject.Attributes, nil)
+				normalizeSDKv2Object(nested, attr.NestedObject.Attributes)
 			})
 		case schema.MapNestedAttribute:
 			if m, ok := value.(map[string]any); ok {
 				for _, element := range m {
 					if nested, ok := element.(map[string]any); ok {
-						normalizeSDKv2Object(nested, attr.NestedObject.Attributes, nil)
+						normalizeSDKv2Object(nested, attr.NestedObject.Attributes)
 					}
 				}
 			}
@@ -162,23 +162,6 @@ func normalizeSDKv2Object(obj map[string]any, attrs map[string]schema.Attribute,
 		obj[name] = value
 	}
 
-	for name, block := range blocks {
-		value, ok := obj[name]
-		if !ok || value == nil {
-			continue
-		}
-
-		switch block := block.(type) {
-		case schema.ListNestedBlock:
-			forEachObject(value, func(nested map[string]any) {
-				normalizeSDKv2Object(nested, block.NestedObject.Attributes, block.NestedObject.Blocks)
-			})
-		case schema.SetNestedBlock:
-			forEachObject(value, func(nested map[string]any) {
-				normalizeSDKv2Object(nested, block.NestedObject.Attributes, block.NestedObject.Blocks)
-			})
-		}
-	}
 }
 
 // sdkv2PluralRenames maps the current plural name of a collection to the
