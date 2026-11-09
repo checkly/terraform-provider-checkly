@@ -115,11 +115,11 @@ type PlaywrightCheckSuiteRuntimeCommandModel struct {
 // attribute data model.
 type PlaywrightCheckSuiteRuntimePlaywrightModel struct {
 	Version types.String `tfsdk:"version"`
-	Device  types.Set    `tfsdk:"device"`
+	Devices types.Set    `tfsdk:"devices"`
 }
 
 // PlaywrightCheckSuiteRuntimeDeviceModel describes the
-// runtime.playwright.device element data model.
+// runtime.playwright.devices element data model.
 type PlaywrightCheckSuiteRuntimeDeviceModel struct {
 	Type types.String `tfsdk:"type"`
 }
@@ -150,7 +150,7 @@ var playwrightCheckSuiteRuntimeDeviceElementType = types.ObjectType{
 
 var playwrightCheckSuiteRuntimePlaywrightAttrTypes = map[string]attr.Type{
 	"version": types.StringType,
-	"device":  types.SetType{ElemType: playwrightCheckSuiteRuntimeDeviceElementType},
+	"devices": types.SetType{ElemType: playwrightCheckSuiteRuntimeDeviceElementType},
 }
 
 var playwrightCheckSuiteRuntimeEngineAttrTypes = map[string]attr.Type{
@@ -312,7 +312,7 @@ func (r *PlaywrightCheckSuiteResource) Schema(ctx context.Context, req resource.
 								Description: "The Playwright version to use. Defaults to the " +
 									"version detected from the code bundle's lockfile.",
 							},
-							"device": schema.SetNestedAttribute{
+							"devices": schema.SetNestedAttribute{
 								Optional: true,
 								Computed: true,
 								Description: "The list of devices that should be made available for Playwright. " +
@@ -645,9 +645,9 @@ func playwrightCheckSuiteFromModel(
 				check.PlaywrightVersion = &version
 			}
 
-			if !playwright.Device.IsNull() && !playwright.Device.IsUnknown() {
+			if !playwright.Devices.IsNull() && !playwright.Devices.IsUnknown() {
 				var devices []PlaywrightCheckSuiteRuntimeDeviceModel
-				diags.Append(playwright.Device.ElementsAs(ctx, &devices, false)...)
+				diags.Append(playwright.Devices.ElementsAs(ctx, &devices, false)...)
 
 				var browsers []string
 				for _, device := range devices {
@@ -834,7 +834,7 @@ func playwrightCheckSuiteRuntimeFromAPI(
 		var d diag.Diagnostics
 		playwright, d = types.ObjectValue(playwrightCheckSuiteRuntimePlaywrightAttrTypes, map[string]attr.Value{
 			"version": version,
-			"device":  device,
+			"devices": device,
 		})
 		diags.Append(d...)
 	}
@@ -1058,11 +1058,11 @@ func playwrightCheckSuiteResolveRuntime(
 
 		version = playwright.Version
 
-		if !playwright.Device.IsNull() {
+		if !playwright.Devices.IsNull() {
 			devicesConfigured = true
 
 			var devices []PlaywrightCheckSuiteRuntimeDeviceModel
-			diags.Append(playwright.Device.ElementsAs(ctx, &devices, false)...)
+			diags.Append(playwright.Devices.ElementsAs(ctx, &devices, false)...)
 			if diags.HasError() {
 				return null
 			}
@@ -1164,12 +1164,12 @@ func playwrightCheckSuiteResolveRuntime(
 			diags.AddError(
 				"Invalid Runtime Configuration",
 				"unable to detect default devices from the code bundle; "+
-					"set \"runtime.playwright.device\" entries explicitly",
+					"set \"runtime.playwright.devices\" entries explicitly",
 			)
 		} else {
 			diags.AddError(
 				"Invalid Runtime Configuration",
-				`at least one "runtime.playwright.device" entry is required when "runtime.auto_detect" is false`,
+				`at least one "runtime.playwright.devices" entry is required when "runtime.auto_detect" is false`,
 			)
 		}
 		return null
@@ -1205,7 +1205,7 @@ func playwrightCheckSuiteResolveRuntime(
 
 	playwright, d := types.ObjectValue(playwrightCheckSuiteRuntimePlaywrightAttrTypes, map[string]attr.Value{
 		"version": version,
-		"device":  playwrightCheckSuiteDeviceSet(ctx, deviceTypes, diags),
+		"devices": playwrightCheckSuiteDeviceSet(ctx, deviceTypes, diags),
 	})
 	diags.Append(d...)
 

@@ -85,7 +85,7 @@ resource "checkly_ssl_monitor" "example-ssl-monitor-2" {
       mode = "account_default"
     }
 
-    assertion = [
+    assertions = [
       {
         source     = "CERTIFICATE"
         property   = "daysUntilExpiry"
@@ -148,7 +148,7 @@ Required:
 Optional:
 
 - `alert_days_before_expiry` (Number) Raise an alert when the certificate is within this many days of expiry. Possible values are between 1 and 365. (Default `20`).
-- `assertion` (Attributes Set) A request can have multiple assertions. The allowed comparisons, properties, and target formats depend on the assertion source — see the [Assertion Reference](#assertion-reference) below. (see [below for nested schema](#nestedatt--request--assertion))
+- `assertions` (Attributes Set) A request can have multiple assertions. The allowed comparisons, properties, and target formats depend on the assertion source — see the [Assertion Reference](#assertion-reference) below. (see [below for nested schema](#nestedatt--request--assertions))
 - `client_certificate` (Attributes) The mutual-TLS client certificate configuration. (see [below for nested schema](#nestedatt--request--client_certificate))
 - `handshake_timeout_ms` (Number) The number of milliseconds to wait for the TLS handshake to complete before timing out. Possible values are between 1000 and 30000. (Default `10000`).
 - `ip_family` (String) The IP family to use when executing the check. The value can be either `IPv4` or `IPv6`. (Default `IPv4`).
@@ -157,8 +157,8 @@ Optional:
 - `server_name` (String) An optional SNI server name to send in the TLS handshake. Defaults to `hostname` when unset.
 - `skip_chain_validation` (Boolean) When true, the certificate chain is not validated against trusted roots (the certificate is still inspected for expiry and the security baseline). (Default `false`).
 
-<a id="nestedatt--request--assertion"></a>
-### Nested Schema for `request.assertion`
+<a id="nestedatt--request--assertions"></a>
+### Nested Schema for `request.assertions`
 
 Required:
 
@@ -369,7 +369,7 @@ terraform import checkly_ssl_monitor.example 3ffee447-5c86-4c56-b95a-2e1b4d1a123
 
 ## Assertion Reference
 
-Each element of `request.assertion` has the shape `{ source, property, comparison, target }`. SSL assertions use a property-scoped grammar: for the `CERTIFICATE` and `CONNECTION` sources, `property` selects the fact being asserted, and that property determines which comparisons are allowed. These rules are enforced by the Checkly API at apply time.
+Each element of `request.assertions` has the shape `{ source, property, comparison, target }`. SSL assertions use a property-scoped grammar: for the `CERTIFICATE` and `CONNECTION` sources, `property` selects the fact being asserted, and that property determines which comparisons are allowed. These rules are enforced by the Checkly API at apply time.
 
 ### Source `CERTIFICATE`
 
@@ -414,10 +414,10 @@ Each element of `request.assertion` has the shape `{ source, property, compariso
 
 ### Examples
 
-The following `assertion` list, placed inside `request`, shows assertions on the certificate, the connection and the check result.
+The following `assertions` list, placed inside `request`, shows assertions on the certificate, the connection and the check result.
 
 ```terraform
-assertion = [
+assertions = [
   # The certificate must be valid for at least 14 more days.
   {
     source     = "CERTIFICATE"

@@ -48,7 +48,7 @@ resource "checkly_check_group" "check-group-3" {
       query = "foo-val"
     }
 
-    assertion = [
+    assertions = [
       {
         source     = "STATUS_CODE"
         property   = ""

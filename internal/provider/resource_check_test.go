@@ -239,7 +239,7 @@ func TestAccApiCheckRequestUnknownValues(t *testing.T) {
 
 					request = {
 						url = "https://api.checklyhq.com/public-stats?marker=${checkly_snippet.test.id}"
-						assertion = [{
+						assertions = [{
 							source     = "STATUS_CODE"
 							comparison = "EQUALS"
 							target     = checkly_snippet.test.id
@@ -300,7 +300,7 @@ func TestAccApiCheckBasic(t *testing.T) {
 				),
 				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_check.test",
-					"request.assertion.*",
+					"request.assertions.*",
 					map[string]string{
 						"source":     "STATUS_CODE",
 						"property":   "",
@@ -467,12 +467,12 @@ func TestAccApiCheckFull(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_check.test",
-					"request.assertion.#",
+					"request.assertions.#",
 					"3",
 				),
 				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_check.test",
-					"request.assertion.*",
+					"request.assertions.*",
 					map[string]string{
 						"source":     "STATUS_CODE",
 						"property":   "",
@@ -482,7 +482,7 @@ func TestAccApiCheckFull(t *testing.T) {
 				),
 				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_check.test",
-					"request.assertion.*",
+					"request.assertions.*",
 					map[string]string{
 						"source":     "HEADERS",
 						"property":   "cache-control",
@@ -492,7 +492,7 @@ func TestAccApiCheckFull(t *testing.T) {
 				),
 				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_check.test",
-					"request.assertion.*",
+					"request.assertions.*",
 					map[string]string{
 						"source":     "JSON_BODY",
 						"property":   "$.apiCheckResults",
@@ -569,7 +569,7 @@ resource "checkly_check" "test_trigger_incident" {
 	request = {
 		url    = "https://api.example.com/health"
 		method = "GET"
-		assertion = [{
+		assertions = [{
 			source     = "STATUS_CODE"
 			comparison = "EQUALS"
 			target     = "200"
@@ -1383,7 +1383,7 @@ const apiCheck_basic = `
 	  request = {
 		method     = "GET"
 		url        = "https://api.checklyhq.com/public-stats"
-		assertion = [{
+		assertions = [{
 		  comparison = "EQUALS"
 		  property   = ""
 		  source     = "STATUS_CODE"
@@ -1406,7 +1406,7 @@ const apiCheck_basic_withoutDescription = `
 	  request = {
 		method     = "GET"
 		url        = "https://api.checklyhq.com/public-stats"
-		assertion = [{
+		assertions = [{
 		  comparison = "EQUALS"
 		  property   = ""
 		  source     = "STATUS_CODE"
@@ -1446,7 +1446,7 @@ const apiCheck_full = `
 		username = "user"
 		password = "pass"
 	  }
-	  assertion = [{
+	  assertions = [{
 		comparison = "EQUALS"
 		property   = ""
 		source     = "STATUS_CODE"
@@ -1524,7 +1524,7 @@ const apiCheck_withEmptyBasicAuth = `
 		username = ""
 		password = ""
 	  }
-	  assertion = [{
+	  assertions = [{
 		source     = "STATUS_CODE"
 		property   = ""
 		comparison = "EQUALS"

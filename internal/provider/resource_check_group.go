@@ -192,7 +192,7 @@ func (r *CheckGroupResource) Configure(ctx context.Context, req resource.Configu
 }
 
 // ModifyPlan applies default values to the optional+computed attributes
-// nested in the api_check_defaults.assertion set. Schema defaults cannot be
+// nested in the api_check_defaults.assertions set. Schema defaults cannot be
 // used for these attributes (see the attribute schema for details), so the
 // plan is adjusted here instead. Substituting static values keeps every set
 // element fully known and stable across plans, which set element correlation
@@ -200,7 +200,7 @@ func (r *CheckGroupResource) Configure(ctx context.Context, req resource.Configu
 // out of a newly configured alert_settings attribute; see
 // planUnconfiguredAlertSettingsAsUnknown.
 func (r *CheckGroupResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	planNestedDefaults(ctx, req, resp, path.Root(apiCheckDefaultsAttributeName), objectWithSetDefaults("assertion", assertionsWithPropertyDefault))
+	planNestedDefaults(ctx, req, resp, path.Root(apiCheckDefaultsAttributeName), objectWithSetDefaults("assertions", assertionsWithPropertyDefault))
 	planUnconfiguredAlertSettingsAsUnknown(ctx, req, resp)
 }
 

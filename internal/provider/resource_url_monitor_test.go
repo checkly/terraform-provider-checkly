@@ -77,7 +77,7 @@ func TestAccURLMonitorBasic(t *testing.T) {
 				),
 				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_url_monitor.test",
-					"request.assertion.*",
+					"request.assertions.*",
 					map[string]string{
 						"source":     "STATUS_CODE",
 						"property":   "",
@@ -150,12 +150,12 @@ func TestAccURLMonitorFull(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_url_monitor.test",
-					"request.assertion.#",
+					"request.assertions.#",
 					"2",
 				),
 				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_url_monitor.test",
-					"request.assertion.*",
+					"request.assertions.*",
 					map[string]string{
 						"source":     "STATUS_CODE",
 						"property":   "",
@@ -165,7 +165,7 @@ func TestAccURLMonitorFull(t *testing.T) {
 				),
 				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_url_monitor.test",
-					"request.assertion.*",
+					"request.assertions.*",
 					map[string]string{
 						"source":     "STATUS_CODE",
 						"property":   "",
@@ -198,7 +198,7 @@ resource "checkly_url_monitor" "test_trigger_incident" {
 	request = {
 		url = "https://status.example.com/health"
 		follow_redirects = false
-		assertion = [{
+		assertions = [{
 			source     = "STATUS_CODE"
 			comparison = "EQUALS"
 			target     = "200"
@@ -342,7 +342,7 @@ resource "checkly_url_monitor" "test" {
   use_global_alert_settings = true
   request = {
     url = "https://api.checklyhq.com"
-    assertion = [{
+    assertions = [{
       comparison = "EQUALS"
       property   = ""
       source     = "STATUS_CODE"
@@ -363,7 +363,7 @@ resource "checkly_url_monitor" "test" {
   use_global_alert_settings = true
   request = {
     url = "https://api.checklyhq.com"
-    assertion = [{
+    assertions = [{
       comparison = "EQUALS"
       property   = ""
       source     = "STATUS_CODE"
@@ -391,7 +391,7 @@ resource "checkly_url_monitor" "test" {
     follow_redirects = true
     skip_ssl         = false
     ip_family        = "IPv6"
-    assertion = [{
+    assertions = [{
       comparison = "GREATER_THAN"
       property   = ""
       source     = "STATUS_CODE"
@@ -1486,7 +1486,7 @@ func TestAccURLMonitorAlertChannelSubscriptions(t *testing.T) {
 					request = {
 						url = "https://api.checklyhq.com"
 
-						assertion = [{
+						assertions = [{
 							source     = "STATUS_CODE"
 							comparison = "EQUALS"
 							target     = "200"
@@ -1555,7 +1555,7 @@ func TestAccURLMonitorAlertChannelSubscriptions(t *testing.T) {
 					request = {
 						url = "https://api.checklyhq.com"
 
-						assertion = [{
+						assertions = [{
 							source     = "STATUS_CODE"
 							comparison = "EQUALS"
 							target     = "200"
@@ -1636,7 +1636,7 @@ func TestAccURLMonitorAlertChannelSubscriptions(t *testing.T) {
 					request = {
 						url = "https://api.checklyhq.com"
 
-						assertion = [{
+						assertions = [{
 							source     = "STATUS_CODE"
 							comparison = "EQUALS"
 							target     = "200"
@@ -1691,7 +1691,7 @@ func TestAccURLMonitorAlertChannelSubscriptions(t *testing.T) {
 					request = {
 						url = "https://api.checklyhq.com"
 
-						assertion = [{
+						assertions = [{
 							source     = "STATUS_CODE"
 							comparison = "EQUALS"
 							target     = "200"
@@ -1923,7 +1923,7 @@ func TestAccURLMonitorUnsetSweepRequest(t *testing.T) {
 						follow_redirects = false
 						skip_ssl         = true
 						ip_family        = "IPv6"
-						assertion = [{
+						assertions = [{
 							source     = "STATUS_CODE"
 							comparison = "EQUALS"
 							target     = "200"
@@ -1935,7 +1935,7 @@ func TestAccURLMonitorUnsetSweepRequest(t *testing.T) {
 				testCheckResourceAttrExpr("checkly_url_monitor.test", `follow_redirects":"false"`, "false"),
 				testCheckResourceAttrExpr("checkly_url_monitor.test", `skip_ssl":"true"`, "true"),
 				testCheckResourceAttrExpr("checkly_url_monitor.test", `ip_family":"IPv6"`, "IPv6"),
-				testCheckResourceAttrExpr("checkly_url_monitor.test", `assertion.#":"1"`, "1"),
+				testCheckResourceAttrExpr("checkly_url_monitor.test", `assertions.#":"1"`, "1"),
 			),
 		},
 		{
@@ -1954,7 +1954,7 @@ func TestAccURLMonitorUnsetSweepRequest(t *testing.T) {
 				testCheckResourceAttrExpr("checkly_url_monitor.test", `follow_redirects":"true"`, "true"),
 				testCheckResourceAttrExpr("checkly_url_monitor.test", `skip_ssl":"false"`, "false"),
 				testCheckResourceAttrExpr("checkly_url_monitor.test", `ip_family":"IPv4"`, "IPv4"),
-				testCheckResourceAttrExpr("checkly_url_monitor.test", `assertion.#":"0"`, "0"),
+				testCheckResourceAttrExpr("checkly_url_monitor.test", `assertions.#":"0"`, "0"),
 			),
 		},
 	})

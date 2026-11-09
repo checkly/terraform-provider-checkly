@@ -26,7 +26,7 @@ resource "checkly_url_monitor" "example-url-monitor" {
   request = {
     url = "https://welcome.checklyhq.com"
 
-    assertion = [{
+    assertions = [{
       source     = "STATUS_CODE"
       comparison = "EQUALS"
       target     = "200"
@@ -78,13 +78,13 @@ Required:
 
 Optional:
 
-- `assertion` (Attributes Set) Assertions to validate the HTTP response. URL monitors only support status code assertions. (see [below for nested schema](#nestedatt--request--assertion))
+- `assertions` (Attributes Set) Assertions to validate the HTTP response. URL monitors only support status code assertions. (see [below for nested schema](#nestedatt--request--assertions))
 - `follow_redirects` (Boolean) Whether to follow HTTP redirects automatically. (Default `true`).
 - `ip_family` (String) IP family version to use for the connection. The value can be either `IPv4` or `IPv6`. (Default `IPv4`).
 - `skip_ssl` (Boolean) Whether to skip SSL certificate verification. (Default `false`).
 
-<a id="nestedatt--request--assertion"></a>
-### Nested Schema for `request.assertion`
+<a id="nestedatt--request--assertions"></a>
+### Nested Schema for `request.assertions`
 
 Required:
 

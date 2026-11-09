@@ -249,7 +249,7 @@ resource "checkly_check" "test" {
       username = "user"
       password = "pass"
     }
-    assertion = [
+    assertions = [
       {
         source     = "STATUS_CODE"
         property   = ""
@@ -717,7 +717,7 @@ resource "checkly_tcp_check" "test" {
   request = {
     hostname = "api.checklyhq.com"
     port     = 80
-    assertion = [{
+    assertions = [{
       source     = "RESPONSE_TIME"
       property   = ""
       comparison = "LESS_THAN"
@@ -819,7 +819,7 @@ resource "checkly_tcp_monitor" "test" {
     hostname  = "api.checklyhq.com"
     port      = 80
     ip_family = "IPv4"
-    assertion = [
+    assertions = [
       {
         source     = "RESPONSE_TIME"
         property   = ""
@@ -951,7 +951,7 @@ resource "checkly_check_group" "test" {
     query_parameters = {
       query = "foo"
     }
-    assertion = [
+    assertions = [
       {
         source     = "STATUS_CODE"
         property   = ""
@@ -1142,7 +1142,7 @@ resource "checkly_check_group_v2" "test" {
     query_parameters = {
       version = "v2"
     }
-    assertion = [
+    assertions = [
       {
         source     = "STATUS_CODE"
         property   = ""
@@ -2023,7 +2023,7 @@ resource "checkly_url_monitor" "test" {
     follow_redirects = true
     skip_ssl         = false
     ip_family        = "IPv6"
-    assertion = [
+    assertions = [
       {
         source     = "STATUS_CODE"
         property   = ""
@@ -2182,7 +2182,7 @@ resource "checkly_dns_monitor" "test" {
       port = 53
     }
 
-    assertion = [{
+    assertions = [{
       source     = "RESPONSE_CODE"
       property   = ""
       comparison = "EQUALS"
@@ -2274,7 +2274,7 @@ resource "checkly_icmp_monitor" "test" {
     ip_family  = "IPv4"
     ping_count = 10
 
-    assertion = [{
+    assertions = [{
       source     = "LATENCY"
       property   = "avg"
       comparison = "LESS_THAN"
@@ -2382,7 +2382,7 @@ resource "checkly_grpc_monitor" "test" {
       value = "supersecret"
     }]
 
-    assertion = [{
+    assertions = [{
       source     = "GRPC_STATUS_CODE"
       property   = ""
       comparison = "EQUALS"
@@ -2482,7 +2482,7 @@ resource "checkly_traceroute_monitor" "test" {
     ptr_lookup       = true
     timeout          = 10
 
-    assertion = [{
+    assertions = [{
       source     = "PACKET_LOSS"
       property   = ""
       comparison = "LESS_THAN"
@@ -2624,7 +2624,7 @@ resource "checkly_ssl_monitor" "test" {
       mode = "account_default"
     }
 
-    assertion = [{
+    assertions = [{
       source     = "CERTIFICATE"
       property   = "daysUntilExpiry"
       comparison = "GREATER_THAN"
@@ -2760,7 +2760,7 @@ resource "checkly_playwright_check_suite" "test" {
     }
     playwright = {
       version = "1.56.1"
-      device = [
+      devices = [
         {
           type = "chromium"
         },
@@ -2938,7 +2938,7 @@ resource "checkly_tcp_monitor" "test" {
   request = {
     hostname = "api.checklyhq.com"
     port     = 80
-    assertion = [{
+    assertions = [{
       source     = "RESPONSE_TIME"
       property   = ""
       comparison = "LESS_THAN"
@@ -2998,7 +2998,7 @@ resource "checkly_api_check" "test" {
 
   request = {
     url = "https://api.checklyhq.com/public-stats"
-    assertion = [{
+    assertions = [{
       source     = "STATUS_CODE"
       comparison = "EQUALS"
       target     = "200"

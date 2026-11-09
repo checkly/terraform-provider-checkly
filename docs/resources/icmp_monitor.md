@@ -28,7 +28,7 @@ resource "checkly_icmp_monitor" "example-icmp-monitor" {
     ip_family  = "IPv4"
     ping_count = 10
 
-    assertion = [{
+    assertions = [{
       source     = "LATENCY"
       property   = "avg"
       comparison = "LESS_THAN"
@@ -80,12 +80,12 @@ Required:
 
 Optional:
 
-- `assertion` (Attributes Set) Assertions to validate the ICMP response. (see [below for nested schema](#nestedatt--request--assertion))
+- `assertions` (Attributes Set) Assertions to validate the ICMP response. (see [below for nested schema](#nestedatt--request--assertions))
 - `ip_family` (String) The IP family to use. Possible values are `IPv4` and `IPv6`. (Default `IPv4`).
 - `ping_count` (Number) The number of ping packets to send. (Default `10`).
 
-<a id="nestedatt--request--assertion"></a>
-### Nested Schema for `request.assertion`
+<a id="nestedatt--request--assertions"></a>
+### Nested Schema for `request.assertions`
 
 Required:
 

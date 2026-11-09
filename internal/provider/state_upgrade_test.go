@@ -145,9 +145,9 @@ func TestUpgradeSDKv2State(t *testing.T) {
 		requireStateValue(t, state, path.Root("retry_strategy").AtName("base_backoff_seconds"), types.Int64Value(30))
 		requireStateValue(t, state, path.Root("retry_strategy").AtName("only_on").AtName("network_error"), types.BoolValue(true))
 		// The one-element request list is unwrapped into an object; its
-		// assertion list becomes a set of objects.
+		// assertion list becomes the assertions set.
 		requireStateValue(t, state, path.Root("request").AtName("url"), types.StringValue("https://example.com"))
-		requireStateValue(t, state, path.Root("request").AtName("assertion"), types.SetValueMust(
+		requireStateValue(t, state, path.Root("request").AtName("assertions"), types.SetValueMust(
 			types.ObjectType{AttrTypes: assertionAttrTypes},
 			[]attr.Value{types.ObjectValueMust(assertionAttrTypes, map[string]attr.Value{
 				"source":     types.StringValue("STATUS_CODE"),
@@ -174,7 +174,7 @@ func TestUpgradeSDKv2State(t *testing.T) {
 		requireStateNull(t, state, path.Root(alertChannelSubscriptionAttributeName))
 		// SDK v2 stores no assertions as an empty list, which upgrades to
 		// the empty set the attribute defaults to.
-		requireStateValue(t, state, path.Root("request").AtName("assertion"), types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{}))
+		requireStateValue(t, state, path.Root("request").AtName("assertions"), types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{}))
 	})
 
 	t.Run("ssl_monitor", func(t *testing.T) {
@@ -188,7 +188,7 @@ func TestUpgradeSDKv2State(t *testing.T) {
 		requireStateValue(t, state, request.AtName("security_baseline").AtName("enabled"), types.BoolValue(true))
 		requireStateValue(t, state, request.AtName("security_baseline").AtName("min_tls_version").AtName("value"), types.StringValue("TLS1.2"))
 		requireStateNull(t, state, request.AtName("security_baseline").AtName("known_bad_ca"))
-		requireStateValue(t, state, request.AtName("assertion"), types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{}))
+		requireStateValue(t, state, request.AtName("assertions"), types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{}))
 		requireStateValue(t, state, path.Root("retry_strategy").AtName("type"), types.StringValue("NO_RETRIES"))
 	})
 
@@ -216,6 +216,25 @@ func TestUpgradeSDKv2State(t *testing.T) {
 		requireStateNull(t, state, path.Root("teardown_script"))
 	})
 
+	t.Run("check_group_v2 with default assertions", func(t *testing.T) {
+		// SDK v2 stored the assertions of api_check_defaults under the
+		// singular name assertion.
+		raw := sdkv2FixtureWith(t, "check_group_v2", func(obj map[string]any) {
+			defaults := obj["api_check_defaults"].([]any)[0].(map[string]any)
+			defaults["assertion"] = []any{map[string]any{"source": "STATUS_CODE", "property": "", "comparison": "EQUALS", "target": "200"}}
+		})
+		state := upgradeSDKv2Raw(t, NewCheckGroupV2Resource(), raw)
+		requireStateValue(t, state, path.Root(apiCheckDefaultsAttributeName).AtName("assertions"), types.SetValueMust(
+			types.ObjectType{AttrTypes: assertionAttrTypes},
+			[]attr.Value{types.ObjectValueMust(assertionAttrTypes, map[string]attr.Value{
+				"source":     types.StringValue("STATUS_CODE"),
+				"property":   types.StringValue(""),
+				"comparison": types.StringValue("EQUALS"),
+				"target":     types.StringValue("200"),
+			})},
+		))
+	})
+
 	t.Run("check_group_v2 with enforced alert channel subscriptions", func(t *testing.T) {
 		// SDK v2 stored the subscriptions of enforce_alert_settings under
 		// the singular name, empty when there are none.
@@ -234,6 +253,11 @@ func TestUpgradeSDKv2State(t *testing.T) {
 		state := upgradeSDKv2Fixture(t, NewPlaywrightCheckSuiteResource(), "playwright_check_suite")
 		requireStateValue(t, state, path.Root("runtime").AtName("steps").AtName("install").AtName("command"), types.StringValue("npm ci"))
 		requireStateValue(t, state, path.Root("runtime").AtName("playwright").AtName("version"), types.StringValue("1.50.0"))
+		// SDK v2 stored the devices under the singular name device.
+		requireStateValue(t, state, path.Root("runtime").AtName("playwright").AtName("devices"), types.SetValueMust(
+			playwrightCheckSuiteRuntimeDeviceElementType,
+			[]attr.Value{types.ObjectValueMust(playwrightCheckSuiteRuntimeDeviceAttrTypes, map[string]attr.Value{"type": types.StringValue("chromium")})},
+		))
 		requireStateValue(t, state, path.Root("bundle").AtName("id"), types.StringValue("b"))
 		requireStateValue(t, state, path.Root("bundle").AtName("metadata"), types.StringValue("{}"))
 	})

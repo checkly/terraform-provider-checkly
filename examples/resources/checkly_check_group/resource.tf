@@ -20,7 +20,7 @@ resource "checkly_check_group" "test_group1" {
       query = "foo"
     }
 
-    assertion = [
+    assertions = [
       {
         source     = "STATUS_CODE"
         property   = ""

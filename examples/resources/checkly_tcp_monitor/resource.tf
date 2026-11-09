@@ -56,7 +56,7 @@ resource "checkly_tcp_monitor" "example-tcp-monitor-2" {
     port     = 80
     data     = "hello"
 
-    assertion = [
+    assertions = [
       {
         source     = "RESPONSE_DATA"
         property   = ""

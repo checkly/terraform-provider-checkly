@@ -61,7 +61,7 @@ func TestAccApiCheckResourceBasic(t *testing.T) {
 				),
 				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_api_check.test",
-					"request.assertion.*",
+					"request.assertions.*",
 					map[string]string{
 						"source":     "STATUS_CODE",
 						"property":   "",
@@ -321,12 +321,12 @@ func TestAccApiCheckResourceFull(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_api_check.test",
-					"request.assertion.#",
+					"request.assertions.#",
 					"3",
 				),
 				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_api_check.test",
-					"request.assertion.*",
+					"request.assertions.*",
 					map[string]string{
 						"source":     "STATUS_CODE",
 						"property":   "",
@@ -336,7 +336,7 @@ func TestAccApiCheckResourceFull(t *testing.T) {
 				),
 				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_api_check.test",
-					"request.assertion.*",
+					"request.assertions.*",
 					map[string]string{
 						"source":     "HEADERS",
 						"property":   "cache-control",
@@ -346,7 +346,7 @@ func TestAccApiCheckResourceFull(t *testing.T) {
 				),
 				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_api_check.test",
-					"request.assertion.*",
+					"request.assertions.*",
 					map[string]string{
 						"source":     "JSON_BODY",
 						"property":   "$.apiCheckResults",
@@ -715,7 +715,7 @@ func TestAccApiCheckResourceMovedFromCheck(t *testing.T) {
 				  request = {
 					method     = "GET"
 					url        = "https://api.checklyhq.com/public-stats"
-					assertion = [{
+					assertions = [{
 					  comparison = "EQUALS"
 					  property   = ""
 					  source     = "STATUS_CODE"
@@ -739,7 +739,7 @@ func TestAccApiCheckResourceMovedFromCheck(t *testing.T) {
 				  request = {
 					method     = "GET"
 					url        = "https://api.checklyhq.com/public-stats"
-					assertion = [{
+					assertions = [{
 					  comparison = "EQUALS"
 					  property   = ""
 					  source     = "STATUS_CODE"
@@ -1182,7 +1182,7 @@ func TestAccApiCheckUnsetSweepRequest(t *testing.T) {
 							username = "user"
 							password = "pass"
 						}
-						assertion = [{
+						assertions = [{
 							source     = "STATUS_CODE"
 							comparison = "EQUALS"
 							target     = "200"
@@ -1217,7 +1217,7 @@ func TestAccApiCheckUnsetSweepRequest(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_api_check.test",
-					"request.assertion.#",
+					"request.assertions.#",
 					"2",
 				),
 			),
@@ -1231,7 +1231,7 @@ func TestAccApiCheckUnsetSweepRequest(t *testing.T) {
 					locations = ["eu-central-1"]
 					request = {
 						url = "https://api.checklyhq.com/public-stats"
-						assertion = [{
+						assertions = [{
 							source     = "STATUS_CODE"
 							comparison = "EQUALS"
 							target     = "200"
@@ -1257,7 +1257,7 @@ func TestAccApiCheckUnsetSweepRequest(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_api_check.test",
-					"request.assertion.#",
+					"request.assertions.#",
 					"1",
 				),
 			),
@@ -1349,7 +1349,7 @@ const apiCheckResource_basic = `
 	  request = {
 		method     = "GET"
 		url        = "https://api.checklyhq.com/public-stats"
-		assertion = [{
+		assertions = [{
 		  comparison = "EQUALS"
 		  property   = ""
 		  source     = "STATUS_CODE"
@@ -1371,7 +1371,7 @@ const apiCheckResource_basicWithoutDescription = `
 	  request = {
 		method     = "GET"
 		url        = "https://api.checklyhq.com/public-stats"
-		assertion = [{
+		assertions = [{
 		  comparison = "EQUALS"
 		  property   = ""
 		  source     = "STATUS_CODE"
@@ -1410,7 +1410,7 @@ const apiCheckResource_full = `
 		username = "user"
 		password = "pass"
 	  }
-	  assertion = [{
+	  assertions = [{
 		comparison = "EQUALS"
 		property   = ""
 		source     = "STATUS_CODE"
@@ -1486,7 +1486,7 @@ const apiCheckResource_withEmptyBasicAuth = `
 		username = ""
 		password = ""
 	  }
-	  assertion = [{
+	  assertions = [{
 		source     = "STATUS_CODE"
 		property   = ""
 		comparison = "EQUALS"

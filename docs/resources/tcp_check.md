@@ -77,7 +77,7 @@ resource "checkly_tcp_check" "example-tcp-check-2" {
     port     = 80
     data     = "hello"
 
-    assertion = [
+    assertions = [
       {
         source     = "RESPONSE_DATA"
         property   = ""
@@ -140,12 +140,12 @@ Required:
 
 Optional:
 
-- `assertion` (Attributes Set) A request can have multiple assertions. (see [below for nested schema](#nestedatt--request--assertion))
+- `assertions` (Attributes Set) A request can have multiple assertions. (see [below for nested schema](#nestedatt--request--assertions))
 - `data` (String) The data to send to the target host.
 - `ip_family` (String) The IP family to use when executing the TCP check. The value can be either `IPv4` or `IPv6`. (Default `IPv4`).
 
-<a id="nestedatt--request--assertion"></a>
-### Nested Schema for `request.assertion`
+<a id="nestedatt--request--assertions"></a>
+### Nested Schema for `request.assertions`
 
 Required:
 

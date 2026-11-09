@@ -11,7 +11,7 @@ resource "checkly_url_monitor" "example-url-monitor" {
   request = {
     url = "https://welcome.checklyhq.com"
 
-    assertion = [{
+    assertions = [{
       source     = "STATUS_CODE"
       comparison = "EQUALS"
       target     = "200"

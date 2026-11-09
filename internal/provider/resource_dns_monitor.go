@@ -73,7 +73,7 @@ type DNSMonitorRequestModel struct {
 	Query      types.String `tfsdk:"query"`
 	Protocol   types.String `tfsdk:"protocol"`
 	NameServer types.Object `tfsdk:"name_server"`
-	Assertions types.Set    `tfsdk:"assertion"`
+	Assertions types.Set    `tfsdk:"assertions"`
 }
 
 // DNSMonitorNameServerModel describes the request.name_server attribute
@@ -93,7 +93,7 @@ var dnsMonitorRequestAttrTypes = map[string]attr.Type{
 	"query":       types.StringType,
 	"protocol":    types.StringType,
 	"name_server": types.ObjectType{AttrTypes: dnsMonitorNameServerAttrTypes},
-	"assertion":   types.SetType{ElemType: types.ObjectType{AttrTypes: assertionAttrTypes}},
+	"assertions":  types.SetType{ElemType: types.ObjectType{AttrTypes: assertionAttrTypes}},
 }
 
 func (r *DNSMonitorResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -252,7 +252,7 @@ func (r *DNSMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 							},
 						},
 					},
-					"assertion": schema.SetNestedAttribute{
+					"assertions": schema.SetNestedAttribute{
 						Optional:    true,
 						Computed:    true,
 						Default:     setdefault.StaticValue(types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{})),
@@ -325,7 +325,7 @@ func (r *DNSMonitorResource) Configure(ctx context.Context, req resource.Configu
 // fully known and stable across plans, which set element correlation
 // requires.
 func (r *DNSMonitorResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	planNestedDefaults(ctx, req, resp, path.Root("request"), objectWithSetDefaults("assertion", assertionsWithPropertyDefault))
+	planNestedDefaults(ctx, req, resp, path.Root("request"), objectWithSetDefaults("assertions", assertionsWithPropertyDefault))
 }
 
 func (r *DNSMonitorResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {

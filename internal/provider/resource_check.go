@@ -389,7 +389,7 @@ func (r *CheckResource) Configure(ctx context.Context, req resource.ConfigureReq
 // fully known and stable across plans, which set element correlation
 // requires.
 func (r *CheckResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	planNestedDefaults(ctx, req, resp, path.Root("request"), objectWithSetDefaults("assertion", assertionsWithPropertyAndTargetDefaults))
+	planNestedDefaults(ctx, req, resp, path.Root("request"), objectWithSetDefaults("assertions", assertionsWithPropertyAndTargetDefaults))
 
 	// An empty script is reported in the plan when it is known there.
 	// Create and Update check again for a script known only at apply time.

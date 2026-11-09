@@ -29,7 +29,7 @@ resource "checkly_api_check" "example_check" {
     url              = "https://api.example.com/"
     follow_redirects = true
     skip_ssl         = false
-    assertion = [{
+    assertions = [{
       source     = "STATUS_CODE"
       comparison = "EQUALS"
       target     = "200"
@@ -85,7 +85,7 @@ resource "checkly_api_check" "example_check_2" {
       X-Bogus = "bogus"
     }
 
-    assertion = [
+    assertions = [
       {
         source     = "JSON_BODY"
         property   = "code"
@@ -120,7 +120,7 @@ resource "checkly_api_check" "high_frequency_check" {
 
   request = {
     url = "https://api.example.com/health"
-    assertion = [{
+    assertions = [{
       source     = "STATUS_CODE"
       comparison = "EQUALS"
       target     = "200"
@@ -232,7 +232,7 @@ Required:
 
 Optional:
 
-- `assertion` (Attributes Set) A request can have multiple assertions. (see [below for nested schema](#nestedatt--request--assertion))
+- `assertions` (Attributes Set) A request can have multiple assertions. (see [below for nested schema](#nestedatt--request--assertions))
 - `basic_auth` (Attributes) Set up HTTP basic authentication (username & password). (see [below for nested schema](#nestedatt--request--basic_auth))
 - `body` (String) The body of the request.
 - `body_type` (String) The `Content-Type` header of the request. Possible values `NONE`, `JSON`, `FORM`, `RAW`, and `GRAPHQL`. (Default `NONE`).
@@ -243,8 +243,8 @@ Optional:
 - `query_parameters` (Map of String) Query parameters to add to the request URL, as a map of parameter names to values.
 - `skip_ssl` (Boolean) Whether to skip TLS certificate validation of the request. (Default `false`).
 
-<a id="nestedatt--request--assertion"></a>
-### Nested Schema for `request.assertion`
+<a id="nestedatt--request--assertions"></a>
+### Nested Schema for `request.assertions`
 
 Required:
 

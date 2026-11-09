@@ -70,7 +70,7 @@ resource "checkly_ssl_monitor" "example-ssl-monitor-2" {
       mode = "account_default"
     }
 
-    assertion = [
+    assertions = [
       {
         source     = "CERTIFICATE"
         property   = "daysUntilExpiry"

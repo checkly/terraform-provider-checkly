@@ -72,19 +72,19 @@ type TCPMonitorResourceModel struct {
 
 // TCPMonitorRequestModel describes the request attribute data model.
 type TCPMonitorRequestModel struct {
-	Hostname  types.String `tfsdk:"hostname"`
-	Port      types.Int64  `tfsdk:"port"`
-	Data      types.String `tfsdk:"data"`
-	Assertion types.Set    `tfsdk:"assertion"`
-	IPFamily  types.String `tfsdk:"ip_family"`
+	Hostname   types.String `tfsdk:"hostname"`
+	Port       types.Int64  `tfsdk:"port"`
+	Data       types.String `tfsdk:"data"`
+	Assertions types.Set    `tfsdk:"assertions"`
+	IPFamily   types.String `tfsdk:"ip_family"`
 }
 
 var tcpMonitorRequestAttrTypes = map[string]attr.Type{
-	"hostname":  types.StringType,
-	"port":      types.Int64Type,
-	"data":      types.StringType,
-	"assertion": types.SetType{ElemType: types.ObjectType{AttrTypes: assertionAttrTypes}},
-	"ip_family": types.StringType,
+	"hostname":   types.StringType,
+	"port":       types.Int64Type,
+	"data":       types.StringType,
+	"assertions": types.SetType{ElemType: types.ObjectType{AttrTypes: assertionAttrTypes}},
+	"ip_family":  types.StringType,
 }
 
 func (r *TCPMonitorResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -231,7 +231,7 @@ func (r *TCPMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 							stringvalidator.OneOf("IPv4", "IPv6"),
 						},
 					},
-					"assertion": schema.SetNestedAttribute{
+					"assertions": schema.SetNestedAttribute{
 						Optional:    true,
 						Computed:    true,
 						Default:     setdefault.StaticValue(types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{})),
@@ -301,7 +301,7 @@ func (r *TCPMonitorResource) Configure(ctx context.Context, req resource.Configu
 // fully known and stable across plans, which set element correlation
 // requires.
 func (r *TCPMonitorResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	planNestedDefaults(ctx, req, resp, path.Root("request"), objectWithSetDefaults("assertion", assertionsWithPropertyAndTargetDefaults))
+	planNestedDefaults(ctx, req, resp, path.Root("request"), objectWithSetDefaults("assertions", assertionsWithPropertyAndTargetDefaults))
 }
 
 func (r *TCPMonitorResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -566,7 +566,7 @@ func tcpMonitorRequestFromObject(ctx context.Context, obj types.Object, diags *d
 		Hostname:   model.Hostname.ValueString(),
 		Port:       uint16(model.Port.ValueInt64()),
 		Data:       model.Data.ValueString(),
-		Assertions: assertionsFromSet(ctx, model.Assertion, diags),
+		Assertions: assertionsFromSet(ctx, model.Assertions, diags),
 		IPFamily:   checkly.IPFamily(model.IPFamily.ValueString()),
 	}
 }
@@ -575,11 +575,11 @@ func tcpMonitorRequestFromObject(ctx context.Context, obj types.Object, diags *d
 // to the request attribute value.
 func tcpMonitorRequestToObject(ctx context.Context, request checkly.TCPRequest, diags *diag.Diagnostics) types.Object {
 	obj, d := types.ObjectValue(tcpMonitorRequestAttrTypes, map[string]attr.Value{
-		"hostname":  types.StringValue(request.Hostname),
-		"port":      types.Int64Value(int64(request.Port)),
-		"data":      types.StringValue(request.Data),
-		"assertion": assertionsToSet(ctx, request.Assertions, diags),
-		"ip_family": types.StringValue(string(request.IPFamily)),
+		"hostname":   types.StringValue(request.Hostname),
+		"port":       types.Int64Value(int64(request.Port)),
+		"data":       types.StringValue(request.Data),
+		"assertions": assertionsToSet(ctx, request.Assertions, diags),
+		"ip_family":  types.StringValue(string(request.IPFamily)),
 	})
 	diags.Append(d...)
 

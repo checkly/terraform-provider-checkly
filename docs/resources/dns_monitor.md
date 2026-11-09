@@ -32,7 +32,7 @@ resource "checkly_dns_monitor" "example-dns-monitor" {
       port = 53
     }
 
-    assertion = [{
+    assertions = [{
       source     = "RESPONSE_CODE"
       comparison = "EQUALS"
       target     = "NOERROR"
@@ -102,12 +102,12 @@ Required:
 
 Optional:
 
-- `assertion` (Attributes Set) Assertions to validate the DNS response. (see [below for nested schema](#nestedatt--request--assertion))
+- `assertions` (Attributes Set) Assertions to validate the DNS response. (see [below for nested schema](#nestedatt--request--assertions))
 - `name_server` (Attributes) The name server to use. (see [below for nested schema](#nestedatt--request--name_server))
 - `protocol` (String) The protocol used to communicate with the name server. Possible values are `UDP` and `TCP`. (Default `UDP`).
 
-<a id="nestedatt--request--assertion"></a>
-### Nested Schema for `request.assertion`
+<a id="nestedatt--request--assertions"></a>
+### Nested Schema for `request.assertions`
 
 Required:
 

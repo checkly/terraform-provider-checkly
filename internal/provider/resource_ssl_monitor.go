@@ -82,7 +82,7 @@ type SSLMonitorRequestModel struct {
 	AlertDaysBeforeExpiry types.Int64  `tfsdk:"alert_days_before_expiry"`
 	SecurityBaseline      types.Object `tfsdk:"security_baseline"`
 	ClientCertificate     types.Object `tfsdk:"client_certificate"`
-	Assertion             types.Set    `tfsdk:"assertion"`
+	Assertions            types.Set    `tfsdk:"assertions"`
 }
 
 // SSLMonitorSecurityBaselineModel describes the request.security_baseline
@@ -169,7 +169,7 @@ var sslMonitorRequestAttrTypes = map[string]attr.Type{
 	"alert_days_before_expiry": types.Int64Type,
 	"security_baseline":        types.ObjectType{AttrTypes: sslMonitorSecurityBaselineAttrTypes},
 	"client_certificate":       types.ObjectType{AttrTypes: sslMonitorClientCertificateAttrTypes},
-	"assertion":                types.SetType{ElemType: types.ObjectType{AttrTypes: assertionAttrTypes}},
+	"assertions":               types.SetType{ElemType: types.ObjectType{AttrTypes: assertionAttrTypes}},
 }
 
 // sslMonitorBaselineSeverityAttribute returns the severity attribute for a
@@ -467,7 +467,7 @@ func (r *SSLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 					// assertion sources, properties, or their rules
 					// change here or in the API, update that template
 					// too — it is not generated from this schema.
-					"assertion": schema.SetNestedAttribute{
+					"assertions": schema.SetNestedAttribute{
 						Optional:    true,
 						Computed:    true,
 						Default:     setdefault.StaticValue(types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{})),
@@ -541,7 +541,7 @@ func (r *SSLMonitorResource) Configure(ctx context.Context, req resource.Configu
 // requires. The request, its security baseline and the baseline rules are
 // single nested attributes, so their own attributes use schema defaults.
 func (r *SSLMonitorResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	planNestedDefaults(ctx, req, resp, path.Root("request"), objectWithSetDefaults("assertion", assertionsWithPropertyAndTargetDefaults))
+	planNestedDefaults(ctx, req, resp, path.Root("request"), objectWithSetDefaults("assertions", assertionsWithPropertyAndTargetDefaults))
 }
 
 func (r *SSLMonitorResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -810,7 +810,7 @@ func sslMonitorRequestFromObject(ctx context.Context, obj types.Object, diags *d
 
 	request := checkly.SSLRequest{
 		SSLConfig:  config,
-		Assertions: assertionsFromSet(ctx, model.Assertion, diags),
+		Assertions: assertionsFromSet(ctx, model.Assertions, diags),
 	}
 
 	// client_certificate.mode maps to sslConfig.clientCertificateMode
@@ -860,7 +860,7 @@ func sslMonitorRequestToObject(ctx context.Context, r checkly.SSLRequest, prior 
 		AlertDaysBeforeExpiry: types.Int64Value(int64(config.AlertDaysBeforeExpiry)),
 		SecurityBaseline:      sslMonitorSecurityBaselineToObject(ctx, config.SecurityBaseline, priorRequest.SecurityBaseline, diags),
 		ClientCertificate:     sslMonitorClientCertificateToObject(ctx, r, priorRequest.ClientCertificate, diags),
-		Assertion:             assertionsToSet(ctx, r.Assertions, diags),
+		Assertions:            assertionsToSet(ctx, r.Assertions, diags),
 	})
 	diags.Append(d...)
 

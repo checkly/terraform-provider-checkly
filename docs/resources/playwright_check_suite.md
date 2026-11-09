@@ -103,7 +103,7 @@ resource "checkly_playwright_check_suite" "example-playwright-check-custom" {
     playwright = {
       version = "1.56.1"
 
-      device = [
+      devices = [
         {
           type = "chromium"
         },
@@ -265,11 +265,11 @@ Required:
 
 Optional:
 
-- `device` (Attributes Set) The list of devices that should be made available for Playwright. Defaults to chromium, firefox, and webkit. (see [below for nested schema](#nestedatt--runtime--playwright--device))
+- `devices` (Attributes Set) The list of devices that should be made available for Playwright. Defaults to chromium, firefox, and webkit. (see [below for nested schema](#nestedatt--runtime--playwright--devices))
 - `version` (String) The Playwright version to use. Defaults to the version detected from the code bundle's lockfile.
 
-<a id="nestedatt--runtime--playwright--device"></a>
-### Nested Schema for `runtime.playwright.device`
+<a id="nestedatt--runtime--playwright--devices"></a>
+### Nested Schema for `runtime.playwright.devices`
 
 Required:
 

@@ -23,7 +23,7 @@ type apiCheckDefaultsModel struct {
 	URL             types.String `tfsdk:"url"`
 	Headers         types.Map    `tfsdk:"headers"`
 	QueryParameters types.Map    `tfsdk:"query_parameters"`
-	Assertion       types.Set    `tfsdk:"assertion"`
+	Assertions      types.Set    `tfsdk:"assertions"`
 	BasicAuth       types.Object `tfsdk:"basic_auth"`
 }
 
@@ -31,7 +31,7 @@ var apiCheckDefaultsAttrTypes = map[string]attr.Type{
 	"url":              types.StringType,
 	"headers":          types.MapType{ElemType: types.StringType},
 	"query_parameters": types.MapType{ElemType: types.StringType},
-	"assertion":        types.SetType{ElemType: types.ObjectType{AttrTypes: assertionAttrTypes}},
+	"assertions":       types.SetType{ElemType: types.ObjectType{AttrTypes: assertionAttrTypes}},
 	"basic_auth":       types.ObjectType{AttrTypes: apiCheckBasicAuthAttrTypes},
 }
 
@@ -45,7 +45,7 @@ func apiCheckDefaultsDefaultObject() types.Object {
 		"url":              types.StringValue(""),
 		"headers":          types.MapValueMust(types.StringType, map[string]attr.Value{}),
 		"query_parameters": types.MapValueMust(types.StringType, map[string]attr.Value{}),
-		"assertion":        types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{}),
+		"assertions":       types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{}),
 		"basic_auth":       types.ObjectNull(apiCheckBasicAuthAttrTypes),
 	})
 }
@@ -78,7 +78,7 @@ func makeAPICheckDefaultsAttributeSchema() schema.SingleNestedAttribute {
 				Default:     mapdefault.StaticValue(types.MapValueMust(types.StringType, map[string]attr.Value{})),
 				Description: "Default query parameters for API checks in this group.",
 			},
-			"assertion": schema.SetNestedAttribute{
+			"assertions": schema.SetNestedAttribute{
 				Optional:    true,
 				Computed:    true,
 				Default:     setdefault.StaticValue(types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{})),
@@ -186,7 +186,7 @@ func apiCheckDefaultsFromObject(ctx context.Context, obj types.Object, diags *di
 		BaseURL:         model.URL.ValueString(),
 		Headers:         apiCheckDefaultsKeyValuesFromMap(ctx, model.Headers, diags),
 		QueryParameters: apiCheckDefaultsKeyValuesFromMap(ctx, model.QueryParameters, diags),
-		Assertions:      assertionsFromSet(ctx, model.Assertion, diags),
+		Assertions:      assertionsFromSet(ctx, model.Assertions, diags),
 	}
 
 	if basicAuth := apiCheckBasicAuthFromObject(ctx, model.BasicAuth, diags); basicAuth != nil {
@@ -226,7 +226,7 @@ func apiCheckDefaultsToObject(ctx context.Context, defaults checkly.APICheckDefa
 		"url":              types.StringValue(defaults.BaseURL),
 		"headers":          apiCheckDefaultsMapFromKeyValues(defaults.Headers),
 		"query_parameters": apiCheckDefaultsMapFromKeyValues(defaults.QueryParameters),
-		"assertion":        assertionsToSet(ctx, defaults.Assertions, diags),
+		"assertions":       assertionsToSet(ctx, defaults.Assertions, diags),
 		"basic_auth":       basicAuth,
 	})
 	diags.Append(d...)

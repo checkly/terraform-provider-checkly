@@ -185,27 +185,27 @@ func TestAccCheckGroupFull(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_check_group.test",
-					"api_check_defaults.assertion.#",
+					"api_check_defaults.assertions.#",
 					"1",
 				),
 				testCheckResourceAttrExpr(
 					"checkly_check_group.test",
-					"api_check_defaults.assertion.*.comparison",
+					"api_check_defaults.assertions.*.comparison",
 					"EQUALS",
 				),
 				testCheckResourceAttrExpr(
 					"checkly_check_group.test",
-					"api_check_defaults.assertion.*.property",
+					"api_check_defaults.assertions.*.property",
 					"",
 				),
 				testCheckResourceAttrExpr(
 					"checkly_check_group.test",
-					"api_check_defaults.assertion.*.source",
+					"api_check_defaults.assertions.*.source",
 					"STATUS_CODE",
 				),
 				testCheckResourceAttrExpr(
 					"checkly_check_group.test",
-					"api_check_defaults.assertion.*.target",
+					"api_check_defaults.assertions.*.target",
 					"200",
 				),
 				resource.TestCheckResourceAttr(
@@ -297,7 +297,7 @@ const testCheckGroup_full = `
 	  query_parameters = {
 		query = "foo"
 	  }
-	  assertion = [
+	  assertions = [
 		{
 		  source     = "STATUS_CODE"
 		  property   = ""
@@ -1197,7 +1197,7 @@ func TestAccCheckGroupUnsetSweepAPICheckDefaults(t *testing.T) {
 							sweep = "one"
 						}
 
-						assertion = [
+						assertions = [
 							{
 								source     = "STATUS_CODE"
 								comparison = "EQUALS"
@@ -1216,7 +1216,7 @@ func TestAccCheckGroupUnsetSweepAPICheckDefaults(t *testing.T) {
 				resource.TestCheckResourceAttr("checkly_check_group.test", "api_check_defaults.url", "http://sweep1.example.com/"),
 				resource.TestCheckResourceAttr("checkly_check_group.test", "api_check_defaults.headers.X-Sweep", "one"),
 				resource.TestCheckResourceAttr("checkly_check_group.test", "api_check_defaults.query_parameters.sweep", "one"),
-				resource.TestCheckResourceAttr("checkly_check_group.test", "api_check_defaults.assertion.#", "1"),
+				resource.TestCheckResourceAttr("checkly_check_group.test", "api_check_defaults.assertions.#", "1"),
 				resource.TestCheckResourceAttr("checkly_check_group.test", "api_check_defaults.basic_auth.username", "user"),
 			),
 		},
@@ -1239,7 +1239,7 @@ func TestAccCheckGroupUnsetSweepAPICheckDefaults(t *testing.T) {
 				resource.TestCheckResourceAttr("checkly_check_group.test", "api_check_defaults.url", "http://sweep2.example.com/"),
 				resource.TestCheckResourceAttr("checkly_check_group.test", "api_check_defaults.headers.%", "0"),
 				resource.TestCheckResourceAttr("checkly_check_group.test", "api_check_defaults.query_parameters.%", "0"),
-				resource.TestCheckResourceAttr("checkly_check_group.test", "api_check_defaults.assertion.#", "0"),
+				resource.TestCheckResourceAttr("checkly_check_group.test", "api_check_defaults.assertions.#", "0"),
 				resource.TestCheckNoResourceAttr("checkly_check_group.test", "api_check_defaults.basic_auth.%"),
 			),
 		},
@@ -1257,7 +1257,7 @@ func TestAccCheckGroupUnsetSweepAPICheckDefaults(t *testing.T) {
 				resource.TestCheckResourceAttr("checkly_check_group.test", "api_check_defaults.url", ""),
 				resource.TestCheckResourceAttr("checkly_check_group.test", "api_check_defaults.headers.%", "0"),
 				resource.TestCheckResourceAttr("checkly_check_group.test", "api_check_defaults.query_parameters.%", "0"),
-				resource.TestCheckResourceAttr("checkly_check_group.test", "api_check_defaults.assertion.#", "0"),
+				resource.TestCheckResourceAttr("checkly_check_group.test", "api_check_defaults.assertions.#", "0"),
 				resource.TestCheckNoResourceAttr("checkly_check_group.test", "api_check_defaults.basic_auth.%"),
 			),
 		},

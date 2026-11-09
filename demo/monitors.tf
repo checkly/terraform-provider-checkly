@@ -19,7 +19,7 @@ resource "checkly_grpc_monitor" "grpc-monitor-1" {
     method             = "grpcbin.GRPCBin/DummyUnary"
     message            = jsonencode({ f_string = "hello" })
 
-    assertion = [{
+    assertions = [{
       source     = "GRPC_STATUS_CODE"
       property   = ""
       comparison = "EQUALS"
@@ -47,7 +47,7 @@ resource "checkly_traceroute_monitor" "traceroute-monitor-1" {
     protocol = "ICMP"
     max_hops = 30
 
-    assertion = [{
+    assertions = [{
       source     = "PACKET_LOSS"
       property   = ""
       comparison = "LESS_THAN"
@@ -75,7 +75,7 @@ resource "checkly_ssl_monitor" "ssl-monitor-1" {
     port                     = 443
     alert_days_before_expiry = 30
 
-    assertion = [{
+    assertions = [{
       source     = "CERTIFICATE"
       property   = "daysUntilExpiry"
       comparison = "GREATER_THAN"

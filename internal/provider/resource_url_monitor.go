@@ -73,7 +73,7 @@ type URLMonitorRequestModel struct {
 	URL             types.String `tfsdk:"url"`
 	FollowRedirects types.Bool   `tfsdk:"follow_redirects"`
 	SkipSSL         types.Bool   `tfsdk:"skip_ssl"`
-	Assertions      types.Set    `tfsdk:"assertion"`
+	Assertions      types.Set    `tfsdk:"assertions"`
 	IPFamily        types.String `tfsdk:"ip_family"`
 }
 
@@ -81,7 +81,7 @@ var urlMonitorRequestAttrTypes = map[string]attr.Type{
 	"url":              types.StringType,
 	"follow_redirects": types.BoolType,
 	"skip_ssl":         types.BoolType,
-	"assertion":        types.SetType{ElemType: types.ObjectType{AttrTypes: assertionAttrTypes}},
+	"assertions":       types.SetType{ElemType: types.ObjectType{AttrTypes: assertionAttrTypes}},
 	"ip_family":        types.StringType,
 }
 
@@ -227,7 +227,7 @@ func (r *URLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 							stringvalidator.OneOf("IPv4", "IPv6"),
 						},
 					},
-					"assertion": schema.SetNestedAttribute{
+					"assertions": schema.SetNestedAttribute{
 						Optional:    true,
 						Computed:    true,
 						Default:     setdefault.StaticValue(types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{})),
@@ -302,7 +302,7 @@ func (r *URLMonitorResource) Configure(ctx context.Context, req resource.Configu
 // fully known and stable across plans, which set element correlation
 // requires.
 func (r *URLMonitorResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	planNestedDefaults(ctx, req, resp, path.Root("request"), objectWithSetDefaults("assertion", assertionsWithPropertyDefault))
+	planNestedDefaults(ctx, req, resp, path.Root("request"), objectWithSetDefaults("assertions", assertionsWithPropertyDefault))
 }
 
 func (r *URLMonitorResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {

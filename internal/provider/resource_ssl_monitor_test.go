@@ -172,7 +172,7 @@ func TestAccSSLMonitorInvalidAssertionSource(t *testing.T) {
 				  locations = ["us-east-1"]
 				  request = {
 					hostname = "api.checklyhq.com"
-					assertion = [{
+					assertions = [{
 					  source     = "CERT_EXPIRES_IN_DAYS"
 					  comparison = "GREATER_THAN"
 					  target     = "14"
@@ -180,7 +180,7 @@ func TestAccSSLMonitorInvalidAssertionSource(t *testing.T) {
 				  }
 				}
 			`,
-			ExpectError: regexp.MustCompile(`(?s)request\.assertion\[.*\]\.source\s+value\s+must\s+be\s+one\s+of`),
+			ExpectError: regexp.MustCompile(`(?s)request\.assertions\[.*\]\.source\s+value\s+must\s+be\s+one\s+of`),
 		},
 	})
 }
@@ -262,12 +262,12 @@ func TestAccSSLMonitorFull(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_ssl_monitor.test",
-					"request.assertion.#",
+					"request.assertions.#",
 					"2",
 				),
 				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_ssl_monitor.test",
-					"request.assertion.*",
+					"request.assertions.*",
 					map[string]string{
 						"source":     "CERTIFICATE",
 						"property":   "daysUntilExpiry",
@@ -277,7 +277,7 @@ func TestAccSSLMonitorFull(t *testing.T) {
 				),
 				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_ssl_monitor.test",
-					"request.assertion.*",
+					"request.assertions.*",
 					map[string]string{
 						"source":     "CONNECTION",
 						"property":   "hostnameVerified",
@@ -517,7 +517,7 @@ const sslMonitor_full = `
 		  mode = "account_default"
 		}
 
-		assertion = [
+		assertions = [
 		  {
 			source     = "CERTIFICATE"
 			property   = "daysUntilExpiry"

@@ -73,7 +73,7 @@ func TestAccTCPMonitorBasic(t *testing.T) {
 				),
 				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_tcp_monitor.test",
-					"request.assertion.*",
+					"request.assertions.*",
 					map[string]string{
 						"source":     "RESPONSE_TIME",
 						"property":   "",
@@ -129,12 +129,12 @@ func TestAccTCPMonitorFull(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_tcp_monitor.test",
-					"request.assertion.#",
+					"request.assertions.#",
 					"2",
 				),
 				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_tcp_monitor.test",
-					"request.assertion.*",
+					"request.assertions.*",
 					map[string]string{
 						"source":     "RESPONSE_TIME",
 						"property":   "",
@@ -144,7 +144,7 @@ func TestAccTCPMonitorFull(t *testing.T) {
 				),
 				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_tcp_monitor.test",
-					"request.assertion.*",
+					"request.assertions.*",
 					map[string]string{
 						"source":     "RESPONSE_DATA",
 						"property":   "",
@@ -187,7 +187,7 @@ resource "checkly_tcp_monitor" "test_trigger_incident" {
 	request = {
 		hostname = "example.com"
 		port     = 443
-		assertion = [{
+		assertions = [{
 			source     = "RESPONSE_TIME"
 			comparison = "LESS_THAN"
 			target     = "3000"
@@ -262,7 +262,7 @@ const tcpMonitor_basic = `
 	  request = {
 		hostname     = "api.checklyhq.com"
 		port         = 80
-		assertion = [{
+		assertions = [{
 		  comparison = "LESS_THAN"
 		  property   = ""
 		  source     = "RESPONSE_TIME"
@@ -284,7 +284,7 @@ const tcpMonitor_basic_withoutDescription = `
 	  request = {
 		hostname     = "api.checklyhq.com"
 		port         = 80
-		assertion = [{
+		assertions = [{
 		  comparison = "LESS_THAN"
 		  property   = ""
 		  source     = "RESPONSE_TIME"
@@ -310,7 +310,7 @@ const tcpMonitor_full = `
 	request = {
 	  hostname         = "api.checklyhq.com"
 	  port             = 80
-	  assertion = [{
+	  assertions = [{
 		comparison = "LESS_THAN"
 		property   = ""
 		source     = "RESPONSE_TIME"
@@ -1424,7 +1424,7 @@ func TestAccTCPMonitorUnsetSweepRequest(t *testing.T) {
 						port      = 443
 						data      = "PING"
 						ip_family = "IPv6"
-						assertion = [{
+						assertions = [{
 							source     = "RESPONSE_TIME"
 							comparison = "LESS_THAN"
 							target     = "2000"
@@ -1439,7 +1439,7 @@ func TestAccTCPMonitorUnsetSweepRequest(t *testing.T) {
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr("checkly_tcp_monitor.test", "request.data", "PING"),
 				resource.TestCheckResourceAttr("checkly_tcp_monitor.test", "request.ip_family", "IPv6"),
-				resource.TestCheckResourceAttr("checkly_tcp_monitor.test", "request.assertion.#", "2"),
+				resource.TestCheckResourceAttr("checkly_tcp_monitor.test", "request.assertions.#", "2"),
 			),
 		},
 		// Removing ip_family must reset it to the IPv4 default, and removing
@@ -1468,7 +1468,7 @@ func TestAccTCPMonitorUnsetSweepRequest(t *testing.T) {
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr("checkly_tcp_monitor.test", "request.data", "PONG"),
 				resource.TestCheckResourceAttr("checkly_tcp_monitor.test", "request.ip_family", "IPv4"),
-				resource.TestCheckResourceAttr("checkly_tcp_monitor.test", "request.assertion.#", "0"),
+				resource.TestCheckResourceAttr("checkly_tcp_monitor.test", "request.assertions.#", "0"),
 			),
 		},
 	})
@@ -1669,7 +1669,7 @@ func TestAccTCPMonitorAlertChannelSubscriptions(t *testing.T) {
 						hostname = "api.checklyhq.com"
 						port     = 80
 
-						assertion = [{
+						assertions = [{
 							source     = "RESPONSE_TIME"
 							comparison = "LESS_THAN"
 							target     = "2000"
@@ -1739,7 +1739,7 @@ func TestAccTCPMonitorAlertChannelSubscriptions(t *testing.T) {
 						hostname = "api.checklyhq.com"
 						port     = 80
 
-						assertion = [{
+						assertions = [{
 							source     = "RESPONSE_TIME"
 							comparison = "LESS_THAN"
 							target     = "2000"
@@ -1819,7 +1819,7 @@ func TestAccTCPMonitorAlertChannelSubscriptions(t *testing.T) {
 						hostname = "api.checklyhq.com"
 						port     = 80
 
-						assertion = [{
+						assertions = [{
 							source     = "RESPONSE_TIME"
 							comparison = "LESS_THAN"
 							target     = "2000"

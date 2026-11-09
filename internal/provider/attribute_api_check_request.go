@@ -27,7 +27,7 @@ type apiCheckRequestModel struct {
 	QueryParameters types.Map    `tfsdk:"query_parameters"`
 	Body            types.String `tfsdk:"body"`
 	BodyType        types.String `tfsdk:"body_type"`
-	Assertion       types.Set    `tfsdk:"assertion"`
+	Assertions      types.Set    `tfsdk:"assertions"`
 	BasicAuth       types.Object `tfsdk:"basic_auth"`
 	IPFamily        types.String `tfsdk:"ip_family"`
 }
@@ -53,7 +53,7 @@ var apiCheckRequestAttrTypes = map[string]attr.Type{
 	"query_parameters": types.MapType{ElemType: types.StringType},
 	"body":             types.StringType,
 	"body_type":        types.StringType,
-	"assertion":        types.SetType{ElemType: types.ObjectType{AttrTypes: assertionAttrTypes}},
+	"assertions":       types.SetType{ElemType: types.ObjectType{AttrTypes: assertionAttrTypes}},
 	"basic_auth":       types.ObjectType{AttrTypes: apiCheckBasicAuthAttrTypes},
 	"ip_family":        types.StringType,
 }
@@ -122,7 +122,7 @@ func apiCheckRequestAttributeSchema(opts apiCheckRequestAttributeSchemaOptions) 
 					stringvalidator.OneOf("NONE", "JSON", "FORM", "RAW", "GRAPHQL"),
 				},
 			},
-			"assertion": schema.SetNestedAttribute{
+			"assertions": schema.SetNestedAttribute{
 				Optional:    true,
 				Computed:    true,
 				Default:     setdefault.StaticValue(types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{})),
@@ -203,7 +203,7 @@ func apiCheckRequestFromObject(ctx context.Context, obj types.Object, diags *dia
 		BodyType:        checkly.BodyType(model.BodyType.ValueString()),
 		Headers:         apiCheckKeyValuesFromMap(ctx, model.Headers, diags),
 		QueryParameters: apiCheckKeyValuesFromMap(ctx, model.QueryParameters, diags),
-		Assertions:      assertionsFromSet(ctx, model.Assertion, diags),
+		Assertions:      assertionsFromSet(ctx, model.Assertions, diags),
 		BasicAuth:       apiCheckBasicAuthFromObject(ctx, model.BasicAuth, diags),
 		IPFamily:        checkly.IPFamily(model.IPFamily.ValueString()),
 	}
@@ -235,7 +235,7 @@ func apiCheckRequestToObject(ctx context.Context, r checkly.Request, prior types
 		QueryParameters: apiCheckMapFromKeyValues(ctx, r.QueryParameters, priorModel.QueryParameters, diags),
 		Body:            types.StringValue(r.Body),
 		BodyType:        types.StringValue(string(r.BodyType)),
-		Assertion:       assertionsToSet(ctx, r.Assertions, diags),
+		Assertions:      assertionsToSet(ctx, r.Assertions, diags),
 		BasicAuth:       apiCheckBasicAuthToObject(ctx, r.BasicAuth, diags),
 		IPFamily:        types.StringValue(string(r.IPFamily)),
 	})

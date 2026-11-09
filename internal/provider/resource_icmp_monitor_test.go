@@ -52,7 +52,7 @@ func TestAccICMPMonitorBasic(t *testing.T) {
 					request = {
 						hostname = "example.com"
 
-						assertion = [{
+						assertions = [{
 							source     = "LATENCY"
 							property   = "avg"
 							comparison = "LESS_THAN"
@@ -94,7 +94,7 @@ func TestAccICMPMonitorBasic(t *testing.T) {
 				),
 				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_icmp_monitor.test",
-					"request.assertion.*",
+					"request.assertions.*",
 					map[string]string{
 						"source":     "LATENCY",
 						"property":   "avg",
@@ -123,7 +123,7 @@ func TestAccICMPMonitorDescriptionRemoval(t *testing.T) {
 					request = {
 						hostname = "example.com"
 
-						assertion = [{
+						assertions = [{
 							source     = "LATENCY"
 							property   = "avg"
 							comparison = "LESS_THAN"
@@ -151,7 +151,7 @@ func TestAccICMPMonitorDescriptionRemoval(t *testing.T) {
 					request = {
 						hostname = "example.com"
 
-						assertion = [{
+						assertions = [{
 							source     = "LATENCY"
 							property   = "avg"
 							comparison = "LESS_THAN"
@@ -192,7 +192,7 @@ func TestAccICMPMonitorFull(t *testing.T) {
 						ip_family  = "IPv4"
 						ping_count = 10
 
-						assertion = [{
+						assertions = [{
 							source     = "LATENCY"
 							property   = "avg"
 							comparison = "LESS_THAN"
@@ -257,12 +257,12 @@ func TestAccICMPMonitorFull(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_icmp_monitor.test",
-					"request.assertion.#",
+					"request.assertions.#",
 					"2",
 				),
 				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_icmp_monitor.test",
-					"request.assertion.*",
+					"request.assertions.*",
 					map[string]string{
 						"source":     "LATENCY",
 						"property":   "avg",
@@ -272,7 +272,7 @@ func TestAccICMPMonitorFull(t *testing.T) {
 				),
 				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_icmp_monitor.test",
-					"request.assertion.*",
+					"request.assertions.*",
 					map[string]string{
 						"source":     "LATENCY",
 						"property":   "max",
@@ -305,7 +305,7 @@ resource "checkly_icmp_monitor" "test_trigger_incident" {
 	request = {
 		hostname = "example.com"
 
-		assertion = [{
+		assertions = [{
 			source     = "LATENCY"
 			property   = "avg"
 			comparison = "LESS_THAN"
@@ -848,7 +848,7 @@ func TestAccICMPMonitorAlertChannelSubscriptions(t *testing.T) {
 					request = {
 						hostname = "example.com"
 
-						assertion = [{
+						assertions = [{
 							source     = "LATENCY"
 							property   = "avg"
 							comparison = "LESS_THAN"
@@ -918,7 +918,7 @@ func TestAccICMPMonitorAlertChannelSubscriptions(t *testing.T) {
 					request = {
 						hostname = "example.com"
 
-						assertion = [{
+						assertions = [{
 							source     = "LATENCY"
 							property   = "avg"
 							comparison = "LESS_THAN"
@@ -998,7 +998,7 @@ func TestAccICMPMonitorAlertChannelSubscriptions(t *testing.T) {
 					request = {
 						hostname = "example.com"
 
-						assertion = [{
+						assertions = [{
 							source     = "LATENCY"
 							property   = "avg"
 							comparison = "LESS_THAN"
@@ -1200,7 +1200,7 @@ func TestAccICMPMonitorUnsetSweepRequest(t *testing.T) {
 						hostname   = "api.checklyhq.com"
 						ip_family  = "IPv6"
 						ping_count = 5
-						assertion = [{
+						assertions = [{
 							source     = "LATENCY"
 							property   = "avg"
 							comparison = "LESS_THAN"
@@ -1212,7 +1212,7 @@ func TestAccICMPMonitorUnsetSweepRequest(t *testing.T) {
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "request.ip_family", "IPv6"),
 				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "request.ping_count", "5"),
-				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "request.assertion.#", "1"),
+				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "request.assertions.#", "1"),
 			),
 		},
 		{
@@ -1230,7 +1230,7 @@ func TestAccICMPMonitorUnsetSweepRequest(t *testing.T) {
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "request.ip_family", "IPv4"),
 				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "request.ping_count", "10"),
-				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "request.assertion.#", "0"),
+				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "request.assertions.#", "0"),
 			),
 		},
 	})

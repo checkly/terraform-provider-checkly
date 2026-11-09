@@ -89,7 +89,7 @@ type GRPCMonitorRequestModel struct {
 	Method            types.String `tfsdk:"method"`
 	Message           types.String `tfsdk:"message"`
 	Metadata          types.Set    `tfsdk:"metadata"`
-	Assertion         types.Set    `tfsdk:"assertion"`
+	Assertions        types.Set    `tfsdk:"assertions"`
 }
 
 // GRPCMonitorMetadataModel describes the data model of a request.metadata
@@ -120,7 +120,7 @@ var grpcMonitorRequestAttrTypes = map[string]attr.Type{
 	"method":             types.StringType,
 	"message":            types.StringType,
 	"metadata":           types.SetType{ElemType: types.ObjectType{AttrTypes: grpcMonitorMetadataAttrTypes}},
-	"assertion":          types.SetType{ElemType: types.ObjectType{AttrTypes: assertionAttrTypes}},
+	"assertions":         types.SetType{ElemType: types.ObjectType{AttrTypes: assertionAttrTypes}},
 }
 
 func (r *GRPCMonitorResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -392,7 +392,7 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 					// assertion sources or their rules change here or in
 					// the API, update that template too — it is not
 					// generated from this schema.
-					"assertion": schema.SetNestedAttribute{
+					"assertions": schema.SetNestedAttribute{
 						Optional:    true,
 						Computed:    true,
 						Default:     setdefault.StaticValue(types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{})),
@@ -596,10 +596,10 @@ func (r *GRPCMonitorResource) ModifyPlan(ctx context.Context, req resource.Modif
 
 // grpcMonitorRequestWithDefaults returns the request attribute value with
 // default values substituted for null and unknown optional+computed
-// attributes nested in the metadata and assertion sets.
+// attributes nested in the metadata and assertions sets.
 func grpcMonitorRequestWithDefaults(ctx context.Context, obj types.Object, diags *diag.Diagnostics) types.Object {
 	obj = objectWithSetDefaults("metadata", grpcMonitorMetadataWithDefaults)(ctx, obj, diags)
-	return objectWithSetDefaults("assertion", assertionsWithPropertyAndTargetDefaults)(ctx, obj, diags)
+	return objectWithSetDefaults("assertions", assertionsWithPropertyAndTargetDefaults)(ctx, obj, diags)
 }
 
 // grpcMonitorMetadataWithDefaults returns the request.metadata set value
@@ -905,7 +905,7 @@ func grpcMonitorRequestFromModel(ctx context.Context, model GRPCMonitorRequestMo
 		IPFamily:   checkly.IPFamily(model.IPFamily.ValueString()),
 		SkipSSL:    model.SkipSSL.ValueBool(),
 		Timeout:    int(model.Timeout.ValueInt64()),
-		Assertions: assertionsFromSet(ctx, model.Assertion, diags),
+		Assertions: assertionsFromSet(ctx, model.Assertions, diags),
 		GRPCConfig: config,
 	}
 }
@@ -929,7 +929,7 @@ func grpcMonitorRequestToObject(ctx context.Context, r checkly.GRPCRequest, diag
 		Method:            types.StringValue(r.GRPCConfig.Method),
 		Message:           types.StringValue(r.GRPCConfig.Message),
 		Metadata:          grpcMonitorMetadataToSet(ctx, r.GRPCConfig.Metadata, diags),
-		Assertion:         assertionsToSet(ctx, r.Assertions, diags),
+		Assertions:        assertionsToSet(ctx, r.Assertions, diags),
 	})
 	diags.Append(d...)
 

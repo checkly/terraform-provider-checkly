@@ -72,14 +72,14 @@ type ICMPMonitorRequestModel struct {
 	Hostname   types.String `tfsdk:"hostname"`
 	IPFamily   types.String `tfsdk:"ip_family"`
 	PingCount  types.Int64  `tfsdk:"ping_count"`
-	Assertions types.Set    `tfsdk:"assertion"`
+	Assertions types.Set    `tfsdk:"assertions"`
 }
 
 var icmpMonitorRequestAttrTypes = map[string]attr.Type{
 	"hostname":   types.StringType,
 	"ip_family":  types.StringType,
 	"ping_count": types.Int64Type,
-	"assertion":  types.SetType{ElemType: types.ObjectType{AttrTypes: assertionAttrTypes}},
+	"assertions": types.SetType{ElemType: types.ObjectType{AttrTypes: assertionAttrTypes}},
 }
 
 func (r *ICMPMonitorResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -217,7 +217,7 @@ func (r *ICMPMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 							int64validator.Between(1, 50),
 						},
 					},
-					"assertion": schema.SetNestedAttribute{
+					"assertions": schema.SetNestedAttribute{
 						Optional:    true,
 						Computed:    true,
 						Default:     setdefault.StaticValue(types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{})),
@@ -292,7 +292,7 @@ func (r *ICMPMonitorResource) Configure(ctx context.Context, req resource.Config
 // fully known and stable across plans, which set element correlation
 // requires.
 func (r *ICMPMonitorResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	planNestedDefaults(ctx, req, resp, path.Root("request"), objectWithSetDefaults("assertion", assertionsWithPropertyDefault))
+	planNestedDefaults(ctx, req, resp, path.Root("request"), objectWithSetDefaults("assertions", assertionsWithPropertyDefault))
 }
 
 func (r *ICMPMonitorResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {

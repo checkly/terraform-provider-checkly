@@ -47,7 +47,7 @@ func TestAccPlaywrightCheckSuiteWithEnvironmentVariable(t *testing.T) {
 
 						playwright = {
 							version = "1.56.1"
-							device = [
+							devices = [
 								{
 									type = "chromium"
 								},
@@ -284,7 +284,7 @@ func TestAccPlaywrightCheckSuiteWithoutRuntime(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_playwright_check_suite.test",
-					"runtime.playwright.device.#",
+					"runtime.playwright.devices.#",
 					fmt.Sprintf("%d", len(playwrightCheckSuiteDefaultBrowsers)),
 				),
 				resource.TestCheckResourceAttr(
@@ -425,7 +425,7 @@ func TestAccPlaywrightCheckSuiteVersionRemovedWithDevicesKept(t *testing.T) {
 					runtime = {
 						playwright = {
 							version = "1.56.1"
-							device = [
+							devices = [
 								{
 									type = "chromium"
 								},
@@ -442,7 +442,7 @@ func TestAccPlaywrightCheckSuiteVersionRemovedWithDevicesKept(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_playwright_check_suite.test",
-					"runtime.playwright.device.#",
+					"runtime.playwright.devices.#",
 					"1",
 				),
 			),
@@ -463,7 +463,7 @@ func TestAccPlaywrightCheckSuiteVersionRemovedWithDevicesKept(t *testing.T) {
 
 					runtime = {
 						playwright = {
-							device = [
+							devices = [
 								{
 									type = "chromium"
 								},
@@ -480,7 +480,7 @@ func TestAccPlaywrightCheckSuiteVersionRemovedWithDevicesKept(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_playwright_check_suite.test",
-					"runtime.playwright.device.#",
+					"runtime.playwright.devices.#",
 					"1",
 				),
 			),
@@ -506,7 +506,7 @@ func TestAccPlaywrightCheckSuiteWithExplicitDevices(t *testing.T) {
 
 					runtime = {
 						playwright = {
-							device = [
+							devices = [
 								{
 									type = "chromium"
 								},
@@ -518,7 +518,7 @@ func TestAccPlaywrightCheckSuiteWithExplicitDevices(t *testing.T) {
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_playwright_check_suite.test",
-					"runtime.playwright.device.#",
+					"runtime.playwright.devices.#",
 					"1",
 				),
 			),
@@ -545,7 +545,7 @@ func TestAccPlaywrightCheckSuiteWithExplicitDevices(t *testing.T) {
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_playwright_check_suite.test",
-					"runtime.playwright.device.#",
+					"runtime.playwright.devices.#",
 					fmt.Sprintf("%d", len(playwrightCheckSuiteDefaultBrowsers)),
 				),
 			),
@@ -570,7 +570,7 @@ func TestAccPlaywrightCheckSuiteWithExplicitDevices(t *testing.T) {
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_playwright_check_suite.test",
-					"runtime.playwright.device.#",
+					"runtime.playwright.devices.#",
 					fmt.Sprintf("%d", len(playwrightCheckSuiteDefaultBrowsers)),
 				),
 			),
@@ -593,7 +593,7 @@ func TestAccPlaywrightCheckSuiteWithExplicitDevices(t *testing.T) {
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_playwright_check_suite.test",
-					"runtime.playwright.device.#",
+					"runtime.playwright.devices.#",
 					fmt.Sprintf("%d", len(playwrightCheckSuiteDefaultBrowsers)),
 				),
 			),
@@ -901,7 +901,7 @@ func TestAccPlaywrightCheckSuiteWithoutDevicesShouldNotCrash(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_playwright_check_suite.test",
-					"runtime.playwright.device.#",
+					"runtime.playwright.devices.#",
 					fmt.Sprintf("%d", len(playwrightCheckSuiteDefaultBrowsers)),
 				),
 			),
@@ -937,7 +937,7 @@ func TestAccPlaywrightCheckSuiteAutoDetectTransition(t *testing.T) {
 
 						playwright = {
 							version = "1.56.1"
-							device = [
+							devices = [
 								{
 									type = "chromium"
 								},
@@ -954,7 +954,7 @@ func TestAccPlaywrightCheckSuiteAutoDetectTransition(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_playwright_check_suite.test",
-					"runtime.playwright.device.#",
+					"runtime.playwright.devices.#",
 					"1",
 				),
 				resource.TestCheckResourceAttr(
@@ -995,7 +995,7 @@ func TestAccPlaywrightCheckSuiteAutoDetectTransition(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_playwright_check_suite.test",
-					"runtime.playwright.device.#",
+					"runtime.playwright.devices.#",
 					fmt.Sprintf("%d", len(playwrightCheckSuiteDefaultBrowsers)),
 				),
 				resource.TestCheckResourceAttr(
@@ -1029,7 +1029,7 @@ func TestAccPlaywrightCheckSuiteAutoDetectTransition(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_playwright_check_suite.test",
-					"runtime.playwright.device.#",
+					"runtime.playwright.devices.#",
 					fmt.Sprintf("%d", len(playwrightCheckSuiteDefaultBrowsers)),
 				),
 				resource.TestCheckResourceAttr(
@@ -1069,7 +1069,7 @@ func TestAccPlaywrightCheckSuiteAutoDetectFalse(t *testing.T) {
 
 						playwright = {
 							version = "1.56.1"
-							device = [
+							devices = [
 								{
 									type = "chromium"
 								},
@@ -1091,7 +1091,7 @@ func TestAccPlaywrightCheckSuiteAutoDetectFalse(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_playwright_check_suite.test",
-					"runtime.playwright.device.#",
+					"runtime.playwright.devices.#",
 					"1",
 				),
 				resource.TestCheckResourceAttr(
@@ -1130,7 +1130,7 @@ func TestAccPlaywrightCheckSuiteAutoDetectFalseMissingVersion(t *testing.T) {
 						}
 
 						playwright = {
-							device = [
+							devices = [
 								{
 									type = "chromium"
 								},
@@ -1175,7 +1175,7 @@ func TestAccPlaywrightCheckSuiteAutoDetectFalseMissingDevices(t *testing.T) {
 					}
 				}
 			`,
-			ExpectError: regexp.MustCompile(`at least one "runtime.playwright.device" entry is required`),
+			ExpectError: regexp.MustCompile(`at least one "runtime.playwright.devices" entry is required`),
 		},
 	})
 }
@@ -1201,7 +1201,7 @@ func TestAccPlaywrightCheckSuiteAutoDetectFalseMissingTestCommand(t *testing.T) 
 
 						playwright = {
 							version = "1.56.1"
-							device = [
+							devices = [
 								{
 									type = "chromium"
 								},
@@ -1499,7 +1499,7 @@ func TestAccPlaywrightCheckSuiteEnvironmentVariableRemoval(t *testing.T) {
 
 						playwright = {
 							version = "1.56.1"
-							device = [
+							devices = [
 								{
 									type = "chromium"
 								},
@@ -1550,7 +1550,7 @@ func TestAccPlaywrightCheckSuiteEnvironmentVariableRemoval(t *testing.T) {
 
 						playwright = {
 							version = "1.56.1"
-							device = [
+							devices = [
 								{
 									type = "chromium"
 								},

@@ -659,7 +659,7 @@ func TestAccPlaywrightCheckSuiteIntent(t *testing.T) {
 
 						playwright = {
 							version = "1.56.1"
-							device = [
+							devices = [
 								{
 									type = "chromium"
 								},

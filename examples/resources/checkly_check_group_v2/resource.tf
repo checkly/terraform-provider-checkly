@@ -104,7 +104,7 @@ resource "checkly_check_group_v2" "production-api" {
       "version" = "v2"
     }
 
-    assertion = [
+    assertions = [
       {
         source     = "STATUS_CODE"
         comparison = "LESS_THAN"

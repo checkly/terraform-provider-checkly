@@ -82,7 +82,7 @@ type TracerouteMonitorRequestModel struct {
 	MaxUnknownHops types.Int64  `tfsdk:"max_unknown_hops"`
 	PtrLookup      types.Bool   `tfsdk:"ptr_lookup"`
 	Timeout        types.Int64  `tfsdk:"timeout"`
-	Assertion      types.Set    `tfsdk:"assertion"`
+	Assertions     types.Set    `tfsdk:"assertions"`
 }
 
 var tracerouteMonitorRequestAttrTypes = map[string]attr.Type{
@@ -94,7 +94,7 @@ var tracerouteMonitorRequestAttrTypes = map[string]attr.Type{
 	"max_unknown_hops": types.Int64Type,
 	"ptr_lookup":       types.BoolType,
 	"timeout":          types.Int64Type,
-	"assertion":        types.SetType{ElemType: types.ObjectType{AttrTypes: assertionAttrTypes}},
+	"assertions":       types.SetType{ElemType: types.ObjectType{AttrTypes: assertionAttrTypes}},
 }
 
 func (r *TracerouteMonitorResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -293,7 +293,7 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 					// When assertion sources or their rules change here
 					// or in the API, update that template too — it is
 					// not generated from this schema.
-					"assertion": schema.SetNestedAttribute{
+					"assertions": schema.SetNestedAttribute{
 						Optional:    true,
 						Computed:    true,
 						Default:     setdefault.StaticValue(types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{})),
@@ -366,7 +366,7 @@ func (r *TracerouteMonitorResource) Configure(ctx context.Context, req resource.
 // fully known and stable across plans, which set element correlation
 // requires.
 func (r *TracerouteMonitorResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	planNestedDefaults(ctx, req, resp, path.Root("request"), objectWithSetDefaults("assertion", assertionsWithPropertyAndTargetDefaults))
+	planNestedDefaults(ctx, req, resp, path.Root("request"), objectWithSetDefaults("assertions", assertionsWithPropertyAndTargetDefaults))
 }
 
 func (r *TracerouteMonitorResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -645,7 +645,7 @@ func tracerouteMonitorRequestFromModel(ctx context.Context, model TracerouteMoni
 		MaxUnknownHops: int(model.MaxUnknownHops.ValueInt64()),
 		PtrLookup:      &ptrLookup,
 		Timeout:        int(model.Timeout.ValueInt64()),
-		Assertions:     assertionsFromSet(ctx, model.Assertion, diags),
+		Assertions:     assertionsFromSet(ctx, model.Assertions, diags),
 	}
 
 	if model.Port.IsNull() || model.Port.IsUnknown() {
@@ -686,7 +686,7 @@ func tracerouteMonitorRequestToObject(ctx context.Context, r checkly.TracerouteR
 		MaxUnknownHops: types.Int64Value(int64(r.MaxUnknownHops)),
 		PtrLookup:      types.BoolValue(ptrLookup),
 		Timeout:        types.Int64Value(int64(r.Timeout)),
-		Assertion:      assertionsToSet(ctx, r.Assertions, diags),
+		Assertions:     assertionsToSet(ctx, r.Assertions, diags),
 	})
 	diags.Append(d...)
 

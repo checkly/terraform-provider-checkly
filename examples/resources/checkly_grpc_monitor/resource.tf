@@ -66,7 +66,7 @@ resource "checkly_grpc_monitor" "example-grpc-monitor-2" {
       value = "supersecret"
     }]
 
-    assertion = [
+    assertions = [
       {
         source     = "GRPC_STATUS_CODE"
         property   = ""

@@ -66,7 +66,7 @@ resource "checkly_traceroute_monitor" "example-traceroute-monitor-2" {
     ptr_lookup       = true
     timeout          = 10
 
-    assertion = [
+    assertions = [
       {
         source     = "PACKET_LOSS"
         property   = ""
@@ -128,7 +128,7 @@ Required:
 
 Optional:
 
-- `assertion` (Attributes Set) A request can have multiple assertions. The allowed comparisons, properties, and target formats depend on the assertion source — see the [Assertion Reference](#assertion-reference) below. (see [below for nested schema](#nestedatt--request--assertion))
+- `assertions` (Attributes Set) A request can have multiple assertions. The allowed comparisons, properties, and target formats depend on the assertion source — see the [Assertion Reference](#assertion-reference) below. (see [below for nested schema](#nestedatt--request--assertions))
 - `ip_family` (String) The IP family to use when executing the traceroute. The value can be either `IPv4` or `IPv6`. (Default `IPv4`).
 - `max_hops` (Number) The maximum number of network hops to probe before stopping. Possible values are between 1 and 64. (Default `30`).
 - `max_unknown_hops` (Number) The maximum number of consecutive unresponsive hops to tolerate before stopping the trace. Possible values are between 1 and 30, and the value must not exceed `max_hops`. (Default `min(15, max_hops)`).
@@ -137,8 +137,8 @@ Optional:
 - `ptr_lookup` (Boolean) Whether to perform reverse-DNS (PTR) lookups on each hop's IP address. (Default `true`).
 - `timeout` (Number) The number of seconds to wait for the traceroute to complete before timing out. Possible values are between 1 and 30. (Default `10`).
 
-<a id="nestedatt--request--assertion"></a>
-### Nested Schema for `request.assertion`
+<a id="nestedatt--request--assertions"></a>
+### Nested Schema for `request.assertions`
 
 Required:
 
@@ -247,7 +247,7 @@ terraform import checkly_traceroute_monitor.example 3ffee447-5c86-4c56-b95a-2e1b
 
 ## Assertion Reference
 
-Each element of `request.assertion` has the shape `{ source, property, comparison, target }`. Which comparisons are allowed, and what `target` must contain, depend on `source`. The `comparison`, `target`, and `RESPONSE_TIME` `property` rules are enforced by the Checkly API at apply time; where `property` is marked as ignored, the API accepts any value but does not use it. All traceroute assertion targets are numeric.
+Each element of `request.assertions` has the shape `{ source, property, comparison, target }`. Which comparisons are allowed, and what `target` must contain, depend on `source`. The `comparison`, `target`, and `RESPONSE_TIME` `property` rules are enforced by the Checkly API at apply time; where `property` is marked as ignored, the API accepts any value but does not use it. All traceroute assertion targets are numeric.
 
 | `source` | `property` | Allowed `comparison` values | `target` |
 |---|---|---|---|
@@ -257,10 +257,10 @@ Each element of `request.assertion` has the shape `{ source, property, compariso
 
 ### Examples
 
-The following `assertion` list, placed inside `request`, shows one assertion per source.
+The following `assertions` list, placed inside `request`, shows one assertion per source.
 
 ```terraform
-assertion = [
+assertions = [
   # Average round-trip time must stay under 2 seconds.
   {
     source     = "RESPONSE_TIME"

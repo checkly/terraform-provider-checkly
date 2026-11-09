@@ -1497,7 +1497,7 @@ func TestAccCheckGroupV2ApiCheckDefaults(t *testing.T) {
 							"version" = "v2"
 						}
 
-						assertion = [
+						assertions = [
 							{
 								source     = "STATUS_CODE"
 								comparison = "EQUALS"
@@ -1530,17 +1530,17 @@ func TestAccCheckGroupV2ApiCheckDefaults(t *testing.T) {
 				),
 				testCheckResourceAttrExpr(
 					checkGroupV2Resource,
-					"api_check_defaults.assertion.*.source",
+					"api_check_defaults.assertions.*.source",
 					"STATUS_CODE",
 				),
 				testCheckResourceAttrExpr(
 					checkGroupV2Resource,
-					"api_check_defaults.assertion.*.comparison",
+					"api_check_defaults.assertions.*.comparison",
 					"EQUALS",
 				),
 				testCheckResourceAttrExpr(
 					checkGroupV2Resource,
-					"api_check_defaults.assertion.*.target",
+					"api_check_defaults.assertions.*.target",
 					"200",
 				),
 				resource.TestCheckResourceAttr(
@@ -1863,7 +1863,7 @@ func TestAccCheckGroupV2UnsetSweepAPICheckDefaults(t *testing.T) {
 							sweep = "one"
 						}
 
-						assertion = [
+						assertions = [
 							{
 								source     = "STATUS_CODE"
 								comparison = "EQUALS"
@@ -1882,7 +1882,7 @@ func TestAccCheckGroupV2UnsetSweepAPICheckDefaults(t *testing.T) {
 				resource.TestCheckResourceAttr(checkGroupV2Resource, "api_check_defaults.url", "http://sweep1.example.com/"),
 				resource.TestCheckResourceAttr(checkGroupV2Resource, "api_check_defaults.headers.X-Sweep", "one"),
 				resource.TestCheckResourceAttr(checkGroupV2Resource, "api_check_defaults.query_parameters.sweep", "one"),
-				resource.TestCheckResourceAttr(checkGroupV2Resource, "api_check_defaults.assertion.#", "1"),
+				resource.TestCheckResourceAttr(checkGroupV2Resource, "api_check_defaults.assertions.#", "1"),
 				resource.TestCheckResourceAttr(checkGroupV2Resource, "api_check_defaults.basic_auth.username", "user"),
 			),
 		},
@@ -1902,7 +1902,7 @@ func TestAccCheckGroupV2UnsetSweepAPICheckDefaults(t *testing.T) {
 				resource.TestCheckResourceAttr(checkGroupV2Resource, "api_check_defaults.url", "http://sweep2.example.com/"),
 				resource.TestCheckResourceAttr(checkGroupV2Resource, "api_check_defaults.headers.%", "0"),
 				resource.TestCheckResourceAttr(checkGroupV2Resource, "api_check_defaults.query_parameters.%", "0"),
-				resource.TestCheckResourceAttr(checkGroupV2Resource, "api_check_defaults.assertion.#", "0"),
+				resource.TestCheckResourceAttr(checkGroupV2Resource, "api_check_defaults.assertions.#", "0"),
 				resource.TestCheckNoResourceAttr(checkGroupV2Resource, "api_check_defaults.basic_auth.%"),
 			),
 		},

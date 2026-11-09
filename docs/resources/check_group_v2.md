@@ -124,7 +124,7 @@ resource "checkly_check_group_v2" "production-api" {
       "version" = "v2"
     }
 
-    assertion = [
+    assertions = [
       {
         source     = "STATUS_CODE"
         comparison = "LESS_THAN"
@@ -325,13 +325,13 @@ Required:
 
 Optional:
 
-- `assertion` (Attributes Set) Default assertions for API checks in this group. (see [below for nested schema](#nestedatt--api_check_defaults--assertion))
+- `assertions` (Attributes Set) Default assertions for API checks in this group. (see [below for nested schema](#nestedatt--api_check_defaults--assertions))
 - `basic_auth` (Attributes) Default basic auth credentials for API checks in this group. (see [below for nested schema](#nestedatt--api_check_defaults--basic_auth))
 - `headers` (Map of String) Default headers for API checks in this group.
 - `query_parameters` (Map of String) Default query parameters for API checks in this group.
 
-<a id="nestedatt--api_check_defaults--assertion"></a>
-### Nested Schema for `api_check_defaults.assertion`
+<a id="nestedatt--api_check_defaults--assertions"></a>
+### Nested Schema for `api_check_defaults.assertions`
 
 Required:
 

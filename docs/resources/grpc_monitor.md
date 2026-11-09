@@ -81,7 +81,7 @@ resource "checkly_grpc_monitor" "example-grpc-monitor-2" {
       value = "supersecret"
     }]
 
-    assertion = [
+    assertions = [
       {
         source     = "GRPC_STATUS_CODE"
         property   = ""
@@ -165,7 +165,7 @@ Required:
 
 Optional:
 
-- `assertion` (Attributes Set) A request can have multiple assertions. The allowed comparisons, properties, and target formats depend on the assertion source — see the [Assertion Reference](#assertion-reference) below. (see [below for nested schema](#nestedatt--request--assertion))
+- `assertions` (Attributes Set) A request can have multiple assertions. The allowed comparisons, properties, and target formats depend on the assertion source — see the [Assertion Reference](#assertion-reference) below. (see [below for nested schema](#nestedatt--request--assertions))
 - `bfbs_content` (String) A base64-encoded binary FlatBuffers schema (`.bfbs`), at most 100 KiB once encoded. Required when `encoding = "FLATBUFFERS"` and forbidden otherwise. Generate it with `flatc -b --schema --bfbs-builtins schema.fbs` and load it with Terraform's `filebase64()` function.
 - `encoding` (String) The wire encoding used in `BEHAVIOR` mode. Possible values are `PROTOBUF` and `FLATBUFFERS`. (Default `PROTOBUF`).
 - `grpc_mode` (String) The gRPC monitoring mode. `BEHAVIOR` invokes a unary method (requires `method`); `HEALTH` queries the standard gRPC health-check service (allows `service`). (Default `BEHAVIOR`).
@@ -180,8 +180,8 @@ Optional:
 - `timeout` (Number) The number of seconds to wait for the gRPC call to complete before timing out. Possible values are between 1 and 180. (Default `60`).
 - `tls` (Boolean) Whether to use a TLS-encrypted connection to the gRPC server. (Default `true`).
 
-<a id="nestedatt--request--assertion"></a>
-### Nested Schema for `request.assertion`
+<a id="nestedatt--request--assertions"></a>
+### Nested Schema for `request.assertions`
 
 Required:
 
@@ -302,7 +302,7 @@ terraform import checkly_grpc_monitor.example 3ffee447-5c86-4c56-b95a-2e1b4d1a12
 
 ## Assertion Reference
 
-Each element of `request.assertion` has the shape `{ source, property, comparison, target }`. Which comparisons are allowed, and what `target` must contain, depend on `source`. The `comparison` and `target` rules are enforced by the Checkly API at apply time; where `property` is marked as ignored, the API accepts any value but does not use it.
+Each element of `request.assertions` has the shape `{ source, property, comparison, target }`. Which comparisons are allowed, and what `target` must contain, depend on `source`. The `comparison` and `target` rules are enforced by the Checkly API at apply time; where `property` is marked as ignored, the API accepts any value but does not use it.
 
 | `source` | `property` | Allowed `comparison` values | `target` |
 |---|---|---|---|
@@ -315,10 +315,10 @@ Each element of `request.assertion` has the shape `{ source, property, compariso
 
 ### Examples
 
-The following `assertion` list, placed inside `request`, shows one assertion per source.
+The following `assertions` list, placed inside `request`, shows one assertion per source.
 
 ```terraform
-assertion = [
+assertions = [
   # The unary call must return gRPC status OK.
   {
     source     = "GRPC_STATUS_CODE"
