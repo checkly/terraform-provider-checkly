@@ -36,8 +36,9 @@ var statusPageV3ThemeValues = allowedValues[string]{
 }
 
 // The server lowercases the URL before storing it, so accepting uppercase
-// here would create a permanent diff between config and state.
-var statusPageV3URLRegex = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$`)
+// here would create a permanent diff between config and state. Both status
+// page resources share the rule.
+var statusPageURLRegex = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$`)
 
 // The server lowercases the custom domain and strips a scheme before storing
 // it, so only the stored form is accepted to avoid a permanent diff. An empty
@@ -96,24 +97,25 @@ var statusPageV3ThemeColorsAttrTypes = map[string]attr.Type{
 	"dark":  statusPageV3ThemeColorGroupObjectType,
 }
 
-// statusPageV3StringValidator rejects string values for which check returns
+// predicateStringValidator rejects string values for which check returns
 // false. message is a format string receiving the attribute path (%q) and
-// the rejected value (%s).
-type statusPageV3StringValidator struct {
+// the rejected value (%s). Several resources use it, not only the status
+// pages.
+type predicateStringValidator struct {
 	check       func(string) bool
 	message     string
 	description string
 }
 
-func (v statusPageV3StringValidator) Description(ctx context.Context) string {
+func (v predicateStringValidator) Description(ctx context.Context) string {
 	return v.description
 }
 
-func (v statusPageV3StringValidator) MarkdownDescription(ctx context.Context) string {
+func (v predicateStringValidator) MarkdownDescription(ctx context.Context) string {
 	return v.description
 }
 
-func (v statusPageV3StringValidator) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+func (v predicateStringValidator) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
 	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
 		return
 	}
@@ -132,7 +134,13 @@ func validateStatusPageV3HexColor(value string) bool {
 	return statusPageV3HexColorRegex.MatchString(value)
 }
 
-var statusPageV3HexColorValidator = statusPageV3StringValidator{
+var statusPageURLValidator = predicateStringValidator{
+	check:       statusPageURLRegex.MatchString,
+	message:     "%q can only contain lowercase alphanumeric characters and dashes, with no leading or trailing dash, got: %s",
+	description: "value must be lowercase alphanumeric characters and dashes, with no leading or trailing dash",
+}
+
+var statusPageV3HexColorValidator = predicateStringValidator{
 	check:       validateStatusPageV3HexColor,
 	message:     "%q must be a hex color such as \"#FF0000\" or \"#F00\", got: %s",
 	description: "value must be a hex color such as \"#FF0000\" or \"#F00\"",
@@ -235,16 +243,12 @@ func (r *StatusPageV3Resource) Schema(ctx context.Context, req resource.SchemaRe
 				Required:    true,
 				Description: "The unique subdomain of the status page: lowercase alphanumeric characters and dashes, no leading or trailing dash, at most 63 characters.",
 				Validators: []validator.String{
-					statusPageV3StringValidator{
-						check:       statusPageV3URLRegex.MatchString,
-						message:     "%q can only contain lowercase alphanumeric characters and dashes, with no leading or trailing dash, got: %s",
-						description: "value must be lowercase alphanumeric characters and dashes, with no leading or trailing dash",
-					},
+					statusPageURLValidator,
 				},
 			},
 			"custom_domain": statusPageV3OptionalString(
 				"A custom user domain, e.g. \"status.example.com\": a lowercase hostname without a scheme. See the docs on updating your DNS and SSL usage.",
-				statusPageV3StringValidator{
+				predicateStringValidator{
 					check:       statusPageV3CustomDomainRegex.MatchString,
 					message:     "%q must be a lowercase hostname without a scheme, such as \"status.example.com\", got: %s",
 					description: "value must be a lowercase hostname without a scheme",

@@ -32,7 +32,7 @@ resource "checkly_environment_variable" "variable_2" {
 ### Required
 
 - `key` (String) The name of the environment variable. Changing the name forces the environment variable to be replaced.
-- `value` (String, Sensitive) The value of the environment variable.
+- `value` (String, Sensitive) The value of the environment variable. At most 64000 bytes in UTF-8, or 31744 bytes for a secret or locked variable.
 
 ### Optional
 

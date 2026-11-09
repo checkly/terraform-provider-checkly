@@ -106,7 +106,10 @@ func (r *StatusPageResource) Schema(ctx context.Context, req resource.SchemaRequ
 			},
 			"url": schema.StringAttribute{
 				Required:    true,
-				Description: "The URL of the status page.",
+				Description: "The unique subdomain of the status page: lowercase alphanumeric characters and dashes, no leading or trailing dash, at most 63 characters.",
+				Validators: []validator.String{
+					statusPageURLValidator,
+				},
 			},
 			"custom_domain": schema.StringAttribute{
 				Optional:    true,

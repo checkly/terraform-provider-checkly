@@ -30,6 +30,19 @@ func TestAccPrivateLocationCheckRequiredFields(t *testing.T) {
 	})
 }
 
+func TestAccPrivateLocationInvalidSlug(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `resource "checkly_private_location" "test" {
+				name      = "Invalid slug"
+				slug_name = "eu-central-1-lab"
+			}`,
+			PlanOnly:    true,
+			ExpectError: regexp.MustCompile(`must\s+not\s+start\s+with\s+the\s+ID\s+of\s+a\s+public\s+location`),
+		},
+	})
+}
+
 func TestAccPrivateLocationSuccess(t *testing.T) {
 	rInt := acctest.RandInt()
 	// Slug names are limited to 30 alphanumeric characters. We use modulo to

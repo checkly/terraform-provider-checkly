@@ -49,7 +49,7 @@ resource "checkly_status_page" "example" {
 ### Required
 
 - `name` (String) The name of the status page.
-- `url` (String) The URL of the status page.
+- `url` (String) The unique subdomain of the status page: lowercase alphanumeric characters and dashes, no leading or trailing dash, at most 63 characters.
 
 ### Optional
 

@@ -64,7 +64,8 @@ func (r *PrivateLocationResource) Schema(ctx context.Context, req resource.Schem
 			},
 			"slug_name": schema.StringAttribute{
 				Required:    true,
-				Description: "Valid slug name.",
+				Description: "The slug name of the private location: 1 to 30 letters, digits and dashes, not starting with the ID of a public location such as `eu-central-1`.",
+				Validators:  privateLocationSlugValidators,
 			},
 			"icon": schema.StringAttribute{
 				Optional:    true,

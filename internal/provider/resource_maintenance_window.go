@@ -79,7 +79,10 @@ func (r *MaintenanceWindowResource) Schema(ctx context.Context, req resource.Sch
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
-				Description: "The maintenance window name.",
+				Description: "The maintenance window name, of 1 to 200 UTF-16 code units. " + utf16CountingExplanation,
+				Validators: []validator.String{
+					utf16LengthBetween(1, 200),
+				},
 			},
 			"starts_at": schema.StringAttribute{
 				Required:    true,
@@ -140,7 +143,10 @@ func (r *MaintenanceWindowResource) Schema(ctx context.Context, req resource.Sch
 			},
 			"description": schema.StringAttribute{
 				Optional:    true,
-				Description: "A description of the maintenance window. When the window is visible on status pages, the description is shown there too.",
+				Description: "A description of the maintenance window, of at most 2000 UTF-16 code units. When the window is visible on status pages, the description is shown there too. " + utf16CountingExplanation,
+				Validators: []validator.String{
+					utf16LengthBetween(0, 2000),
+				},
 			},
 			"status_page_visibility": maintenanceWindowStatusPageVisibilitySchema(),
 		},
