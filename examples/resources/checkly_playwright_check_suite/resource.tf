@@ -88,7 +88,7 @@ resource "checkly_playwright_check_suite" "example-playwright-check-custom" {
     playwright = {
       version = "1.56.1"
 
-      device = [
+      devices = [
         {
           type = "chromium"
         },

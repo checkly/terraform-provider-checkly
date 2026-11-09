@@ -13,7 +13,7 @@ resource "checkly_icmp_monitor" "example-icmp-monitor" {
     ip_family  = "IPv4"
     ping_count = 10
 
-    assertion = [{
+    assertions = [{
       source     = "LATENCY"
       property   = "avg"
       comparison = "LESS_THAN"

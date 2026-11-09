@@ -38,7 +38,7 @@ resource "checkly_check_group" "test_group1" {
       query = "foo"
     }
 
-    assertion = [
+    assertions = [
       {
         source     = "STATUS_CODE"
         property   = ""
@@ -59,17 +59,18 @@ resource "checkly_check_group" "test_group1" {
     }
   }
 
-  environment_variable {
-    key    = "TEST_ENV_VAR"
-    value  = "Hello world"
-    locked = false
-  }
-
-  environment_variable {
-    key    = "ADDITIONAL_ENV_VAR"
-    value  = "test value"
-    locked = true
-  }
+  environment_variables = [
+    {
+      key    = "TEST_ENV_VAR"
+      value  = "Hello world"
+      locked = false
+    },
+    {
+      key    = "ADDITIONAL_ENV_VAR"
+      value  = "test value"
+      locked = true
+    },
+  ]
 
   use_global_alert_settings = false
 
@@ -126,15 +127,16 @@ resource "checkly_alert_channel" "email_ac2" {
 resource "checkly_check_group" "test_group1" {
   name = "My test group 1"
 
-  alert_channel_subscription {
-    channel_id = checkly_alert_channel.email_ac1.id
-    activated  = true
-  }
-
-  alert_channel_subscription {
-    channel_id = checkly_alert_channel.email_ac2.id
-    activated  = true
-  }
+  alert_channel_subscriptions = [
+    {
+      channel_id = checkly_alert_channel.email_ac1.id
+      activated  = true
+    },
+    {
+      channel_id = checkly_alert_channel.email_ac2.id
+      activated  = true
+    },
+  ]
 }
 ```
 
@@ -149,11 +151,11 @@ resource "checkly_check_group" "test_group1" {
 
 ### Optional
 
-- `alert_channel_subscription` (Block Set) An array of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your check, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedblock--alert_channel_subscription))
+- `alert_channel_subscriptions` (Attributes Set) A set of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your check, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedatt--alert_channel_subscriptions))
 - `alert_settings` (Attributes) Determines the alert escalation policy for the check. (see [below for nested schema](#nestedatt--alert_settings))
 - `api_check_defaults` (Attributes) Default settings for API checks in this group. (see [below for nested schema](#nestedatt--api_check_defaults))
 - `double_check` (Boolean, Deprecated) Setting this to `true` will trigger a retry when a check fails from the failing region and another, randomly selected region before marking the check as failed. (Default `false`).
-- `environment_variable` (Block List) Insert environment variables into the runtime environment. Only relevant for browser checks. Use global environment variables whenever possible. At most 200 variables. (see [below for nested schema](#nestedblock--environment_variable))
+- `environment_variables` (Attributes List) Insert environment variables into the runtime environment. Only relevant for browser checks. Use global environment variables whenever possible. At most 200 variables. (see [below for nested schema](#nestedatt--environment_variables))
 - `local_setup_script` (String) A valid piece of Node.js code to run in the setup phase of an API check in this group.
 - `local_teardown_script` (String) A valid piece of Node.js code to run in the teardown phase of an API check in this group.
 - `locations` (Set of String) An array of one or more data center locations where to run the checks.
@@ -171,8 +173,8 @@ resource "checkly_check_group" "test_group1" {
 
 - `id` (String) The ID of the check group.
 
-<a id="nestedblock--alert_channel_subscription"></a>
-### Nested Schema for `alert_channel_subscription`
+<a id="nestedatt--alert_channel_subscriptions"></a>
+### Nested Schema for `alert_channel_subscriptions`
 
 Required:
 
@@ -235,13 +237,13 @@ Required:
 
 Optional:
 
-- `assertion` (Attributes Set) Default assertions for API checks in this group. (see [below for nested schema](#nestedatt--api_check_defaults--assertion))
+- `assertions` (Attributes Set) Default assertions for API checks in this group. (see [below for nested schema](#nestedatt--api_check_defaults--assertions))
 - `basic_auth` (Attributes) Default basic auth credentials for API checks in this group. (see [below for nested schema](#nestedatt--api_check_defaults--basic_auth))
 - `headers` (Map of String) Default headers for API checks in this group.
 - `query_parameters` (Map of String) Default query parameters for API checks in this group.
 
-<a id="nestedatt--api_check_defaults--assertion"></a>
-### Nested Schema for `api_check_defaults.assertion`
+<a id="nestedatt--api_check_defaults--assertions"></a>
+### Nested Schema for `api_check_defaults.assertions`
 
 Required:
 
@@ -264,8 +266,8 @@ Required:
 
 
 
-<a id="nestedblock--environment_variable"></a>
-### Nested Schema for `environment_variable`
+<a id="nestedatt--environment_variables"></a>
+### Nested Schema for `environment_variables`
 
 Required:
 

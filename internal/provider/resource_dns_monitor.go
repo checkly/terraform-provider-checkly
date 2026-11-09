@@ -57,7 +57,7 @@ type DNSMonitorResourceModel struct {
 	MaxResponseTime           types.Int64  `tfsdk:"max_response_time"`
 	Tags                      types.Set    `tfsdk:"tags"`
 	PrivateLocations          types.Set    `tfsdk:"private_locations"`
-	AlertChannelSubscriptions types.Set    `tfsdk:"alert_channel_subscription"`
+	AlertChannelSubscriptions types.Set    `tfsdk:"alert_channel_subscriptions"`
 	AlertSettings             types.Object `tfsdk:"alert_settings"`
 	UseGlobalAlertSettings    types.Bool   `tfsdk:"use_global_alert_settings"`
 	Request                   types.Object `tfsdk:"request"`
@@ -73,7 +73,7 @@ type DNSMonitorRequestModel struct {
 	Query      types.String `tfsdk:"query"`
 	Protocol   types.String `tfsdk:"protocol"`
 	NameServer types.Object `tfsdk:"name_server"`
-	Assertions types.Set    `tfsdk:"assertion"`
+	Assertions types.Set    `tfsdk:"assertions"`
 }
 
 // DNSMonitorNameServerModel describes the request.name_server attribute
@@ -93,7 +93,7 @@ var dnsMonitorRequestAttrTypes = map[string]attr.Type{
 	"query":       types.StringType,
 	"protocol":    types.StringType,
 	"name_server": types.ObjectType{AttrTypes: dnsMonitorNameServerAttrTypes},
-	"assertion":   types.SetType{ElemType: types.ObjectType{AttrTypes: assertionAttrTypes}},
+	"assertions":  types.SetType{ElemType: types.ObjectType{AttrTypes: assertionAttrTypes}},
 }
 
 func (r *DNSMonitorResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -252,7 +252,7 @@ func (r *DNSMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 							},
 						},
 					},
-					"assertion": schema.SetNestedAttribute{
+					"assertions": schema.SetNestedAttribute{
 						Optional:    true,
 						Computed:    true,
 						Default:     setdefault.StaticValue(types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{})),
@@ -295,8 +295,6 @@ func (r *DNSMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 					},
 				},
 			},
-		},
-		Blocks: map[string]schema.Block{
 			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{
 				Monitor: true,
 			}),
@@ -327,7 +325,7 @@ func (r *DNSMonitorResource) Configure(ctx context.Context, req resource.Configu
 // fully known and stable across plans, which set element correlation
 // requires.
 func (r *DNSMonitorResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	planNestedDefaults(ctx, req, resp, path.Root("request"), objectWithSetDefaults("assertion", assertionsWithPropertyDefault))
+	planNestedDefaults(ctx, req, resp, path.Root("request"), objectWithSetDefaults("assertions", assertionsWithPropertyDefault))
 }
 
 func (r *DNSMonitorResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -549,7 +547,7 @@ func dnsMonitorToModel(ctx context.Context, c *checkly.DNSMonitor, model *DNSMon
 	model.Request = dnsMonitorRequestToObject(ctx, c.Request, diags)
 	model.GroupID = types.Int64Value(c.GroupID)
 	model.GroupOrder = types.Int64Value(int64(c.GroupOrder))
-	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, diags)
+	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, model.AlertChannelSubscriptions, diags)
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, model.RetryStrategy, diags)
 	model.TriggerIncident = triggerIncidentToObject(ctx, c.TriggerIncident, diags)
 }

@@ -47,29 +47,29 @@ type TracerouteMonitorResource struct {
 
 // TracerouteMonitorResourceModel describes the resource data model.
 type TracerouteMonitorResourceModel struct {
-	ID                       types.String `tfsdk:"id"`
-	Name                     types.String `tfsdk:"name"`
-	Description              types.String `tfsdk:"description"`
-	Frequency                types.Int64  `tfsdk:"frequency"`
-	FrequencyOffset          types.Int64  `tfsdk:"frequency_offset"`
-	Activated                types.Bool   `tfsdk:"activated"`
-	Muted                    types.Bool   `tfsdk:"muted"`
-	ShouldFail               types.Bool   `tfsdk:"should_fail"`
-	RunParallel              types.Bool   `tfsdk:"run_parallel"`
-	Locations                types.Set    `tfsdk:"locations"`
-	DegradedResponseTime     types.Int64  `tfsdk:"degraded_response_time"`
-	MaxResponseTime          types.Int64  `tfsdk:"max_response_time"`
-	Tags                     types.Set    `tfsdk:"tags"`
-	PrivateLocations         types.Set    `tfsdk:"private_locations"`
-	RuntimeID                types.String `tfsdk:"runtime_id"`
-	AlertSettings            types.Object `tfsdk:"alert_settings"`
-	UseGlobalAlertSettings   types.Bool   `tfsdk:"use_global_alert_settings"`
-	GroupID                  types.Int64  `tfsdk:"group_id"`
-	GroupOrder               types.Int64  `tfsdk:"group_order"`
-	RetryStrategy            types.Object `tfsdk:"retry_strategy"`
-	Request                  types.Object `tfsdk:"request"`
-	AlertChannelSubscription types.Set    `tfsdk:"alert_channel_subscription"`
-	TriggerIncident          types.Object `tfsdk:"trigger_incident"`
+	ID                        types.String `tfsdk:"id"`
+	Name                      types.String `tfsdk:"name"`
+	Description               types.String `tfsdk:"description"`
+	Frequency                 types.Int64  `tfsdk:"frequency"`
+	FrequencyOffset           types.Int64  `tfsdk:"frequency_offset"`
+	Activated                 types.Bool   `tfsdk:"activated"`
+	Muted                     types.Bool   `tfsdk:"muted"`
+	ShouldFail                types.Bool   `tfsdk:"should_fail"`
+	RunParallel               types.Bool   `tfsdk:"run_parallel"`
+	Locations                 types.Set    `tfsdk:"locations"`
+	DegradedResponseTime      types.Int64  `tfsdk:"degraded_response_time"`
+	MaxResponseTime           types.Int64  `tfsdk:"max_response_time"`
+	Tags                      types.Set    `tfsdk:"tags"`
+	PrivateLocations          types.Set    `tfsdk:"private_locations"`
+	RuntimeID                 types.String `tfsdk:"runtime_id"`
+	AlertSettings             types.Object `tfsdk:"alert_settings"`
+	UseGlobalAlertSettings    types.Bool   `tfsdk:"use_global_alert_settings"`
+	GroupID                   types.Int64  `tfsdk:"group_id"`
+	GroupOrder                types.Int64  `tfsdk:"group_order"`
+	RetryStrategy             types.Object `tfsdk:"retry_strategy"`
+	Request                   types.Object `tfsdk:"request"`
+	AlertChannelSubscriptions types.Set    `tfsdk:"alert_channel_subscriptions"`
+	TriggerIncident           types.Object `tfsdk:"trigger_incident"`
 }
 
 // TracerouteMonitorRequestModel describes the request attribute data model.
@@ -82,7 +82,7 @@ type TracerouteMonitorRequestModel struct {
 	MaxUnknownHops types.Int64  `tfsdk:"max_unknown_hops"`
 	PtrLookup      types.Bool   `tfsdk:"ptr_lookup"`
 	Timeout        types.Int64  `tfsdk:"timeout"`
-	Assertion      types.Set    `tfsdk:"assertion"`
+	Assertions     types.Set    `tfsdk:"assertions"`
 }
 
 var tracerouteMonitorRequestAttrTypes = map[string]attr.Type{
@@ -94,7 +94,7 @@ var tracerouteMonitorRequestAttrTypes = map[string]attr.Type{
 	"max_unknown_hops": types.Int64Type,
 	"ptr_lookup":       types.BoolType,
 	"timeout":          types.Int64Type,
-	"assertion":        types.SetType{ElemType: types.ObjectType{AttrTypes: assertionAttrTypes}},
+	"assertions":       types.SetType{ElemType: types.ObjectType{AttrTypes: assertionAttrTypes}},
 }
 
 func (r *TracerouteMonitorResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -293,7 +293,7 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 					// When assertion sources or their rules change here
 					// or in the API, update that template too — it is
 					// not generated from this schema.
-					"assertion": schema.SetNestedAttribute{
+					"assertions": schema.SetNestedAttribute{
 						Optional:    true,
 						Computed:    true,
 						Default:     setdefault.StaticValue(types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{})),
@@ -336,8 +336,6 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 					},
 				},
 			},
-		},
-		Blocks: map[string]schema.Block{
 			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{
 				Monitor: true,
 			}),
@@ -368,7 +366,7 @@ func (r *TracerouteMonitorResource) Configure(ctx context.Context, req resource.
 // fully known and stable across plans, which set element correlation
 // requires.
 func (r *TracerouteMonitorResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	planNestedDefaults(ctx, req, resp, path.Root("request"), objectWithSetDefaults("assertion", assertionsWithPropertyAndTargetDefaults))
+	planNestedDefaults(ctx, req, resp, path.Root("request"), objectWithSetDefaults("assertions", assertionsWithPropertyAndTargetDefaults))
 }
 
 func (r *TracerouteMonitorResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -524,7 +522,7 @@ func tracerouteMonitorFromModel(ctx context.Context, model *TracerouteMonitorRes
 		GroupID:                   model.GroupID.ValueInt64(),
 		GroupOrder:                int(model.GroupOrder.ValueInt64()),
 		Request:                   tracerouteMonitorRequestFromObject(ctx, model.Request, diags),
-		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscription, diags),
+		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscriptions, diags),
 		RetryStrategy:             retryStrategyFromObject(ctx, model.RetryStrategy, diags),
 		TriggerIncident:           triggerIncidentFromObject(ctx, model.TriggerIncident, diags),
 	}
@@ -604,7 +602,7 @@ func tracerouteMonitorToModel(ctx context.Context, c *checkly.TracerouteMonitor,
 	model.GroupOrder = types.Int64Value(int64(c.GroupOrder))
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, model.RetryStrategy, diags)
 	model.Request = tracerouteMonitorRequestToObject(ctx, c.Request, diags)
-	model.AlertChannelSubscription = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, diags)
+	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, model.AlertChannelSubscriptions, diags)
 	model.TriggerIncident = triggerIncidentToObject(ctx, c.TriggerIncident, diags)
 }
 
@@ -647,7 +645,7 @@ func tracerouteMonitorRequestFromModel(ctx context.Context, model TracerouteMoni
 		MaxUnknownHops: int(model.MaxUnknownHops.ValueInt64()),
 		PtrLookup:      &ptrLookup,
 		Timeout:        int(model.Timeout.ValueInt64()),
-		Assertions:     assertionsFromSet(ctx, model.Assertion, diags),
+		Assertions:     assertionsFromSet(ctx, model.Assertions, diags),
 	}
 
 	if model.Port.IsNull() || model.Port.IsUnknown() {
@@ -688,7 +686,7 @@ func tracerouteMonitorRequestToObject(ctx context.Context, r checkly.TracerouteR
 		MaxUnknownHops: types.Int64Value(int64(r.MaxUnknownHops)),
 		PtrLookup:      types.BoolValue(ptrLookup),
 		Timeout:        types.Int64Value(int64(r.Timeout)),
-		Assertion:      assertionsToSet(ctx, r.Assertions, diags),
+		Assertions:     assertionsToSet(ctx, r.Assertions, diags),
 	})
 	diags.Append(d...)
 

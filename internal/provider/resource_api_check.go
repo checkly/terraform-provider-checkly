@@ -43,35 +43,35 @@ type APICheckResource struct {
 
 // APICheckResourceModel describes the resource data model.
 type APICheckResourceModel struct {
-	ID                       types.String `tfsdk:"id"`
-	Name                     types.String `tfsdk:"name"`
-	Description              types.String `tfsdk:"description"`
-	Frequency                types.Int64  `tfsdk:"frequency"`
-	FrequencyOffset          types.Int64  `tfsdk:"frequency_offset"`
-	Activated                types.Bool   `tfsdk:"activated"`
-	Muted                    types.Bool   `tfsdk:"muted"`
-	ShouldFail               types.Bool   `tfsdk:"should_fail"`
-	RunParallel              types.Bool   `tfsdk:"run_parallel"`
-	Locations                types.Set    `tfsdk:"locations"`
-	DegradedResponseTime     types.Int64  `tfsdk:"degraded_response_time"`
-	MaxResponseTime          types.Int64  `tfsdk:"max_response_time"`
-	Tags                     types.Set    `tfsdk:"tags"`
-	SetupSnippetID           types.Int64  `tfsdk:"setup_snippet_id"`
-	TeardownSnippetID        types.Int64  `tfsdk:"teardown_snippet_id"`
-	LocalSetupScript         types.String `tfsdk:"local_setup_script"`
-	LocalTeardownScript      types.String `tfsdk:"local_teardown_script"`
-	RuntimeID                types.String `tfsdk:"runtime_id"`
-	AlertChannelSubscription types.Set    `tfsdk:"alert_channel_subscription"`
-	PrivateLocations         types.Set    `tfsdk:"private_locations"`
-	AlertSettings            types.Object `tfsdk:"alert_settings"`
-	UseGlobalAlertSettings   types.Bool   `tfsdk:"use_global_alert_settings"`
-	Request                  types.Object `tfsdk:"request"`
-	GroupID                  types.Int64  `tfsdk:"group_id"`
-	GroupOrder               types.Int64  `tfsdk:"group_order"`
-	RetryStrategy            types.Object `tfsdk:"retry_strategy"`
-	TriggerIncident          types.Object `tfsdk:"trigger_incident"`
-	Intent                   types.Object `tfsdk:"intent"`
-	AIAutoRepairEnabled      types.Bool   `tfsdk:"ai_auto_repair_enabled"`
+	ID                        types.String `tfsdk:"id"`
+	Name                      types.String `tfsdk:"name"`
+	Description               types.String `tfsdk:"description"`
+	Frequency                 types.Int64  `tfsdk:"frequency"`
+	FrequencyOffset           types.Int64  `tfsdk:"frequency_offset"`
+	Activated                 types.Bool   `tfsdk:"activated"`
+	Muted                     types.Bool   `tfsdk:"muted"`
+	ShouldFail                types.Bool   `tfsdk:"should_fail"`
+	RunParallel               types.Bool   `tfsdk:"run_parallel"`
+	Locations                 types.Set    `tfsdk:"locations"`
+	DegradedResponseTime      types.Int64  `tfsdk:"degraded_response_time"`
+	MaxResponseTime           types.Int64  `tfsdk:"max_response_time"`
+	Tags                      types.Set    `tfsdk:"tags"`
+	SetupSnippetID            types.Int64  `tfsdk:"setup_snippet_id"`
+	TeardownSnippetID         types.Int64  `tfsdk:"teardown_snippet_id"`
+	LocalSetupScript          types.String `tfsdk:"local_setup_script"`
+	LocalTeardownScript       types.String `tfsdk:"local_teardown_script"`
+	RuntimeID                 types.String `tfsdk:"runtime_id"`
+	AlertChannelSubscriptions types.Set    `tfsdk:"alert_channel_subscriptions"`
+	PrivateLocations          types.Set    `tfsdk:"private_locations"`
+	AlertSettings             types.Object `tfsdk:"alert_settings"`
+	UseGlobalAlertSettings    types.Bool   `tfsdk:"use_global_alert_settings"`
+	Request                   types.Object `tfsdk:"request"`
+	GroupID                   types.Int64  `tfsdk:"group_id"`
+	GroupOrder                types.Int64  `tfsdk:"group_order"`
+	RetryStrategy             types.Object `tfsdk:"retry_strategy"`
+	TriggerIncident           types.Object `tfsdk:"trigger_incident"`
+	Intent                    types.Object `tfsdk:"intent"`
+	AIAutoRepairEnabled       types.Bool   `tfsdk:"ai_auto_repair_enabled"`
 }
 
 func (r *APICheckResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -302,8 +302,6 @@ func (r *APICheckResource) Schema(ctx context.Context, req resource.SchemaReques
 				Description: "The parameters of the HTTP request.",
 				Required:    true,
 			}),
-		},
-		Blocks: map[string]schema.Block{
 			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{}),
 		},
 	}
@@ -326,7 +324,7 @@ func (r *APICheckResource) Configure(ctx context.Context, req resource.Configure
 // fully known and stable across plans, which set element correlation
 // requires.
 func (r *APICheckResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	planNestedDefaults(ctx, req, resp, path.Root("request"), objectWithSetDefaults("assertion", assertionsWithPropertyAndTargetDefaults))
+	planNestedDefaults(ctx, req, resp, path.Root("request"), objectWithSetDefaults("assertions", assertionsWithPropertyAndTargetDefaults))
 }
 
 func (r *APICheckResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -455,39 +453,39 @@ func (r *APICheckResource) MoveState(ctx context.Context) []resource.StateMover 
 
 // apiCheckModelFromCheckModel converts a checkly_check model of an API check.
 // The source values are mapped over one-to-one, dropping the attributes that
-// do not apply to API checks (type, script, environment_variable and
+// do not apply to API checks (type, script, environment_variables and
 // ssl_check_domain).
 func apiCheckModelFromCheckModel(source *CheckResourceModel) APICheckResourceModel {
 	return APICheckResourceModel{
-		ID:                       source.ID,
-		Name:                     source.Name,
-		Description:              source.Description,
-		Frequency:                source.Frequency,
-		FrequencyOffset:          source.FrequencyOffset,
-		Activated:                source.Activated,
-		Muted:                    source.Muted,
-		ShouldFail:               source.ShouldFail,
-		RunParallel:              source.RunParallel,
-		Locations:                source.Locations,
-		DegradedResponseTime:     source.DegradedResponseTime,
-		MaxResponseTime:          source.MaxResponseTime,
-		Tags:                     source.Tags,
-		SetupSnippetID:           source.SetupSnippetID,
-		TeardownSnippetID:        source.TeardownSnippetID,
-		LocalSetupScript:         source.LocalSetupScript,
-		LocalTeardownScript:      source.LocalTeardownScript,
-		RuntimeID:                source.RuntimeID,
-		AlertChannelSubscription: source.AlertChannelSubscription,
-		PrivateLocations:         source.PrivateLocations,
-		AlertSettings:            source.AlertSettings,
-		UseGlobalAlertSettings:   source.UseGlobalAlertSettings,
-		Request:                  source.Request,
-		GroupID:                  source.GroupID,
-		GroupOrder:               source.GroupOrder,
-		RetryStrategy:            source.RetryStrategy,
-		TriggerIncident:          source.TriggerIncident,
-		Intent:                   source.Intent,
-		AIAutoRepairEnabled:      source.AIAutoRepairEnabled,
+		ID:                        source.ID,
+		Name:                      source.Name,
+		Description:               source.Description,
+		Frequency:                 source.Frequency,
+		FrequencyOffset:           source.FrequencyOffset,
+		Activated:                 source.Activated,
+		Muted:                     source.Muted,
+		ShouldFail:                source.ShouldFail,
+		RunParallel:               source.RunParallel,
+		Locations:                 source.Locations,
+		DegradedResponseTime:      source.DegradedResponseTime,
+		MaxResponseTime:           source.MaxResponseTime,
+		Tags:                      source.Tags,
+		SetupSnippetID:            source.SetupSnippetID,
+		TeardownSnippetID:         source.TeardownSnippetID,
+		LocalSetupScript:          source.LocalSetupScript,
+		LocalTeardownScript:       source.LocalTeardownScript,
+		RuntimeID:                 source.RuntimeID,
+		AlertChannelSubscriptions: source.AlertChannelSubscriptions,
+		PrivateLocations:          source.PrivateLocations,
+		AlertSettings:             source.AlertSettings,
+		UseGlobalAlertSettings:    source.UseGlobalAlertSettings,
+		Request:                   source.Request,
+		GroupID:                   source.GroupID,
+		GroupOrder:                source.GroupOrder,
+		RetryStrategy:             source.RetryStrategy,
+		TriggerIncident:           source.TriggerIncident,
+		Intent:                    source.Intent,
+		AIAutoRepairEnabled:       source.AIAutoRepairEnabled,
 	}
 }
 
@@ -630,7 +628,7 @@ func apiCheckFromModel(ctx context.Context, model *APICheckResourceModel, diags 
 		LocalTearDownScript:       localTeardownScript,
 		GroupID:                   model.GroupID.ValueInt64(),
 		GroupOrder:                int(model.GroupOrder.ValueInt64()),
-		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscription, diags),
+		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscriptions, diags),
 		PrivateLocations:          &privateLocations,
 		RetryStrategy:             retryStrategyFromObject(ctx, model.RetryStrategy, diags),
 		TriggerIncident:           triggerIncidentFromObject(ctx, model.TriggerIncident, diags),
@@ -715,7 +713,7 @@ func apiCheckToModel(ctx context.Context, c *checkly.APICheck, model *APICheckRe
 	} else {
 		model.RuntimeID = types.StringNull()
 	}
-	model.AlertChannelSubscription = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, diags)
+	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, prior.AlertChannelSubscriptions, diags)
 	if c.PrivateLocations != nil {
 		model.PrivateLocations = setFromStrings(ctx, *c.PrivateLocations, diags)
 	} else {

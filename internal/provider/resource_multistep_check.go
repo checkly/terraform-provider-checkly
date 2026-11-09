@@ -39,31 +39,31 @@ type MultistepCheckResource struct {
 
 // MultistepCheckResourceModel describes the resource data model.
 type MultistepCheckResourceModel struct {
-	ID                       types.String `tfsdk:"id"`
-	Name                     types.String `tfsdk:"name"`
-	Description              types.String `tfsdk:"description"`
-	Frequency                types.Int64  `tfsdk:"frequency"`
-	Activated                types.Bool   `tfsdk:"activated"`
-	Muted                    types.Bool   `tfsdk:"muted"`
-	ShouldFail               types.Bool   `tfsdk:"should_fail"`
-	RunParallel              types.Bool   `tfsdk:"run_parallel"`
-	Locations                types.Set    `tfsdk:"locations"`
-	Script                   types.String `tfsdk:"script"`
-	ScriptPath               types.String `tfsdk:"script_path"`
-	Dependency               types.List   `tfsdk:"dependency"`
-	EnvironmentVariable      types.List   `tfsdk:"environment_variable"`
-	Tags                     types.Set    `tfsdk:"tags"`
-	RuntimeID                types.String `tfsdk:"runtime_id"`
-	AlertChannelSubscription types.Set    `tfsdk:"alert_channel_subscription"`
-	PrivateLocations         types.Set    `tfsdk:"private_locations"`
-	AlertSettings            types.Object `tfsdk:"alert_settings"`
-	UseGlobalAlertSettings   types.Bool   `tfsdk:"use_global_alert_settings"`
-	GroupID                  types.Int64  `tfsdk:"group_id"`
-	GroupOrder               types.Int64  `tfsdk:"group_order"`
-	RetryStrategy            types.Object `tfsdk:"retry_strategy"`
-	TriggerIncident          types.Object `tfsdk:"trigger_incident"`
-	Intent                   types.Object `tfsdk:"intent"`
-	AIAutoRepairEnabled      types.Bool   `tfsdk:"ai_auto_repair_enabled"`
+	ID                        types.String `tfsdk:"id"`
+	Name                      types.String `tfsdk:"name"`
+	Description               types.String `tfsdk:"description"`
+	Frequency                 types.Int64  `tfsdk:"frequency"`
+	Activated                 types.Bool   `tfsdk:"activated"`
+	Muted                     types.Bool   `tfsdk:"muted"`
+	ShouldFail                types.Bool   `tfsdk:"should_fail"`
+	RunParallel               types.Bool   `tfsdk:"run_parallel"`
+	Locations                 types.Set    `tfsdk:"locations"`
+	Script                    types.String `tfsdk:"script"`
+	ScriptPath                types.String `tfsdk:"script_path"`
+	Dependencies              types.List   `tfsdk:"dependencies"`
+	EnvironmentVariables      types.List   `tfsdk:"environment_variables"`
+	Tags                      types.Set    `tfsdk:"tags"`
+	RuntimeID                 types.String `tfsdk:"runtime_id"`
+	AlertChannelSubscriptions types.Set    `tfsdk:"alert_channel_subscriptions"`
+	PrivateLocations          types.Set    `tfsdk:"private_locations"`
+	AlertSettings             types.Object `tfsdk:"alert_settings"`
+	UseGlobalAlertSettings    types.Bool   `tfsdk:"use_global_alert_settings"`
+	GroupID                   types.Int64  `tfsdk:"group_id"`
+	GroupOrder                types.Int64  `tfsdk:"group_order"`
+	RetryStrategy             types.Object `tfsdk:"retry_strategy"`
+	TriggerIncident           types.Object `tfsdk:"trigger_incident"`
+	Intent                    types.Object `tfsdk:"intent"`
+	AIAutoRepairEnabled       types.Bool   `tfsdk:"ai_auto_repair_enabled"`
 }
 
 func (r *MultistepCheckResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -183,27 +183,11 @@ func (r *MultistepCheckResource) Schema(ctx context.Context, req resource.Schema
 			retryStrategyAttributeName: makeRetryStrategyAttributeSchema(RetryStrategyAttributeSchemaOptions{
 				SupportsOnlyOnNetworkError: true,
 			}),
-		},
-		Blocks: map[string]schema.Block{
-			"dependency": schema.ListNestedBlock{
-				Description: "Script dependency files for editor-style multi-file scripts. Use together with `script_path` to mirror a multi-file layout.",
-				NestedObject: schema.NestedBlockObject{
-					Attributes: map[string]schema.Attribute{
-						"path": schema.StringAttribute{
-							Required:    true,
-							Description: "The path of the dependency file.",
-						},
-						"content": schema.StringAttribute{
-							Required:    true,
-							Description: "The content of the dependency file.",
-						},
-					},
-				},
-			},
+			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{}),
 			environmentVariableAttributeName: makeEnvironmentVariableSchema(EnvironmentVariableAttributeSchemaOptions{
 				Description: "Insert environment variables into the runtime environment. Use global environment variables whenever possible.",
 			}),
-			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{}),
+			scriptDependenciesAttributeName: makeScriptDependenciesSchema(),
 		},
 	}
 }
@@ -349,35 +333,35 @@ func (r *MultistepCheckResource) MoveState(ctx context.Context) []resource.State
 // multistepCheckModelFromCheckModel converts a checkly_check model of a
 // multi-step check. The frequency_offset, request, response time, snippet,
 // local script and ssl_check_domain attributes of checkly_check do not exist
-// on checkly_multistep_check and are discarded. The script_path and dependency
-// attributes are new and have no source value.
+// on checkly_multistep_check and are discarded. The script_path and
+// dependencies attributes are new and have no source value.
 func multistepCheckModelFromCheckModel(source *CheckResourceModel) MultistepCheckResourceModel {
 	return MultistepCheckResourceModel{
-		ID:                       source.ID,
-		Name:                     source.Name,
-		Description:              source.Description,
-		Frequency:                source.Frequency,
-		Activated:                source.Activated,
-		Muted:                    source.Muted,
-		ShouldFail:               source.ShouldFail,
-		RunParallel:              source.RunParallel,
-		Locations:                source.Locations,
-		Script:                   source.Script,
-		ScriptPath:               types.StringNull(),
-		Dependency:               types.ListValueMust(types.ObjectType{AttrTypes: scriptDependencyAttrTypes}, []attr.Value{}),
-		EnvironmentVariable:      source.EnvironmentVariable,
-		Tags:                     source.Tags,
-		RuntimeID:                source.RuntimeID,
-		AlertChannelSubscription: source.AlertChannelSubscription,
-		PrivateLocations:         source.PrivateLocations,
-		AlertSettings:            source.AlertSettings,
-		UseGlobalAlertSettings:   source.UseGlobalAlertSettings,
-		GroupID:                  source.GroupID,
-		GroupOrder:               source.GroupOrder,
-		RetryStrategy:            source.RetryStrategy,
-		TriggerIncident:          source.TriggerIncident,
-		Intent:                   source.Intent,
-		AIAutoRepairEnabled:      source.AIAutoRepairEnabled,
+		ID:                        source.ID,
+		Name:                      source.Name,
+		Description:               source.Description,
+		Frequency:                 source.Frequency,
+		Activated:                 source.Activated,
+		Muted:                     source.Muted,
+		ShouldFail:                source.ShouldFail,
+		RunParallel:               source.RunParallel,
+		Locations:                 source.Locations,
+		Script:                    source.Script,
+		ScriptPath:                types.StringNull(),
+		Dependencies:              types.ListNull(types.ObjectType{AttrTypes: scriptDependencyAttrTypes}),
+		EnvironmentVariables:      source.EnvironmentVariables,
+		Tags:                      source.Tags,
+		RuntimeID:                 source.RuntimeID,
+		AlertChannelSubscriptions: source.AlertChannelSubscriptions,
+		PrivateLocations:          source.PrivateLocations,
+		AlertSettings:             source.AlertSettings,
+		UseGlobalAlertSettings:    source.UseGlobalAlertSettings,
+		GroupID:                   source.GroupID,
+		GroupOrder:                source.GroupOrder,
+		RetryStrategy:             source.RetryStrategy,
+		TriggerIncident:           source.TriggerIncident,
+		Intent:                    source.Intent,
+		AIAutoRepairEnabled:       source.AIAutoRepairEnabled,
 	}
 }
 
@@ -439,14 +423,14 @@ func multistepCheckFromModel(ctx context.Context, model *MultistepCheckResourceM
 		Locations:                 locations,
 		Script:                    model.Script.ValueString(),
 		ScriptPath:                optionalStringPointer(model.ScriptPath),
-		Dependencies:              scriptDependenciesFromList(ctx, model.Dependency, diags),
-		EnvironmentVariables:      environmentVariablesFromList(ctx, model.EnvironmentVariable, diags),
+		Dependencies:              scriptDependenciesFromList(ctx, model.Dependencies, diags),
+		EnvironmentVariables:      environmentVariablesFromList(ctx, model.EnvironmentVariables, diags),
 		Tags:                      stringsFromSet(ctx, model.Tags, diags),
 		AlertSettings:             &alertSettings,
 		UseGlobalAlertSettings:    model.UseGlobalAlertSettings.ValueBool(),
 		GroupID:                   model.GroupID.ValueInt64(),
 		GroupOrder:                int(model.GroupOrder.ValueInt64()),
-		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscription, diags),
+		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscriptions, diags),
 		PrivateLocations:          &privateLocations,
 		RetryStrategy:             retryStrategyFromObject(ctx, model.RetryStrategy, diags),
 		TriggerIncident:           triggerIncidentFromObject(ctx, model.TriggerIncident, diags),
@@ -466,7 +450,7 @@ func multistepCheckFromModel(ctx context.Context, model *MultistepCheckResourceM
 // are already known at plan time (defaults included) and must be kept as
 // planned; only the values that may still be unknown in the plan (the ID and
 // the optional+computed alert_settings and retry_strategy objects) are
-// resolved from the API response. Notably, the dependency block value is kept
+// resolved from the API response. Notably, the dependencies value is kept
 // as planned because create and update API responses do not echo
 // dependencies; only reads include them.
 func multistepCheckResolveComputedValues(ctx context.Context, c *checkly.MultiStepCheck, model *MultistepCheckResourceModel, diags *diag.Diagnostics) {
@@ -516,8 +500,8 @@ func multistepCheckToModel(ctx context.Context, c *checkly.MultiStepCheck, model
 		model.ScriptPath = types.StringNull()
 	}
 
-	model.Dependency = scriptDependenciesToList(ctx, c.Dependencies, prior.Dependency, diags)
-	model.EnvironmentVariable = environmentVariablesToList(ctx, c.EnvironmentVariables, prior.EnvironmentVariable, diags)
+	model.Dependencies = scriptDependenciesToList(ctx, c.Dependencies, prior.Dependencies, diags)
+	model.EnvironmentVariables = environmentVariablesToList(ctx, c.EnvironmentVariables, prior.EnvironmentVariables, diags)
 	model.Tags = stringSetFromAPIEmptyIfUnknown(ctx, c.Tags, prior.Tags, diags)
 
 	if c.RuntimeID != nil && *c.RuntimeID != "" {
@@ -526,7 +510,7 @@ func multistepCheckToModel(ctx context.Context, c *checkly.MultiStepCheck, model
 		model.RuntimeID = types.StringNull()
 	}
 
-	model.AlertChannelSubscription = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, diags)
+	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, prior.AlertChannelSubscriptions, diags)
 
 	if c.PrivateLocations != nil {
 		model.PrivateLocations = setFromStrings(ctx, *c.PrivateLocations, diags)

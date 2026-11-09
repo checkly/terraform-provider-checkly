@@ -249,7 +249,7 @@ resource "checkly_check" "test" {
       username = "user"
       password = "pass"
     }
-    assertion = [
+    assertions = [
       {
         source     = "STATUS_CODE"
         property   = ""
@@ -291,10 +291,12 @@ resource "checkly_check" "test" {
     }
   }
 
-  alert_channel_subscription {
-    channel_id = checkly_alert_channel.email.id
-    activated  = true
-  }
+  alert_channel_subscriptions = [
+    {
+      channel_id = checkly_alert_channel.email.id
+      activated  = true
+    },
+  ]
 }
 `),
 
@@ -452,10 +454,12 @@ resource "checkly_check" "test" {
   use_global_alert_settings = false
   script                    = "console.log('test')"
 
-  environment_variable {
-    key   = "BASE_URL"
-    value = "https://www.checklyhq.com"
-  }
+  environment_variables = [
+    {
+      key   = "BASE_URL"
+      value = "https://www.checklyhq.com"
+    },
+  ]
 
   alert_settings = {
     escalation_type = "TIME_BASED"
@@ -475,6 +479,42 @@ resource "checkly_check" "test" {
     max_duration_seconds = 300
     same_region          = false
   }
+}
+`),
+
+	// The deprecated environment_variables map becomes the
+	// environment_variables list. A single entry keeps the order the API
+	// returns independent of SDK v2's map iteration order.
+	"check_browser_environment_variables_map": newSDKv2UpgradeCase(`
+resource "checkly_check" "test" {
+  name                      = "tf-upgrade-{{id}}-check-browser-env-map"
+  type                      = "BROWSER"
+  frequency                 = 720
+  activated                 = true
+  locations                 = ["eu-central-1"]
+  use_global_alert_settings = true
+  script                    = "console.log('test')"
+
+  environment_variables = {
+    BASE_URL = "https://www.checklyhq.com"
+  }
+}
+`, `
+resource "checkly_check" "test" {
+  name                      = "tf-upgrade-{{id}}-check-browser-env-map"
+  type                      = "BROWSER"
+  frequency                 = 720
+  activated                 = true
+  locations                 = ["eu-central-1"]
+  use_global_alert_settings = true
+  script                    = "console.log('test')"
+
+  environment_variables = [
+    {
+      key   = "BASE_URL"
+      value = "https://www.checklyhq.com"
+    },
+  ]
 }
 `),
 
@@ -609,10 +649,12 @@ resource "checkly_heartbeat_monitor" "test" {
     notify_subscribers = true
   }
 
-  alert_channel_subscription {
-    channel_id = checkly_alert_channel.email.id
-    activated  = true
-  }
+  alert_channel_subscriptions = [
+    {
+      channel_id = checkly_alert_channel.email.id
+      activated  = true
+    },
+  ]
 }
 `),
 
@@ -675,7 +717,7 @@ resource "checkly_tcp_check" "test" {
   request = {
     hostname = "api.checklyhq.com"
     port     = 80
-    assertion = [{
+    assertions = [{
       source     = "RESPONSE_TIME"
       property   = ""
       comparison = "LESS_THAN"
@@ -777,7 +819,7 @@ resource "checkly_tcp_monitor" "test" {
     hostname  = "api.checklyhq.com"
     port      = 80
     ip_family = "IPv4"
-    assertion = [
+    assertions = [
       {
         source     = "RESPONSE_TIME"
         property   = ""
@@ -909,7 +951,7 @@ resource "checkly_check_group" "test" {
     query_parameters = {
       query = "foo"
     }
-    assertion = [
+    assertions = [
       {
         source     = "STATUS_CODE"
         property   = ""
@@ -923,11 +965,13 @@ resource "checkly_check_group" "test" {
     }
   }
 
-  environment_variable {
-    key    = "FOO"
-    value  = "BAR"
-    locked = false
-  }
+  environment_variables = [
+    {
+      key    = "FOO"
+      value  = "BAR"
+      locked = false
+    },
+  ]
 
   alert_settings = {
     escalation_type = "RUN_BASED"
@@ -955,10 +999,12 @@ resource "checkly_check_group" "test" {
     }
   }
 
-  alert_channel_subscription {
-    channel_id = checkly_alert_channel.email.id
-    activated  = true
-  }
+  alert_channel_subscriptions = [
+    {
+      channel_id = checkly_alert_channel.email.id
+      activated  = true
+    },
+  ]
 }
 `),
 
@@ -1096,7 +1142,7 @@ resource "checkly_check_group_v2" "test" {
     query_parameters = {
       version = "v2"
     }
-    assertion = [
+    assertions = [
       {
         source     = "STATUS_CODE"
         property   = ""
@@ -1122,11 +1168,13 @@ resource "checkly_check_group_v2" "test" {
     inline_script = "console.log('teardown')"
   }
 
-  environment_variable {
-    key    = "FOO"
-    value  = "bar"
-    locked = true
-  }
+  environment_variables = [
+    {
+      key    = "FOO"
+      value  = "bar"
+      locked = true
+    },
+  ]
 
   enforce_locations = {
     enabled           = true
@@ -1170,7 +1218,7 @@ resource "checkly_check_group_v2" "test" {
         percentage = 50
       }
     }
-    alert_channel_subscription = [
+    alert_channel_subscriptions = [
       {
         channel_id = checkly_alert_channel.email.id
         activated  = true
@@ -1304,12 +1352,16 @@ resource "checkly_status_page" "test" {
   name = "tf-upgrade-{{id}}-maintenance"
   url  = "tf-upgrade-mw-{{id}}"
 
-  card {
-    name = "Card"
-    service_attachment {
-      service_id = checkly_status_page_service.test.id
-    }
-  }
+  cards = [
+    {
+      name = "Card"
+      service_attachments = [
+        {
+          service_id = checkly_status_page_service.test.id
+        },
+      ]
+    },
+  ]
 }
 
 resource "checkly_maintenance_windows" "test" {
@@ -1652,12 +1704,16 @@ resource "checkly_status_page" "test" {
   redirect_to   = "https://example.com"
   default_theme = "DARK"
 
-  card {
-    name = "Card"
-    service_attachment {
-      service_id = checkly_status_page_service.test.id
-    }
-  }
+  cards = [
+    {
+      name = "Card"
+      service_attachments = [
+        {
+          service_id = checkly_status_page_service.test.id
+        },
+      ]
+    },
+  ]
 }
 `),
 
@@ -1869,10 +1925,12 @@ resource "checkly_status_page_v3_automation_rule" "test" {
   cool_down_window_minutes = 30
   tags                     = ["tf-upgrade-api"]
 
-  component {
-    component_id  = checkly_status_page_v3_component.api.id
-    target_impact = "MAJOR_OUTAGE"
-  }
+  components = [
+    {
+      component_id  = checkly_status_page_v3_component.api.id
+      target_impact = "MAJOR_OUTAGE"
+    },
+  ]
 }
 `),
 
@@ -1965,7 +2023,7 @@ resource "checkly_url_monitor" "test" {
     follow_redirects = true
     skip_ssl         = false
     ip_family        = "IPv6"
-    assertion = [
+    assertions = [
       {
         source     = "STATUS_CODE"
         property   = ""
@@ -2015,10 +2073,12 @@ resource "checkly_url_monitor" "test" {
     notify_subscribers = false
   }
 
-  alert_channel_subscription {
-    channel_id = checkly_alert_channel.email.id
-    activated  = true
-  }
+  alert_channel_subscriptions = [
+    {
+      channel_id = checkly_alert_channel.email.id
+      activated  = true
+    },
+  ]
 }
 `),
 
@@ -2122,7 +2182,7 @@ resource "checkly_dns_monitor" "test" {
       port = 53
     }
 
-    assertion = [{
+    assertions = [{
       source     = "RESPONSE_CODE"
       property   = ""
       comparison = "EQUALS"
@@ -2214,7 +2274,7 @@ resource "checkly_icmp_monitor" "test" {
     ip_family  = "IPv4"
     ping_count = 10
 
-    assertion = [{
+    assertions = [{
       source     = "LATENCY"
       property   = "avg"
       comparison = "LESS_THAN"
@@ -2322,7 +2382,7 @@ resource "checkly_grpc_monitor" "test" {
       value = "supersecret"
     }]
 
-    assertion = [{
+    assertions = [{
       source     = "GRPC_STATUS_CODE"
       property   = ""
       comparison = "EQUALS"
@@ -2422,7 +2482,7 @@ resource "checkly_traceroute_monitor" "test" {
     ptr_lookup       = true
     timeout          = 10
 
-    assertion = [{
+    assertions = [{
       source     = "PACKET_LOSS"
       property   = ""
       comparison = "LESS_THAN"
@@ -2564,7 +2624,7 @@ resource "checkly_ssl_monitor" "test" {
       mode = "account_default"
     }
 
-    assertion = [{
+    assertions = [{
       source     = "CERTIFICATE"
       property   = "daysUntilExpiry"
       comparison = "GREATER_THAN"
@@ -2700,7 +2760,7 @@ resource "checkly_playwright_check_suite" "test" {
     }
     playwright = {
       version = "1.56.1"
-      device = [
+      devices = [
         {
           type = "chromium"
         },
@@ -2708,11 +2768,13 @@ resource "checkly_playwright_check_suite" "test" {
     }
   }
 
-  environment_variable {
-    key    = "FOO"
-    value  = "bar"
-    locked = false
-  }
+  environment_variables = [
+    {
+      key    = "FOO"
+      value  = "bar"
+      locked = false
+    },
+  ]
 
   alert_settings = {
     escalation_type = "RUN_BASED"
@@ -2800,10 +2862,12 @@ resource "checkly_browser_check" "test" {
   use_global_alert_settings = true
   script                    = "console.log('test')"
 
-  environment_variable {
-    key   = "BASE_URL"
-    value = "https://www.checklyhq.com"
-  }
+  environment_variables = [
+    {
+      key   = "BASE_URL"
+      value = "https://www.checklyhq.com"
+    },
+  ]
 }
 
 moved {
@@ -2874,7 +2938,7 @@ resource "checkly_tcp_monitor" "test" {
   request = {
     hostname = "api.checklyhq.com"
     port     = 80
-    assertion = [{
+    assertions = [{
       source     = "RESPONSE_TIME"
       property   = ""
       comparison = "LESS_THAN"
@@ -2934,7 +2998,7 @@ resource "checkly_api_check" "test" {
 
   request = {
     url = "https://api.checklyhq.com/public-stats"
-    assertion = [{
+    assertions = [{
       source     = "STATUS_CODE"
       comparison = "EQUALS"
       target     = "200"

@@ -17,7 +17,7 @@ resource "checkly_dns_monitor" "example-dns-monitor" {
       port = 53
     }
 
-    assertion = [{
+    assertions = [{
       source     = "RESPONSE_CODE"
       comparison = "EQUALS"
       target     = "NOERROR"

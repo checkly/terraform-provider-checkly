@@ -33,7 +33,7 @@ resource "checkly_api_check" "example_check" {
   request = {
     url              = "https://api.example.com/"
     follow_redirects = true
-    assertion = [{
+    assertions = [{
       source     = "STATUS_CODE"
       comparison = "EQUALS"
       target     = "200"

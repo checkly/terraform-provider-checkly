@@ -45,46 +45,46 @@ type TCPMonitorResource struct {
 
 // TCPMonitorResourceModel describes the resource data model.
 type TCPMonitorResourceModel struct {
-	ID                       types.String `tfsdk:"id"`
-	Name                     types.String `tfsdk:"name"`
-	Description              types.String `tfsdk:"description"`
-	Frequency                types.Int64  `tfsdk:"frequency"`
-	FrequencyOffset          types.Int64  `tfsdk:"frequency_offset"`
-	Activated                types.Bool   `tfsdk:"activated"`
-	Muted                    types.Bool   `tfsdk:"muted"`
-	ShouldFail               types.Bool   `tfsdk:"should_fail"`
-	RunParallel              types.Bool   `tfsdk:"run_parallel"`
-	Locations                types.Set    `tfsdk:"locations"`
-	DegradedResponseTime     types.Int64  `tfsdk:"degraded_response_time"`
-	MaxResponseTime          types.Int64  `tfsdk:"max_response_time"`
-	Tags                     types.Set    `tfsdk:"tags"`
-	RuntimeID                types.String `tfsdk:"runtime_id"`
-	PrivateLocations         types.Set    `tfsdk:"private_locations"`
-	AlertSettings            types.Object `tfsdk:"alert_settings"`
-	UseGlobalAlertSettings   types.Bool   `tfsdk:"use_global_alert_settings"`
-	GroupID                  types.Int64  `tfsdk:"group_id"`
-	GroupOrder               types.Int64  `tfsdk:"group_order"`
-	RetryStrategy            types.Object `tfsdk:"retry_strategy"`
-	Request                  types.Object `tfsdk:"request"`
-	AlertChannelSubscription types.Set    `tfsdk:"alert_channel_subscription"`
-	TriggerIncident          types.Object `tfsdk:"trigger_incident"`
+	ID                        types.String `tfsdk:"id"`
+	Name                      types.String `tfsdk:"name"`
+	Description               types.String `tfsdk:"description"`
+	Frequency                 types.Int64  `tfsdk:"frequency"`
+	FrequencyOffset           types.Int64  `tfsdk:"frequency_offset"`
+	Activated                 types.Bool   `tfsdk:"activated"`
+	Muted                     types.Bool   `tfsdk:"muted"`
+	ShouldFail                types.Bool   `tfsdk:"should_fail"`
+	RunParallel               types.Bool   `tfsdk:"run_parallel"`
+	Locations                 types.Set    `tfsdk:"locations"`
+	DegradedResponseTime      types.Int64  `tfsdk:"degraded_response_time"`
+	MaxResponseTime           types.Int64  `tfsdk:"max_response_time"`
+	Tags                      types.Set    `tfsdk:"tags"`
+	RuntimeID                 types.String `tfsdk:"runtime_id"`
+	PrivateLocations          types.Set    `tfsdk:"private_locations"`
+	AlertSettings             types.Object `tfsdk:"alert_settings"`
+	UseGlobalAlertSettings    types.Bool   `tfsdk:"use_global_alert_settings"`
+	GroupID                   types.Int64  `tfsdk:"group_id"`
+	GroupOrder                types.Int64  `tfsdk:"group_order"`
+	RetryStrategy             types.Object `tfsdk:"retry_strategy"`
+	Request                   types.Object `tfsdk:"request"`
+	AlertChannelSubscriptions types.Set    `tfsdk:"alert_channel_subscriptions"`
+	TriggerIncident           types.Object `tfsdk:"trigger_incident"`
 }
 
 // TCPMonitorRequestModel describes the request attribute data model.
 type TCPMonitorRequestModel struct {
-	Hostname  types.String `tfsdk:"hostname"`
-	Port      types.Int64  `tfsdk:"port"`
-	Data      types.String `tfsdk:"data"`
-	Assertion types.Set    `tfsdk:"assertion"`
-	IPFamily  types.String `tfsdk:"ip_family"`
+	Hostname   types.String `tfsdk:"hostname"`
+	Port       types.Int64  `tfsdk:"port"`
+	Data       types.String `tfsdk:"data"`
+	Assertions types.Set    `tfsdk:"assertions"`
+	IPFamily   types.String `tfsdk:"ip_family"`
 }
 
 var tcpMonitorRequestAttrTypes = map[string]attr.Type{
-	"hostname":  types.StringType,
-	"port":      types.Int64Type,
-	"data":      types.StringType,
-	"assertion": types.SetType{ElemType: types.ObjectType{AttrTypes: assertionAttrTypes}},
-	"ip_family": types.StringType,
+	"hostname":   types.StringType,
+	"port":       types.Int64Type,
+	"data":       types.StringType,
+	"assertions": types.SetType{ElemType: types.ObjectType{AttrTypes: assertionAttrTypes}},
+	"ip_family":  types.StringType,
 }
 
 func (r *TCPMonitorResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -231,7 +231,7 @@ func (r *TCPMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 							stringvalidator.OneOf("IPv4", "IPv6"),
 						},
 					},
-					"assertion": schema.SetNestedAttribute{
+					"assertions": schema.SetNestedAttribute{
 						Optional:    true,
 						Computed:    true,
 						Default:     setdefault.StaticValue(types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{})),
@@ -271,8 +271,6 @@ func (r *TCPMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 					},
 				},
 			},
-		},
-		Blocks: map[string]schema.Block{
 			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{
 				Monitor: true,
 			}),
@@ -303,7 +301,7 @@ func (r *TCPMonitorResource) Configure(ctx context.Context, req resource.Configu
 // fully known and stable across plans, which set element correlation
 // requires.
 func (r *TCPMonitorResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	planNestedDefaults(ctx, req, resp, path.Root("request"), objectWithSetDefaults("assertion", assertionsWithPropertyAndTargetDefaults))
+	planNestedDefaults(ctx, req, resp, path.Root("request"), objectWithSetDefaults("assertions", assertionsWithPropertyAndTargetDefaults))
 }
 
 func (r *TCPMonitorResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -465,7 +463,7 @@ func tcpMonitorFromModel(ctx context.Context, model *TCPMonitorResourceModel, di
 		GroupOrder:                int(model.GroupOrder.ValueInt64()),
 		PrivateLocations:          &privateLocations,
 		Request:                   tcpMonitorRequestFromObject(ctx, model.Request, diags),
-		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscription, diags),
+		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscriptions, diags),
 		RetryStrategy:             retryStrategyFromObject(ctx, model.RetryStrategy, diags),
 		TriggerIncident:           triggerIncidentFromObject(ctx, model.TriggerIncident, diags),
 	}
@@ -552,7 +550,7 @@ func tcpMonitorToModel(ctx context.Context, c *checkly.TCPMonitor, model *TCPMon
 	model.GroupOrder = types.Int64Value(int64(c.GroupOrder))
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, model.RetryStrategy, diags)
 	model.Request = tcpMonitorRequestToObject(ctx, c.Request, diags)
-	model.AlertChannelSubscription = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, diags)
+	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, model.AlertChannelSubscriptions, diags)
 	model.TriggerIncident = triggerIncidentToObject(ctx, c.TriggerIncident, diags)
 }
 
@@ -568,7 +566,7 @@ func tcpMonitorRequestFromObject(ctx context.Context, obj types.Object, diags *d
 		Hostname:   model.Hostname.ValueString(),
 		Port:       uint16(model.Port.ValueInt64()),
 		Data:       model.Data.ValueString(),
-		Assertions: assertionsFromSet(ctx, model.Assertion, diags),
+		Assertions: assertionsFromSet(ctx, model.Assertions, diags),
 		IPFamily:   checkly.IPFamily(model.IPFamily.ValueString()),
 	}
 }
@@ -577,11 +575,11 @@ func tcpMonitorRequestFromObject(ctx context.Context, obj types.Object, diags *d
 // to the request attribute value.
 func tcpMonitorRequestToObject(ctx context.Context, request checkly.TCPRequest, diags *diag.Diagnostics) types.Object {
 	obj, d := types.ObjectValue(tcpMonitorRequestAttrTypes, map[string]attr.Value{
-		"hostname":  types.StringValue(request.Hostname),
-		"port":      types.Int64Value(int64(request.Port)),
-		"data":      types.StringValue(request.Data),
-		"assertion": assertionsToSet(ctx, request.Assertions, diags),
-		"ip_family": types.StringValue(string(request.IPFamily)),
+		"hostname":   types.StringValue(request.Hostname),
+		"port":       types.Int64Value(int64(request.Port)),
+		"data":       types.StringValue(request.Data),
+		"assertions": assertionsToSet(ctx, request.Assertions, diags),
+		"ip_family":  types.StringValue(string(request.IPFamily)),
 	})
 	diags.Append(d...)
 

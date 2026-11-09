@@ -92,9 +92,10 @@ test('visit page', async ({ page }) => {
 })
 EOT
 
-  dependency {
-    path    = "__checks__/util.ts"
-    content = <<EOT
+  dependencies = [
+    {
+      path    = "__checks__/util.ts"
+      content = <<EOT
 import { expect } from '@playwright/test'
 
 export async function visitPage(page, url) {
@@ -102,7 +103,8 @@ export async function visitPage(page, url) {
     expect(response.status()).toBeLessThan(400)
 }
 EOT
-  }
+    },
+  ]
 }
 
 # An alternative syntax for adding the script is by referencing an external file
@@ -183,11 +185,11 @@ resource "checkly_browser_check" "example_6" {
 
 - `activated` (Boolean) Determines if the check is running or not. Possible values `true`, and `false`. (Default `true`).
 - `ai_auto_repair_enabled` (Boolean) Overrides the account's automatic repair setting for this check. Leave it out to inherit the account setting. Automatic repair supports browser and multi-step checks only, so this setting has no effect on other check types today, and it needs an `intent` with at least one statement. A repair is saved to the check, so it shows as a change to `script`, and the next apply restores the configured script unless you copy the repaired script into the configuration or add `script` to `ignore_changes`. An override edited in the web app and absent from the configuration is removed by the next apply, every time. To leave it to the web app, add `ai_auto_repair_enabled` to `ignore_changes`.
-- `alert_channel_subscription` (Block Set) An array of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your check, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedblock--alert_channel_subscription))
+- `alert_channel_subscriptions` (Attributes Set) A set of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your check, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedatt--alert_channel_subscriptions))
 - `alert_settings` (Attributes) Determines the alert escalation policy for the check. (see [below for nested schema](#nestedatt--alert_settings))
-- `dependency` (Block List) Script dependency files for editor-style multi-file scripts. Use together with `script_path` to mirror a multi-file layout. (see [below for nested schema](#nestedblock--dependency))
+- `dependencies` (Attributes List) Script dependency files for editor-style multi-file scripts. Use together with `script_path` to mirror a multi-file layout. (see [below for nested schema](#nestedatt--dependencies))
 - `description` (String) A description of the check.
-- `environment_variable` (Block List) Insert environment variables into the runtime environment. Use global environment variables whenever possible. At most 200 variables. (see [below for nested schema](#nestedblock--environment_variable))
+- `environment_variables` (Attributes List) Insert environment variables into the runtime environment. Use global environment variables whenever possible. At most 200 variables. (see [below for nested schema](#nestedatt--environment_variables))
 - `frequency` (Number) Controls how often the check should run. Defined in minutes. The allowed values are `1` (1 minute), `2` (2 minutes), `5` (5 minutes), `10` (10 minutes), `15` (15 minutes), `30` (30 minutes), `60` (1 hour), `120` (2 hours), `180` (3 hours), `360` (6 hours), `720` (12 hours) and `1440` (24 hours). (Default `10`).
 - `group_id` (Number) The id of the check group this check is part of.
 - `group_order` (Number) The position of this check in a check group. It determines in what order checks are run when a group is triggered from the API or from CI/CD.
@@ -209,8 +211,8 @@ resource "checkly_browser_check" "example_6" {
 
 - `id` (String) The ID of the check.
 
-<a id="nestedblock--alert_channel_subscription"></a>
-### Nested Schema for `alert_channel_subscription`
+<a id="nestedatt--alert_channel_subscriptions"></a>
+### Nested Schema for `alert_channel_subscriptions`
 
 Required:
 
@@ -264,8 +266,8 @@ Optional:
 
 
 
-<a id="nestedblock--dependency"></a>
-### Nested Schema for `dependency`
+<a id="nestedatt--dependencies"></a>
+### Nested Schema for `dependencies`
 
 Required:
 
@@ -273,8 +275,8 @@ Required:
 - `path` (String) The path of the dependency file.
 
 
-<a id="nestedblock--environment_variable"></a>
-### Nested Schema for `environment_variable`
+<a id="nestedatt--environment_variables"></a>
+### Nested Schema for `environment_variables`
 
 Required:
 

@@ -71,7 +71,7 @@ resource "checkly_tcp_monitor" "example-tcp-monitor-2" {
     port     = 80
     data     = "hello"
 
-    assertion = [
+    assertions = [
       {
         source     = "RESPONSE_DATA"
         property   = ""
@@ -101,7 +101,7 @@ resource "checkly_tcp_monitor" "example-tcp-monitor-2" {
 
 ### Optional
 
-- `alert_channel_subscription` (Block Set) An array of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your monitor, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedblock--alert_channel_subscription))
+- `alert_channel_subscriptions` (Attributes Set) A set of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your monitor, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedatt--alert_channel_subscriptions))
 - `alert_settings` (Attributes) Determines the alert escalation policy for the monitor. (see [below for nested schema](#nestedatt--alert_settings))
 - `degraded_response_time` (Number) The response time in milliseconds starting from which a check should be considered degraded. Possible values are between 0 and 5000. (Default `4000`).
 - `description` (String) A description of the monitor.
@@ -134,12 +134,12 @@ Required:
 
 Optional:
 
-- `assertion` (Attributes Set) A request can have multiple assertions. (see [below for nested schema](#nestedatt--request--assertion))
+- `assertions` (Attributes Set) A request can have multiple assertions. (see [below for nested schema](#nestedatt--request--assertions))
 - `data` (String) The data to send to the target host.
 - `ip_family` (String) The IP family to use when executing the TCP check. The value can be either `IPv4` or `IPv6`. (Default `IPv4`).
 
-<a id="nestedatt--request--assertion"></a>
-### Nested Schema for `request.assertion`
+<a id="nestedatt--request--assertions"></a>
+### Nested Schema for `request.assertions`
 
 Required:
 
@@ -153,8 +153,8 @@ Optional:
 
 
 
-<a id="nestedblock--alert_channel_subscription"></a>
-### Nested Schema for `alert_channel_subscription`
+<a id="nestedatt--alert_channel_subscriptions"></a>
+### Nested Schema for `alert_channel_subscriptions`
 
 Required:
 

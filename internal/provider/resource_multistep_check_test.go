@@ -7,6 +7,9 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 )
 
 func TestAccMultistepCheckResourceBasic(t *testing.T) {
@@ -113,15 +116,16 @@ func TestAccMultistepCheckResourceDependencies(t *testing.T) {
 				script_path               = "__checks__/main.spec.ts"
 				script                    = "console.log('main')"
 
-				dependency {
-					path    = "__checks__/util.ts"
-					content = "export const foo = 'bar'"
-				}
-
-				dependency {
-					path    = "__checks__/data.json"
-					content = "{\"foo\": \"bar\"}"
-				}
+				dependencies = [
+					{
+						path    = "__checks__/util.ts"
+						content = "export const foo = 'bar'"
+					},
+					{
+						path    = "__checks__/data.json"
+						content = "{\"foo\": \"bar\"}"
+					},
+				]
 			}`,
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
@@ -131,22 +135,22 @@ func TestAccMultistepCheckResourceDependencies(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_multistep_check.test",
-					"dependency.#",
+					"dependencies.#",
 					"2",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_multistep_check.test",
-					"dependency.0.path",
+					"dependencies.0.path",
 					"__checks__/util.ts",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_multistep_check.test",
-					"dependency.0.content",
+					"dependencies.0.content",
 					"export const foo = 'bar'",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_multistep_check.test",
-					"dependency.1.path",
+					"dependencies.1.path",
 					"__checks__/data.json",
 				),
 			),
@@ -162,25 +166,26 @@ func TestAccMultistepCheckResourceDependencies(t *testing.T) {
 				script_path               = "__checks__/main.spec.ts"
 				script                    = "console.log('main')"
 
-				dependency {
-					path    = "__checks__/util.ts"
-					content = "export const foo = 'baz'"
-				}
-
-				dependency {
-					path    = "__checks__/data.json"
-					content = "{\"foo\": \"bar\"}"
-				}
+				dependencies = [
+					{
+						path    = "__checks__/util.ts"
+						content = "export const foo = 'baz'"
+					},
+					{
+						path    = "__checks__/data.json"
+						content = "{\"foo\": \"bar\"}"
+					},
+				]
 			}`,
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_multistep_check.test",
-					"dependency.#",
+					"dependencies.#",
 					"2",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_multistep_check.test",
-					"dependency.0.content",
+					"dependencies.0.content",
 					"export const foo = 'baz'",
 				),
 			),
@@ -193,12 +198,40 @@ func TestAccMultistepCheckResourceDependencies(t *testing.T) {
 			// existing state keeps the configured order. An imported state
 			// has no prior value to recover the configured order from, so
 			// the element order may legitimately differ.
-			ImportStateVerifyIgnore: []string{"dependency"},
+			ImportStateVerifyIgnore: []string{"dependencies"},
 		},
 		{
-			// Removing every dependency block must clear the dependencies
-			// remotely; otherwise the post-apply refresh would report the
-			// remote dependencies as drift and fail this step.
+			// An empty list must clear the dependencies remotely and is
+			// stored as an empty list, not null; otherwise the post-apply
+			// refresh and plan would not be empty.
+			Config: `resource "checkly_multistep_check" "test" {
+				name                      = "Multistep Check Resource Dependencies"
+				activated                 = true
+				frequency                 = 720
+				use_global_alert_settings = true
+				locations                 = ["us-east-1"]
+				runtime_id                = "2023.09"
+				script                    = "console.log('main')"
+
+				dependencies = []
+			}`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_multistep_check.test",
+					"dependencies.#",
+					"0",
+				),
+			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue(
+					"checkly_multistep_check.test",
+					tfjsonpath.New("dependencies"),
+					knownvalue.ListExact([]knownvalue.Check{}),
+				),
+			},
+		},
+		{
+			// Leaving the attribute out stores null.
 			Config: `resource "checkly_multistep_check" "test" {
 				name                      = "Multistep Check Resource Dependencies"
 				activated                 = true
@@ -209,10 +242,11 @@ func TestAccMultistepCheckResourceDependencies(t *testing.T) {
 				script                    = "console.log('main')"
 			}`,
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
+				// Unlike a check of the element count, which also passes
+				// for an empty list, this fails unless the value is null.
+				resource.TestCheckNoResourceAttr(
 					"checkly_multistep_check.test",
-					"dependency.#",
-					"0",
+					"dependencies",
 				),
 			),
 		},
@@ -389,7 +423,7 @@ func TestAccMultistepCheckUnsetSweepScalars(t *testing.T) {
 }
 
 // TestAccMultistepCheckUnsetSweepCollections sets the tags, locations and
-// private_locations collections and the environment_variable block, then
+// private_locations collections and the environment_variables list, then
 // removes them, verifying that removal clears the values remotely.
 // Dependencies have dedicated removal coverage in another test.
 func TestAccMultistepCheckUnsetSweepCollections(t *testing.T) {
@@ -415,17 +449,18 @@ func TestAccMultistepCheckUnsetSweepCollections(t *testing.T) {
 					tags              = ["sweep-a", "sweep-b"]
 					script            = "console.log('test')"
 
-					environment_variable {
-						key    = "SWEEP_FOO"
-						value  = "bar"
-						locked = false
-					}
-
-					environment_variable {
-						key    = "SWEEP_SECRET"
-						value  = "s3cr3t"
-						secret = true
-					}
+					environment_variables = [
+						{
+							key    = "SWEEP_FOO"
+							value  = "bar"
+							locked = false
+						},
+						{
+							key    = "SWEEP_SECRET"
+							value  = "s3cr3t"
+							secret = true
+						},
+					]
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
@@ -446,7 +481,7 @@ func TestAccMultistepCheckUnsetSweepCollections(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_multistep_check.test",
-					"environment_variable.#",
+					"environment_variables.#",
 					"2",
 				),
 			),
@@ -476,7 +511,7 @@ func TestAccMultistepCheckUnsetSweepCollections(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_multistep_check.test",
-					"environment_variable.#",
+					"environment_variables.#",
 					"0",
 				),
 				resource.TestCheckResourceAttr(
@@ -550,10 +585,12 @@ func TestAccMultistepCheckUnsetSweepGroupAndAlerts(t *testing.T) {
 					group_id    = checkly_check_group.sweep.id
 					group_order = 2
 
-					alert_channel_subscription {
-						channel_id = checkly_alert_channel.sweep.id
-						activated  = true
-					}
+					alert_channel_subscriptions = [
+						{
+							channel_id = checkly_alert_channel.sweep.id
+							activated  = true
+						},
+					]
 
 					trigger_incident = {
 						service_id         = checkly_status_page_service.sweep.id
@@ -583,7 +620,7 @@ func TestAccMultistepCheckUnsetSweepGroupAndAlerts(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_multistep_check.test",
-					"alert_channel_subscription.#",
+					"alert_channel_subscriptions.#",
 					"1",
 				),
 				resource.TestCheckResourceAttr(
@@ -610,10 +647,12 @@ func TestAccMultistepCheckUnsetSweepGroupAndAlerts(t *testing.T) {
 					script    = "console.log('test')"
 					group_id  = checkly_check_group.sweep.id
 
-					alert_channel_subscription {
-						channel_id = checkly_alert_channel.sweep.id
-						activated  = true
-					}
+					alert_channel_subscriptions = [
+						{
+							channel_id = checkly_alert_channel.sweep.id
+							activated  = true
+						},
+					]
 
 					trigger_incident = {
 						service_id         = checkly_status_page_service.sweep.id
@@ -669,7 +708,7 @@ func TestAccMultistepCheckUnsetSweepGroupAndAlerts(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_multistep_check.test",
-					"alert_channel_subscription.#",
+					"alert_channel_subscriptions.#",
 					"0",
 				),
 				resource.TestCheckNoResourceAttr(

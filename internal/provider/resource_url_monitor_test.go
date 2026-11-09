@@ -11,6 +11,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 
 	"github.com/checkly/checkly-go-sdk/v2"
 )
@@ -74,7 +77,7 @@ func TestAccURLMonitorBasic(t *testing.T) {
 				),
 				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_url_monitor.test",
-					"request.assertion.*",
+					"request.assertions.*",
 					map[string]string{
 						"source":     "STATUS_CODE",
 						"property":   "",
@@ -147,12 +150,12 @@ func TestAccURLMonitorFull(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_url_monitor.test",
-					"request.assertion.#",
+					"request.assertions.#",
 					"2",
 				),
 				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_url_monitor.test",
-					"request.assertion.*",
+					"request.assertions.*",
 					map[string]string{
 						"source":     "STATUS_CODE",
 						"property":   "",
@@ -162,7 +165,7 @@ func TestAccURLMonitorFull(t *testing.T) {
 				),
 				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_url_monitor.test",
-					"request.assertion.*",
+					"request.assertions.*",
 					map[string]string{
 						"source":     "STATUS_CODE",
 						"property":   "",
@@ -195,7 +198,7 @@ resource "checkly_url_monitor" "test_trigger_incident" {
 	request = {
 		url = "https://status.example.com/health"
 		follow_redirects = false
-		assertion = [{
+		assertions = [{
 			source     = "STATUS_CODE"
 			comparison = "EQUALS"
 			target     = "200"
@@ -339,7 +342,7 @@ resource "checkly_url_monitor" "test" {
   use_global_alert_settings = true
   request = {
     url = "https://api.checklyhq.com"
-    assertion = [{
+    assertions = [{
       comparison = "EQUALS"
       property   = ""
       source     = "STATUS_CODE"
@@ -360,7 +363,7 @@ resource "checkly_url_monitor" "test" {
   use_global_alert_settings = true
   request = {
     url = "https://api.checklyhq.com"
-    assertion = [{
+    assertions = [{
       comparison = "EQUALS"
       property   = ""
       source     = "STATUS_CODE"
@@ -388,7 +391,7 @@ resource "checkly_url_monitor" "test" {
     follow_redirects = true
     skip_ssl         = false
     ip_family        = "IPv6"
-    assertion = [{
+    assertions = [{
       comparison = "GREATER_THAN"
       property   = ""
       source     = "STATUS_CODE"
@@ -1483,39 +1486,40 @@ func TestAccURLMonitorAlertChannelSubscriptions(t *testing.T) {
 					request = {
 						url = "https://api.checklyhq.com"
 
-						assertion = [{
+						assertions = [{
 							source     = "STATUS_CODE"
 							comparison = "EQUALS"
 							target     = "200"
 						}]
 					}
 
-					alert_channel_subscription {
-						channel_id = checkly_alert_channel.email_1.id
-						activated  = true
-					}
-
-					alert_channel_subscription {
-						channel_id = checkly_alert_channel.email_2.id
-						activated  = false
-					}
+					alert_channel_subscriptions = [
+						{
+							channel_id = checkly_alert_channel.email_1.id
+							activated  = true
+						},
+						{
+							channel_id = checkly_alert_channel.email_2.id
+							activated  = false
+						},
+					]
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_url_monitor.test",
-					"alert_channel_subscription.#",
+					"alert_channel_subscriptions.#",
 					"2",
 				),
 				testCheckAlertChannelSubscription(
 					"checkly_url_monitor.test",
-					"alert_channel_subscription",
+					"alert_channel_subscriptions",
 					"checkly_alert_channel.email_1",
 					"true",
 				),
 				testCheckAlertChannelSubscription(
 					"checkly_url_monitor.test",
-					"alert_channel_subscription",
+					"alert_channel_subscriptions",
 					"checkly_alert_channel.email_2",
 					"false",
 				),
@@ -1551,56 +1555,58 @@ func TestAccURLMonitorAlertChannelSubscriptions(t *testing.T) {
 					request = {
 						url = "https://api.checklyhq.com"
 
-						assertion = [{
+						assertions = [{
 							source     = "STATUS_CODE"
 							comparison = "EQUALS"
 							target     = "200"
 						}]
 					}
 
-					alert_channel_subscription {
-						channel_id = checkly_alert_channel.email_1.id
-						activated  = false
-					}
-
-					alert_channel_subscription {
-						channel_id = checkly_alert_channel.email_2.id
-						activated  = true
-					}
-
-					alert_channel_subscription {
-						channel_id = checkly_alert_channel.email_3.id
-						activated  = true
-					}
+					alert_channel_subscriptions = [
+						{
+							channel_id = checkly_alert_channel.email_1.id
+							activated  = false
+						},
+						{
+							channel_id = checkly_alert_channel.email_2.id
+							activated  = true
+						},
+						{
+							channel_id = checkly_alert_channel.email_3.id
+							activated  = true
+						},
+					]
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_url_monitor.test",
-					"alert_channel_subscription.#",
+					"alert_channel_subscriptions.#",
 					"3",
 				),
 				testCheckAlertChannelSubscription(
 					"checkly_url_monitor.test",
-					"alert_channel_subscription",
+					"alert_channel_subscriptions",
 					"checkly_alert_channel.email_1",
 					"false",
 				),
 				testCheckAlertChannelSubscription(
 					"checkly_url_monitor.test",
-					"alert_channel_subscription",
+					"alert_channel_subscriptions",
 					"checkly_alert_channel.email_2",
 					"true",
 				),
 				testCheckAlertChannelSubscription(
 					"checkly_url_monitor.test",
-					"alert_channel_subscription",
+					"alert_channel_subscriptions",
 					"checkly_alert_channel.email_3",
 					"true",
 				),
 			),
 		},
-		// Step 3: Remove all alert channel subscriptions.
+		// Step 3: Configure an empty set, which removes all subscriptions
+		// and is stored as an empty set, not null; otherwise the post-apply
+		// plan would not be empty.
 		{
 			Config: `
 				resource "checkly_alert_channel" "email_1" {
@@ -1630,7 +1636,62 @@ func TestAccURLMonitorAlertChannelSubscriptions(t *testing.T) {
 					request = {
 						url = "https://api.checklyhq.com"
 
-						assertion = [{
+						assertions = [{
+							source     = "STATUS_CODE"
+							comparison = "EQUALS"
+							target     = "200"
+						}]
+					}
+
+					alert_channel_subscriptions = []
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_url_monitor.test",
+					"alert_channel_subscriptions.#",
+					"0",
+				),
+			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue(
+					"checkly_url_monitor.test",
+					tfjsonpath.New("alert_channel_subscriptions"),
+					knownvalue.SetExact([]knownvalue.Check{}),
+				),
+			},
+		},
+		// Step 4: Leave the attribute out, which stores null.
+		{
+			Config: `
+				resource "checkly_alert_channel" "email_1" {
+					email = {
+						address = "url-acs-1@example.com"
+					}
+				}
+
+				resource "checkly_alert_channel" "email_2" {
+					email = {
+						address = "url-acs-2@example.com"
+					}
+				}
+
+				resource "checkly_alert_channel" "email_3" {
+					email = {
+						address = "url-acs-3@example.com"
+					}
+				}
+
+				resource "checkly_url_monitor" "test" {
+					name      = "url-alert-channel-sub-test"
+					frequency = 60
+					activated = true
+					locations = ["eu-central-1"]
+
+					request = {
+						url = "https://api.checklyhq.com"
+
+						assertions = [{
 							source     = "STATUS_CODE"
 							comparison = "EQUALS"
 							target     = "200"
@@ -1639,10 +1700,11 @@ func TestAccURLMonitorAlertChannelSubscriptions(t *testing.T) {
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
+				// Unlike a check of the element count, which also passes
+				// for an empty set, this fails unless the value is null.
+				resource.TestCheckNoResourceAttr(
 					"checkly_url_monitor.test",
-					"alert_channel_subscription.#",
-					"0",
+					"alert_channel_subscriptions",
 				),
 			),
 		},
@@ -1861,7 +1923,7 @@ func TestAccURLMonitorUnsetSweepRequest(t *testing.T) {
 						follow_redirects = false
 						skip_ssl         = true
 						ip_family        = "IPv6"
-						assertion = [{
+						assertions = [{
 							source     = "STATUS_CODE"
 							comparison = "EQUALS"
 							target     = "200"
@@ -1873,7 +1935,7 @@ func TestAccURLMonitorUnsetSweepRequest(t *testing.T) {
 				testCheckResourceAttrExpr("checkly_url_monitor.test", `follow_redirects":"false"`, "false"),
 				testCheckResourceAttrExpr("checkly_url_monitor.test", `skip_ssl":"true"`, "true"),
 				testCheckResourceAttrExpr("checkly_url_monitor.test", `ip_family":"IPv6"`, "IPv6"),
-				testCheckResourceAttrExpr("checkly_url_monitor.test", `assertion.#":"1"`, "1"),
+				testCheckResourceAttrExpr("checkly_url_monitor.test", `assertions.#":"1"`, "1"),
 			),
 		},
 		{
@@ -1892,7 +1954,7 @@ func TestAccURLMonitorUnsetSweepRequest(t *testing.T) {
 				testCheckResourceAttrExpr("checkly_url_monitor.test", `follow_redirects":"true"`, "true"),
 				testCheckResourceAttrExpr("checkly_url_monitor.test", `skip_ssl":"false"`, "false"),
 				testCheckResourceAttrExpr("checkly_url_monitor.test", `ip_family":"IPv4"`, "IPv4"),
-				testCheckResourceAttrExpr("checkly_url_monitor.test", `assertion.#":"0"`, "0"),
+				testCheckResourceAttrExpr("checkly_url_monitor.test", `assertions.#":"0"`, "0"),
 			),
 		},
 	})

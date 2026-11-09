@@ -38,9 +38,11 @@ resource "checkly_browser_check" "browser-check-2" {
     "us-east-1"
   ]
 
-  environment_variable {
-    key    = "URL"
-    value  = "https://checklyhq.com"
-    locked = false
-  }
+  environment_variables = [
+    {
+      key    = "URL"
+      value  = "https://checklyhq.com"
+      locked = false
+    },
+  ]
 }

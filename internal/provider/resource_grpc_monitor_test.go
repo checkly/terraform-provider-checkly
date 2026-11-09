@@ -128,7 +128,7 @@ func TestGRPCMonitorRequestFromModelDropsInapplicableFields(t *testing.T) {
 			Method:            types.StringValue("a.B/C"),
 			Message:           types.StringValue(""),
 			Metadata:          types.SetNull(types.ObjectType{AttrTypes: grpcMonitorMetadataAttrTypes}),
-			Assertion:         types.SetNull(types.ObjectType{AttrTypes: assertionAttrTypes}),
+			Assertions:        types.SetNull(types.ObjectType{AttrTypes: assertionAttrTypes}),
 		}
 	}
 
@@ -188,7 +188,7 @@ func TestAccGRPCMonitorInvalidAssertionSource(t *testing.T) {
 				  request = {
 					host = "grpc.example.com"
 					port = 443
-					assertion = [{
+					assertions = [{
 					  source     = "GRPC_STATUSCODE"
 					  comparison = "EQUALS"
 					  target     = "0"
@@ -196,7 +196,7 @@ func TestAccGRPCMonitorInvalidAssertionSource(t *testing.T) {
 				  }
 				}
 			`,
-			ExpectError: regexp.MustCompile(`(?s)request\.assertion\[.*\]\.source\s+value\s+must\s+be\s+one\s+of`),
+			ExpectError: regexp.MustCompile(`(?s)request\.assertions\[.*\]\.source\s+value\s+must\s+be\s+one\s+of`),
 		},
 	})
 }
@@ -298,12 +298,12 @@ func TestAccGRPCMonitorFull(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_grpc_monitor.test",
-					"request.assertion.#",
+					"request.assertions.#",
 					"2",
 				),
 				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_grpc_monitor.test",
-					"request.assertion.*",
+					"request.assertions.*",
 					map[string]string{
 						"source":     "GRPC_STATUS_CODE",
 						"comparison": "EQUALS",
@@ -519,10 +519,12 @@ func TestAccGRPCMonitorUnsetAllAttributes(t *testing.T) {
 				private_locations         = [checkly_private_location.test.slug_name]
 				runtime_id                = "2023.09"
 
-				alert_channel_subscription {
-					channel_id = checkly_alert_channel.test.id
-					activated  = true
-				}
+				alert_channel_subscriptions = [
+					{
+						channel_id = checkly_alert_channel.test.id
+						activated  = true
+					},
+				]
 
 				retry_strategy = {
 					type = "LINEAR"
@@ -547,7 +549,7 @@ func TestAccGRPCMonitorUnsetAllAttributes(t *testing.T) {
 					value = "value"
 				}]
 
-				assertion = [{
+				assertions = [{
 					source     = "GRPC_STATUS_CODE"
 					comparison = "EQUALS"
 					target     = "0"
@@ -555,13 +557,13 @@ func TestAccGRPCMonitorUnsetAllAttributes(t *testing.T) {
 			`),
 			Check: resource.ComposeAggregateTestCheckFunc(
 				resource.TestCheckResourceAttr(name, "description", "description"),
-				resource.TestCheckResourceAttr(name, "alert_channel_subscription.#", "1"),
+				resource.TestCheckResourceAttr(name, "alert_channel_subscriptions.#", "1"),
 				resource.TestCheckResourceAttr(name, "trigger_incident.%", "5"),
 				resource.TestCheckResourceAttr(name, "private_locations.#", "1"),
 				resource.TestCheckResourceAttr(name, "runtime_id", "2023.09"),
 				resource.TestCheckResourceAttr(name, "request.timeout", "30"),
 				resource.TestCheckResourceAttr(name, "request.metadata.#", "1"),
-				resource.TestCheckResourceAttr(name, "request.assertion.#", "1"),
+				resource.TestCheckResourceAttr(name, "request.assertions.#", "1"),
 			),
 		},
 		{
@@ -575,7 +577,7 @@ func TestAccGRPCMonitorUnsetAllAttributes(t *testing.T) {
 				resource.TestCheckResourceAttr(name, "run_parallel", "false"),
 				resource.TestCheckResourceAttr(name, "group_id", "0"),
 				resource.TestCheckResourceAttr(name, "use_global_alert_settings", "false"),
-				resource.TestCheckResourceAttr(name, "alert_channel_subscription.#", "0"),
+				resource.TestCheckResourceAttr(name, "alert_channel_subscriptions.#", "0"),
 				resource.TestCheckResourceAttr(name, "retry_strategy.type", "NO_RETRIES"),
 				resource.TestCheckNoResourceAttr(name, "trigger_incident"),
 				resource.TestCheckNoResourceAttr(name, "private_locations.#"),
@@ -586,7 +588,7 @@ func TestAccGRPCMonitorUnsetAllAttributes(t *testing.T) {
 				resource.TestCheckResourceAttr(name, "request.timeout", "60"),
 				resource.TestCheckResourceAttr(name, "request.message", ""),
 				resource.TestCheckResourceAttr(name, "request.metadata.#", "0"),
-				resource.TestCheckResourceAttr(name, "request.assertion.#", "0"),
+				resource.TestCheckResourceAttr(name, "request.assertions.#", "0"),
 			),
 		},
 		{
@@ -760,7 +762,7 @@ const grpcMonitor_full = `
 		  value = "supersecret"
 		}]
 
-		assertion = [{
+		assertions = [{
 		  source     = "GRPC_STATUS_CODE"
 		  property   = ""
 		  comparison = "EQUALS"
@@ -852,7 +854,7 @@ func TestGRPCMonitorRequestWithDefaults(t *testing.T) {
 					"value": value,
 				}),
 			}),
-			"assertion": types.SetValueMust(assertionType, []attr.Value{
+			"assertions": types.SetValueMust(assertionType, []attr.Value{
 				types.ObjectValueMust(assertionAttrTypes, map[string]attr.Value{
 					"source":     types.StringValue("GRPC_STATUS_CODE"),
 					"property":   property,

@@ -47,29 +47,29 @@ type GRPCMonitorResource struct {
 
 // GRPCMonitorResourceModel describes the resource data model.
 type GRPCMonitorResourceModel struct {
-	ID                       types.String `tfsdk:"id"`
-	Name                     types.String `tfsdk:"name"`
-	Description              types.String `tfsdk:"description"`
-	Frequency                types.Int64  `tfsdk:"frequency"`
-	FrequencyOffset          types.Int64  `tfsdk:"frequency_offset"`
-	Activated                types.Bool   `tfsdk:"activated"`
-	Muted                    types.Bool   `tfsdk:"muted"`
-	ShouldFail               types.Bool   `tfsdk:"should_fail"`
-	RunParallel              types.Bool   `tfsdk:"run_parallel"`
-	Locations                types.Set    `tfsdk:"locations"`
-	DegradedResponseTime     types.Int64  `tfsdk:"degraded_response_time"`
-	MaxResponseTime          types.Int64  `tfsdk:"max_response_time"`
-	Tags                     types.Set    `tfsdk:"tags"`
-	RuntimeID                types.String `tfsdk:"runtime_id"`
-	PrivateLocations         types.Set    `tfsdk:"private_locations"`
-	AlertSettings            types.Object `tfsdk:"alert_settings"`
-	UseGlobalAlertSettings   types.Bool   `tfsdk:"use_global_alert_settings"`
-	GroupID                  types.Int64  `tfsdk:"group_id"`
-	GroupOrder               types.Int64  `tfsdk:"group_order"`
-	RetryStrategy            types.Object `tfsdk:"retry_strategy"`
-	Request                  types.Object `tfsdk:"request"`
-	AlertChannelSubscription types.Set    `tfsdk:"alert_channel_subscription"`
-	TriggerIncident          types.Object `tfsdk:"trigger_incident"`
+	ID                        types.String `tfsdk:"id"`
+	Name                      types.String `tfsdk:"name"`
+	Description               types.String `tfsdk:"description"`
+	Frequency                 types.Int64  `tfsdk:"frequency"`
+	FrequencyOffset           types.Int64  `tfsdk:"frequency_offset"`
+	Activated                 types.Bool   `tfsdk:"activated"`
+	Muted                     types.Bool   `tfsdk:"muted"`
+	ShouldFail                types.Bool   `tfsdk:"should_fail"`
+	RunParallel               types.Bool   `tfsdk:"run_parallel"`
+	Locations                 types.Set    `tfsdk:"locations"`
+	DegradedResponseTime      types.Int64  `tfsdk:"degraded_response_time"`
+	MaxResponseTime           types.Int64  `tfsdk:"max_response_time"`
+	Tags                      types.Set    `tfsdk:"tags"`
+	RuntimeID                 types.String `tfsdk:"runtime_id"`
+	PrivateLocations          types.Set    `tfsdk:"private_locations"`
+	AlertSettings             types.Object `tfsdk:"alert_settings"`
+	UseGlobalAlertSettings    types.Bool   `tfsdk:"use_global_alert_settings"`
+	GroupID                   types.Int64  `tfsdk:"group_id"`
+	GroupOrder                types.Int64  `tfsdk:"group_order"`
+	RetryStrategy             types.Object `tfsdk:"retry_strategy"`
+	Request                   types.Object `tfsdk:"request"`
+	AlertChannelSubscriptions types.Set    `tfsdk:"alert_channel_subscriptions"`
+	TriggerIncident           types.Object `tfsdk:"trigger_incident"`
 }
 
 // GRPCMonitorRequestModel describes the request attribute data model.
@@ -89,7 +89,7 @@ type GRPCMonitorRequestModel struct {
 	Method            types.String `tfsdk:"method"`
 	Message           types.String `tfsdk:"message"`
 	Metadata          types.Set    `tfsdk:"metadata"`
-	Assertion         types.Set    `tfsdk:"assertion"`
+	Assertions        types.Set    `tfsdk:"assertions"`
 }
 
 // GRPCMonitorMetadataModel describes the data model of a request.metadata
@@ -120,7 +120,7 @@ var grpcMonitorRequestAttrTypes = map[string]attr.Type{
 	"method":             types.StringType,
 	"message":            types.StringType,
 	"metadata":           types.SetType{ElemType: types.ObjectType{AttrTypes: grpcMonitorMetadataAttrTypes}},
-	"assertion":          types.SetType{ElemType: types.ObjectType{AttrTypes: assertionAttrTypes}},
+	"assertions":         types.SetType{ElemType: types.ObjectType{AttrTypes: assertionAttrTypes}},
 }
 
 func (r *GRPCMonitorResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -392,7 +392,7 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 					// assertion sources or their rules change here or in
 					// the API, update that template too — it is not
 					// generated from this schema.
-					"assertion": schema.SetNestedAttribute{
+					"assertions": schema.SetNestedAttribute{
 						Optional:    true,
 						Computed:    true,
 						Default:     setdefault.StaticValue(types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{})),
@@ -429,8 +429,6 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 					},
 				},
 			},
-		},
-		Blocks: map[string]schema.Block{
 			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{
 				Monitor: true,
 			}),
@@ -598,10 +596,10 @@ func (r *GRPCMonitorResource) ModifyPlan(ctx context.Context, req resource.Modif
 
 // grpcMonitorRequestWithDefaults returns the request attribute value with
 // default values substituted for null and unknown optional+computed
-// attributes nested in the metadata and assertion sets.
+// attributes nested in the metadata and assertions sets.
 func grpcMonitorRequestWithDefaults(ctx context.Context, obj types.Object, diags *diag.Diagnostics) types.Object {
 	obj = objectWithSetDefaults("metadata", grpcMonitorMetadataWithDefaults)(ctx, obj, diags)
-	return objectWithSetDefaults("assertion", assertionsWithPropertyAndTargetDefaults)(ctx, obj, diags)
+	return objectWithSetDefaults("assertions", assertionsWithPropertyAndTargetDefaults)(ctx, obj, diags)
 }
 
 // grpcMonitorMetadataWithDefaults returns the request.metadata set value
@@ -780,7 +778,7 @@ func grpcMonitorFromModel(ctx context.Context, model *GRPCMonitorResourceModel, 
 		GroupOrder:                int(model.GroupOrder.ValueInt64()),
 		PrivateLocations:          &privateLocations,
 		Request:                   grpcMonitorRequestFromObject(ctx, model.Request, diags),
-		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscription, diags),
+		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscriptions, diags),
 		RetryStrategy:             retryStrategyFromObject(ctx, model.RetryStrategy, diags),
 		TriggerIncident:           triggerIncidentFromObject(ctx, model.TriggerIncident, diags),
 	}
@@ -860,7 +858,7 @@ func grpcMonitorToModel(ctx context.Context, c *checkly.GRPCMonitor, model *GRPC
 	model.GroupOrder = types.Int64Value(int64(c.GroupOrder))
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, model.RetryStrategy, diags)
 	model.Request = grpcMonitorRequestToObject(ctx, c.Request, diags)
-	model.AlertChannelSubscription = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, diags)
+	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, model.AlertChannelSubscriptions, diags)
 	model.TriggerIncident = triggerIncidentToObject(ctx, c.TriggerIncident, diags)
 }
 
@@ -907,7 +905,7 @@ func grpcMonitorRequestFromModel(ctx context.Context, model GRPCMonitorRequestMo
 		IPFamily:   checkly.IPFamily(model.IPFamily.ValueString()),
 		SkipSSL:    model.SkipSSL.ValueBool(),
 		Timeout:    int(model.Timeout.ValueInt64()),
-		Assertions: assertionsFromSet(ctx, model.Assertion, diags),
+		Assertions: assertionsFromSet(ctx, model.Assertions, diags),
 		GRPCConfig: config,
 	}
 }
@@ -931,7 +929,7 @@ func grpcMonitorRequestToObject(ctx context.Context, r checkly.GRPCRequest, diag
 		Method:            types.StringValue(r.GRPCConfig.Method),
 		Message:           types.StringValue(r.GRPCConfig.Message),
 		Metadata:          grpcMonitorMetadataToSet(ctx, r.GRPCConfig.Metadata, diags),
-		Assertion:         assertionsToSet(ctx, r.Assertions, diags),
+		Assertions:        assertionsToSet(ctx, r.Assertions, diags),
 	})
 	diags.Append(d...)
 

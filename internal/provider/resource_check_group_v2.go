@@ -48,7 +48,7 @@ type CheckGroupV2ResourceModel struct {
 	Activated                 types.Bool   `tfsdk:"activated"`
 	Muted                     types.Bool   `tfsdk:"muted"`
 	Tags                      types.Set    `tfsdk:"tags"`
-	EnvironmentVariable       types.List   `tfsdk:"environment_variable"`
+	EnvironmentVariables      types.List   `tfsdk:"environment_variables"`
 	SetupScript               types.Object `tfsdk:"setup_script"`
 	TeardownScript            types.Object `tfsdk:"teardown_script"`
 	DefaultRuntime            types.Object `tfsdk:"default_runtime"`
@@ -227,7 +227,7 @@ func (r *CheckGroupV2Resource) Schema(ctx context.Context, req resource.SchemaRe
 					},
 					alertChannelSubscriptionAttributeName: schema.SetNestedAttribute{
 						Optional: true,
-						Description: "An array of channel IDs and whether they're activated or not. If you don't " +
+						Description: "A set of channel IDs and whether they're activated or not. If you don't " +
 							"set at least one alert channel subscription for your group, we won't be able to alert " +
 							"you even if a check in the group starts failing.",
 						NestedObject: schema.NestedAttributeObject{
@@ -345,8 +345,6 @@ func (r *CheckGroupV2Resource) Schema(ctx context.Context, req resource.SchemaRe
 					},
 				},
 			},
-		},
-		Blocks: map[string]schema.Block{
 			environmentVariableAttributeName: makeEnvironmentVariableSchema(EnvironmentVariableAttributeSchemaOptions{
 				Description: "Insert environment variables into the runtime environment of checks in the group. " +
 					"Only relevant for check types that support environment variables. " +
@@ -367,13 +365,13 @@ func (r *CheckGroupV2Resource) Configure(ctx context.Context, req resource.Confi
 }
 
 // ModifyPlan applies default values to the optional+computed attributes
-// nested in the api_check_defaults.assertion set. Schema defaults cannot be
+// nested in the api_check_defaults.assertions set. Schema defaults cannot be
 // used for these attributes (see the attribute schema for details), so the
 // plan is adjusted here instead. Substituting static values keeps every set
 // element fully known and stable across plans, which set element correlation
 // requires.
 func (r *CheckGroupV2Resource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	planNestedDefaults(ctx, req, resp, path.Root(apiCheckDefaultsAttributeName), objectWithSetDefaults("assertion", assertionsWithPropertyDefault))
+	planNestedDefaults(ctx, req, resp, path.Root(apiCheckDefaultsAttributeName), objectWithSetDefaults("assertions", assertionsWithPropertyDefault))
 }
 
 func (r *CheckGroupV2Resource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -732,7 +730,7 @@ func checkGroupV2FromModel(ctx context.Context, model *CheckGroupV2ResourceModel
 		Muted:                model.Muted.ValueBool(),
 		Tags:                 stringsFromSetOrEmpty(ctx, model.Tags, diags),
 		APICheckDefaults:     apiCheckDefaultsFromObject(ctx, model.APICheckDefaults, diags),
-		EnvironmentVariables: environmentVariablesFromList(ctx, model.EnvironmentVariable, diags),
+		EnvironmentVariables: environmentVariablesFromList(ctx, model.EnvironmentVariables, diags),
 	}
 
 	if runtime := model.DefaultRuntime; !runtime.IsNull() && !runtime.IsUnknown() {
@@ -812,7 +810,7 @@ func checkGroupV2ToModel(ctx context.Context, group *checkly.GroupV2, model *Che
 	model.Activated = types.BoolValue(group.Activated)
 	model.Muted = types.BoolValue(group.Muted)
 	model.Tags = setFromStrings(ctx, group.Tags, diags)
-	model.EnvironmentVariable = environmentVariablesToList(ctx, group.EnvironmentVariables, model.EnvironmentVariable, diags)
+	model.EnvironmentVariables = environmentVariablesToList(ctx, group.EnvironmentVariables, model.EnvironmentVariables, diags)
 	model.SetupScript = checkGroupV2ScriptToObject(group.SetupSnippetID, group.LocalSetupScript)
 	model.TeardownScript = checkGroupV2ScriptToObject(group.TearDownSnippetID, group.LocalTearDownScript)
 	model.DefaultRuntime = checkGroupV2DefaultRuntimeToObject(group.RuntimeID)
@@ -891,7 +889,7 @@ func checkGroupV2EnforceAlertSettingsToObject(ctx context.Context, group *checkl
 		}
 
 		if len(group.AlertChannelSubscriptions) != 0 {
-			subscriptions = alertChannelSubscriptionsToSet(ctx, group.AlertChannelSubscriptions, diags)
+			subscriptions = alertChannelSubscriptionsToSet(ctx, group.AlertChannelSubscriptions, subscriptions, diags)
 		} else if !subscriptions.IsNull() && len(subscriptions.Elements()) != 0 {
 			// The API reports no subscriptions, so the prior non-empty value
 			// is stale.

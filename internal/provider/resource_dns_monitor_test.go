@@ -54,7 +54,7 @@ func TestAccDNSMonitorBasic(t *testing.T) {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 
-						assertion = [{
+						assertions = [{
 							source     = "RESPONSE_CODE"
 							comparison = "EQUALS"
 							target     = "NOERROR"
@@ -100,7 +100,7 @@ func TestAccDNSMonitorBasic(t *testing.T) {
 				),
 				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_dns_monitor.test",
-					"request.assertion.*",
+					"request.assertions.*",
 					map[string]string{
 						"source":     "RESPONSE_CODE",
 						"property":   "",
@@ -131,7 +131,7 @@ func TestAccDNSMonitorDescriptionRemoval(t *testing.T) {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 
-						assertion = [{
+						assertions = [{
 							source     = "RESPONSE_CODE"
 							comparison = "EQUALS"
 							target     = "NOERROR"
@@ -160,7 +160,7 @@ func TestAccDNSMonitorDescriptionRemoval(t *testing.T) {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 
-						assertion = [{
+						assertions = [{
 							source     = "RESPONSE_CODE"
 							comparison = "EQUALS"
 							target     = "NOERROR"
@@ -205,7 +205,7 @@ func TestAccDNSMonitorFull(t *testing.T) {
 							port = 53
 						}
 
-						assertion = [{
+						assertions = [{
 							source     = "RESPONSE_CODE"
 							comparison = "EQUALS"
 							target     = "NOERROR"
@@ -278,12 +278,12 @@ func TestAccDNSMonitorFull(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_dns_monitor.test",
-					"request.assertion.#",
+					"request.assertions.#",
 					"2",
 				),
 				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_dns_monitor.test",
-					"request.assertion.*",
+					"request.assertions.*",
 					map[string]string{
 						"source":     "RESPONSE_CODE",
 						"comparison": "EQUALS",
@@ -292,7 +292,7 @@ func TestAccDNSMonitorFull(t *testing.T) {
 				),
 				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_dns_monitor.test",
-					"request.assertion.*",
+					"request.assertions.*",
 					map[string]string{
 						"source":     "RESPONSE_TIME",
 						"comparison": "LESS_THAN",
@@ -325,7 +325,7 @@ resource "checkly_dns_monitor" "test_trigger_incident" {
 		record_type = "A"
 		query       = "welcome.checklyhq.com"
 
-		assertion = [{
+		assertions = [{
 			source     = "RESPONSE_CODE"
 			comparison = "EQUALS"
 			target     = "NOERROR"
@@ -1394,39 +1394,40 @@ func TestAccDNSMonitorAlertChannelSubscriptions(t *testing.T) {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 
-						assertion = [{
+						assertions = [{
 							source     = "RESPONSE_CODE"
 							comparison = "EQUALS"
 							target     = "NOERROR"
 						}]
 					}
 
-					alert_channel_subscription {
-						channel_id = checkly_alert_channel.email_1.id
-						activated  = true
-					}
-
-					alert_channel_subscription {
-						channel_id = checkly_alert_channel.email_2.id
-						activated  = false
-					}
+					alert_channel_subscriptions = [
+						{
+							channel_id = checkly_alert_channel.email_1.id
+							activated  = true
+						},
+						{
+							channel_id = checkly_alert_channel.email_2.id
+							activated  = false
+						},
+					]
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_dns_monitor.test",
-					"alert_channel_subscription.#",
+					"alert_channel_subscriptions.#",
 					"2",
 				),
 				testCheckAlertChannelSubscription(
 					"checkly_dns_monitor.test",
-					"alert_channel_subscription",
+					"alert_channel_subscriptions",
 					"checkly_alert_channel.email_1",
 					"true",
 				),
 				testCheckAlertChannelSubscription(
 					"checkly_dns_monitor.test",
-					"alert_channel_subscription",
+					"alert_channel_subscriptions",
 					"checkly_alert_channel.email_2",
 					"false",
 				),
@@ -1463,50 +1464,50 @@ func TestAccDNSMonitorAlertChannelSubscriptions(t *testing.T) {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 
-						assertion = [{
+						assertions = [{
 							source     = "RESPONSE_CODE"
 							comparison = "EQUALS"
 							target     = "NOERROR"
 						}]
 					}
 
-					alert_channel_subscription {
-						channel_id = checkly_alert_channel.email_1.id
-						activated  = false
-					}
-
-					alert_channel_subscription {
-						channel_id = checkly_alert_channel.email_2.id
-						activated  = true
-					}
-
-					alert_channel_subscription {
-						channel_id = checkly_alert_channel.email_3.id
-						activated  = true
-					}
+					alert_channel_subscriptions = [
+						{
+							channel_id = checkly_alert_channel.email_1.id
+							activated  = false
+						},
+						{
+							channel_id = checkly_alert_channel.email_2.id
+							activated  = true
+						},
+						{
+							channel_id = checkly_alert_channel.email_3.id
+							activated  = true
+						},
+					]
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_dns_monitor.test",
-					"alert_channel_subscription.#",
+					"alert_channel_subscriptions.#",
 					"3",
 				),
 				testCheckAlertChannelSubscription(
 					"checkly_dns_monitor.test",
-					"alert_channel_subscription",
+					"alert_channel_subscriptions",
 					"checkly_alert_channel.email_1",
 					"false",
 				),
 				testCheckAlertChannelSubscription(
 					"checkly_dns_monitor.test",
-					"alert_channel_subscription",
+					"alert_channel_subscriptions",
 					"checkly_alert_channel.email_2",
 					"true",
 				),
 				testCheckAlertChannelSubscription(
 					"checkly_dns_monitor.test",
-					"alert_channel_subscription",
+					"alert_channel_subscriptions",
 					"checkly_alert_channel.email_3",
 					"true",
 				),
@@ -1543,7 +1544,7 @@ func TestAccDNSMonitorAlertChannelSubscriptions(t *testing.T) {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 
-						assertion = [{
+						assertions = [{
 							source     = "RESPONSE_CODE"
 							comparison = "EQUALS"
 							target     = "NOERROR"
@@ -1554,7 +1555,7 @@ func TestAccDNSMonitorAlertChannelSubscriptions(t *testing.T) {
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_dns_monitor.test",
-					"alert_channel_subscription.#",
+					"alert_channel_subscriptions.#",
 					"0",
 				),
 			),
@@ -1728,7 +1729,7 @@ func TestAccDNSMonitorUnsetSweepRequest(t *testing.T) {
 						record_type = "A"
 						query       = "welcome.checklyhq.com"
 						protocol    = "TCP"
-						assertion = [{
+						assertions = [{
 							source     = "RESPONSE_CODE"
 							comparison = "EQUALS"
 							target     = "NOERROR"
@@ -1738,7 +1739,7 @@ func TestAccDNSMonitorUnsetSweepRequest(t *testing.T) {
 			`,
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr("checkly_dns_monitor.test", "request.protocol", "TCP"),
-				resource.TestCheckResourceAttr("checkly_dns_monitor.test", "request.assertion.#", "1"),
+				resource.TestCheckResourceAttr("checkly_dns_monitor.test", "request.assertions.#", "1"),
 			),
 		},
 		{
@@ -1756,7 +1757,7 @@ func TestAccDNSMonitorUnsetSweepRequest(t *testing.T) {
 			`,
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr("checkly_dns_monitor.test", "request.protocol", "UDP"),
-				resource.TestCheckResourceAttr("checkly_dns_monitor.test", "request.assertion.#", "0"),
+				resource.TestCheckResourceAttr("checkly_dns_monitor.test", "request.assertions.#", "0"),
 			),
 		},
 	})

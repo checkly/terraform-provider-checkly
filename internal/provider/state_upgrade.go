@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 
@@ -19,7 +20,7 @@ import (
 // sdkv2SchemaVersion is the schema version of all state written by the
 // provider's Terraform Plugin SDK v2 implementation (releases before v2.0.0).
 //
-// That state differs from what the framework implementation writes in two
+// That state differs from what the framework implementation writes in three
 // ways:
 //
 //   - Single nested objects were blocks limited to one element, which SDK v2
@@ -29,6 +30,11 @@ import (
 //     state refreshed by it holds `""`, `0`, `[]` or `{}` instead. Several Read
 //     implementations keep such prior values, so they would never become
 //     null again and every plan would propose removing them.
+//   - Repeated blocks are list or set nested attributes now, and every
+//     collection has a plural name where SDK v2 used the singular name of a
+//     repeated block or attribute (see sdkv2PluralRenames). The
+//     deprecated environment_variables map has been folded into the
+//     environment_variables list.
 //
 // Zero values of nested fields that the API only ignores in some cases, such
 // as the retry_strategy fields NO_RETRIES does not use, are not normalized
@@ -40,9 +46,11 @@ const sdkv2SchemaVersion = 0
 
 // sdkv2StateUpgraders returns the state upgraders of a resource whose state
 // may have been written at sdkv2SchemaVersion. The upgrade is driven entirely
-// by the current schema: every value at a single nested position is unwrapped
-// from its one-element array, empty strings, zero numbers and empty
-// collections of optional, non-computed attributes become null, and attributes the current schema no
+// by the current schema: values stored under the singular name of a
+// collection the schema now names in the plural are moved to the plural name,
+// every value at a single nested position is unwrapped from its one-element
+// array, empty strings, zero numbers and empty collections of optional,
+// non-computed attributes become null, and attributes the current schema no
 // longer has are dropped. All other values carry over unchanged; Read
 // refreshes them from the API afterwards.
 //
@@ -90,7 +98,7 @@ func upgradeSDKv2RawState(ctx context.Context, raw *tfprotov6.RawState, s schema
 		return tftypes.Value{}, fmt.Errorf("decoding state JSON: %w", err)
 	}
 
-	normalizeSDKv2Object(obj, s.Attributes, s.Blocks)
+	normalizeSDKv2Object(obj, s.Attributes)
 
 	upgraded, err := json.Marshal(obj)
 	if err != nil {
@@ -108,14 +116,16 @@ func upgradeSDKv2RawState(ctx context.Context, raw *tfprotov6.RawState, s schema
 	)
 }
 
-// normalizeSDKv2Object rewrites obj in place, at any depth below it: every
-// single nested attribute described by attrs holds an object (or null)
-// instead of a list of at most one object, and every optional, non-computed
-// attribute holds null instead of an empty string, zero number or empty
-// collection. The remaining blocks are all repeated; they keep their empty
-// lists, which is how the framework stores absent blocks too, and only their
-// elements are normalized.
-func normalizeSDKv2Object(obj map[string]any, attrs map[string]schema.Attribute, blocks map[string]schema.Block) {
+// normalizeSDKv2Object rewrites obj in place, at any depth below it: values
+// under the SDK v2 names of renamed collections move to the names in attrs
+// (see renameSDKv2Collections), every single nested attribute described by
+// attrs holds an object (or null) instead of a list of at most one object,
+// and every optional, non-computed attribute holds null instead of an empty
+// string, zero number or empty collection. The current schemas have no
+// blocks, so attrs describes everything obj may hold.
+func normalizeSDKv2Object(obj map[string]any, attrs map[string]schema.Attribute) {
+	renameSDKv2Collections(obj, attrs)
+
 	for name, attr := range attrs {
 		value, ok := obj[name]
 		if !ok || value == nil {
@@ -126,21 +136,21 @@ func normalizeSDKv2Object(obj map[string]any, attrs map[string]schema.Attribute,
 		case schema.SingleNestedAttribute:
 			value = unwrapList(value)
 			if nested, ok := value.(map[string]any); ok {
-				normalizeSDKv2Object(nested, attr.Attributes, nil)
+				normalizeSDKv2Object(nested, attr.Attributes)
 			}
 		case schema.ListNestedAttribute:
 			forEachObject(value, func(nested map[string]any) {
-				normalizeSDKv2Object(nested, attr.NestedObject.Attributes, nil)
+				normalizeSDKv2Object(nested, attr.NestedObject.Attributes)
 			})
 		case schema.SetNestedAttribute:
 			forEachObject(value, func(nested map[string]any) {
-				normalizeSDKv2Object(nested, attr.NestedObject.Attributes, nil)
+				normalizeSDKv2Object(nested, attr.NestedObject.Attributes)
 			})
 		case schema.MapNestedAttribute:
 			if m, ok := value.(map[string]any); ok {
 				for _, element := range m {
 					if nested, ok := element.(map[string]any); ok {
-						normalizeSDKv2Object(nested, attr.NestedObject.Attributes, nil)
+						normalizeSDKv2Object(nested, attr.NestedObject.Attributes)
 					}
 				}
 			}
@@ -152,23 +162,78 @@ func normalizeSDKv2Object(obj map[string]any, attrs map[string]schema.Attribute,
 		obj[name] = value
 	}
 
-	for name, block := range blocks {
-		value, ok := obj[name]
-		if !ok || value == nil {
+}
+
+// sdkv2PluralRenames maps the current plural name of a collection to the
+// singular name SDK v2 stored it under, as a repeated block or as an
+// attribute. A rename applies wherever the current schema has an attribute
+// with the plural name, at any depth.
+var sdkv2PluralRenames = map[string]string{
+	"alert_channel_subscriptions": "alert_channel_subscription",
+	"assertions":                  "assertion",
+	"cards":                       "card",
+	"components":                  "component",
+	"devices":                     "device",
+	"environment_variables":       "environment_variable",
+	"service_attachments":         "service_attachment",
+}
+
+// renameSDKv2Collections moves the value obj holds under the SDK v2 name of
+// every collection in attrs that sdkv2PluralRenames renames to the current
+// name, and deletes the SDK v2 name. A non-null value already stored under the
+// current name is kept, and the value under the SDK v2 name is discarded.
+//
+// SDK v2 also stored a deprecated environment_variables map of names to
+// values next to the environment_variable list, keeping at most one of them
+// non-empty. Where attrs has an environment_variables list, a non-empty map is
+// converted to list elements that are neither locked nor secret, sorted by
+// name because the map has no order; otherwise the list is used. A JSON
+// object at any other list position is left as it is: no SDK v2 state has
+// one there, and decoding it fails instead of losing data silently.
+func renameSDKv2Collections(obj map[string]any, attrs map[string]schema.Attribute) {
+	for name, attr := range attrs {
+		oldName, ok := sdkv2PluralRenames[name]
+		if !ok {
 			continue
 		}
+		oldValue, hasOldValue := obj[oldName]
+		delete(obj, oldName)
 
-		switch block := block.(type) {
-		case schema.ListNestedBlock:
-			forEachObject(value, func(nested map[string]any) {
-				normalizeSDKv2Object(nested, block.NestedObject.Attributes, block.NestedObject.Blocks)
-			})
-		case schema.SetNestedBlock:
-			forEachObject(value, func(nested map[string]any) {
-				normalizeSDKv2Object(nested, block.NestedObject.Attributes, block.NestedObject.Blocks)
-			})
+		value := obj[name]
+		if m, ok := value.(map[string]any); ok && name == environmentVariablesSDKv2MapName {
+			if _, ok := attr.(schema.ListNestedAttribute); ok {
+				value = environmentVariableMapToList(m)
+			}
 		}
+
+		if value == nil && hasOldValue {
+			value = oldValue
+		}
+		obj[name] = value
 	}
+}
+
+// environmentVariablesSDKv2MapName is the name of the deprecated SDK v2
+// environment variable map, which the environment variable list has taken
+// over.
+const environmentVariablesSDKv2MapName = "environment_variables"
+
+// environmentVariableMapToList converts an SDK v2 environment variable map to
+// list elements sorted by key, or returns nil for an empty map.
+func environmentVariableMapToList(m map[string]any) any {
+	if len(m) == 0 {
+		return nil
+	}
+	list := make([]any, 0, len(m))
+	for _, key := range slices.Sorted(maps.Keys(m)) {
+		list = append(list, map[string]any{
+			"key":    key,
+			"value":  m[key],
+			"locked": false,
+			"secret": false,
+		})
+	}
+	return list
 }
 
 // isSDKv2ZeroValue reports whether value is an empty JSON string, a zero

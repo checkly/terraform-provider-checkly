@@ -31,7 +31,7 @@ func TestTracerouteMonitorRequestFromModelDerivesDefaults(t *testing.T) {
 			MaxUnknownHops: maxUnknownHops,
 			PtrLookup:      types.BoolValue(false),
 			Timeout:        types.Int64Unknown(),
-			Assertion:      types.SetNull(types.ObjectType{AttrTypes: assertionAttrTypes}),
+			Assertions:     types.SetNull(types.ObjectType{AttrTypes: assertionAttrTypes}),
 		}
 	}
 
@@ -103,7 +103,7 @@ func TestAccTracerouteMonitorInvalidAssertionSource(t *testing.T) {
 				  locations = ["us-east-1"]
 				  request = {
 					url = "api.checklyhq.com"
-					assertion = [{
+					assertions = [{
 					  source     = "PACKETLOSS"
 					  comparison = "LESS_THAN"
 					  target     = "10"
@@ -111,7 +111,7 @@ func TestAccTracerouteMonitorInvalidAssertionSource(t *testing.T) {
 				  }
 				}
 			`,
-			ExpectError: regexp.MustCompile(`(?s)request\.assertion\[.*\]\.source\s+value\s+must\s+be\s+one\s+of`),
+			ExpectError: regexp.MustCompile(`(?s)request\.assertions\[.*\]\.source\s+value\s+must\s+be\s+one\s+of`),
 		},
 	})
 }
@@ -193,12 +193,12 @@ func TestAccTracerouteMonitorFull(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_traceroute_monitor.test",
-					"request.assertion.#",
+					"request.assertions.#",
 					"2",
 				),
 				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_traceroute_monitor.test",
-					"request.assertion.*",
+					"request.assertions.*",
 					map[string]string{
 						"source":     "PACKET_LOSS",
 						"property":   "",
@@ -359,7 +359,7 @@ const tracerouteMonitor_full = `
 		ptr_lookup       = true
 		timeout          = 10
 
-		assertion = [{
+		assertions = [{
 		  source     = "PACKET_LOSS"
 		  property   = ""
 		  comparison = "LESS_THAN"

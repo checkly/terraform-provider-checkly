@@ -48,17 +48,17 @@ type StatusPageResourceModel struct {
 	RedirectTo   types.String `tfsdk:"redirect_to"`
 	Favicon      types.String `tfsdk:"favicon"`
 	DefaultTheme types.String `tfsdk:"default_theme"`
-	Cards        types.List   `tfsdk:"card"`
+	Cards        types.List   `tfsdk:"cards"`
 }
 
-// statusPageCardModel describes the card block data model.
+// statusPageCardModel describes an element of the cards attribute.
 type statusPageCardModel struct {
 	Name               types.String `tfsdk:"name"`
-	ServiceAttachments types.List   `tfsdk:"service_attachment"`
+	ServiceAttachments types.List   `tfsdk:"service_attachments"`
 }
 
-// statusPageServiceAttachmentModel describes the service_attachment block
-// data model.
+// statusPageServiceAttachmentModel describes an element of the
+// service_attachments attribute of a card.
 type statusPageServiceAttachmentModel struct {
 	ServiceID types.String `tfsdk:"service_id"`
 }
@@ -69,7 +69,7 @@ var statusPageServiceAttachmentAttrTypes = map[string]attr.Type{
 
 var statusPageCardAttrTypes = map[string]attr.Type{
 	"name": types.StringType,
-	"service_attachment": types.ListType{
+	"service_attachments": types.ListType{
 		ElemType: types.ObjectType{AttrTypes: statusPageServiceAttachmentAttrTypes},
 	},
 }
@@ -147,29 +147,25 @@ func (r *StatusPageResource) Schema(ctx context.Context, req resource.SchemaRequ
 					stringvalidator.OneOf("AUTO", "DARK", "LIGHT"),
 				},
 			},
-		},
-		Blocks: map[string]schema.Block{
-			"card": schema.ListNestedBlock{
+			"cards": schema.ListNestedAttribute{
+				Required:    true,
 				Description: "A list of cards to include on the status page.",
 				Validators: []validator.List{
-					listvalidator.IsRequired(),
 					listvalidator.SizeAtLeast(1),
 				},
-				NestedObject: schema.NestedBlockObject{
+				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"name": schema.StringAttribute{
 							Required:    true,
 							Description: "The name of the card.",
 						},
-					},
-					Blocks: map[string]schema.Block{
-						"service_attachment": schema.ListNestedBlock{
+						"service_attachments": schema.ListNestedAttribute{
+							Required:    true,
 							Description: "A list of services to attach to the card.",
 							Validators: []validator.List{
-								listvalidator.IsRequired(),
 								listvalidator.SizeAtLeast(1),
 							},
-							NestedObject: schema.NestedBlockObject{
+							NestedObject: schema.NestedAttributeObject{
 								Attributes: map[string]schema.Attribute{
 									"service_id": schema.StringAttribute{
 										Required:    true,
@@ -336,7 +332,7 @@ func statusPageFromModel(ctx context.Context, model *StatusPageResourceModel, di
 	}
 }
 
-// statusPageCardsFromList converts the card block value to its API
+// statusPageCardsFromList converts the cards attribute value to its API
 // representation.
 func statusPageCardsFromList(ctx context.Context, list types.List, diags *diag.Diagnostics) []checkly.StatusPageCard {
 	res := []checkly.StatusPageCard{}
@@ -374,8 +370,9 @@ func statusPageCardsFromList(ctx context.Context, list types.List, diags *diag.D
 	return res
 }
 
-// statusPageCardsToList converts the API representation of cards to the card
-// block value.
+// statusPageCardsToList converts the API representation of cards to the
+// cards attribute value. The attribute is required, so it is never null and
+// needs no prior value.
 func statusPageCardsToList(ctx context.Context, cards []checkly.StatusPageCard, diags *diag.Diagnostics) types.List {
 	cardType := types.ObjectType{AttrTypes: statusPageCardAttrTypes}
 

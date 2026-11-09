@@ -46,40 +46,40 @@ type CheckResource struct {
 
 // CheckResourceModel describes the resource data model.
 type CheckResourceModel struct {
-	ID                       types.String `tfsdk:"id"`
-	Name                     types.String `tfsdk:"name"`
-	Description              types.String `tfsdk:"description"`
-	Type                     types.String `tfsdk:"type"`
-	Frequency                types.Int64  `tfsdk:"frequency"`
-	FrequencyOffset          types.Int64  `tfsdk:"frequency_offset"`
-	Activated                types.Bool   `tfsdk:"activated"`
-	Muted                    types.Bool   `tfsdk:"muted"`
-	ShouldFail               types.Bool   `tfsdk:"should_fail"`
-	RunParallel              types.Bool   `tfsdk:"run_parallel"`
-	Locations                types.Set    `tfsdk:"locations"`
-	Script                   types.String `tfsdk:"script"`
-	DegradedResponseTime     types.Int64  `tfsdk:"degraded_response_time"`
-	MaxResponseTime          types.Int64  `tfsdk:"max_response_time"`
-	EnvironmentVariable      types.List   `tfsdk:"environment_variable"`
-	Tags                     types.Set    `tfsdk:"tags"`
-	SSLCheckDomain           types.String `tfsdk:"ssl_check_domain"`
-	SetupSnippetID           types.Int64  `tfsdk:"setup_snippet_id"`
-	TeardownSnippetID        types.Int64  `tfsdk:"teardown_snippet_id"`
-	LocalSetupScript         types.String `tfsdk:"local_setup_script"`
-	LocalTeardownScript      types.String `tfsdk:"local_teardown_script"`
-	RuntimeID                types.String `tfsdk:"runtime_id"`
-	AlertChannelSubscription types.Set    `tfsdk:"alert_channel_subscription"`
-	PrivateLocations         types.Set    `tfsdk:"private_locations"`
-	AlertSettings            types.Object `tfsdk:"alert_settings"`
-	UseGlobalAlertSettings   types.Bool   `tfsdk:"use_global_alert_settings"`
-	DoubleCheck              types.Bool   `tfsdk:"double_check"`
-	Request                  types.Object `tfsdk:"request"`
-	GroupID                  types.Int64  `tfsdk:"group_id"`
-	GroupOrder               types.Int64  `tfsdk:"group_order"`
-	RetryStrategy            types.Object `tfsdk:"retry_strategy"`
-	TriggerIncident          types.Object `tfsdk:"trigger_incident"`
-	Intent                   types.Object `tfsdk:"intent"`
-	AIAutoRepairEnabled      types.Bool   `tfsdk:"ai_auto_repair_enabled"`
+	ID                        types.String `tfsdk:"id"`
+	Name                      types.String `tfsdk:"name"`
+	Description               types.String `tfsdk:"description"`
+	Type                      types.String `tfsdk:"type"`
+	Frequency                 types.Int64  `tfsdk:"frequency"`
+	FrequencyOffset           types.Int64  `tfsdk:"frequency_offset"`
+	Activated                 types.Bool   `tfsdk:"activated"`
+	Muted                     types.Bool   `tfsdk:"muted"`
+	ShouldFail                types.Bool   `tfsdk:"should_fail"`
+	RunParallel               types.Bool   `tfsdk:"run_parallel"`
+	Locations                 types.Set    `tfsdk:"locations"`
+	Script                    types.String `tfsdk:"script"`
+	DegradedResponseTime      types.Int64  `tfsdk:"degraded_response_time"`
+	MaxResponseTime           types.Int64  `tfsdk:"max_response_time"`
+	EnvironmentVariables      types.List   `tfsdk:"environment_variables"`
+	Tags                      types.Set    `tfsdk:"tags"`
+	SSLCheckDomain            types.String `tfsdk:"ssl_check_domain"`
+	SetupSnippetID            types.Int64  `tfsdk:"setup_snippet_id"`
+	TeardownSnippetID         types.Int64  `tfsdk:"teardown_snippet_id"`
+	LocalSetupScript          types.String `tfsdk:"local_setup_script"`
+	LocalTeardownScript       types.String `tfsdk:"local_teardown_script"`
+	RuntimeID                 types.String `tfsdk:"runtime_id"`
+	AlertChannelSubscriptions types.Set    `tfsdk:"alert_channel_subscriptions"`
+	PrivateLocations          types.Set    `tfsdk:"private_locations"`
+	AlertSettings             types.Object `tfsdk:"alert_settings"`
+	UseGlobalAlertSettings    types.Bool   `tfsdk:"use_global_alert_settings"`
+	DoubleCheck               types.Bool   `tfsdk:"double_check"`
+	Request                   types.Object `tfsdk:"request"`
+	GroupID                   types.Int64  `tfsdk:"group_id"`
+	GroupOrder                types.Int64  `tfsdk:"group_order"`
+	RetryStrategy             types.Object `tfsdk:"retry_strategy"`
+	TriggerIncident           types.Object `tfsdk:"trigger_incident"`
+	Intent                    types.Object `tfsdk:"intent"`
+	AIAutoRepairEnabled       types.Bool   `tfsdk:"ai_auto_repair_enabled"`
 }
 
 func (r *CheckResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -96,7 +96,7 @@ func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 			"Use a `moved` block to migrate existing resources without recreating them. " +
 			"When migrating an API check, note that the default `degraded_response_time` and `max_response_time` " +
 			"changed from 15000/30000 to 5000/20000 — set them explicitly to keep the previous thresholds. " +
-			"`checkly_api_check` has no `environment_variable` blocks, which never had an effect on API checks.",
+			"`checkly_api_check` has no `environment_variables` attribute, which never had an effect on API checks.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -255,12 +255,10 @@ func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 			"request": apiCheckRequestAttributeSchema(apiCheckRequestAttributeSchemaOptions{
 				Description: "An API check might have one request config. Only relevant when `type` is `API`.",
 			}),
-		},
-		Blocks: map[string]schema.Block{
+			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{}),
 			environmentVariableAttributeName: makeEnvironmentVariableSchema(EnvironmentVariableAttributeSchemaOptions{
 				Description: "Insert environment variables into the runtime environment. Only relevant for browser checks. Use global environment variables whenever possible.",
 			}),
-			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{}),
 		},
 	}
 }
@@ -324,7 +322,7 @@ func (r *CheckResource) ValidateConfig(ctx context.Context, req resource.Validat
 			path.Root(environmentVariableAttributeName),
 			"Environment Variables Have No Effect",
 			"API checks do not use environment variables, so the API does not store them and every plan "+
-				"shows them as a change. Remove the environment_variable blocks from this check.",
+				"shows them as a change. Remove environment_variables from this check.",
 		)
 	}
 
@@ -354,7 +352,7 @@ var checkAPIOnlyAttributes = []string{
 // checkIgnoredAttributes lists, for each check type, the checkly_check
 // attributes that the API endpoint of that type has no field for (see
 // apiCheckModelFromCheckModel and its siblings), so a configured value only
-// changes the state. environment_variable and ssl_check_domain on API checks
+// changes the state. environment_variables and ssl_check_domain on API checks
 // have diagnostics of their own.
 var checkIgnoredAttributes = map[checkly.CheckType][]string{
 	checkly.CheckTypeAPI:       {"script"},
@@ -391,7 +389,7 @@ func (r *CheckResource) Configure(ctx context.Context, req resource.ConfigureReq
 // fully known and stable across plans, which set element correlation
 // requires.
 func (r *CheckResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	planNestedDefaults(ctx, req, resp, path.Root("request"), objectWithSetDefaults("assertion", assertionsWithPropertyAndTargetDefaults))
+	planNestedDefaults(ctx, req, resp, path.Root("request"), objectWithSetDefaults("assertions", assertionsWithPropertyAndTargetDefaults))
 
 	// An empty script is reported in the plan when it is known there.
 	// Create and Update check again for a script known only at apply time.
@@ -914,7 +912,7 @@ func checkToModel(ctx context.Context, check checkly.Check, model *CheckResource
 	model.Locations = stringSetFromAPIEmptyIfUnknown(ctx, c.Locations, prior.Locations, diags)
 	model.Tags = stringSetFromAPIEmptyIfUnknown(ctx, c.Tags, prior.Tags, diags)
 	model.RuntimeID = stringValueOrNull(valueOrZero(c.RuntimeID))
-	model.AlertChannelSubscription = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, diags)
+	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, prior.AlertChannelSubscriptions, diags)
 	model.PrivateLocations = setFromStrings(ctx, valueOrZero(c.PrivateLocations), diags)
 	model.AlertSettings = alertSettingsToObject(ctx, valueOrZero(c.AlertSettings), prior.AlertSettings, diags)
 	model.UseGlobalAlertSettings = types.BoolValue(c.UseGlobalAlertSettings)
@@ -944,7 +942,7 @@ func checkToModel(ctx context.Context, check checkly.Check, model *CheckResource
 		// The API does not store environment variables of API checks, so
 		// configured ones show as a change in every plan; ValidateConfig warns
 		// about them.
-		model.EnvironmentVariable = environmentVariablesToList(ctx, nil, prior.EnvironmentVariable, diags)
+		model.EnvironmentVariables = environmentVariablesToList(ctx, nil, prior.EnvironmentVariables, diags)
 		model.SetupSnippetID = types.Int64Value(typed.SetupSnippetID)
 		model.TeardownSnippetID = types.Int64Value(typed.TearDownSnippetID)
 		model.LocalSetupScript = types.StringValue(valueOrZero(typed.LocalSetupScript))
@@ -953,7 +951,7 @@ func checkToModel(ctx context.Context, check checkly.Check, model *CheckResource
 	case *checkly.BrowserCheck:
 		model.Type = types.StringValue(string(checkly.CheckTypeBrowser))
 		model.Script = types.StringValue(typed.Script)
-		model.EnvironmentVariable = environmentVariablesToList(ctx, typed.EnvironmentVariables, prior.EnvironmentVariable, diags)
+		model.EnvironmentVariables = environmentVariablesToList(ctx, typed.EnvironmentVariables, prior.EnvironmentVariables, diags)
 		// The prior value is preserved when the API reports no domain.
 		if typed.SSLCheckDomain != "" {
 			model.SSLCheckDomain = types.StringValue(typed.SSLCheckDomain)
@@ -962,7 +960,7 @@ func checkToModel(ctx context.Context, check checkly.Check, model *CheckResource
 	case *checkly.MultiStepCheck:
 		model.Type = types.StringValue(string(checkly.CheckTypeMultiStep))
 		model.Script = types.StringValue(typed.Script)
-		model.EnvironmentVariable = environmentVariablesToList(ctx, typed.EnvironmentVariables, prior.EnvironmentVariable, diags)
+		model.EnvironmentVariables = environmentVariablesToList(ctx, typed.EnvironmentVariables, prior.EnvironmentVariables, diags)
 		checkKeepAPICheckAttributes(model)
 	}
 }

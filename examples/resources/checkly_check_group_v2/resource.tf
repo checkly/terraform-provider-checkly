@@ -63,7 +63,7 @@ resource "checkly_check_group_v2" "production-api" {
     }
 
     # Subscribe alert channels to this group.
-    alert_channel_subscription = [
+    alert_channel_subscriptions = [
       {
         channel_id = 1234
         activated  = true
@@ -72,18 +72,19 @@ resource "checkly_check_group_v2" "production-api" {
   }
 
   # Environment variables available to all checks in the group.
-  environment_variable {
-    key    = "BASE_URL"
-    value  = "https://api.example.com"
-    locked = false
-  }
-
-  environment_variable {
-    key    = "API_TOKEN"
-    value  = "super-secret-token"
-    locked = true
-    secret = true
-  }
+  environment_variables = [
+    {
+      key    = "BASE_URL"
+      value  = "https://api.example.com"
+      locked = false
+    },
+    {
+      key    = "API_TOKEN"
+      value  = "super-secret-token"
+      locked = true
+      secret = true
+    },
+  ]
 
   # Default runtime for checks that don't specify their own.
   default_runtime = {
@@ -103,7 +104,7 @@ resource "checkly_check_group_v2" "production-api" {
       "version" = "v2"
     }
 
-    assertion = [
+    assertions = [
       {
         source     = "STATUS_CODE"
         comparison = "LESS_THAN"
@@ -226,7 +227,7 @@ resource "checkly_check_group_v2" "with-alert-channels" {
       }
     }
 
-    alert_channel_subscription = [
+    alert_channel_subscriptions = [
       {
         channel_id = checkly_alert_channel.email.id
         activated  = true

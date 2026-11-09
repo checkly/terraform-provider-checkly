@@ -54,27 +54,27 @@ type PlaywrightCheckSuiteResource struct {
 
 // PlaywrightCheckSuiteResourceModel describes the resource data model.
 type PlaywrightCheckSuiteResourceModel struct {
-	ID                       types.String `tfsdk:"id"`
-	Name                     types.String `tfsdk:"name"`
-	Description              types.String `tfsdk:"description"`
-	Frequency                types.Int64  `tfsdk:"frequency"`
-	Activated                types.Bool   `tfsdk:"activated"`
-	Muted                    types.Bool   `tfsdk:"muted"`
-	RunParallel              types.Bool   `tfsdk:"run_parallel"`
-	Locations                types.Set    `tfsdk:"locations"`
-	EnvironmentVariable      types.List   `tfsdk:"environment_variable"`
-	Tags                     types.Set    `tfsdk:"tags"`
-	AlertChannelSubscription types.Set    `tfsdk:"alert_channel_subscription"`
-	PrivateLocations         types.Set    `tfsdk:"private_locations"`
-	AlertSettings            types.Object `tfsdk:"alert_settings"`
-	UseGlobalAlertSettings   types.Bool   `tfsdk:"use_global_alert_settings"`
-	Bundle                   types.Object `tfsdk:"bundle"`
-	Runtime                  types.Object `tfsdk:"runtime"`
-	GroupID                  types.Int64  `tfsdk:"group_id"`
-	GroupOrder               types.Int64  `tfsdk:"group_order"`
-	TriggerIncident          types.Object `tfsdk:"trigger_incident"`
-	Intent                   types.Object `tfsdk:"intent"`
-	AIAutoRepairEnabled      types.Bool   `tfsdk:"ai_auto_repair_enabled"`
+	ID                        types.String `tfsdk:"id"`
+	Name                      types.String `tfsdk:"name"`
+	Description               types.String `tfsdk:"description"`
+	Frequency                 types.Int64  `tfsdk:"frequency"`
+	Activated                 types.Bool   `tfsdk:"activated"`
+	Muted                     types.Bool   `tfsdk:"muted"`
+	RunParallel               types.Bool   `tfsdk:"run_parallel"`
+	Locations                 types.Set    `tfsdk:"locations"`
+	EnvironmentVariables      types.List   `tfsdk:"environment_variables"`
+	Tags                      types.Set    `tfsdk:"tags"`
+	AlertChannelSubscriptions types.Set    `tfsdk:"alert_channel_subscriptions"`
+	PrivateLocations          types.Set    `tfsdk:"private_locations"`
+	AlertSettings             types.Object `tfsdk:"alert_settings"`
+	UseGlobalAlertSettings    types.Bool   `tfsdk:"use_global_alert_settings"`
+	Bundle                    types.Object `tfsdk:"bundle"`
+	Runtime                   types.Object `tfsdk:"runtime"`
+	GroupID                   types.Int64  `tfsdk:"group_id"`
+	GroupOrder                types.Int64  `tfsdk:"group_order"`
+	TriggerIncident           types.Object `tfsdk:"trigger_incident"`
+	Intent                    types.Object `tfsdk:"intent"`
+	AIAutoRepairEnabled       types.Bool   `tfsdk:"ai_auto_repair_enabled"`
 }
 
 // PlaywrightCheckSuiteBundleModel describes the bundle attribute data model.
@@ -115,11 +115,11 @@ type PlaywrightCheckSuiteRuntimeCommandModel struct {
 // attribute data model.
 type PlaywrightCheckSuiteRuntimePlaywrightModel struct {
 	Version types.String `tfsdk:"version"`
-	Device  types.Set    `tfsdk:"device"`
+	Devices types.Set    `tfsdk:"devices"`
 }
 
 // PlaywrightCheckSuiteRuntimeDeviceModel describes the
-// runtime.playwright.device element data model.
+// runtime.playwright.devices element data model.
 type PlaywrightCheckSuiteRuntimeDeviceModel struct {
 	Type types.String `tfsdk:"type"`
 }
@@ -150,7 +150,7 @@ var playwrightCheckSuiteRuntimeDeviceElementType = types.ObjectType{
 
 var playwrightCheckSuiteRuntimePlaywrightAttrTypes = map[string]attr.Type{
 	"version": types.StringType,
-	"device":  types.SetType{ElemType: playwrightCheckSuiteRuntimeDeviceElementType},
+	"devices": types.SetType{ElemType: playwrightCheckSuiteRuntimeDeviceElementType},
 }
 
 var playwrightCheckSuiteRuntimeEngineAttrTypes = map[string]attr.Type{
@@ -312,7 +312,7 @@ func (r *PlaywrightCheckSuiteResource) Schema(ctx context.Context, req resource.
 								Description: "The Playwright version to use. Defaults to the " +
 									"version detected from the code bundle's lockfile.",
 							},
-							"device": schema.SetNestedAttribute{
+							"devices": schema.SetNestedAttribute{
 								Optional: true,
 								Computed: true,
 								Description: "The list of devices that should be made available for Playwright. " +
@@ -385,12 +385,10 @@ func (r *PlaywrightCheckSuiteResource) Schema(ctx context.Context, req resource.
 					},
 				},
 			},
-		},
-		Blocks: map[string]schema.Block{
+			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{}),
 			environmentVariableAttributeName: makeEnvironmentVariableSchema(EnvironmentVariableAttributeSchemaOptions{
 				Description: "Insert environment variables into the execution environment.",
 			}),
-			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{}),
 		},
 	}
 }
@@ -552,11 +550,11 @@ func playwrightCheckSuiteFromModel(
 		UseGlobalAlertSettings:    model.UseGlobalAlertSettings.ValueBool(),
 		GroupID:                   model.GroupID.ValueInt64(),
 		GroupOrder:                int(model.GroupOrder.ValueInt64()),
-		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscription, diags),
+		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscriptions, diags),
 		TriggerIncident:           triggerIncidentFromObject(ctx, model.TriggerIncident, diags),
 		Intent:                    checkIntentFromObject(ctx, model.Intent, diags),
 		AIAutoRepairEnabled:       model.AIAutoRepairEnabled.ValueBoolPointer(),
-		EnvironmentVariables:      environmentVariablesFromList(ctx, model.EnvironmentVariable, diags),
+		EnvironmentVariables:      environmentVariablesFromList(ctx, model.EnvironmentVariables, diags),
 	}
 
 	// An empty description clears any previously set value.
@@ -647,9 +645,9 @@ func playwrightCheckSuiteFromModel(
 				check.PlaywrightVersion = &version
 			}
 
-			if !playwright.Device.IsNull() && !playwright.Device.IsUnknown() {
+			if !playwright.Devices.IsNull() && !playwright.Devices.IsUnknown() {
 				var devices []PlaywrightCheckSuiteRuntimeDeviceModel
-				diags.Append(playwright.Device.ElementsAs(ctx, &devices, false)...)
+				diags.Append(playwright.Devices.ElementsAs(ctx, &devices, false)...)
 
 				var browsers []string
 				for _, device := range devices {
@@ -744,17 +742,9 @@ func playwrightCheckSuiteToModel(
 	}
 	model.PrivateLocations = stringSetFromAPIEmptyIfUnknown(ctx, privateLocations, model.PrivateLocations, diags)
 
-	if len(check.EnvironmentVariables) == 0 && model.EnvironmentVariable.IsNull() {
-		// Keep null; an absent block list stays absent.
-	} else {
-		model.EnvironmentVariable = environmentVariablesToList(ctx, check.EnvironmentVariables, model.EnvironmentVariable, diags)
-	}
+	model.EnvironmentVariables = environmentVariablesToList(ctx, check.EnvironmentVariables, model.EnvironmentVariables, diags)
 
-	if len(check.AlertChannelSubscriptions) == 0 && model.AlertChannelSubscription.IsNull() {
-		// Keep null; an absent block list stays absent.
-	} else {
-		model.AlertChannelSubscription = alertChannelSubscriptionsToSet(ctx, check.AlertChannelSubscriptions, diags)
-	}
+	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, check.AlertChannelSubscriptions, model.AlertChannelSubscriptions, diags)
 
 	model.TriggerIncident = triggerIncidentToObject(ctx, check.TriggerIncident, diags)
 	model.Intent = checkIntentToObject(ctx, check.Intent, model.Intent, diags)
@@ -844,7 +834,7 @@ func playwrightCheckSuiteRuntimeFromAPI(
 		var d diag.Diagnostics
 		playwright, d = types.ObjectValue(playwrightCheckSuiteRuntimePlaywrightAttrTypes, map[string]attr.Value{
 			"version": version,
-			"device":  device,
+			"devices": device,
 		})
 		diags.Append(d...)
 	}
@@ -1068,11 +1058,11 @@ func playwrightCheckSuiteResolveRuntime(
 
 		version = playwright.Version
 
-		if !playwright.Device.IsNull() {
+		if !playwright.Devices.IsNull() {
 			devicesConfigured = true
 
 			var devices []PlaywrightCheckSuiteRuntimeDeviceModel
-			diags.Append(playwright.Device.ElementsAs(ctx, &devices, false)...)
+			diags.Append(playwright.Devices.ElementsAs(ctx, &devices, false)...)
 			if diags.HasError() {
 				return null
 			}
@@ -1174,12 +1164,12 @@ func playwrightCheckSuiteResolveRuntime(
 			diags.AddError(
 				"Invalid Runtime Configuration",
 				"unable to detect default devices from the code bundle; "+
-					"set \"runtime.playwright.device\" entries explicitly",
+					"set \"runtime.playwright.devices\" entries explicitly",
 			)
 		} else {
 			diags.AddError(
 				"Invalid Runtime Configuration",
-				`at least one "runtime.playwright.device" entry is required when "runtime.auto_detect" is false`,
+				`at least one "runtime.playwright.devices" entry is required when "runtime.auto_detect" is false`,
 			)
 		}
 		return null
@@ -1215,7 +1205,7 @@ func playwrightCheckSuiteResolveRuntime(
 
 	playwright, d := types.ObjectValue(playwrightCheckSuiteRuntimePlaywrightAttrTypes, map[string]attr.Value{
 		"version": version,
-		"device":  playwrightCheckSuiteDeviceSet(ctx, deviceTypes, diags),
+		"devices": playwrightCheckSuiteDeviceSet(ctx, deviceTypes, diags),
 	})
 	diags.Append(d...)
 

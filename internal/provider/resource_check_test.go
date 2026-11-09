@@ -239,7 +239,7 @@ func TestAccApiCheckRequestUnknownValues(t *testing.T) {
 
 					request = {
 						url = "https://api.checklyhq.com/public-stats?marker=${checkly_snippet.test.id}"
-						assertion = [{
+						assertions = [{
 							source     = "STATUS_CODE"
 							comparison = "EQUALS"
 							target     = checkly_snippet.test.id
@@ -300,7 +300,7 @@ func TestAccApiCheckBasic(t *testing.T) {
 				),
 				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_check.test",
-					"request.assertion.*",
+					"request.assertions.*",
 					map[string]string{
 						"source":     "STATUS_CODE",
 						"property":   "",
@@ -467,12 +467,12 @@ func TestAccApiCheckFull(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_check.test",
-					"request.assertion.#",
+					"request.assertions.#",
 					"3",
 				),
 				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_check.test",
-					"request.assertion.*",
+					"request.assertions.*",
 					map[string]string{
 						"source":     "STATUS_CODE",
 						"property":   "",
@@ -482,7 +482,7 @@ func TestAccApiCheckFull(t *testing.T) {
 				),
 				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_check.test",
-					"request.assertion.*",
+					"request.assertions.*",
 					map[string]string{
 						"source":     "HEADERS",
 						"property":   "cache-control",
@@ -492,7 +492,7 @@ func TestAccApiCheckFull(t *testing.T) {
 				),
 				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_check.test",
-					"request.assertion.*",
+					"request.assertions.*",
 					map[string]string{
 						"source":     "JSON_BODY",
 						"property":   "$.apiCheckResults",
@@ -569,7 +569,7 @@ resource "checkly_check" "test_trigger_incident" {
 	request = {
 		url    = "https://api.example.com/health"
 		method = "GET"
-		assertion = [{
+		assertions = [{
 			source     = "STATUS_CODE"
 			comparison = "EQUALS"
 			target     = "200"
@@ -1383,7 +1383,7 @@ const apiCheck_basic = `
 	  request = {
 		method     = "GET"
 		url        = "https://api.checklyhq.com/public-stats"
-		assertion = [{
+		assertions = [{
 		  comparison = "EQUALS"
 		  property   = ""
 		  source     = "STATUS_CODE"
@@ -1406,7 +1406,7 @@ const apiCheck_basic_withoutDescription = `
 	  request = {
 		method     = "GET"
 		url        = "https://api.checklyhq.com/public-stats"
-		assertion = [{
+		assertions = [{
 		  comparison = "EQUALS"
 		  property   = ""
 		  source     = "STATUS_CODE"
@@ -1446,7 +1446,7 @@ const apiCheck_full = `
 		username = "user"
 		password = "pass"
 	  }
-	  assertion = [{
+	  assertions = [{
 		comparison = "EQUALS"
 		property   = ""
 		source     = "STATUS_CODE"
@@ -1524,7 +1524,7 @@ const apiCheck_withEmptyBasicAuth = `
 		username = ""
 		password = ""
 	  }
-	  assertion = [{
+	  assertions = [{
 		source     = "STATUS_CODE"
 		property   = ""
 		comparison = "EQUALS"
@@ -1717,53 +1717,54 @@ func TestAccCheckWithEnvironmentVariable(t *testing.T) {
 					locations                 = ["us-east-1"]
 					script                    = "console.log('test')"
 
-					environment_variable {
-						key    = "FOO"
-						value  = "bar"
-						locked = false
-					}
-
-					environment_variable {
-						key    = "SECRET"
-						value  = "s3cr3t"
-						locked = true
-					}
+					environment_variables = [
+						{
+							key    = "FOO"
+							value  = "bar"
+							locked = false
+						},
+						{
+							key    = "SECRET"
+							value  = "s3cr3t"
+							locked = true
+						},
+					]
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_check.test",
-					"environment_variable.#",
+					"environment_variables.#",
 					"2",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_check.test",
-					"environment_variable.0.key",
+					"environment_variables.0.key",
 					"FOO",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_check.test",
-					"environment_variable.0.value",
+					"environment_variables.0.value",
 					"bar",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_check.test",
-					"environment_variable.0.locked",
+					"environment_variables.0.locked",
 					"false",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_check.test",
-					"environment_variable.1.key",
+					"environment_variables.1.key",
 					"SECRET",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_check.test",
-					"environment_variable.1.value",
+					"environment_variables.1.value",
 					"s3cr3t",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_check.test",
-					"environment_variable.1.locked",
+					"environment_variables.1.locked",
 					"true",
 				),
 			),
@@ -1784,16 +1785,18 @@ func TestAccCheckEnvironmentVariableRemoval(t *testing.T) {
 					locations                 = ["us-east-1"]
 					script                    = "console.log('test')"
 
-					environment_variable {
-						key   = "FOO"
-						value = "bar"
-					}
+					environment_variables = [
+						{
+							key   = "FOO"
+							value = "bar"
+						},
+					]
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_check.test",
-					"environment_variable.#",
+					"environment_variables.#",
 					"1",
 				),
 			),
@@ -1813,7 +1816,7 @@ func TestAccCheckEnvironmentVariableRemoval(t *testing.T) {
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_check.test",
-					"environment_variable.#",
+					"environment_variables.#",
 					"0",
 				),
 			),
@@ -2132,32 +2135,33 @@ func TestAccCheckAlertChannelSubscriptions(t *testing.T) {
 						url    = "https://api.checklyhq.com/public-stats"
 					}
 
-					alert_channel_subscription {
-						channel_id = checkly_alert_channel.email_1.id
-						activated  = true
-					}
-
-					alert_channel_subscription {
-						channel_id = checkly_alert_channel.email_2.id
-						activated  = false
-					}
+					alert_channel_subscriptions = [
+						{
+							channel_id = checkly_alert_channel.email_1.id
+							activated  = true
+						},
+						{
+							channel_id = checkly_alert_channel.email_2.id
+							activated  = false
+						},
+					]
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_check.test",
-					"alert_channel_subscription.#",
+					"alert_channel_subscriptions.#",
 					"2",
 				),
 				testCheckAlertChannelSubscription(
 					"checkly_check.test",
-					"alert_channel_subscription",
+					"alert_channel_subscriptions",
 					"checkly_alert_channel.email_1",
 					"true",
 				),
 				testCheckAlertChannelSubscription(
 					"checkly_check.test",
-					"alert_channel_subscription",
+					"alert_channel_subscriptions",
 					"checkly_alert_channel.email_2",
 					"false",
 				),
@@ -2196,43 +2200,43 @@ func TestAccCheckAlertChannelSubscriptions(t *testing.T) {
 						url    = "https://api.checklyhq.com/public-stats"
 					}
 
-					alert_channel_subscription {
-						channel_id = checkly_alert_channel.email_1.id
-						activated  = false
-					}
-
-					alert_channel_subscription {
-						channel_id = checkly_alert_channel.email_2.id
-						activated  = true
-					}
-
-					alert_channel_subscription {
-						channel_id = checkly_alert_channel.email_3.id
-						activated  = true
-					}
+					alert_channel_subscriptions = [
+						{
+							channel_id = checkly_alert_channel.email_1.id
+							activated  = false
+						},
+						{
+							channel_id = checkly_alert_channel.email_2.id
+							activated  = true
+						},
+						{
+							channel_id = checkly_alert_channel.email_3.id
+							activated  = true
+						},
+					]
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_check.test",
-					"alert_channel_subscription.#",
+					"alert_channel_subscriptions.#",
 					"3",
 				),
 				testCheckAlertChannelSubscription(
 					"checkly_check.test",
-					"alert_channel_subscription",
+					"alert_channel_subscriptions",
 					"checkly_alert_channel.email_1",
 					"false",
 				),
 				testCheckAlertChannelSubscription(
 					"checkly_check.test",
-					"alert_channel_subscription",
+					"alert_channel_subscriptions",
 					"checkly_alert_channel.email_2",
 					"true",
 				),
 				testCheckAlertChannelSubscription(
 					"checkly_check.test",
-					"alert_channel_subscription",
+					"alert_channel_subscriptions",
 					"checkly_alert_channel.email_3",
 					"true",
 				),
@@ -2275,7 +2279,7 @@ func TestAccCheckAlertChannelSubscriptions(t *testing.T) {
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_check.test",
-					"alert_channel_subscription.#",
+					"alert_channel_subscriptions.#",
 					"0",
 				),
 			),

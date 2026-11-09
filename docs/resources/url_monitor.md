@@ -26,7 +26,7 @@ resource "checkly_url_monitor" "example-url-monitor" {
   request = {
     url = "https://welcome.checklyhq.com"
 
-    assertion = [{
+    assertions = [{
       source     = "STATUS_CODE"
       comparison = "EQUALS"
       target     = "200"
@@ -47,7 +47,7 @@ resource "checkly_url_monitor" "example-url-monitor" {
 
 ### Optional
 
-- `alert_channel_subscription` (Block Set) An array of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your monitor, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedblock--alert_channel_subscription))
+- `alert_channel_subscriptions` (Attributes Set) A set of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your monitor, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedatt--alert_channel_subscriptions))
 - `alert_settings` (Attributes) Determines the alert escalation policy for the monitor. (see [below for nested schema](#nestedatt--alert_settings))
 - `degraded_response_time` (Number) The response time in milliseconds where the monitor should be considered degraded. Possible values are between `0` and `30000`. (Default `3000`).
 - `description` (String) A description of the monitor.
@@ -78,13 +78,13 @@ Required:
 
 Optional:
 
-- `assertion` (Attributes Set) Assertions to validate the HTTP response. URL monitors only support status code assertions. (see [below for nested schema](#nestedatt--request--assertion))
+- `assertions` (Attributes Set) Assertions to validate the HTTP response. URL monitors only support status code assertions. (see [below for nested schema](#nestedatt--request--assertions))
 - `follow_redirects` (Boolean) Whether to follow HTTP redirects automatically. (Default `true`).
 - `ip_family` (String) IP family version to use for the connection. The value can be either `IPv4` or `IPv6`. (Default `IPv4`).
 - `skip_ssl` (Boolean) Whether to skip SSL certificate verification. (Default `false`).
 
-<a id="nestedatt--request--assertion"></a>
-### Nested Schema for `request.assertion`
+<a id="nestedatt--request--assertions"></a>
+### Nested Schema for `request.assertions`
 
 Required:
 
@@ -98,8 +98,8 @@ Optional:
 
 
 
-<a id="nestedblock--alert_channel_subscription"></a>
-### Nested Schema for `alert_channel_subscription`
+<a id="nestedatt--alert_channel_subscriptions"></a>
+### Nested Schema for `alert_channel_subscriptions`
 
 Required:
 

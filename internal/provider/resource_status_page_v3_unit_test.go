@@ -266,7 +266,7 @@ func TestEncodeDecodeStatusPageV3AutomationRuleResource(t *testing.T) {
 		t.Fatal(err)
 	}
 	got.StatusPageID = model.StatusPageID.ValueString()
-	// tags and component are sets: their order is not preserved.
+	// tags and components are sets: their order is not preserved.
 	sort.Strings(got.Tags)
 	sort.Slice(got.Components, func(i, j int) bool {
 		return got.Components[i].ComponentID < got.Components[j].ComponentID
@@ -302,6 +302,35 @@ func TestStatusPageV3AutomationRuleDuplicateComponents(t *testing.T) {
 	}
 	if _, err := statusPageV3AutomationRuleFromModel(ctx, &model, &diags); err == nil {
 		t.Error("expected an error for a duplicate component_id")
+	}
+}
+
+// The API reports no components as an empty array, which converts to null
+// unless the prior value is known.
+func TestStatusPageV3AutomationRuleComponentsNullVersusEmpty(t *testing.T) {
+	ctx := context.Background()
+	componentType := types.ObjectType{AttrTypes: statusPageV3AutomationRuleComponentAttrTypes}
+	empty := types.SetValueMust(componentType, nil)
+
+	for name, c := range map[string]struct {
+		prior types.Set
+		want  types.Set
+	}{
+		"prior null":    {prior: types.SetNull(componentType), want: types.SetNull(componentType)},
+		"prior unknown": {prior: types.SetUnknown(componentType), want: types.SetNull(componentType)},
+		"prior empty":   {prior: empty, want: empty},
+	} {
+		t.Run(name, func(t *testing.T) {
+			var diags diag.Diagnostics
+			model := StatusPageV3AutomationRuleResourceModel{Components: c.prior}
+			statusPageV3AutomationRuleToModel(ctx, &checkly.StatusPageAutomationRuleV3{Tags: []string{"t"}}, &model, &diags)
+			if diags.HasError() {
+				t.Fatal(diags)
+			}
+			if !model.Components.Equal(c.want) {
+				t.Errorf("components = %s, want %s", model.Components, c.want)
+			}
+		})
 	}
 }
 

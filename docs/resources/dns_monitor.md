@@ -32,7 +32,7 @@ resource "checkly_dns_monitor" "example-dns-monitor" {
       port = 53
     }
 
-    assertion = [{
+    assertions = [{
       source     = "RESPONSE_CODE"
       comparison = "EQUALS"
       target     = "NOERROR"
@@ -71,7 +71,7 @@ resource "checkly_dns_monitor" "example-dns-monitor-private-location" {
 
 ### Optional
 
-- `alert_channel_subscription` (Block Set) An array of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your monitor, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedblock--alert_channel_subscription))
+- `alert_channel_subscriptions` (Attributes Set) A set of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your monitor, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedatt--alert_channel_subscriptions))
 - `alert_settings` (Attributes) Determines the alert escalation policy for the monitor. (see [below for nested schema](#nestedatt--alert_settings))
 - `degraded_response_time` (Number) The response time in milliseconds where the monitor should be considered degraded. Possible values are between `0` and `5000`. (Default `500`).
 - `description` (String) A description of the monitor.
@@ -102,12 +102,12 @@ Required:
 
 Optional:
 
-- `assertion` (Attributes Set) Assertions to validate the DNS response. (see [below for nested schema](#nestedatt--request--assertion))
+- `assertions` (Attributes Set) Assertions to validate the DNS response. (see [below for nested schema](#nestedatt--request--assertions))
 - `name_server` (Attributes) The name server to use. (see [below for nested schema](#nestedatt--request--name_server))
 - `protocol` (String) The protocol used to communicate with the name server. Possible values are `UDP` and `TCP`. (Default `UDP`).
 
-<a id="nestedatt--request--assertion"></a>
-### Nested Schema for `request.assertion`
+<a id="nestedatt--request--assertions"></a>
+### Nested Schema for `request.assertions`
 
 Required:
 
@@ -130,8 +130,8 @@ Optional:
 
 
 
-<a id="nestedblock--alert_channel_subscription"></a>
-### Nested Schema for `alert_channel_subscription`
+<a id="nestedatt--alert_channel_subscriptions"></a>
+### Nested Schema for `alert_channel_subscriptions`
 
 Required:
 

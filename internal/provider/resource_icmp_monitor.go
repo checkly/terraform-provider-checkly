@@ -57,7 +57,7 @@ type ICMPMonitorResourceModel struct {
 	MaxPacketLossThreshold      types.Int64  `tfsdk:"max_packet_loss_threshold"`
 	Tags                        types.Set    `tfsdk:"tags"`
 	PrivateLocations            types.Set    `tfsdk:"private_locations"`
-	AlertChannelSubscriptions   types.Set    `tfsdk:"alert_channel_subscription"`
+	AlertChannelSubscriptions   types.Set    `tfsdk:"alert_channel_subscriptions"`
 	AlertSettings               types.Object `tfsdk:"alert_settings"`
 	UseGlobalAlertSettings      types.Bool   `tfsdk:"use_global_alert_settings"`
 	Request                     types.Object `tfsdk:"request"`
@@ -72,14 +72,14 @@ type ICMPMonitorRequestModel struct {
 	Hostname   types.String `tfsdk:"hostname"`
 	IPFamily   types.String `tfsdk:"ip_family"`
 	PingCount  types.Int64  `tfsdk:"ping_count"`
-	Assertions types.Set    `tfsdk:"assertion"`
+	Assertions types.Set    `tfsdk:"assertions"`
 }
 
 var icmpMonitorRequestAttrTypes = map[string]attr.Type{
 	"hostname":   types.StringType,
 	"ip_family":  types.StringType,
 	"ping_count": types.Int64Type,
-	"assertion":  types.SetType{ElemType: types.ObjectType{AttrTypes: assertionAttrTypes}},
+	"assertions": types.SetType{ElemType: types.ObjectType{AttrTypes: assertionAttrTypes}},
 }
 
 func (r *ICMPMonitorResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -217,7 +217,7 @@ func (r *ICMPMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 							int64validator.Between(1, 50),
 						},
 					},
-					"assertion": schema.SetNestedAttribute{
+					"assertions": schema.SetNestedAttribute{
 						Optional:    true,
 						Computed:    true,
 						Default:     setdefault.StaticValue(types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{})),
@@ -262,8 +262,6 @@ func (r *ICMPMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 					},
 				},
 			},
-		},
-		Blocks: map[string]schema.Block{
 			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{
 				Monitor: true,
 			}),
@@ -294,7 +292,7 @@ func (r *ICMPMonitorResource) Configure(ctx context.Context, req resource.Config
 // fully known and stable across plans, which set element correlation
 // requires.
 func (r *ICMPMonitorResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	planNestedDefaults(ctx, req, resp, path.Root("request"), objectWithSetDefaults("assertion", assertionsWithPropertyDefault))
+	planNestedDefaults(ctx, req, resp, path.Root("request"), objectWithSetDefaults("assertions", assertionsWithPropertyDefault))
 }
 
 func (r *ICMPMonitorResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -516,7 +514,7 @@ func icmpMonitorToModel(ctx context.Context, c *checkly.ICMPMonitor, model *ICMP
 	model.Request = icmpMonitorRequestToObject(ctx, c.Request, diags)
 	model.GroupID = types.Int64Value(c.GroupID)
 	model.GroupOrder = types.Int64Value(int64(c.GroupOrder))
-	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, diags)
+	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, model.AlertChannelSubscriptions, diags)
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, model.RetryStrategy, diags)
 	model.TriggerIncident = triggerIncidentToObject(ctx, c.TriggerIncident, diags)
 }

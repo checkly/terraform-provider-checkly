@@ -58,11 +58,11 @@ type StatusPageV3AutomationRuleResourceModel struct {
 	NotifySubscribers     types.Bool   `tfsdk:"notify_subscribers"`
 	CoolDownWindowMinutes types.Int64  `tfsdk:"cool_down_window_minutes"`
 	Tags                  types.Set    `tfsdk:"tags"`
-	Components            types.Set    `tfsdk:"component"`
+	Components            types.Set    `tfsdk:"components"`
 }
 
-// statusPageV3AutomationRuleComponentModel describes the component block
-// data model.
+// statusPageV3AutomationRuleComponentModel describes an element of the
+// components attribute.
 type statusPageV3AutomationRuleComponentModel struct {
 	ComponentID  types.String `tfsdk:"component_id"`
 	TargetImpact types.String `tfsdk:"target_impact"`
@@ -141,11 +141,12 @@ func (r *StatusPageV3AutomationRuleResource) Schema(ctx context.Context, req res
 					setvalidator.SizeAtLeast(1),
 				},
 			},
-		},
-		Blocks: map[string]schema.Block{
-			"component": schema.SetNestedBlock{
+			// Optional without a default, so leaving it out stores null; see
+			// statusPageV3AutomationRuleToModel.
+			"components": schema.SetNestedAttribute{
+				Optional:    true,
 				Description: "The components an automated incident impacts, with the impact each gets.",
-				NestedObject: schema.NestedBlockObject{
+				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"component_id": schema.StringAttribute{
 							Required:    true,
@@ -382,8 +383,11 @@ func statusPageV3AutomationRuleFromModel(ctx context.Context, model *StatusPageV
 }
 
 // statusPageV3AutomationRuleToModel updates the model to match the API
-// representation of the rule.
+// representation of the rule. The API reports no components as an empty
+// array, so no components convert to null when the prior components value in
+// model is null or unknown, and to an empty set when it is known.
 func statusPageV3AutomationRuleToModel(ctx context.Context, rule *checkly.StatusPageAutomationRuleV3, model *StatusPageV3AutomationRuleResourceModel, diags *diag.Diagnostics) {
+	componentType := types.ObjectType{AttrTypes: statusPageV3AutomationRuleComponentAttrTypes}
 	componentModels := make([]statusPageV3AutomationRuleComponentModel, 0, len(rule.Components))
 	for _, component := range rule.Components {
 		componentModels = append(componentModels, statusPageV3AutomationRuleComponentModel{
@@ -392,12 +396,11 @@ func statusPageV3AutomationRuleToModel(ctx context.Context, rule *checkly.Status
 		})
 	}
 
-	components, d := types.SetValueFrom(
-		ctx,
-		types.ObjectType{AttrTypes: statusPageV3AutomationRuleComponentAttrTypes},
-		componentModels,
-	)
+	components, d := types.SetValueFrom(ctx, componentType, componentModels)
 	diags.Append(d...)
+	if len(rule.Components) == 0 && (model.Components.IsNull() || model.Components.IsUnknown()) {
+		components = types.SetNull(componentType)
+	}
 
 	model.ID = types.StringValue(rule.ID)
 	model.StatusPageID = types.StringValue(rule.StatusPageID)

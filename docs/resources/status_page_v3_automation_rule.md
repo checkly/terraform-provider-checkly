@@ -33,10 +33,12 @@ resource "checkly_status_page_v3_automation_rule" "api_outage" {
   last_update    = "The issue has been resolved."
   tags           = ["api"]
 
-  component {
-    component_id  = checkly_status_page_v3_component.api.id
-    target_impact = "MAJOR_OUTAGE"
-  }
+  components = [
+    {
+      component_id  = checkly_status_page_v3_component.api.id
+      target_impact = "MAJOR_OUTAGE"
+    },
+  ]
 }
 ```
 
@@ -53,7 +55,7 @@ resource "checkly_status_page_v3_automation_rule" "api_outage" {
 
 ### Optional
 
-- `component` (Block Set) The components an automated incident impacts, with the impact each gets. (see [below for nested schema](#nestedblock--component))
+- `components` (Attributes Set) The components an automated incident impacts, with the impact each gets. (see [below for nested schema](#nestedatt--components))
 - `cool_down_window_minutes` (Number) Minimum minutes after an automated incident before this rule may open the next one. `0` disables the cool down. (Default `5`).
 - `enabled` (Boolean) A disabled rule never opens incidents. (Default `true`).
 - `notify_subscribers` (Boolean) Whether subscribers are notified of the automated updates. (Default `true`).
@@ -62,8 +64,8 @@ resource "checkly_status_page_v3_automation_rule" "api_outage" {
 
 - `id` (String) The ID of the automation rule.
 
-<a id="nestedblock--component"></a>
-### Nested Schema for `component`
+<a id="nestedatt--components"></a>
+### Nested Schema for `components`
 
 Required:
 

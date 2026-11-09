@@ -14,7 +14,7 @@ resource "checkly_api_check" "example_check" {
     url              = "https://api.example.com/"
     follow_redirects = true
     skip_ssl         = false
-    assertion = [{
+    assertions = [{
       source     = "STATUS_CODE"
       comparison = "EQUALS"
       target     = "200"
@@ -70,7 +70,7 @@ resource "checkly_api_check" "example_check_2" {
       X-Bogus = "bogus"
     }
 
-    assertion = [
+    assertions = [
       {
         source     = "JSON_BODY"
         property   = "code"
@@ -105,7 +105,7 @@ resource "checkly_api_check" "high_frequency_check" {
 
   request = {
     url = "https://api.example.com/health"
-    assertion = [{
+    assertions = [{
       source     = "STATUS_CODE"
       comparison = "EQUALS"
       target     = "200"
@@ -134,15 +134,16 @@ resource "checkly_api_check" "example_check_3" {
     url = "https://api.example.com/"
   }
 
-  alert_channel_subscription {
-    channel_id = checkly_alert_channel.email_ac1.id
-    activated  = true
-  }
-
-  alert_channel_subscription {
-    channel_id = checkly_alert_channel.email_ac2.id
-    activated  = true
-  }
+  alert_channel_subscriptions = [
+    {
+      channel_id = checkly_alert_channel.email_ac1.id
+      activated  = true
+    },
+    {
+      channel_id = checkly_alert_channel.email_ac2.id
+      activated  = true
+    },
+  ]
 }
 
 # Migrating an existing checkly_check resource with type = "API" without

@@ -7,6 +7,9 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 )
 
 const statusPageV3AutomationRuleResource = "checkly_status_page_v3_automation_rule.test"
@@ -38,10 +41,12 @@ func TestAccStatusPageV3AutomationRuleCheckRequiredFields(t *testing.T) {
 					last_update    = "Resolved."
 					tags           = ["foo"]
 
-					component {
-						component_id  = "0e4f5a72-6a5c-42a1-9a8a-5f7d38c8a9d1"
-						target_impact = "OPERATIONAL"
-					}
+					components = [
+						{
+							component_id  = "0e4f5a72-6a5c-42a1-9a8a-5f7d38c8a9d1"
+							target_impact = "OPERATIONAL"
+						},
+					]
 				}
 			`,
 			ExpectError: regexp.MustCompile(`value must be one of`),
@@ -73,10 +78,12 @@ func TestAccStatusPageV3AutomationRuleHappyPath(t *testing.T) {
 					last_update    = "The issue has been resolved."
 					tags           = ["foo-api"]
 
-					component {
-						component_id  = checkly_status_page_v3_component.api.id
-						target_impact = "MAJOR_OUTAGE"
-					}
+					components = [
+						{
+							component_id  = checkly_status_page_v3_component.api.id
+							target_impact = "MAJOR_OUTAGE"
+						},
+					]
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
@@ -107,7 +114,7 @@ func TestAccStatusPageV3AutomationRuleHappyPath(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					statusPageV3AutomationRuleResource,
-					"component.#",
+					"components.#",
 					"1",
 				),
 				resource.TestCheckResourceAttrPair(
@@ -130,10 +137,12 @@ func TestAccStatusPageV3AutomationRuleHappyPath(t *testing.T) {
 					cool_down_window_minutes = 30
 					tags                     = ["foo-api", "bar-api"]
 
-					component {
-						component_id  = checkly_status_page_v3_component.api.id
-						target_impact = "DEGRADED_PERFORMANCE"
-					}
+					components = [
+						{
+							component_id  = checkly_status_page_v3_component.api.id
+							target_impact = "DEGRADED_PERFORMANCE"
+						},
+					]
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
@@ -158,6 +167,38 @@ func TestAccStatusPageV3AutomationRuleHappyPath(t *testing.T) {
 					"2",
 				),
 			),
+		},
+		{
+			// An empty set removes the component links and is stored as an
+			// empty set, not null; otherwise the post-apply plan would not be
+			// empty.
+			Config: base + `
+				resource "checkly_status_page_v3_automation_rule" "test" {
+					status_page_id           = checkly_status_page_v3.test.id
+					name                     = "Bar API outage"
+					enabled                  = false
+					first_update             = "We are investigating an issue."
+					last_update              = "The issue has been resolved."
+					notify_subscribers       = false
+					cool_down_window_minutes = 30
+					tags                     = ["foo-api", "bar-api"]
+					components               = []
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					statusPageV3AutomationRuleResource,
+					"components.#",
+					"0",
+				),
+			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue(
+					statusPageV3AutomationRuleResource,
+					tfjsonpath.New("components"),
+					knownvalue.SetExact([]knownvalue.Check{}),
+				),
+			},
 		},
 		{
 			// Removing every optional, including all component links, resets
@@ -188,10 +229,12 @@ func TestAccStatusPageV3AutomationRuleHappyPath(t *testing.T) {
 					"cool_down_window_minutes",
 					"5",
 				),
-				resource.TestCheckResourceAttr(
+				// Leaving components out stores null. Unlike a check of the
+				// element count, which also passes for an empty set, this
+				// fails unless the value is null.
+				resource.TestCheckNoResourceAttr(
 					statusPageV3AutomationRuleResource,
-					"component.#",
-					"0",
+					"components",
 				),
 			),
 		},

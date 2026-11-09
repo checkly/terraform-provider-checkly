@@ -20,7 +20,7 @@ resource "checkly_check_group" "test_group1" {
       query = "foo"
     }
 
-    assertion = [
+    assertions = [
       {
         source     = "STATUS_CODE"
         property   = ""
@@ -41,17 +41,18 @@ resource "checkly_check_group" "test_group1" {
     }
   }
 
-  environment_variable {
-    key    = "TEST_ENV_VAR"
-    value  = "Hello world"
-    locked = false
-  }
-
-  environment_variable {
-    key    = "ADDITIONAL_ENV_VAR"
-    value  = "test value"
-    locked = true
-  }
+  environment_variables = [
+    {
+      key    = "TEST_ENV_VAR"
+      value  = "Hello world"
+      locked = false
+    },
+    {
+      key    = "ADDITIONAL_ENV_VAR"
+      value  = "test value"
+      locked = true
+    },
+  ]
 
   use_global_alert_settings = false
 
@@ -108,14 +109,15 @@ resource "checkly_alert_channel" "email_ac2" {
 resource "checkly_check_group" "test_group1" {
   name = "My test group 1"
 
-  alert_channel_subscription {
-    channel_id = checkly_alert_channel.email_ac1.id
-    activated  = true
-  }
-
-  alert_channel_subscription {
-    channel_id = checkly_alert_channel.email_ac2.id
-    activated  = true
-  }
+  alert_channel_subscriptions = [
+    {
+      channel_id = checkly_alert_channel.email_ac1.id
+      activated  = true
+    },
+    {
+      channel_id = checkly_alert_channel.email_ac2.id
+      activated  = true
+    },
+  ]
 }
 

@@ -14,10 +14,10 @@ func TestObjectWithSetDefaults(t *testing.T) {
 	ctx := context.Background()
 	assertionType := types.ObjectType{AttrTypes: assertionAttrTypes}
 	attrTypes := map[string]attr.Type{
-		"url":       types.StringType,
-		"assertion": types.SetType{ElemType: assertionType},
+		"url":        types.StringType,
+		"assertions": types.SetType{ElemType: assertionType},
 	}
-	withDefaults := objectWithSetDefaults("assertion", assertionsWithPropertyAndTargetDefaults)
+	withDefaults := objectWithSetDefaults("assertions", assertionsWithPropertyAndTargetDefaults)
 
 	t.Run("null and unknown objects are unchanged", func(t *testing.T) {
 		var diags diag.Diagnostics
@@ -41,12 +41,12 @@ func TestObjectWithSetDefaults(t *testing.T) {
 			})
 		}
 		obj := types.ObjectValueMust(attrTypes, map[string]attr.Value{
-			"url":       types.StringValue("https://example.com"),
-			"assertion": types.SetValueMust(assertionType, []attr.Value{assertion(types.StringNull(), types.StringUnknown())}),
+			"url":        types.StringValue("https://example.com"),
+			"assertions": types.SetValueMust(assertionType, []attr.Value{assertion(types.StringNull(), types.StringUnknown())}),
 		})
 		want := types.ObjectValueMust(attrTypes, map[string]attr.Value{
-			"url":       types.StringValue("https://example.com"),
-			"assertion": types.SetValueMust(assertionType, []attr.Value{assertion(types.StringValue(""), types.StringValue(""))}),
+			"url":        types.StringValue("https://example.com"),
+			"assertions": types.SetValueMust(assertionType, []attr.Value{assertion(types.StringValue(""), types.StringValue(""))}),
 		})
 
 		var diags diag.Diagnostics

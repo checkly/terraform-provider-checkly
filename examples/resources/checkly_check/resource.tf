@@ -15,7 +15,7 @@ resource "checkly_check" "example_check" {
     url              = "https://api.example.com/"
     follow_redirects = true
     skip_ssl         = false
-    assertion = [{
+    assertions = [{
       source     = "STATUS_CODE"
       comparison = "EQUALS"
       target     = "200"
@@ -72,7 +72,7 @@ resource "checkly_check" "example_check_2" {
       X-Bogus = "bogus"
     }
 
-    assertion = [
+    assertions = [
       {
         source     = "JSON_BODY"
         property   = "code"
@@ -138,15 +138,16 @@ resource "checkly_check" "example_check" {
   name = "Example check"
   # ...
 
-  alert_channel_subscription {
-    channel_id = checkly_alert_channel.email_ac1.id
-    activated  = true
-  }
-
-  alert_channel_subscription {
-    channel_id = checkly_alert_channel.email_ac2.id
-    activated  = true
-  }
+  alert_channel_subscriptions = [
+    {
+      channel_id = checkly_alert_channel.email_ac1.id
+      activated  = true
+    },
+    {
+      channel_id = checkly_alert_channel.email_ac2.id
+      activated  = true
+    },
+  ]
 }
 
 # An alternative syntax for add the script is by referencing an external file

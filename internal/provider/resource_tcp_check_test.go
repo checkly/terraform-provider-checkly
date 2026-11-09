@@ -66,7 +66,7 @@ func TestAccTCPCheckBasic(t *testing.T) {
 				),
 				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_tcp_check.test",
-					"request.assertion.*",
+					"request.assertions.*",
 					map[string]string{
 						"source":     "RESPONSE_TIME",
 						"property":   "",
@@ -101,12 +101,12 @@ func TestAccTCPCheckFull(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_tcp_check.test",
-					"request.assertion.#",
+					"request.assertions.#",
 					"2",
 				),
 				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_tcp_check.test",
-					"request.assertion.*",
+					"request.assertions.*",
 					map[string]string{
 						"source":     "RESPONSE_TIME",
 						"property":   "",
@@ -116,7 +116,7 @@ func TestAccTCPCheckFull(t *testing.T) {
 				),
 				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_tcp_check.test",
-					"request.assertion.*",
+					"request.assertions.*",
 					map[string]string{
 						"source":     "RESPONSE_DATA",
 						"property":   "",
@@ -149,7 +149,7 @@ func TestAccTCPCheckMovedToTCPMonitor(t *testing.T) {
 				  request = {
 					hostname     = "api.checklyhq.com"
 					port         = 80
-					assertion = [{
+					assertions = [{
 					  comparison = "LESS_THAN"
 					  property   = ""
 					  source     = "RESPONSE_TIME"
@@ -191,7 +191,7 @@ const tcpCheck_basic = `
 	  request = {
 		hostname     = "api.checklyhq.com"
 		port         = 80
-		assertion = [{
+		assertions = [{
 		  comparison = "LESS_THAN"
 		  property   = ""
 		  source     = "RESPONSE_TIME"
@@ -217,7 +217,7 @@ const tcpCheck_full = `
 	request = {
 	  hostname         = "api.checklyhq.com"
 	  port             = 80
-	  assertion = [{
+	  assertions = [{
 		comparison = "LESS_THAN"
 		property   = ""
 		source     = "RESPONSE_TIME"

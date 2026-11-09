@@ -40,27 +40,27 @@ type CheckGroupResource struct {
 
 // CheckGroupResourceModel describes the resource data model.
 type CheckGroupResourceModel struct {
-	ID                       types.String `tfsdk:"id"`
-	Name                     types.String `tfsdk:"name"`
-	Concurrency              types.Int64  `tfsdk:"concurrency"`
-	Activated                types.Bool   `tfsdk:"activated"`
-	Muted                    types.Bool   `tfsdk:"muted"`
-	RunParallel              types.Bool   `tfsdk:"run_parallel"`
-	Locations                types.Set    `tfsdk:"locations"`
-	PrivateLocations         types.Set    `tfsdk:"private_locations"`
-	Tags                     types.Set    `tfsdk:"tags"`
-	EnvironmentVariable      types.List   `tfsdk:"environment_variable"`
-	SetupSnippetID           types.Int64  `tfsdk:"setup_snippet_id"`
-	TeardownSnippetID        types.Int64  `tfsdk:"teardown_snippet_id"`
-	LocalSetupScript         types.String `tfsdk:"local_setup_script"`
-	LocalTeardownScript      types.String `tfsdk:"local_teardown_script"`
-	RuntimeID                types.String `tfsdk:"runtime_id"`
-	AlertChannelSubscription types.Set    `tfsdk:"alert_channel_subscription"`
-	AlertSettings            types.Object `tfsdk:"alert_settings"`
-	UseGlobalAlertSettings   types.Bool   `tfsdk:"use_global_alert_settings"`
-	DoubleCheck              types.Bool   `tfsdk:"double_check"`
-	APICheckDefaults         types.Object `tfsdk:"api_check_defaults"`
-	RetryStrategy            types.Object `tfsdk:"retry_strategy"`
+	ID                        types.String `tfsdk:"id"`
+	Name                      types.String `tfsdk:"name"`
+	Concurrency               types.Int64  `tfsdk:"concurrency"`
+	Activated                 types.Bool   `tfsdk:"activated"`
+	Muted                     types.Bool   `tfsdk:"muted"`
+	RunParallel               types.Bool   `tfsdk:"run_parallel"`
+	Locations                 types.Set    `tfsdk:"locations"`
+	PrivateLocations          types.Set    `tfsdk:"private_locations"`
+	Tags                      types.Set    `tfsdk:"tags"`
+	EnvironmentVariables      types.List   `tfsdk:"environment_variables"`
+	SetupSnippetID            types.Int64  `tfsdk:"setup_snippet_id"`
+	TeardownSnippetID         types.Int64  `tfsdk:"teardown_snippet_id"`
+	LocalSetupScript          types.String `tfsdk:"local_setup_script"`
+	LocalTeardownScript       types.String `tfsdk:"local_teardown_script"`
+	RuntimeID                 types.String `tfsdk:"runtime_id"`
+	AlertChannelSubscriptions types.Set    `tfsdk:"alert_channel_subscriptions"`
+	AlertSettings             types.Object `tfsdk:"alert_settings"`
+	UseGlobalAlertSettings    types.Bool   `tfsdk:"use_global_alert_settings"`
+	DoubleCheck               types.Bool   `tfsdk:"double_check"`
+	APICheckDefaults          types.Object `tfsdk:"api_check_defaults"`
+	RetryStrategy             types.Object `tfsdk:"retry_strategy"`
 }
 
 func (r *CheckGroupResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -172,13 +172,11 @@ func (r *CheckGroupResource) Schema(ctx context.Context, req resource.SchemaRequ
 				SupportsOnlyOnNetworkError: true,
 				DoubleCheck:                true,
 			}),
-			doubleCheckAttributeName: doubleCheckAttributeSchema(),
-		},
-		Blocks: map[string]schema.Block{
+			doubleCheckAttributeName:              doubleCheckAttributeSchema(),
+			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{}),
 			environmentVariableAttributeName: makeEnvironmentVariableSchema(EnvironmentVariableAttributeSchemaOptions{
 				Description: "Insert environment variables into the runtime environment. Only relevant for browser checks. Use global environment variables whenever possible.",
 			}),
-			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{}),
 		},
 	}
 }
@@ -194,7 +192,7 @@ func (r *CheckGroupResource) Configure(ctx context.Context, req resource.Configu
 }
 
 // ModifyPlan applies default values to the optional+computed attributes
-// nested in the api_check_defaults.assertion set. Schema defaults cannot be
+// nested in the api_check_defaults.assertions set. Schema defaults cannot be
 // used for these attributes (see the attribute schema for details), so the
 // plan is adjusted here instead. Substituting static values keeps every set
 // element fully known and stable across plans, which set element correlation
@@ -202,7 +200,7 @@ func (r *CheckGroupResource) Configure(ctx context.Context, req resource.Configu
 // out of a newly configured alert_settings attribute; see
 // planUnconfiguredAlertSettingsAsUnknown.
 func (r *CheckGroupResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	planNestedDefaults(ctx, req, resp, path.Root(apiCheckDefaultsAttributeName), objectWithSetDefaults("assertion", assertionsWithPropertyDefault))
+	planNestedDefaults(ctx, req, resp, path.Root(apiCheckDefaultsAttributeName), objectWithSetDefaults("assertions", assertionsWithPropertyDefault))
 	planUnconfiguredAlertSettingsAsUnknown(ctx, req, resp)
 }
 
@@ -399,14 +397,14 @@ func checkGroupFromModel(ctx context.Context, model *CheckGroupResourceModel, di
 		RunParallel:               model.RunParallel.ValueBoolPointer(),
 		Locations:                 stringsFromSetOrEmpty(ctx, model.Locations, diags),
 		Tags:                      stringsFromSetOrEmpty(ctx, model.Tags, diags),
-		EnvironmentVariables:      environmentVariablesFromList(ctx, model.EnvironmentVariable, diags),
+		EnvironmentVariables:      environmentVariablesFromList(ctx, model.EnvironmentVariables, diags),
 		SetupSnippetID:            pointerOrNilWhenZero(model.SetupSnippetID.ValueInt64()),
 		TearDownSnippetID:         pointerOrNilWhenZero(model.TeardownSnippetID.ValueInt64()),
 		LocalSetupScript:          pointerOrNilWhenZero(model.LocalSetupScript.ValueString()),
 		LocalTearDownScript:       pointerOrNilWhenZero(model.LocalTeardownScript.ValueString()),
 		UseGlobalAlertSettings:    model.UseGlobalAlertSettings.ValueBoolPointer(),
 		APICheckDefaults:          apiCheckDefaultsFromObject(ctx, model.APICheckDefaults, diags),
-		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscription, diags),
+		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscriptions, diags),
 		RetryStrategy:             retryStrategyFromObject(ctx, model.RetryStrategy, diags),
 	}
 
@@ -448,7 +446,7 @@ func checkGroupToModel(ctx context.Context, group *checkly.GroupV2, model *Check
 	}
 
 	model.Tags = setFromStrings(ctx, group.Tags, diags)
-	model.EnvironmentVariable = environmentVariablesToList(ctx, group.EnvironmentVariables, model.EnvironmentVariable, diags)
+	model.EnvironmentVariables = environmentVariablesToList(ctx, group.EnvironmentVariables, model.EnvironmentVariables, diags)
 	model.SetupSnippetID = types.Int64Value(valueOrZero(group.SetupSnippetID))
 	model.TeardownSnippetID = types.Int64Value(valueOrZero(group.TearDownSnippetID))
 	model.LocalSetupScript = types.StringValue(valueOrZero(group.LocalSetupScript))
@@ -463,7 +461,7 @@ func checkGroupToModel(ctx context.Context, group *checkly.GroupV2, model *Check
 		model.RuntimeID = stringOrNullWhenUnknown(model.RuntimeID)
 	}
 
-	model.AlertChannelSubscription = alertChannelSubscriptionsToSet(ctx, group.AlertChannelSubscriptions, diags)
+	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, group.AlertChannelSubscriptions, model.AlertChannelSubscriptions, diags)
 	model.AlertSettings = alertSettingsToObject(ctx, valueOrZero(group.AlertSettings), model.AlertSettings, diags)
 	model.UseGlobalAlertSettings = types.BoolValue(valueOrZero(group.UseGlobalAlertSettings))
 

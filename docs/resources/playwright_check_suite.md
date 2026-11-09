@@ -103,7 +103,7 @@ resource "checkly_playwright_check_suite" "example-playwright-check-custom" {
     playwright = {
       version = "1.56.1"
 
-      device = [
+      devices = [
         {
           type = "chromium"
         },
@@ -129,10 +129,10 @@ resource "checkly_playwright_check_suite" "example-playwright-check-custom" {
 ### Optional
 
 - `ai_auto_repair_enabled` (Boolean) Overrides the account's automatic repair setting for this check. Leave it out to inherit the account setting. Automatic repair supports browser and multi-step checks only, so this setting has no effect on other check types today, and it needs an `intent` with at least one statement. A repair is saved to the check, so it shows as a change to `script`, and the next apply restores the configured script unless you copy the repaired script into the configuration or add `script` to `ignore_changes`. An override edited in the web app and absent from the configuration is removed by the next apply, every time. To leave it to the web app, add `ai_auto_repair_enabled` to `ignore_changes`.
-- `alert_channel_subscription` (Block Set) An array of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your check, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedblock--alert_channel_subscription))
+- `alert_channel_subscriptions` (Attributes Set) A set of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your check, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedatt--alert_channel_subscriptions))
 - `alert_settings` (Attributes) Determines the alert escalation policy for the check. (see [below for nested schema](#nestedatt--alert_settings))
 - `description` (String) A description of the check.
-- `environment_variable` (Block List) Insert environment variables into the execution environment. At most 200 variables. (see [below for nested schema](#nestedblock--environment_variable))
+- `environment_variables` (Attributes List) Insert environment variables into the execution environment. At most 200 variables. (see [below for nested schema](#nestedatt--environment_variables))
 - `group_id` (Number) The ID of the check group that this check is part of.
 - `group_order` (Number) The position of the check in the check group. It determines in what order checks and monitors are run when a group is triggered from the API or from CI/CD.
 - `intent` (Attributes) Guidance for root cause analysis and automatic repair: what this check protects, and which changes keep it meaningful. Automatic repair supports browser and multi-step checks only, and refuses an intent with no statements: a `goal` on its own is accepted here, but repair needs at least one statement in either `required_outcomes` or `must_preserve`. An intent edited in the web app and absent from the configuration is removed by the next apply, every time. To leave it to the web app, add `intent` to `ignore_changes`. (see [below for nested schema](#nestedatt--intent))
@@ -158,8 +158,8 @@ Required:
 - `metadata` (String) The generated metadata of the code bundle.
 
 
-<a id="nestedblock--alert_channel_subscription"></a>
-### Nested Schema for `alert_channel_subscription`
+<a id="nestedatt--alert_channel_subscriptions"></a>
+### Nested Schema for `alert_channel_subscriptions`
 
 Required:
 
@@ -213,8 +213,8 @@ Optional:
 
 
 
-<a id="nestedblock--environment_variable"></a>
-### Nested Schema for `environment_variable`
+<a id="nestedatt--environment_variables"></a>
+### Nested Schema for `environment_variables`
 
 Required:
 
@@ -265,11 +265,11 @@ Required:
 
 Optional:
 
-- `device` (Attributes Set) The list of devices that should be made available for Playwright. Defaults to chromium, firefox, and webkit. (see [below for nested schema](#nestedatt--runtime--playwright--device))
+- `devices` (Attributes Set) The list of devices that should be made available for Playwright. Defaults to chromium, firefox, and webkit. (see [below for nested schema](#nestedatt--runtime--playwright--devices))
 - `version` (String) The Playwright version to use. Defaults to the version detected from the code bundle's lockfile.
 
-<a id="nestedatt--runtime--playwright--device"></a>
-### Nested Schema for `runtime.playwright.device`
+<a id="nestedatt--runtime--playwright--devices"></a>
+### Nested Schema for `runtime.playwright.devices`
 
 Required:
 

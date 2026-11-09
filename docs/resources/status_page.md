@@ -29,17 +29,20 @@ resource "checkly_status_page" "example" {
   url           = "my-example-status-page"
   default_theme = "DARK"
 
-  card {
-    name = "Services"
+  cards = [
+    {
+      name = "Services"
 
-    service_attachment {
-      service_id = checkly_status_page_service.api.id
-    }
-
-    service_attachment {
-      service_id = checkly_status_page_service.database.id
-    }
-  }
+      service_attachments = [
+        {
+          service_id = checkly_status_page_service.api.id
+        },
+        {
+          service_id = checkly_status_page_service.database.id
+        },
+      ]
+    },
+  ]
 }
 ```
 
@@ -48,12 +51,12 @@ resource "checkly_status_page" "example" {
 
 ### Required
 
+- `cards` (Attributes List) A list of cards to include on the status page. (see [below for nested schema](#nestedatt--cards))
 - `name` (String) The name of the status page.
 - `url` (String) The unique subdomain of the status page: lowercase alphanumeric characters and dashes, no leading or trailing dash, at most 63 characters.
 
 ### Optional
 
-- `card` (Block List) A list of cards to include on the status page. (see [below for nested schema](#nestedblock--card))
 - `custom_domain` (String) A custom user domain, e.g. "status.example.com". See the docs on updating your DNS and SSL usage.
 - `default_theme` (String) The color theme the status page is shown in. `AUTO` follows the visitor's system preference. Possible values are `AUTO`, `DARK`, and `LIGHT`. (Default `AUTO`).
 - `favicon` (String) A URL to an image file to use as the favicon of the status page.
@@ -64,19 +67,16 @@ resource "checkly_status_page" "example" {
 
 - `id` (String) The ID of the status page.
 
-<a id="nestedblock--card"></a>
-### Nested Schema for `card`
+<a id="nestedatt--cards"></a>
+### Nested Schema for `cards`
 
 Required:
 
 - `name` (String) The name of the card.
+- `service_attachments` (Attributes List) A list of services to attach to the card. (see [below for nested schema](#nestedatt--cards--service_attachments))
 
-Optional:
-
-- `service_attachment` (Block List) A list of services to attach to the card. (see [below for nested schema](#nestedblock--card--service_attachment))
-
-<a id="nestedblock--card--service_attachment"></a>
-### Nested Schema for `card.service_attachment`
+<a id="nestedatt--cards--service_attachments"></a>
+### Nested Schema for `cards.service_attachments`
 
 Required:
 

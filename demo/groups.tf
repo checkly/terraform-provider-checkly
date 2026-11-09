@@ -48,7 +48,7 @@ resource "checkly_check_group" "check-group-3" {
       query = "foo-val"
     }
 
-    assertion = [
+    assertions = [
       {
         source     = "STATUS_CODE"
         property   = ""
@@ -63,12 +63,14 @@ resource "checkly_check_group" "check-group-3" {
     }
   }
 
-  environment_variable {
-    key    = "API_KEY"
-    value  = "wuZeo4aeQu1ia4aezuiphookagheiwoh"
-    locked = true
-    secret = true
-  }
+  environment_variables = [
+    {
+      key    = "API_KEY"
+      value  = "wuZeo4aeQu1ia4aezuiphookagheiwoh"
+      locked = true
+      secret = true
+    },
+  ]
 
   alert_settings = {
     escalation_type = "RUN_BASED"
@@ -102,12 +104,14 @@ resource "checkly_check_group" "group-with-alert-channels" {
     "eu-west-2",
   ]
 
-  alert_channel_subscription {
-    channel_id = checkly_alert_channel.email_ac.id
-    activated  = true
-  }
-  alert_channel_subscription {
-    channel_id = checkly_alert_channel.sms_ac.id
-    activated  = false
-  }
+  alert_channel_subscriptions = [
+    {
+      channel_id = checkly_alert_channel.email_ac.id
+      activated  = true
+    },
+    {
+      channel_id = checkly_alert_channel.sms_ac.id
+      activated  = false
+    },
+  ]
 }

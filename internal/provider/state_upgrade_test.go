@@ -1,9 +1,12 @@
 package provider
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -11,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
@@ -66,6 +70,45 @@ func upgradeSDKv2Raw(t *testing.T, r resource.Resource, raw string) tfsdk.State 
 	return tfsdk.State{Schema: schemaResp.Schema, Raw: value}
 }
 
+// sdkv2FixtureWith returns the JSON of the SDK v2 state fixture name after
+// edit has changed its decoded object.
+func sdkv2FixtureWith(t *testing.T, name string, edit func(obj map[string]any)) string {
+	t.Helper()
+
+	obj := decodeSDKv2TestJSON(t, string(readSDKv2StateFixture(t, name).JSON))
+	edit(obj)
+	b, err := json.Marshal(obj)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(b)
+}
+
+// environmentVariablesList returns an environment_variables value with a
+// single variable that is neither locked nor secret.
+func environmentVariablesList(t *testing.T, key, value string) types.List {
+	t.Helper()
+
+	return environmentVariableTestList(t, []EnvironmentVariableModel{{
+		Key:    types.StringValue(key),
+		Value:  types.StringValue(value),
+		Locked: types.BoolValue(false),
+		Secret: types.BoolValue(false),
+	}})
+}
+
+// alertChannelSubscriptionsSet returns an alert_channel_subscriptions value
+// with a single subscription.
+func alertChannelSubscriptionsSet(channelID int64, activated bool) types.Set {
+	return types.SetValueMust(
+		types.ObjectType{AttrTypes: alertChannelSubscriptionAttrTypes},
+		[]attr.Value{types.ObjectValueMust(alertChannelSubscriptionAttrTypes, map[string]attr.Value{
+			"channel_id": types.Int64Value(channelID),
+			"activated":  types.BoolValue(activated),
+		})},
+	)
+}
+
 func requireStateValue(t *testing.T, state tfsdk.State, p path.Path, want attr.Value) {
 	t.Helper()
 
@@ -102,9 +145,9 @@ func TestUpgradeSDKv2State(t *testing.T) {
 		requireStateValue(t, state, path.Root("retry_strategy").AtName("base_backoff_seconds"), types.Int64Value(30))
 		requireStateValue(t, state, path.Root("retry_strategy").AtName("only_on").AtName("network_error"), types.BoolValue(true))
 		// The one-element request list is unwrapped into an object; its
-		// assertion list becomes a set of objects.
+		// assertion list becomes the assertions set.
 		requireStateValue(t, state, path.Root("request").AtName("url"), types.StringValue("https://example.com"))
-		requireStateValue(t, state, path.Root("request").AtName("assertion"), types.SetValueMust(
+		requireStateValue(t, state, path.Root("request").AtName("assertions"), types.SetValueMust(
 			types.ObjectType{AttrTypes: assertionAttrTypes},
 			[]attr.Value{types.ObjectValueMust(assertionAttrTypes, map[string]attr.Value{
 				"source":     types.StringValue("STATUS_CODE"),
@@ -115,12 +158,23 @@ func TestUpgradeSDKv2State(t *testing.T) {
 		))
 	})
 
+	t.Run("url_monitor with alert channel subscriptions", func(t *testing.T) {
+		raw := sdkv2FixtureWith(t, "url_monitor", func(obj map[string]any) {
+			obj["alert_channel_subscription"] = []any{map[string]any{"channel_id": 7, "activated": true}}
+		})
+		state := upgradeSDKv2Raw(t, NewURLMonitorResource(), raw)
+		requireStateValue(t, state, path.Root(alertChannelSubscriptionAttributeName), alertChannelSubscriptionsSet(7, true))
+	})
+
 	t.Run("url_monitor without optional blocks", func(t *testing.T) {
 		state := upgradeSDKv2Fixture(t, NewURLMonitorResource(), "url_monitor_minimal")
 		requireStateNull(t, state, path.Root("alert_settings"))
+		// SDK v2 stored no subscriptions as an empty alert_channel_subscription
+		// list.
+		requireStateNull(t, state, path.Root(alertChannelSubscriptionAttributeName))
 		// SDK v2 stores no assertions as an empty list, which upgrades to
 		// the empty set the attribute defaults to.
-		requireStateValue(t, state, path.Root("request").AtName("assertion"), types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{}))
+		requireStateValue(t, state, path.Root("request").AtName("assertions"), types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{}))
 	})
 
 	t.Run("ssl_monitor", func(t *testing.T) {
@@ -134,7 +188,7 @@ func TestUpgradeSDKv2State(t *testing.T) {
 		requireStateValue(t, state, request.AtName("security_baseline").AtName("enabled"), types.BoolValue(true))
 		requireStateValue(t, state, request.AtName("security_baseline").AtName("min_tls_version").AtName("value"), types.StringValue("TLS1.2"))
 		requireStateNull(t, state, request.AtName("security_baseline").AtName("known_bad_ca"))
-		requireStateValue(t, state, request.AtName("assertion"), types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{}))
+		requireStateValue(t, state, request.AtName("assertions"), types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{}))
 		requireStateValue(t, state, path.Root("retry_strategy").AtName("type"), types.StringValue("NO_RETRIES"))
 	})
 
@@ -158,13 +212,52 @@ func TestUpgradeSDKv2State(t *testing.T) {
 		requireStateValue(t, state, path.Root("default_runtime").AtName("runtime_id"), types.StringValue("2024.09"))
 		requireStateValue(t, state, path.Root("setup_script").AtName("inline_script"), types.StringValue("console.log('x')"))
 		requireStateNull(t, state, path.Root("setup_script").AtName("snippet_id"))
+		requireStateNull(t, state, path.Root(environmentVariableAttributeName))
 		requireStateNull(t, state, path.Root("teardown_script"))
+	})
+
+	t.Run("check_group_v2 with default assertions", func(t *testing.T) {
+		// SDK v2 stored the assertions of api_check_defaults under the
+		// singular name assertion.
+		raw := sdkv2FixtureWith(t, "check_group_v2", func(obj map[string]any) {
+			defaults := obj["api_check_defaults"].([]any)[0].(map[string]any)
+			defaults["assertion"] = []any{map[string]any{"source": "STATUS_CODE", "property": "", "comparison": "EQUALS", "target": "200"}}
+		})
+		state := upgradeSDKv2Raw(t, NewCheckGroupV2Resource(), raw)
+		requireStateValue(t, state, path.Root(apiCheckDefaultsAttributeName).AtName("assertions"), types.SetValueMust(
+			types.ObjectType{AttrTypes: assertionAttrTypes},
+			[]attr.Value{types.ObjectValueMust(assertionAttrTypes, map[string]attr.Value{
+				"source":     types.StringValue("STATUS_CODE"),
+				"property":   types.StringValue(""),
+				"comparison": types.StringValue("EQUALS"),
+				"target":     types.StringValue("200"),
+			})},
+		))
+	})
+
+	t.Run("check_group_v2 with enforced alert channel subscriptions", func(t *testing.T) {
+		// SDK v2 stored the subscriptions of enforce_alert_settings under
+		// the singular name, empty when there are none.
+		subscriptions := path.Root("enforce_alert_settings").AtName(alertChannelSubscriptionAttributeName)
+		requireStateNull(t, upgradeSDKv2Fixture(t, NewCheckGroupV2Resource(), "check_group_v2"), subscriptions)
+
+		raw := sdkv2FixtureWith(t, "check_group_v2", func(obj map[string]any) {
+			settings := obj["enforce_alert_settings"].([]any)[0].(map[string]any)
+			settings["alert_channel_subscription"] = []any{map[string]any{"channel_id": 7, "activated": true}}
+		})
+		state := upgradeSDKv2Raw(t, NewCheckGroupV2Resource(), raw)
+		requireStateValue(t, state, subscriptions, alertChannelSubscriptionsSet(7, true))
 	})
 
 	t.Run("playwright_check_suite", func(t *testing.T) {
 		state := upgradeSDKv2Fixture(t, NewPlaywrightCheckSuiteResource(), "playwright_check_suite")
 		requireStateValue(t, state, path.Root("runtime").AtName("steps").AtName("install").AtName("command"), types.StringValue("npm ci"))
 		requireStateValue(t, state, path.Root("runtime").AtName("playwright").AtName("version"), types.StringValue("1.50.0"))
+		// SDK v2 stored the devices under the singular name device.
+		requireStateValue(t, state, path.Root("runtime").AtName("playwright").AtName("devices"), types.SetValueMust(
+			playwrightCheckSuiteRuntimeDeviceElementType,
+			[]attr.Value{types.ObjectValueMust(playwrightCheckSuiteRuntimeDeviceAttrTypes, map[string]attr.Value{"type": types.StringValue("chromium")})},
+		))
 		requireStateValue(t, state, path.Root("bundle").AtName("id"), types.StringValue("b"))
 		requireStateValue(t, state, path.Root("bundle").AtName("metadata"), types.StringValue("{}"))
 	})
@@ -242,6 +335,44 @@ func TestUpgradeSDKv2State(t *testing.T) {
 		requireStateNull(t, upgrade(`[]`), path.Root("request").AtName("name_server"))
 	})
 
+	t.Run("status_page", func(t *testing.T) {
+		// SDK v2 stored cards and their service attachments as repeated
+		// blocks under the singular names.
+		raw := `{"id":"1","name":"p","url":"p","custom_domain":"","logo":"","redirect_to":"","favicon":"","default_theme":"AUTO",` +
+			`"card":[{"name":"c","service_attachment":[{"service_id":"s1"},{"service_id":"s2"}]}]}`
+		state := upgradeSDKv2Raw(t, NewStatusPageResource(), raw)
+		attachmentType := types.ObjectType{AttrTypes: statusPageServiceAttachmentAttrTypes}
+		attachment := func(id string) attr.Value {
+			return types.ObjectValueMust(statusPageServiceAttachmentAttrTypes, map[string]attr.Value{"service_id": types.StringValue(id)})
+		}
+		requireStateValue(t, state, path.Root("cards"), types.ListValueMust(
+			types.ObjectType{AttrTypes: statusPageCardAttrTypes},
+			[]attr.Value{types.ObjectValueMust(statusPageCardAttrTypes, map[string]attr.Value{
+				"name":                types.StringValue("c"),
+				"service_attachments": types.ListValueMust(attachmentType, []attr.Value{attachment("s1"), attachment("s2")}),
+			})},
+		))
+	})
+
+	t.Run("status_page_v3_automation_rule", func(t *testing.T) {
+		// SDK v2 stored components as a repeated block under the singular
+		// name, empty when there are none.
+		upgrade := func(components string) tfsdk.State {
+			raw := `{"id":"r","status_page_id":"p","name":"n","enabled":true,"first_update":"a","last_update":"b",` +
+				`"notify_subscribers":true,"cool_down_window_minutes":5,"tags":["t"],"component":` + components + `}`
+			return upgradeSDKv2Raw(t, NewStatusPageV3AutomationRuleResource(), raw)
+		}
+		state := upgrade(`[{"component_id":"c","target_impact":"MAJOR_OUTAGE"}]`)
+		requireStateValue(t, state, path.Root("components"), types.SetValueMust(
+			types.ObjectType{AttrTypes: statusPageV3AutomationRuleComponentAttrTypes},
+			[]attr.Value{types.ObjectValueMust(statusPageV3AutomationRuleComponentAttrTypes, map[string]attr.Value{
+				"component_id":  types.StringValue("c"),
+				"target_impact": types.StringValue("MAJOR_OUTAGE"),
+			})},
+		))
+		requireStateNull(t, upgrade(`[]`), path.Root("components"))
+	})
+
 	t.Run("ssl_monitor after refresh", func(t *testing.T) {
 		state := upgradeSDKv2Fixture(t, NewSSLMonitorResource(), "ssl_monitor_read")
 		requireStateNull(t, state, path.Root("request").AtName("client_certificate").AtName("client_certificate_id"))
@@ -272,14 +403,17 @@ func TestUpgradeSDKv2State(t *testing.T) {
 	})
 
 	t.Run("check", func(t *testing.T) {
-		// ssl_check and environment_variables have been removed.
+		// ssl_check has been removed. The deprecated environment_variables
+		// map becomes the environment_variables list.
 		state := upgradeSDKv2Fixture(t, NewCheckResource(), "check")
+		requireStateValue(t, state, path.Root(environmentVariableAttributeName), environmentVariablesList(t, "A", "b"))
 		requireStateValue(t, state, path.Root("type"), types.StringValue("API"))
 		requireStateValue(t, state, path.Root("double_check"), types.BoolValue(true))
 		requireStateNull(t, state, path.Root(checkIntentAttributeName))
 		requireStateNull(t, state, path.Root(aiAutoRepairEnabledAttributeName))
 		requireStateValue(t, state, path.Root("retry_strategy").AtName("type"), types.StringValue("FIXED"))
 		requireSDKv2CheckRequest(t, state)
+		requireStateNull(t, state, path.Root(alertChannelSubscriptionAttributeName))
 	})
 
 	t.Run("check_browser", func(t *testing.T) {
@@ -287,6 +421,15 @@ func TestUpgradeSDKv2State(t *testing.T) {
 		// list, which upgrades to a null object.
 		state := upgradeSDKv2Fixture(t, NewCheckResource(), "check_browser")
 		requireStateNull(t, state, path.Root("request"))
+		// The environment_variable list becomes environment_variables.
+		requireStateValue(t, state, path.Root(environmentVariableAttributeName), environmentVariablesList(t, "K", "v"))
+	})
+
+	t.Run("check_multistep", func(t *testing.T) {
+		// SDK v2 stored no environment variables as an empty
+		// environment_variable list and a null environment_variables map.
+		state := upgradeSDKv2Fixture(t, NewCheckResource(), "check_multistep")
+		requireStateNull(t, state, path.Root(environmentVariableAttributeName))
 	})
 }
 
@@ -300,6 +443,180 @@ func requireSDKv2CheckRequest(t *testing.T, state tfsdk.State) {
 	requireStateNull(t, state, request.AtName("headers"))
 	requireStateNull(t, state, request.AtName("query_parameters"))
 	requireStateValue(t, state, request.AtName("basic_auth").AtName("username"), types.StringValue("u"))
+}
+
+// decodeSDKv2TestJSON decodes JSON the way upgradeSDKv2RawState does.
+func decodeSDKv2TestJSON(t *testing.T, s string) map[string]any {
+	t.Helper()
+
+	decoder := json.NewDecoder(bytes.NewReader([]byte(s)))
+	decoder.UseNumber()
+	var obj map[string]any
+	if err := decoder.Decode(&obj); err != nil {
+		t.Fatalf("decoding %s: %v", s, err)
+	}
+	return obj
+}
+
+// requireNormalizedSDKv2Object normalizes the SDK v2 state raw against attrs
+// and compares the result with the JSON object want.
+func requireNormalizedSDKv2Object(t *testing.T, attrs map[string]schema.Attribute, raw, want string) {
+	t.Helper()
+
+	obj := decodeSDKv2TestJSON(t, raw)
+	normalizeSDKv2Object(obj, attrs)
+	if wantObj := decodeSDKv2TestJSON(t, want); !reflect.DeepEqual(obj, wantObj) {
+		got, _ := json.Marshal(obj)
+		t.Errorf("got %s, want %s", got, want)
+	}
+}
+
+// Collections that SDK v2 stored under a singular name move to their plural
+// name, at any depth. The schemas are reduced to the attributes involved.
+func TestNormalizeSDKv2PluralRenames(t *testing.T) {
+	subscriptions := schema.SetNestedAttribute{
+		Optional: true,
+		NestedObject: schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{
+			"channel_id": schema.Int64Attribute{Required: true},
+			"activated":  schema.BoolAttribute{Required: true},
+		}},
+	}
+	named := schema.ListNestedAttribute{
+		Optional: true,
+		NestedObject: schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{
+			"name": schema.StringAttribute{Required: true},
+		}},
+	}
+
+	t.Run("top level", func(t *testing.T) {
+		requireNormalizedSDKv2Object(t,
+			map[string]schema.Attribute{"alert_channel_subscriptions": subscriptions},
+			`{"alert_channel_subscription":[{"channel_id":1,"activated":true}]}`,
+			`{"alert_channel_subscriptions":[{"channel_id":1,"activated":true}]}`,
+		)
+	})
+
+	t.Run("an empty collection becomes null", func(t *testing.T) {
+		requireNormalizedSDKv2Object(t,
+			map[string]schema.Attribute{"alert_channel_subscriptions": subscriptions},
+			`{"alert_channel_subscription":[]}`,
+			`{"alert_channel_subscriptions":null}`,
+		)
+	})
+
+	t.Run("inside a list nested attribute", func(t *testing.T) {
+		cards := schema.ListNestedAttribute{
+			Required: true,
+			NestedObject: schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{
+				"name":                schema.StringAttribute{Required: true},
+				"service_attachments": named,
+			}},
+		}
+		requireNormalizedSDKv2Object(t,
+			map[string]schema.Attribute{"cards": cards},
+			`{"card":[{"name":"a","service_attachment":[{"name":"s"}]},{"name":"b","service_attachment":[]}]}`,
+			`{"cards":[{"name":"a","service_attachments":[{"name":"s"}]},{"name":"b","service_attachments":null}]}`,
+		)
+	})
+
+	t.Run("inside a single nested attribute", func(t *testing.T) {
+		request := schema.SingleNestedAttribute{
+			Required: true,
+			Attributes: map[string]schema.Attribute{
+				"url":        schema.StringAttribute{Required: true},
+				"assertions": named,
+			},
+		}
+		requireNormalizedSDKv2Object(t,
+			map[string]schema.Attribute{"request": request},
+			`{"request":[{"url":"u","assertion":[{"name":"a"}]}]}`,
+			`{"request":{"url":"u","assertions":[{"name":"a"}]}}`,
+		)
+	})
+
+	t.Run("a value under the plural name is kept", func(t *testing.T) {
+		requireNormalizedSDKv2Object(t,
+			map[string]schema.Attribute{"devices": named},
+			`{"devices":[{"name":"new"}],"device":[{"name":"old"}]}`,
+			`{"devices":[{"name":"new"}]}`,
+		)
+	})
+
+	t.Run("a null value under the plural name is replaced", func(t *testing.T) {
+		requireNormalizedSDKv2Object(t,
+			map[string]schema.Attribute{"devices": named},
+			`{"devices":null,"device":[{"name":"old"}]}`,
+			`{"devices":[{"name":"old"}]}`,
+		)
+	})
+
+	t.Run("not renamed where the schema has no plural name", func(t *testing.T) {
+		requireNormalizedSDKv2Object(t,
+			map[string]schema.Attribute{"device": named},
+			`{"device":[{"name":"d"}]}`,
+			`{"device":[{"name":"d"}]}`,
+		)
+	})
+}
+
+// The deprecated SDK v2 environment_variables map is folded into the
+// environment variable list.
+func TestNormalizeSDKv2EnvironmentVariables(t *testing.T) {
+	attrs := map[string]schema.Attribute{
+		"environment_variables": schema.ListNestedAttribute{
+			Optional: true,
+			NestedObject: schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{
+				"key":    schema.StringAttribute{Required: true},
+				"value":  schema.StringAttribute{Required: true},
+				"locked": schema.BoolAttribute{Optional: true, Computed: true},
+				"secret": schema.BoolAttribute{Optional: true, Computed: true},
+			}},
+		},
+	}
+	list := `[{"key":"K","value":"v","locked":true,"secret":false}]`
+
+	for name, c := range map[string]struct{ raw, want string }{
+		"map": {
+			raw: `{"environment_variables":{"B":"2","A":"1"},"environment_variable":[]}`,
+			want: `{"environment_variables":[` +
+				`{"key":"A","value":"1","locked":false,"secret":false},` +
+				`{"key":"B","value":"2","locked":false,"secret":false}]}`,
+		},
+		"list and an empty map": {
+			raw:  `{"environment_variables":{},"environment_variable":` + list + `}`,
+			want: `{"environment_variables":` + list + `}`,
+		},
+		"list and a null map": {
+			raw:  `{"environment_variables":null,"environment_variable":` + list + `}`,
+			want: `{"environment_variables":` + list + `}`,
+		},
+		"neither": {
+			raw:  `{"environment_variables":{},"environment_variable":[]}`,
+			want: `{"environment_variables":null}`,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			requireNormalizedSDKv2Object(t, attrs, c.raw, c.want)
+		})
+	}
+}
+
+// Only the environment_variables map is converted to a list. SDK v2 never
+// stored a JSON object at any other list position, so such state fails to
+// upgrade instead of being dropped.
+func TestUpgradeSDKv2ObjectAtListPosition(t *testing.T) {
+	s := schema.Schema{Attributes: map[string]schema.Attribute{
+		"cards": schema.ListNestedAttribute{
+			Optional: true,
+			NestedObject: schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{
+				"name": schema.StringAttribute{Required: true},
+			}},
+		},
+	}}
+	raw := &tfprotov6.RawState{JSON: []byte(`{"cards":{"name":"a"}}`)}
+	if _, err := upgradeSDKv2RawState(context.Background(), raw, s); err == nil {
+		t.Fatal("expected an error")
+	}
 }
 
 // A `moved` block can move a resource whose state the SDK v2 implementation
@@ -330,6 +647,12 @@ func TestMoveSDKv2State(t *testing.T) {
 			fixture:    "check_browser",
 			attr:       path.Root("script"),
 			want:       types.StringValue("console.log(1)"),
+			check: func(t *testing.T, state tfsdk.State) {
+				requireStateValue(t, state, path.Root(environmentVariableAttributeName), environmentVariablesList(t, "K", "v"))
+				// checkly_check has no dependencies, so the moved check has
+				// none either.
+				requireStateNull(t, state, path.Root(scriptDependenciesAttributeName))
+			},
 		},
 		"checkly_check to checkly_multistep_check": {
 			target:     NewMultistepCheckResource(),
@@ -337,6 +660,9 @@ func TestMoveSDKv2State(t *testing.T) {
 			fixture:    "check_multistep",
 			attr:       path.Root("script"),
 			want:       types.StringValue("console.log(2)"),
+			check: func(t *testing.T, state tfsdk.State) {
+				requireStateNull(t, state, path.Root(scriptDependenciesAttributeName))
+			},
 		},
 		"checkly_tcp_check to checkly_tcp_monitor": {
 			target:     NewTCPMonitorResource(),

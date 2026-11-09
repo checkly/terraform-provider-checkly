@@ -57,7 +57,7 @@ type URLMonitorResourceModel struct {
 	DegradedResponseTime      types.Int64  `tfsdk:"degraded_response_time"`
 	MaxResponseTime           types.Int64  `tfsdk:"max_response_time"`
 	Tags                      types.Set    `tfsdk:"tags"`
-	AlertChannelSubscriptions types.Set    `tfsdk:"alert_channel_subscription"`
+	AlertChannelSubscriptions types.Set    `tfsdk:"alert_channel_subscriptions"`
 	PrivateLocations          types.Set    `tfsdk:"private_locations"`
 	AlertSettings             types.Object `tfsdk:"alert_settings"`
 	UseGlobalAlertSettings    types.Bool   `tfsdk:"use_global_alert_settings"`
@@ -73,7 +73,7 @@ type URLMonitorRequestModel struct {
 	URL             types.String `tfsdk:"url"`
 	FollowRedirects types.Bool   `tfsdk:"follow_redirects"`
 	SkipSSL         types.Bool   `tfsdk:"skip_ssl"`
-	Assertions      types.Set    `tfsdk:"assertion"`
+	Assertions      types.Set    `tfsdk:"assertions"`
 	IPFamily        types.String `tfsdk:"ip_family"`
 }
 
@@ -81,7 +81,7 @@ var urlMonitorRequestAttrTypes = map[string]attr.Type{
 	"url":              types.StringType,
 	"follow_redirects": types.BoolType,
 	"skip_ssl":         types.BoolType,
-	"assertion":        types.SetType{ElemType: types.ObjectType{AttrTypes: assertionAttrTypes}},
+	"assertions":       types.SetType{ElemType: types.ObjectType{AttrTypes: assertionAttrTypes}},
 	"ip_family":        types.StringType,
 }
 
@@ -227,7 +227,7 @@ func (r *URLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 							stringvalidator.OneOf("IPv4", "IPv6"),
 						},
 					},
-					"assertion": schema.SetNestedAttribute{
+					"assertions": schema.SetNestedAttribute{
 						Optional:    true,
 						Computed:    true,
 						Default:     setdefault.StaticValue(types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{})),
@@ -272,8 +272,6 @@ func (r *URLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 					},
 				},
 			},
-		},
-		Blocks: map[string]schema.Block{
 			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{
 				Monitor: true,
 			}),
@@ -304,7 +302,7 @@ func (r *URLMonitorResource) Configure(ctx context.Context, req resource.Configu
 // fully known and stable across plans, which set element correlation
 // requires.
 func (r *URLMonitorResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	planNestedDefaults(ctx, req, resp, path.Root("request"), objectWithSetDefaults("assertion", assertionsWithPropertyDefault))
+	planNestedDefaults(ctx, req, resp, path.Root("request"), objectWithSetDefaults("assertions", assertionsWithPropertyDefault))
 }
 
 func (r *URLMonitorResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -529,7 +527,7 @@ func urlMonitorToModel(ctx context.Context, c *checkly.URLMonitor, model *URLMon
 	}
 	model.PrivateLocations = stringSetFromAPINullIfUnset(ctx, privateLocations, model.PrivateLocations, diags)
 
-	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, diags)
+	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, model.AlertChannelSubscriptions, diags)
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, model.RetryStrategy, diags)
 	model.TriggerIncident = triggerIncidentToObject(ctx, c.TriggerIncident, diags)
 }

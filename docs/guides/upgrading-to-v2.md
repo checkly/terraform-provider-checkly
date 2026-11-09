@@ -22,7 +22,7 @@ Existing state is upgraded automatically: you do not need to import or recreate 
 1. If you use `checkly_trigger_check` or `checkly_trigger_group`, take them out of your configuration and state, as described in [Removed resource types](#removed-resource-types).
 1. Back up your state, for example with `terraform state pull > backup.tfstate`. Once v2 has refreshed the state, v1.x can no longer read it; to go back to v1.x, restore the backup.
 1. Update the version constraint, for example `version = "~> 2.0"`, and run `terraform init -upgrade`.
-1. Update your configuration as described in [Configuration changes](#configuration-changes). `terraform validate` points at every line that needs to change, except misspelled names inside objects assigned with `= { ... }`, which Terraform ignores (see [Single nested objects are attributes](#single-nested-objects-are-attributes)).
+1. Update your configuration as described in [Configuration changes](#configuration-changes). `terraform validate` points at every line that needs to change, except misspelled names inside objects written as `{ ... }`, which Terraform ignores (see [Single nested objects are attributes](#single-nested-objects-are-attributes)).
 1. Run `terraform plan`. It should report no changes, except for the cases listed under [Expected one-time changes](#expected-one-time-changes). A change to a value inside a converted object, such as a setting going back to its default, usually means that a name in that object is misspelled.
 
 ## Configuration changes
@@ -61,7 +61,7 @@ resource "checkly_url_monitor" "example" {
 }
 ```
 
-Repeated blocks nested inside such an attribute become lists or sets of objects, written as `[{ ... }]` and also assigned with `=`:
+Repeated blocks nested inside such an attribute become lists or sets of objects with plural names, written as `[{ ... }]` and also assigned with `=` (see [Collections are plural attributes](#collections-are-plural-attributes)):
 
 ```terraform
 # v1.x
@@ -82,7 +82,7 @@ resource "checkly_url_monitor" "example" {
   # ...
   request = {
     url = "https://example.com"
-    assertion = [{
+    assertions = [{
       source     = "STATUS_CODE"
       comparison = "EQUALS"
       target     = "200"
@@ -90,37 +90,6 @@ resource "checkly_url_monitor" "example" {
   }
 }
 ```
-
-Leaving such a list out means it is empty, as leaving out the blocks did in v1.x.
-
-A `dynamic` block that generated such nested blocks becomes a `for` expression:
-
-```terraform
-# v1.x
-request {
-  url = "https://example.com"
-  dynamic "assertion" {
-    for_each = var.assertions
-    content {
-      source     = assertion.value.source
-      comparison = assertion.value.comparison
-      target     = assertion.value.target
-    }
-  }
-}
-
-# v2
-request = {
-  url = "https://example.com"
-  assertion = [for a in var.assertions : {
-    source     = a.source
-    comparison = a.comparison
-    target     = a.target
-  }]
-}
-```
-
-`dynamic` blocks keep working for the blocks that remain, such as `alert_channel_subscription` and `environment_variable`.
 
 Terraform does not reject unknown names inside these objects: a misspelled optional attribute, such as `folow_redirects` in `request = { ... }`, is ignored instead of raising an error as it did inside a block. The attribute then keeps its default. Check the names in these objects carefully when you convert them, in particular the rules of `security_baseline` in `checkly_ssl_monitor`, where a misspelled rule silently keeps its default instead of the value you set.
 
@@ -131,32 +100,106 @@ This affects:
 | Resource type | Attributes |
 |---|---|
 | `checkly_alert_channel` | `call`, `email`, `opsgenie`, `pagerduty`, `slack`, `slack_app`, `sms`, `webhook` |
-| `checkly_check` | `alert_settings` (and its `parallel_run_failure_threshold`, `reminders`, `run_based_escalation`, `time_based_escalation`), `request` (and its `assertion` and `basic_auth`), `retry_strategy` (and its `only_on`), `trigger_incident` |
-| `checkly_check_group` | `alert_settings` (and nested objects as above), `api_check_defaults` (and its `basic_auth` and `assertion`), `retry_strategy` (and its `only_on`) |
-| `checkly_check_group_v2` | `api_check_defaults` (and its `basic_auth` and `assertion`), `default_runtime`, `enforce_alert_settings` (and its `alert_settings` and `alert_channel_subscription`), `enforce_locations`, `enforce_retry_strategy` (and its `retry_strategy`), `enforce_scheduling_strategy`, `setup_script`, `teardown_script` |
+| `checkly_check` | `alert_settings` (and its `parallel_run_failure_threshold`, `reminders`, `run_based_escalation`, `time_based_escalation`), `request` (and its `assertions` and `basic_auth`), `retry_strategy` (and its `only_on`), `trigger_incident` |
+| `checkly_check_group` | `alert_settings` (and nested objects as above), `api_check_defaults` (and its `basic_auth` and `assertions`), `retry_strategy` (and its `only_on`) |
+| `checkly_check_group_v2` | `api_check_defaults` (and its `basic_auth` and `assertions`), `default_runtime`, `enforce_alert_settings` (and its `alert_settings` and `alert_channel_subscriptions`), `enforce_locations`, `enforce_retry_strategy` (and its `retry_strategy`), `enforce_scheduling_strategy`, `setup_script`, `teardown_script` |
 | `checkly_heartbeat`, `checkly_heartbeat_monitor` | `alert_settings` (and nested objects as above), `heartbeat`, `trigger_incident` |
-| `checkly_url_monitor` | `alert_settings` (and nested objects as above), `request` (and its `assertion`), `retry_strategy` (and its `only_on`), `trigger_incident` |
-| `checkly_dns_monitor` | `alert_settings` (and nested objects as above), `request` (and its `assertion` and `name_server`), `retry_strategy`, `trigger_incident` |
-| `checkly_grpc_monitor` | `alert_settings` (and nested objects as above), `request` (and its `assertion` and `metadata`), `retry_strategy`, `trigger_incident` |
-| `checkly_icmp_monitor`, `checkly_tcp_check`, `checkly_tcp_monitor`, `checkly_traceroute_monitor` | `alert_settings` (and nested objects as above), `request` (and its `assertion`), `retry_strategy`, `trigger_incident` |
-| `checkly_ssl_monitor` | `alert_settings` (and nested objects as above), `request` (and its `assertion`, `client_certificate` and `security_baseline` with each of its rules, such as `min_tls_version`), `retry_strategy`, `trigger_incident` |
+| `checkly_url_monitor` | `alert_settings` (and nested objects as above), `request` (and its `assertions`), `retry_strategy` (and its `only_on`), `trigger_incident` |
+| `checkly_dns_monitor` | `alert_settings` (and nested objects as above), `request` (and its `assertions` and `name_server`), `retry_strategy`, `trigger_incident` |
+| `checkly_grpc_monitor` | `alert_settings` (and nested objects as above), `request` (and its `assertions` and `metadata`), `retry_strategy`, `trigger_incident` |
+| `checkly_icmp_monitor`, `checkly_tcp_check`, `checkly_tcp_monitor`, `checkly_traceroute_monitor` | `alert_settings` (and nested objects as above), `request` (and its `assertions`), `retry_strategy`, `trigger_incident` |
+| `checkly_ssl_monitor` | `alert_settings` (and nested objects as above), `request` (and its `assertions`, `client_certificate` and `security_baseline` with each of its rules, such as `min_tls_version`), `retry_strategy`, `trigger_incident` |
 | `checkly_playwright_check_suite` | `alert_settings` (and nested objects as above), `bundle`, `runtime` (and its `engine`, `playwright`, `steps`), `trigger_incident` |
 | `checkly_playwright_code_bundle` | `prebuilt_archive` |
 | `checkly_maintenance_window`, `checkly_maintenance_windows` | `status_page_visibility` |
 | `checkly_status_page_v3` | `theme_colors` (and its `light` and `dark`) |
 
-The table lists every such attribute. Only blocks that can be repeated, such as `alert_channel_subscription` and `environment_variable`, keep their block syntax.
+The table lists every such attribute.
+
+### Collections are plural attributes
+
+No resource has blocks any more. Every block that could be repeated, including the ones nested inside single nested objects such as `request`, is now a list or set of objects with a plural name, assigned with `=`:
+
+| v1.x block | v2 attribute | Resource types |
+|---|---|---|
+| `alert_channel_subscription` | `alert_channel_subscriptions` | every check and monitor resource type, `checkly_check_group`, `checkly_playwright_check_suite`, and `enforce_alert_settings.alert_channel_subscription` of `checkly_check_group_v2` |
+| `environment_variable` | `environment_variables` | `checkly_check`, `checkly_check_group`, `checkly_check_group_v2`, `checkly_playwright_check_suite` |
+| `request.assertion` | `request.assertions` | every check and monitor resource type with a `request` |
+| `api_check_defaults.assertion` | `api_check_defaults.assertions` | `checkly_check_group`, `checkly_check_group_v2` |
+| `runtime.playwright.device` | `runtime.playwright.devices` | `checkly_playwright_check_suite` |
+| `component` | `components` | `checkly_status_page_v3_automation_rule` |
+| `card` | `cards` | `checkly_status_page` |
+| `card.service_attachment` | `cards[*].service_attachments` | `checkly_status_page` |
+
+The resource types that are new in v2 follow the same rule, for example `dependencies` on `checkly_browser_check` and `checkly_multistep_check`.
+
+The deprecated `environment_variables` map of `checkly_check` and `checkly_check_group` becomes the same `environment_variables` list: write each entry as an element `{ key = "...", value = "..." }`. Its state converts automatically; see [Removed attributes](#removed-attributes) and [Expected one-time changes](#expected-one-time-changes).
+
+Each block becomes one element of the list:
+
+```terraform
+# v1.x
+resource "checkly_url_monitor" "example" {
+  # ...
+  alert_channel_subscription {
+    channel_id = checkly_alert_channel.email.id
+    activated  = true
+  }
+  alert_channel_subscription {
+    channel_id = checkly_alert_channel.sms.id
+    activated  = false
+  }
+}
+
+# v2
+resource "checkly_url_monitor" "example" {
+  # ...
+  alert_channel_subscriptions = [
+    {
+      channel_id = checkly_alert_channel.email.id
+      activated  = true
+    },
+    {
+      channel_id = checkly_alert_channel.sms.id
+      activated  = false
+    },
+  ]
+}
+```
+
+A collection can now be assigned from any expression, such as `alert_channel_subscriptions = local.channels`. A `dynamic` block becomes a `for` expression:
+
+```terraform
+# v1.x
+dynamic "environment_variable" {
+  for_each = var.environment
+  content {
+    key   = environment_variable.key
+    value = environment_variable.value
+  }
+}
+
+# v2
+environment_variables = [for key, value in var.environment : {
+  key   = key
+  value = value
+}]
+```
+
+Leaving out `alert_channel_subscriptions`, `environment_variables` or `components` still removes them in Checkly, as leaving out all the blocks did in v1.x. Leaving out `request.assertions` or `api_check_defaults.assertions` removes all assertions too, and stores an empty set. Leaving out `runtime.playwright.devices` while `runtime.auto_detect` is enabled, which is the default, selects the default devices: chromium, firefox and webkit.
+
+As with [single nested objects](#single-nested-objects-are-attributes), a misspelled name inside an element is ignored instead of raising an error. Entries in `ignore_changes` and references to these attributes, such as `checkly_url_monitor.example.alert_channel_subscription`, must use the new names too.
 
 ### Removed attributes
 
 These attributes were deprecated in v1.x. Remove them from your configuration:
 
-- `environment_variables` (the map) on `checkly_check` and `checkly_check_group`. Unlike the attributes below, it did take effect: rewrite each entry as an `environment_variable` block with the same `key` and `value`, so that the variables are kept. It was deprecated throughout v1.x and, unlike `double_check`, it is not a separate API setting: the blocks set exactly the same variables, so v2 removes it.
+- `environment_variables` as a map on `checkly_check` and `checkly_check_group`. Unlike the attributes below, it did take effect: rewrite each entry as an element of the `environment_variables` list with the same `key` and `value`, so that the variables are kept. The state is converted automatically, but an unconverted map fails with Terraform's `Inappropriate value for attribute "environment_variables": list of object required` error. It was deprecated throughout v1.x and, unlike `double_check`, it is not a separate API setting: the list sets exactly the same variables.
 - `ssl_check` on `checkly_check`, which the API ignored.
 - `alert_settings.ssl_certificates` on all resource types that had it, which the API ignored.
 - `retry_strategy.only_on` on `checkly_dns_monitor`, `checkly_grpc_monitor`, `checkly_icmp_monitor`, `checkly_ssl_monitor`, `checkly_tcp_check`, `checkly_tcp_monitor` and `checkly_traceroute_monitor`, where it had no conditions to set.
 
-`environment_variable` blocks on a `checkly_check` with `type = "API"` have no effect either, because API checks do not use environment variables, and they cause a change in every plan. Remove them as well.
+`environment_variables` on a `checkly_check` with `type = "API"` have no effect either, because API checks do not use environment variables, and they cause a change in every plan. Remove them as well.
 
 ### Deprecated attributes
 
@@ -184,7 +227,7 @@ Every API key now needs an account ID, which must be a UUID; v1.x only required 
 
 These attributes are now sensitive, so Terraform redacts them in plan output:
 
-- `value` of `checkly_environment_variable`, and of `environment_variable` blocks on checks, check groups and Playwright check suites.
+- `value` of `checkly_environment_variable`, and of `environment_variables` on checks, check groups and Playwright check suites.
 - `password` of `basic_auth` in a check `request` and in `api_check_defaults`.
 - `slack.url`, `webhook.url`, `webhook.webhook_secret`, `webhook.headers`, `webhook.query_parameters`, `opsgenie.api_key` and `pagerduty.service_key` of `checkly_alert_channel`.
 - `heartbeat.ping_token` of `checkly_heartbeat_monitor` and `checkly_heartbeat`.
@@ -198,7 +241,7 @@ Header and query parameter values of check requests and of `api_check_defaults` 
 The provider checks lengths and formats at plan time, so some configurations that applied with v1.x now fail the plan:
 
 - An uppercase `url` on `checkly_status_page`. The API lowercased it; use the lowercase URL.
-- An `environment_variable` on a check or check group with a value over 64000 bytes in UTF-8, or 31744 bytes if it is secret or locked, or more than 200 `environment_variable` blocks. The API dropped those variables without an error.
+- An element of `environment_variables` on a check or check group with a value over 64000 bytes in UTF-8, or 31744 bytes if it is secret or locked, or more than 200 elements in `environment_variables`. The API dropped those variables without an error.
 
 ### Debug log removed
 
@@ -231,7 +274,7 @@ v2 fails to plan while these resource types are in state. Remove them from your 
 
 `checkly_check` now writes through the API endpoint of each check type, which only stores what applies to that type. `request`, `frequency_offset`, `degraded_response_time`, `max_response_time`, `setup_snippet_id`, `teardown_snippet_id`, `local_setup_script` and `local_teardown_script` have no effect on browser and multi-step checks, and neither do `script` on API checks and `ssl_check_domain` on multi-step checks: changing one only changes the state, and setting one gives a warning at plan time. Remove them, or move the check to its per-type resource, which doesn't have them. A browser or multi-step check with an empty `script` is an error, which the plan reports when the script is known there; with `ignore_changes = [script]`, the stored script counts.
 
-Every update of a browser or multi-step `checkly_check` clears the script path and dependencies that the Checkly CLI sets for multi-file scripts, because `checkly_check` has no attributes for them. v1.x left them alone. To keep them, move the check to `checkly_browser_check` or `checkly_multistep_check` and set `script_path` and the `dependency` blocks there, since those resources also clear values that are absent from the configuration. Or keep managing the check with the Checkly CLI.
+Every update of a browser or multi-step `checkly_check` clears the script path and dependencies that the Checkly CLI sets for multi-file scripts, because `checkly_check` has no attributes for them. v1.x left them alone. To keep them, move the check to `checkly_browser_check` or `checkly_multistep_check` and set `script_path` and `dependencies` there, since those resources also clear values that are absent from the configuration. Or keep managing the check with the Checkly CLI.
 
 To switch a check, heartbeat, TCP or maintenance window resource to its new type without recreating it, change the resource type and add a `moved` block. This works in the same plan as the provider upgrade:
 
@@ -342,12 +385,13 @@ resource "checkly_maintenance_window" "example" {
   - `checkly_check_group`: `setup_snippet_id`, `teardown_snippet_id`, `local_setup_script` and `local_teardown_script`.
   - `checkly_url_monitor`, `checkly_tcp_monitor`, `checkly_tcp_check`, `checkly_dns_monitor`, `checkly_icmp_monitor`, `checkly_grpc_monitor`, `checkly_ssl_monitor` and `checkly_traceroute_monitor`: `tags` and `group_order`.
   - `checkly_heartbeat_monitor` and `checkly_heartbeat`: `tags`.
-  - `checkly_tcp_monitor`, `checkly_tcp_check` and `checkly_traceroute_monitor`: also `request.assertion`.
-  - `checkly_ssl_monitor`: also `request.assertion`, `request.server_name` and `request.client_certificate.client_certificate_id`.
+  - `checkly_tcp_monitor`, `checkly_tcp_check` and `checkly_traceroute_monitor`: also `request.assertions`.
+  - `checkly_ssl_monitor`: also `request.assertions`, `request.server_name` and `request.client_certificate.client_certificate_id`.
   - `checkly_grpc_monitor`: also `request.proto_content` with `service_definition = "REFLECTION"`.
   - Every resource with `alert_settings`: `reminders.amount` and `parallel_run_failure_threshold.enabled`, when the configured object leaves them out.
 - `checkly_check`, `checkly_playwright_check_suite`, and checks moved from `checkly_check` to the per-type resources: an `intent` or `ai_auto_repair_enabled` value set outside Terraform and absent from your configuration is removed by the first apply, which the plan shows. To keep such a value, add it to your configuration, or add the attribute to `ignore_changes` to leave it to the web app.
 - `checkly_dns_monitor`, `checkly_icmp_monitor` and `checkly_traceroute_monitor`: `private_locations` set outside Terraform and absent from your configuration are removed by the first apply, which the plan shows. The same goes for `proxy_url` on `checkly_private_location`. To keep such a value, add it to your configuration, or add the attribute to `ignore_changes` to leave it to the web app.
 - A check or monitor added to a group in the web app, with no `group_id` in its configuration, leaves the group on the first apply, as it did with v1.x.
 - `checkly_maintenance_window` and `checkly_maintenance_windows`: links to v3 status page components set in the web app and absent from your configuration are removed by the first apply, which the plan shows. If the v3 page stays in `status_page_ids` without an entry in `component_configs`, the apply is rejected instead. To keep the links, add them to `component_configs`, or leave them to the web app with `ignore_changes`: `status_page_visibility.component_configs` when your configuration sets `status_page_visibility`, or `status_page_visibility` as a whole otherwise, which leaves all its settings to the web app. An account without the status page maintenance windows entitlement can't remove the links, so every update of such a window is rejected until they are in the configuration or ignored.
+- `checkly_check` and `checkly_check_group` with an `environment_variables` map of several entries: v1.x sent the map's variables in no particular order. If that order differs from the order of the list in your configuration, the first plan shows the variables reordered, and applying it stores them in the configured order.
 - `checkly_client_certificate`: v1.x stored `path` without a trailing slash. If your configuration has one, for example `path = "/partner/api/"`, the first plan shows an in-place update of `path` that does not change the certificate.

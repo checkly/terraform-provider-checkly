@@ -14,7 +14,7 @@ resource "checkly_api_check" "api-check-1" {
     method = "GET"
     url    = "https://api.checklyhq.com/public-stats"
 
-    assertion = [{
+    assertions = [{
       comparison = "EQUALS"
       property   = ""
       source     = "STATUS_CODE"
@@ -68,7 +68,7 @@ resource "checkly_api_check" "api-check-2" {
       # another alternative is using git encrypted secret files
     }
 
-    assertion = [
+    assertions = [
       {
         comparison = "EQUALS"
         property   = ""
@@ -130,7 +130,7 @@ resource "checkly_api_check" "api-check-3" {
     body      = "{\"message\":\"hello checkly\",\"messageId\":1}"
     body_type = "JSON"
 
-    assertion = [
+    assertions = [
       {
         comparison = "EQUALS"
         property   = ""
@@ -183,7 +183,7 @@ resource "checkly_api_check" "api-check-4" {
       password = ""
     }
 
-    assertion = [{
+    assertions = [{
       source     = "STATUS_CODE"
       property   = ""
       comparison = "EQUALS"
@@ -246,7 +246,7 @@ resource "checkly_api_check" "check-with-alert-channels" {
     method = "GET"
     url    = "https://api.checklyhq.com/public-stats"
 
-    assertion = [{
+    assertions = [{
       comparison = "EQUALS"
       property   = ""
       source     = "STATUS_CODE"
@@ -254,13 +254,14 @@ resource "checkly_api_check" "check-with-alert-channels" {
     }]
   }
 
-  alert_channel_subscription {
-    channel_id = checkly_alert_channel.email_ac.id
-    activated  = true
-  }
-
-  alert_channel_subscription {
-    channel_id = checkly_alert_channel.sms_ac.id
-    activated  = true
-  }
+  alert_channel_subscriptions = [
+    {
+      channel_id = checkly_alert_channel.email_ac.id
+      activated  = true
+    },
+    {
+      channel_id = checkly_alert_channel.sms_ac.id
+      activated  = true
+    },
+  ]
 }

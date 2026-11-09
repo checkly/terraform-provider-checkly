@@ -282,13 +282,15 @@ func TestCheckToModelDropsEnvironmentVariablesOfAPIChecks(t *testing.T) {
 
 	var diags diag.Diagnostics
 	model := emptyCheckModel()
-	model.EnvironmentVariable = environmentVariablesToList(ctx, []checkly.EnvironmentVariable{{Key: "A", Value: "1"}}, types.ListNull(types.ObjectType{AttrTypes: environmentVariableAttrTypes}), &diags)
+	model.EnvironmentVariables = environmentVariablesToList(ctx, []checkly.EnvironmentVariable{{Key: "A", Value: "1"}}, types.ListNull(types.ObjectType{AttrTypes: environmentVariableAttrTypes}), &diags)
 	checkToModel(ctx, &checkly.APICheck{ID: "abc"}, &model, &diags)
 	if diags.HasError() {
 		t.Fatal(diags)
 	}
-	if len(model.EnvironmentVariable.Elements()) != 0 {
-		t.Errorf("environment_variable = %s, want none", model.EnvironmentVariable)
+	// The prior value is a known list, so the result is an empty list, not
+	// null.
+	if model.EnvironmentVariables.IsNull() || len(model.EnvironmentVariables.Elements()) != 0 {
+		t.Errorf("environment_variables = %s, want an empty list", model.EnvironmentVariables)
 	}
 }
 

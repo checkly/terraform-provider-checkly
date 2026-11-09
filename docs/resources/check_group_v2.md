@@ -83,7 +83,7 @@ resource "checkly_check_group_v2" "production-api" {
     }
 
     # Subscribe alert channels to this group.
-    alert_channel_subscription = [
+    alert_channel_subscriptions = [
       {
         channel_id = 1234
         activated  = true
@@ -92,18 +92,19 @@ resource "checkly_check_group_v2" "production-api" {
   }
 
   # Environment variables available to all checks in the group.
-  environment_variable {
-    key    = "BASE_URL"
-    value  = "https://api.example.com"
-    locked = false
-  }
-
-  environment_variable {
-    key    = "API_TOKEN"
-    value  = "super-secret-token"
-    locked = true
-    secret = true
-  }
+  environment_variables = [
+    {
+      key    = "BASE_URL"
+      value  = "https://api.example.com"
+      locked = false
+    },
+    {
+      key    = "API_TOKEN"
+      value  = "super-secret-token"
+      locked = true
+      secret = true
+    },
+  ]
 
   # Default runtime for checks that don't specify their own.
   default_runtime = {
@@ -123,7 +124,7 @@ resource "checkly_check_group_v2" "production-api" {
       "version" = "v2"
     }
 
-    assertion = [
+    assertions = [
       {
         source     = "STATUS_CODE"
         comparison = "LESS_THAN"
@@ -246,7 +247,7 @@ resource "checkly_check_group_v2" "with-alert-channels" {
       }
     }
 
-    alert_channel_subscription = [
+    alert_channel_subscriptions = [
       {
         channel_id = checkly_alert_channel.email.id
         activated  = true
@@ -305,7 +306,7 @@ resource "checkly_check_group_v2" "single-retry" {
 - `enforce_locations` (Attributes) Enforces public and private locations for the whole group. Overrides check configuration. (see [below for nested schema](#nestedatt--enforce_locations))
 - `enforce_retry_strategy` (Attributes) Enforces a retry strategy for the whole group. Overrides check configuration. (see [below for nested schema](#nestedatt--enforce_retry_strategy))
 - `enforce_scheduling_strategy` (Attributes) Enforces a scheduling strategy for the whole group. Overrides check configuration. (see [below for nested schema](#nestedatt--enforce_scheduling_strategy))
-- `environment_variable` (Block List) Insert environment variables into the runtime environment of checks in the group. Only relevant for check types that support environment variables. Use global environment variables whenever possible. At most 200 variables. (see [below for nested schema](#nestedblock--environment_variable))
+- `environment_variables` (Attributes List) Insert environment variables into the runtime environment of checks in the group. Only relevant for check types that support environment variables. Use global environment variables whenever possible. At most 200 variables. (see [below for nested schema](#nestedatt--environment_variables))
 - `muted` (Boolean) Determines if any notifications will be sent out when a check in this group fails and/or recovers. Muting the group will deactivate all notifications for all checks in the group, regardless of their muted state. (Default `false`).
 - `setup_script` (Attributes) A script to run in the setup phase of an API check. Runs in addition to the check's own setup script. (see [below for nested schema](#nestedatt--setup_script))
 - `tags` (Set of String) Additional tags to append to all checks in the group.
@@ -324,13 +325,13 @@ Required:
 
 Optional:
 
-- `assertion` (Attributes Set) Default assertions for API checks in this group. (see [below for nested schema](#nestedatt--api_check_defaults--assertion))
+- `assertions` (Attributes Set) Default assertions for API checks in this group. (see [below for nested schema](#nestedatt--api_check_defaults--assertions))
 - `basic_auth` (Attributes) Default basic auth credentials for API checks in this group. (see [below for nested schema](#nestedatt--api_check_defaults--basic_auth))
 - `headers` (Map of String) Default headers for API checks in this group.
 - `query_parameters` (Map of String) Default query parameters for API checks in this group.
 
-<a id="nestedatt--api_check_defaults--assertion"></a>
-### Nested Schema for `api_check_defaults.assertion`
+<a id="nestedatt--api_check_defaults--assertions"></a>
+### Nested Schema for `api_check_defaults.assertions`
 
 Required:
 
@@ -370,12 +371,12 @@ Required:
 
 Optional:
 
-- `alert_channel_subscription` (Attributes Set) An array of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your group, we won't be able to alert you even if a check in the group starts failing. (see [below for nested schema](#nestedatt--enforce_alert_settings--alert_channel_subscription))
+- `alert_channel_subscriptions` (Attributes Set) A set of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your group, we won't be able to alert you even if a check in the group starts failing. (see [below for nested schema](#nestedatt--enforce_alert_settings--alert_channel_subscriptions))
 - `alert_settings` (Attributes) Determines the alert escalation policy for the check. (see [below for nested schema](#nestedatt--enforce_alert_settings--alert_settings))
 - `use_global_alert_settings` (Boolean) Whether to use account level alert settings instead of the group's alert settings.Default (`false`).
 
-<a id="nestedatt--enforce_alert_settings--alert_channel_subscription"></a>
-### Nested Schema for `enforce_alert_settings.alert_channel_subscription`
+<a id="nestedatt--enforce_alert_settings--alert_channel_subscriptions"></a>
+### Nested Schema for `enforce_alert_settings.alert_channel_subscriptions`
 
 Required:
 
@@ -485,8 +486,8 @@ Required:
 - `run_parallel` (Boolean) Determines if the checks in the group should run in all selected locations in parallel or round-robin.
 
 
-<a id="nestedblock--environment_variable"></a>
-### Nested Schema for `environment_variable`
+<a id="nestedatt--environment_variables"></a>
+### Nested Schema for `environment_variables`
 
 Required:
 

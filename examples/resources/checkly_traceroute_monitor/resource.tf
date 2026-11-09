@@ -51,7 +51,7 @@ resource "checkly_traceroute_monitor" "example-traceroute-monitor-2" {
     ptr_lookup       = true
     timeout          = 10
 
-    assertion = [
+    assertions = [
       {
         source     = "PACKET_LOSS"
         property   = ""
