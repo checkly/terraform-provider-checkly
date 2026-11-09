@@ -218,7 +218,7 @@ resource "checkly_check" "example_check" {
 - `retry_strategy` (Attributes) A strategy for retrying failed check/monitor runs. (see [below for nested schema](#nestedatt--retry_strategy))
 - `run_parallel` (Boolean) Determines if the check should run in all selected locations in parallel or round-robin.
 - `runtime_id` (String) The id of the runtime to use for this check.
-- `script` (String) A valid piece of Node.js JavaScript code describing a browser interaction with the Puppeteer/Playwright framework or a reference to an external JavaScript file. Required when `type` is `BROWSER` or `MULTI_STEP`; has no effect when it is `API`.
+- `script` (String) A valid piece of Node.js JavaScript code describing a browser interaction with the Puppeteer/Playwright framework or a reference to an external JavaScript file. Required when `type` is `BROWSER` or `MULTI_STEP`; has no effect when it is `API`. Updating a browser or multi-step check clears the script path and dependencies that the Checkly CLI sets for multi-file scripts.
 - `setup_snippet_id` (Number) An ID reference to a snippet to use in the setup phase of an API check.
 - `should_fail` (Boolean) Allows to invert the behaviour of when a check is considered to fail. Allows for validating error status like 404.
 - `ssl_check_domain` (String) A valid fully qualified domain name (FQDN) to check its SSL certificate. Only relevant when `type` is `BROWSER`.

@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -21,15 +20,9 @@ import (
 // Calls to any other method panic through the nil embedded Client.
 type checkWriteClient struct {
 	checkly.Client
-	stored         checkly.Check
-	err            error
 	updatedAPI     *checkly.APICheck
 	updatedBrowser *checkly.BrowserCheck
 	updatedMulti   *checkly.MultiStepCheck
-}
-
-func (c *checkWriteClient) GetCheck(ctx context.Context, id string) (checkly.Check, error) {
-	return c.stored, c.err
 }
 
 func (c *checkWriteClient) UpdateAPICheck(ctx context.Context, id string, check checkly.APICheck) (*checkly.APICheck, error) {
@@ -76,54 +69,25 @@ func updateCheck(t *testing.T, client *checkWriteClient, attributes map[string]a
 	return resp.Diagnostics
 }
 
-func TestCheckUpdateKeepsUnmanagedFields(t *testing.T) {
-	scriptPath := "tests/main.spec.js"
-	dependencies := []checkly.ScriptDependency{{Path: "tests/helper.js", Content: "helper"}}
-	storedIntent := &checkly.CheckIntent{Goal: "stored"}
-	storedAIAutoRepair := true
-
+func TestCheckUpdateSendsThePlan(t *testing.T) {
 	cases := map[string]struct {
 		plannedType string
-		stored      checkly.Check
-		// Whether the update carries the script path and dependencies, which
-		// an API check doesn't have.
-		wantScript bool
-		update     func(c *checkWriteClient) (*string, []checkly.ScriptDependency, *checkly.CheckIntent, *bool)
+		update      func(c *checkWriteClient) (*string, []checkly.ScriptDependency, *checkly.CheckIntent, *bool)
 	}{
 		"api": {
 			plannedType: "API",
-			stored:      &checkly.APICheck{Intent: storedIntent, AIAutoRepairEnabled: &storedAIAutoRepair},
 			update: func(c *checkWriteClient) (*string, []checkly.ScriptDependency, *checkly.CheckIntent, *bool) {
 				return nil, nil, c.updatedAPI.Intent, c.updatedAPI.AIAutoRepairEnabled
 			},
 		},
 		"browser": {
 			plannedType: "BROWSER",
-			stored:      &checkly.BrowserCheck{ScriptPath: &scriptPath, Dependencies: dependencies, Intent: storedIntent, AIAutoRepairEnabled: &storedAIAutoRepair},
-			wantScript:  true,
 			update: func(c *checkWriteClient) (*string, []checkly.ScriptDependency, *checkly.CheckIntent, *bool) {
 				return c.updatedBrowser.ScriptPath, c.updatedBrowser.Dependencies, c.updatedBrowser.Intent, c.updatedBrowser.AIAutoRepairEnabled
 			},
 		},
 		"multi-step": {
 			plannedType: "MULTI_STEP",
-			stored:      &checkly.MultiStepCheck{ScriptPath: &scriptPath, Dependencies: dependencies, Intent: storedIntent, AIAutoRepairEnabled: &storedAIAutoRepair},
-			wantScript:  true,
-			update: func(c *checkWriteClient) (*string, []checkly.ScriptDependency, *checkly.CheckIntent, *bool) {
-				return c.updatedMulti.ScriptPath, c.updatedMulti.Dependencies, c.updatedMulti.Intent, c.updatedMulti.AIAutoRepairEnabled
-			},
-		},
-		"an API check changing type dispatches on the planned type": {
-			plannedType: "BROWSER",
-			stored:      &checkly.APICheck{Intent: storedIntent, AIAutoRepairEnabled: &storedAIAutoRepair},
-			update: func(c *checkWriteClient) (*string, []checkly.ScriptDependency, *checkly.CheckIntent, *bool) {
-				return c.updatedBrowser.ScriptPath, c.updatedBrowser.Dependencies, c.updatedBrowser.Intent, c.updatedBrowser.AIAutoRepairEnabled
-			},
-		},
-		"a browser check changing type dispatches on the planned type": {
-			plannedType: "MULTI_STEP",
-			stored:      &checkly.BrowserCheck{ScriptPath: &scriptPath, Dependencies: dependencies, Intent: storedIntent, AIAutoRepairEnabled: &storedAIAutoRepair},
-			wantScript:  true,
 			update: func(c *checkWriteClient) (*string, []checkly.ScriptDependency, *checkly.CheckIntent, *bool) {
 				return c.updatedMulti.ScriptPath, c.updatedMulti.Dependencies, c.updatedMulti.Intent, c.updatedMulti.AIAutoRepairEnabled
 			},
@@ -138,7 +102,7 @@ func TestCheckUpdateKeepsUnmanagedFields(t *testing.T) {
 
 	for name, c := range cases {
 		// The intent and the automatic repair override come from the plan,
-		// whether it sets them or leaves them out, never from the stored check.
+		// whether it sets them or leaves them out.
 		for _, planned := range []bool{true, false} {
 			t.Run(fmt.Sprintf("%s/planned=%v", name, planned), func(t *testing.T) {
 				attributes := map[string]any{"id": "abc", "type": c.plannedType, "script": "code"}
@@ -146,7 +110,7 @@ func TestCheckUpdateKeepsUnmanagedFields(t *testing.T) {
 					attributes[checkIntentAttributeName] = plannedIntent
 					attributes[aiAutoRepairEnabledAttributeName] = types.BoolValue(false)
 				}
-				client := &checkWriteClient{stored: c.stored}
+				client := &checkWriteClient{}
 				diags := updateCheck(t, client, attributes)
 				if diags.HasError() {
 					t.Fatal(diags)
@@ -163,42 +127,13 @@ func TestCheckUpdateKeepsUnmanagedFields(t *testing.T) {
 				} else if gotIntent != nil || gotAIAutoRepair != nil {
 					t.Errorf("intent = %+v, aiAutoRepairEnabled = %v, want both cleared", gotIntent, gotAIAutoRepair)
 				}
-				if c.wantScript && (gotPath != &scriptPath || len(gotDependencies) != 1) {
-					t.Errorf("script path = %v, dependencies = %+v, want the stored ones", gotPath, gotDependencies)
+				// checkly_check has no attributes for the script path and
+				// dependencies, so an update clears them.
+				if gotPath != nil || len(gotDependencies) != 0 {
+					t.Errorf("script path = %v, dependencies = %+v, want both cleared", gotPath, gotDependencies)
 				}
 			})
 		}
-	}
-}
-
-func TestCheckUpdateSendsNoUpdateWhenTheReadFails(t *testing.T) {
-	client := &checkWriteClient{err: errors.New("502 Bad Gateway")}
-	diags := updateCheck(t, client, map[string]any{"id": "abc", "type": "API"})
-
-	if !diags.HasError() {
-		t.Fatal("expected an error diagnostic")
-	}
-	if got := diags.Errors()[0]; got.Summary() != "Unable to Update Check" || !strings.Contains(got.Detail(), "502 Bad Gateway") {
-		t.Errorf("diagnostic = %q: %q", got.Summary(), got.Detail())
-	}
-	if client.updatedAPI != nil {
-		t.Errorf("sent an update: %+v", client.updatedAPI)
-	}
-}
-
-func TestCheckUpdateRejectsOtherStoredTypes(t *testing.T) {
-	client := &checkWriteClient{stored: &checkly.TCPMonitor{}}
-	diags := updateCheck(t, client, map[string]any{"id": "abc", "type": "API"})
-
-	if !diags.HasError() {
-		t.Fatal("expected an error diagnostic")
-	}
-	detail := diags.Errors()[0].Detail()
-	if !strings.Contains(detail, `"TCP"`) || !strings.Contains(detail, "checkly_tcp_monitor") {
-		t.Errorf("detail = %q, want the stored type and its resource type", detail)
-	}
-	if client.updatedAPI != nil {
-		t.Errorf("sent an update: %+v", client.updatedAPI)
 	}
 }
 

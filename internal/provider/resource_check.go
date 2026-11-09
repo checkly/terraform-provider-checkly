@@ -159,7 +159,7 @@ func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 				Optional:    true,
 				Computed:    true,
 				Default:     stringdefault.StaticString(""),
-				Description: "A valid piece of Node.js JavaScript code describing a browser interaction with the Puppeteer/Playwright framework or a reference to an external JavaScript file. Required when `type` is `BROWSER` or `MULTI_STEP`; has no effect when it is `API`.",
+				Description: "A valid piece of Node.js JavaScript code describing a browser interaction with the Puppeteer/Playwright framework or a reference to an external JavaScript file. Required when `type` is `BROWSER` or `MULTI_STEP`; has no effect when it is `API`. Updating a browser or multi-step check clears the script path and dependencies that the Checkly CLI sets for multi-file scripts.",
 			},
 			"degraded_response_time": schema.Int64Attribute{
 				Optional: true,
@@ -495,27 +495,10 @@ func (r *CheckResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	stored, err := readForUpdate(ctx, r.client.GetCheck, plan.ID.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Update Check",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
-		return
-	}
-
-	common, err := commonCheckFieldsFrom(stored)
-	if err != nil {
-		resp.Diagnostics.AddError("Unable to Update Check", err.Error())
-		return
-	}
-
-	// The write has its own deadline, so that a read that had to wait for the
-	// rate limit doesn't use it up.
 	apiCtx, cancel := contextWithAPITimeout(ctx)
 	defer cancel()
 
-	result, err := r.updateCheck(apiCtx, &plan, common, &resp.Diagnostics)
+	result, err := r.updateCheck(apiCtx, &plan, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -705,12 +688,11 @@ func (r *CheckResource) createCheck(ctx context.Context, model *CheckResourceMod
 }
 
 // updateCheck updates the check through the endpoint of its planned type,
-// which also changes the type of a stored check of another type. The script
-// path and dependencies of browser and multi-step checks, which checkly_check
-// has no attributes for and the per-type updates would clear when sent empty,
-// are copied from stored. With an error in diags, it returns nil values
-// without sending a request.
-func (r *CheckResource) updateCheck(ctx context.Context, model *CheckResourceModel, stored commonCheckFields, diags *diag.Diagnostics) (checkly.Check, error) {
+// which also changes the type of a stored check of another type. The update
+// clears the script path and dependencies of browser and multi-step checks,
+// which checkly_check has no attributes for. With an error in diags, it
+// returns nil values without sending a request.
+func (r *CheckResource) updateCheck(ctx context.Context, model *CheckResourceModel, diags *diag.Diagnostics) (checkly.Check, error) {
 	id := model.ID.ValueString()
 
 	switch checkType := checkly.CheckType(model.Type.ValueString()); checkType {
@@ -727,8 +709,6 @@ func (r *CheckResource) updateCheck(ctx context.Context, model *CheckResourceMod
 		if diags.HasError() {
 			return nil, nil
 		}
-		check.ScriptPath = stored.ScriptPath
-		check.Dependencies = stored.Dependencies
 		return r.client.UpdateBrowserCheck(ctx, id, check)
 	case checkly.CheckTypeMultiStep:
 		target := multistepCheckModelFromCheckModel(model)
@@ -736,8 +716,6 @@ func (r *CheckResource) updateCheck(ctx context.Context, model *CheckResourceMod
 		if diags.HasError() {
 			return nil, nil
 		}
-		check.ScriptPath = stored.ScriptPath
-		check.Dependencies = stored.Dependencies
 		return r.client.UpdateMultiStepCheck(ctx, id, check)
 	default:
 		return nil, plannedCheckTypeError(checkType)
@@ -784,8 +762,7 @@ func unmanagedCheckTypeError(check checkly.Check) error {
 }
 
 // commonCheckFields holds the fields that the API, browser and multi-step
-// check types share, so that checkly_check reads them once. ScriptPath and
-// Dependencies stay empty for API checks, which don't have them.
+// check types share, so that checkly_check reads them once.
 type commonCheckFields struct {
 	ID                        string
 	Name                      string
@@ -806,8 +783,6 @@ type commonCheckFields struct {
 	RuntimeID                 *string
 	RetryStrategy             *checkly.RetryStrategy
 	TriggerIncident           *checkly.IncidentTrigger
-	ScriptPath                *string
-	Dependencies              []checkly.ScriptDependency
 	Intent                    *checkly.CheckIntent
 	AIAutoRepairEnabled       *bool
 }
@@ -861,8 +836,6 @@ func commonCheckFieldsFrom(check checkly.Check) (commonCheckFields, error) {
 			RuntimeID:                 c.RuntimeID,
 			RetryStrategy:             c.RetryStrategy,
 			TriggerIncident:           c.TriggerIncident,
-			ScriptPath:                c.ScriptPath,
-			Dependencies:              c.Dependencies,
 			Intent:                    c.Intent,
 			AIAutoRepairEnabled:       c.AIAutoRepairEnabled,
 		}, nil
@@ -887,8 +860,6 @@ func commonCheckFieldsFrom(check checkly.Check) (commonCheckFields, error) {
 			RuntimeID:                 c.RuntimeID,
 			RetryStrategy:             c.RetryStrategy,
 			TriggerIncident:           c.TriggerIncident,
-			ScriptPath:                c.ScriptPath,
-			Dependencies:              c.Dependencies,
 			Intent:                    c.Intent,
 			AIAutoRepairEnabled:       c.AIAutoRepairEnabled,
 		}, nil

@@ -2475,9 +2475,10 @@ func TestAccCheckUpdateClearsRemovedValues(t *testing.T) {
 	})
 }
 
-// TestAccCheckUpdateKeepsUnmanagedValues sets values that checkly_check has no
-// attributes for outside Terraform, which an update has to keep.
-func TestAccCheckUpdateKeepsUnmanagedValues(t *testing.T) {
+// TestAccCheckUpdateClearsScriptPath sets the script path and dependencies of
+// a browser check outside Terraform. checkly_check has no attributes for them,
+// so an update clears them.
+func TestAccCheckUpdateClearsScriptPath(t *testing.T) {
 	config := func(name string) string {
 		return fmt.Sprintf(`
 			resource "checkly_check" "test" {
@@ -2496,7 +2497,7 @@ func TestAccCheckUpdateKeepsUnmanagedValues(t *testing.T) {
 	var id string
 	accTestCase(t, []resource.TestStep{
 		{
-			Config: config("tf-acc-keep-unmanaged"),
+			Config: config("tf-acc-clear-script-path"),
 			Check: func(s *terraform.State) error {
 				id = s.RootModule().Resources[r].Primary.ID
 				return nil
@@ -2510,24 +2511,24 @@ func TestAccCheckUpdateKeepsUnmanagedValues(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				scriptPath := "tests/keep.spec.js"
+				scriptPath := "tests/main.spec.js"
 				check.ScriptPath = &scriptPath
 				check.Dependencies = []checkly.ScriptDependency{{Path: "tests/helper.js", Content: "module.exports = {}"}}
 				if _, err := client.UpdateBrowserCheck(ctx, id, *check); err != nil {
 					t.Fatal(err)
 				}
 			},
-			Config: config("tf-acc-keep-unmanaged-renamed"),
+			Config: config("tf-acc-clear-script-path-renamed"),
 			Check: func(s *terraform.State) error {
 				check, err := testAccClient().GetBrowserCheck(context.Background(), id)
 				if err != nil {
 					return err
 				}
-				if check.ScriptPath == nil || *check.ScriptPath != "tests/keep.spec.js" {
-					return fmt.Errorf("scriptPath = %v, want tests/keep.spec.js", check.ScriptPath)
+				if check.ScriptPath != nil {
+					return fmt.Errorf("scriptPath = %q, want it cleared", *check.ScriptPath)
 				}
-				if len(check.Dependencies) != 1 || check.Dependencies[0].Path != "tests/helper.js" {
-					return fmt.Errorf("dependencies = %+v, want tests/helper.js", check.Dependencies)
+				if len(check.Dependencies) != 0 {
+					return fmt.Errorf("dependencies = %+v, want them cleared", check.Dependencies)
 				}
 				return nil
 			},
