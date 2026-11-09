@@ -91,7 +91,7 @@ resource "checkly_maintenance_windows" "maintenance-2" {
 - `repeat_unit` (String) The repeat cadence for the maintenance window. Possible values `DAY`, `WEEK` and `MONTH`.
 - `silence_alerts_tags` (Set of String) The tags of the checks and groups whose alerts are silenced during the maintenance window. Ignored when `silence_all_alerts` is `true`.
 - `silence_all_alerts` (Boolean) Silence alerts for every check in the account during the maintenance window, regardless of `silence_alerts_tags`. Defaults to `false`.
-- `status_page_visibility` (Attributes) Whether and how the maintenance window appears on status pages. Omitting the attribute hides the window and unlinks it from all status pages and services. Only service-based status page links are supported; links to status page components can't be managed here. An account without the status page maintenance windows entitlement can only change `enabled` to `false`: keep the rest of the attribute as it is, because removing it also changes the other settings, which is rejected. (see [below for nested schema](#nestedatt--status_page_visibility))
+- `status_page_visibility` (Attributes) Whether and how the maintenance window appears on status pages. Omitting the attribute hides the window and unlinks it from all status pages and services. An account without the status page maintenance windows entitlement can only change `enabled` to `false`: keep the rest of the attribute as it is, because removing it also changes the other settings, which is rejected. For the same reason, such an account must copy the window's existing component links into `component_configs`, since removing them is a change it can't make. (see [below for nested schema](#nestedatt--status_page_visibility))
 - `tags` (Set of String) The tags of the checks and groups that are paused during the maintenance window. Ignored when `pause_all_checks` is `true`.
 - `timezone` (String) The named IANA time zone used to schedule recurring occurrences, e.g. `America/New_York`. Occurrences keep the same local time across daylight-saving changes. `starts_at` and `ends_at` remain absolute instants; the time zone does not reinterpret them. Use the canonical IANA name (e.g. `America/New_York`, not `US/Eastern`): the API stores canonical names, so an alias shows as a change on every plan. UTC offsets such as `+05:00` or `Etc/GMT+5` are not accepted. Defaults to `UTC`. The time zone cannot be changed while a maintenance is active.
 
@@ -104,18 +104,42 @@ resource "checkly_maintenance_windows" "maintenance-2" {
 
 Optional:
 
-- `affect_all_services` (Boolean) Mark every service on the linked status pages as affected. Can't be combined with `service_ids`. (Default `false`).
+- `affect_all_services` (Boolean) Mark every service on the linked v2 status pages (`checkly_status_page`) as affected. Can't be combined with `service_ids`. v3 status pages use `component_configs` instead. (Default `false`).
 - `auto_end` (Boolean) Complete the maintenance automatically at the scheduled end time. (Default `true`).
 - `auto_start` (Boolean) Start the maintenance automatically at the scheduled time. (Default `true`).
+- `component_configs` (Attributes Set) The affected components of each linked v3 status page (`checkly_status_page_v3`), at most one entry per page. Omitting the attribute removes the window's component links. (see [below for nested schema](#nestedatt--status_page_visibility--component_configs))
 - `enabled` (Boolean) Show the maintenance window on the linked status pages. All other settings in this attribute only take effect when this is `true`. (Default `false`).
 - `notify_on_end` (Boolean) Email status page subscribers when the maintenance ends. (Default `false`).
 - `notify_on_start` (Boolean) Email status page subscribers when the maintenance starts. (Default `false`).
 - `reminder_minutes_before` (Set of Number) Up to three reminders, in minutes before the maintenance starts (60 to 10080), sent to status page subscribers.
-- `service_ids` (Set of String) The IDs of the affected status page services (`checkly_status_page_service`). Each service must be on one of the linked status pages.
+- `service_ids` (Set of String) The IDs of the affected status page services (`checkly_status_page_service`). Each service must be on one of the linked v2 status pages.
 - `severity` (String) The severity shown on the status page. Possible values are `MINOR`, `MEDIUM`, `MAJOR` and `CRITICAL`.
 - `show_affected_services` (Boolean) Show which services the maintenance affects. When `false`, downtime during the maintenance counts against the services' uptime. (Default `true`).
-- `status_page_ids` (Set of String) The IDs of the status pages (`checkly_status_page`) to show the maintenance window on. Requires `service_ids` or `affect_all_services`.
+- `status_page_ids` (Set of String) The IDs of the status pages to show the maintenance window on. A v2 status page (`checkly_status_page`) requires `service_ids` or `affect_all_services`, and a v3 status page (`checkly_status_page_v3`) requires an entry in `component_configs`.
 - `suppress_auto_incidents` (Boolean) Suppress automatically created incidents for the linked services during the maintenance. (Default `false`).
+
+<a id="nestedatt--status_page_visibility--component_configs"></a>
+### Nested Schema for `status_page_visibility.component_configs`
+
+Required:
+
+- `status_page_id` (String) The ID of a v3 status page (`checkly_status_page_v3`). The page must also be listed in `status_page_ids`.
+
+Optional:
+
+- `affect_all_components` (Boolean) Mark every component of the status page as affected, including components added later. Can't be combined with `components`. (Default `false`).
+- `components` (Attributes Set) The affected components of the status page, each with the status it shows while the maintenance is in progress. Required unless `affect_all_components` is `true`, and can't be an empty set: leave it out instead. (see [below for nested schema](#nestedatt--status_page_visibility--component_configs--components))
+
+<a id="nestedatt--status_page_visibility--component_configs--components"></a>
+### Nested Schema for `status_page_visibility.component_configs.components`
+
+Required:
+
+- `component_id` (String) The ID of a component (`checkly_status_page_v3_component`) on the status page.
+
+Optional:
+
+- `status` (String) The status the component shows while the maintenance is in progress. Possible values are `OPERATIONAL`, `UNDER_MAINTENANCE`, `DEGRADED_PERFORMANCE`, `PARTIAL_OUTAGE` and `MAJOR_OUTAGE`. (Default `UNDER_MAINTENANCE`).
 
 ## Import
 

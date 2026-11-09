@@ -300,7 +300,28 @@ Both resource types manage the same check groups, so you can switch a group over
 
 `checkly_status_page` and `checkly_status_page_service` are deprecated in favor of `checkly_status_page_v3`, together with `checkly_status_page_v3_component` and `checkly_status_page_v3_automation_rule`. v3 status pages are separate objects, so an existing page cannot be converted: create a v3 page alongside it, then remove the old one.
 
-Maintenance windows can be shown on v3 pages too, but the provider can't link one to a v3 page yet. `status_page_visibility` on `checkly_maintenance_window` links a page through its services, with `status_page_ids` and either `service_ids` or `affect_all_services`, while a v3 page needs the components the window affects, which the attribute can't set. Keep the v2 page if a maintenance window managed by Terraform appears on it.
+Maintenance windows can be shown on v3 pages too. `status_page_visibility` on `checkly_maintenance_window` links a v2 page through its services, with `status_page_ids` and either `service_ids` or `affect_all_services`. A v3 page is linked through its components instead: list it in `status_page_ids` and add an entry for it to `component_configs`, with either the affected `components` and the status each one shows, or `affect_all_components = true`:
+
+```terraform
+resource "checkly_maintenance_window" "example" {
+  name      = "Database upgrade"
+  starts_at = "2028-09-24T00:00:00.000Z"
+  ends_at   = "2028-09-24T02:00:00.000Z"
+
+  status_page_visibility = {
+    enabled         = true
+    status_page_ids = [checkly_status_page_v3.example.id]
+
+    component_configs = [{
+      status_page_id = checkly_status_page_v3.example.id
+      components = [{
+        component_id = checkly_status_page_v3_component.database.id
+        status       = "UNDER_MAINTENANCE"
+      }]
+    }]
+  }
+}
+```
 
 ## Expected one-time changes
 
@@ -319,4 +340,5 @@ Maintenance windows can be shown on v3 pages too, but the provider can't link on
 - `checkly_playwright_check_suite`, and checks moved from `checkly_check` to the per-type resources: an `intent` or `ai_auto_repair_enabled` value set outside Terraform and absent from your configuration is removed by the first apply, which the plan shows. To keep such a value, add it to your configuration, or add the attribute to `ignore_changes` to leave it to the web app.
 - `checkly_dns_monitor`, `checkly_icmp_monitor` and `checkly_traceroute_monitor`: `private_locations` set outside Terraform and absent from your configuration are removed by the first apply, which the plan shows. The same goes for `proxy_url` on `checkly_private_location`. To keep such a value, add it to your configuration, or add the attribute to `ignore_changes` to leave it to the web app.
 - A check or monitor added to a group in the web app, with no `group_id` in its configuration, leaves the group on the first apply, as it did with v1.x.
+- `checkly_maintenance_window` and `checkly_maintenance_windows`: links to v3 status page components set in the web app and absent from your configuration are removed by the first apply, which the plan shows. If the v3 page stays in `status_page_ids` without an entry in `component_configs`, the apply is rejected instead. To keep the links, add them to `component_configs`, or leave them to the web app with `ignore_changes`: `status_page_visibility.component_configs` when your configuration sets `status_page_visibility` and you use Terraform 1.2.7 or later, or `status_page_visibility` as a whole otherwise, which leaves all its settings to the web app. An account without the status page maintenance windows entitlement can't remove the links, so every update of such a window is rejected until they are in the configuration or ignored.
 - `checkly_client_certificate`: v1.x stored `path` without a trailing slash. If your configuration has one, for example `path = "/partner/api/"`, the first plan shows an in-place update of `path` that does not change the certificate.

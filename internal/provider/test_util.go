@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -117,6 +118,9 @@ var configBlockVersionChecks = []struct {
 	{regexp.MustCompile(`(?m)^\s*import\s*\{`), tfversion.SkipBelow(tfversion.Version1_6_0)},
 	// The built-in resource whose output is known only at apply time.
 	{regexp.MustCompile(`(?m)^\s*resource\s+"terraform_data"`), tfversion.SkipBelow(tfversion.Version1_4_0)},
+	// ignore_changes paths into a nested attribute, which Terraform before
+	// 1.2.7 rejects as an unsupported attribute.
+	{regexp.MustCompile(`(?m)^\s*ignore_changes\s*=\s*\[[^\]]*\w\.\w`), tfversion.SkipBelow(version.Must(version.NewVersion("1.2.7")))},
 }
 
 // terraformVersionChecks skips a test on Terraform versions that cannot run

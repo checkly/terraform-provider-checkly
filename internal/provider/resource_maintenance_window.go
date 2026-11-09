@@ -21,11 +21,13 @@ import (
 )
 
 var (
-	_ resource.Resource                 = (*MaintenanceWindowResource)(nil)
-	_ resource.ResourceWithConfigure    = (*MaintenanceWindowResource)(nil)
-	_ resource.ResourceWithUpgradeState = (*MaintenanceWindowResource)(nil)
-	_ resource.ResourceWithImportState  = (*MaintenanceWindowResource)(nil)
-	_ resource.ResourceWithMoveState    = (*MaintenanceWindowResource)(nil)
+	_ resource.Resource                   = (*MaintenanceWindowResource)(nil)
+	_ resource.ResourceWithConfigure      = (*MaintenanceWindowResource)(nil)
+	_ resource.ResourceWithUpgradeState   = (*MaintenanceWindowResource)(nil)
+	_ resource.ResourceWithImportState    = (*MaintenanceWindowResource)(nil)
+	_ resource.ResourceWithMoveState      = (*MaintenanceWindowResource)(nil)
+	_ resource.ResourceWithModifyPlan     = (*MaintenanceWindowResource)(nil)
+	_ resource.ResourceWithValidateConfig = (*MaintenanceWindowResource)(nil)
 )
 
 // NewMaintenanceWindowResource returns a new checkly_maintenance_window
@@ -149,6 +151,28 @@ func (r *MaintenanceWindowResource) Schema(ctx context.Context, req resource.Sch
 // implementation; see sdkv2StateUpgraders.
 func (r *MaintenanceWindowResource) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
 	return sdkv2StateUpgraders(ctx, r)
+}
+
+// ModifyPlan applies default values to the optional+computed attributes of
+// status_page_visibility.component_configs. Schema defaults cannot be used
+// for attributes nested in set elements, so the plan is adjusted here
+// instead. The defaults are applied through the parent object, which is left
+// alone when it is null: setting the nested path directly would create the
+// object in the plan of every window without status_page_visibility.
+func (r *MaintenanceWindowResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	planNestedDefaults(ctx, req, resp, path.Root("status_page_visibility"), objectWithSetDefaults("component_configs", maintenanceWindowComponentConfigsWithDefaults))
+}
+
+// ValidateConfig rejects status_page_visibility.component_configs that the
+// API would reject on apply.
+func (r *MaintenanceWindowResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var visibility types.Object
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("status_page_visibility"), &visibility)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	validateMaintenanceWindowComponentConfigs(ctx, visibility, &resp.Diagnostics)
 }
 
 func (r *MaintenanceWindowResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
