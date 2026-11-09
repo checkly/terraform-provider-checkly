@@ -73,16 +73,6 @@ func contextWithAPITimeout(ctx context.Context) (context.Context, context.Cancel
 	return context.WithTimeout(ctx, apiCallTimeout())
 }
 
-// readForUpdate reads the stored object that an update copies the values
-// Terraform does not manage from. The read has its own API timeout, so that
-// one waiting for the rate limit doesn't use up the deadline of the write.
-func readForUpdate[T any](ctx context.Context, read func(context.Context, string) (T, error), id string) (T, error) {
-	apiCtx, cancel := contextWithAPITimeout(ctx)
-	defer cancel()
-
-	return read(apiCtx, id)
-}
-
 // clientFromProviderData extracts the Checkly API client that the provider
 // stores in ResourceData/DataSourceData during Configure. It returns nil
 // (without diagnostics) when providerData is nil, which happens when

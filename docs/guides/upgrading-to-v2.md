@@ -231,6 +231,8 @@ v2 fails to plan while these resource types are in state. Remove them from your 
 
 `checkly_check` now writes through the API endpoint of each check type, which only stores what applies to that type. `request`, `frequency_offset`, `degraded_response_time`, `max_response_time`, `setup_snippet_id`, `teardown_snippet_id`, `local_setup_script` and `local_teardown_script` have no effect on browser and multi-step checks, and neither do `script` on API checks and `ssl_check_domain` on multi-step checks: changing one only changes the state, and setting one gives a warning at plan time. Remove them, or move the check to its per-type resource, which doesn't have them. A browser or multi-step check with an empty `script` is an error, which the plan reports when the script is known there; with `ignore_changes = [script]`, the stored script counts.
 
+Every update of a browser or multi-step `checkly_check` clears the script path and dependencies that the Checkly CLI sets for multi-file scripts, because `checkly_check` has no attributes for them. v1.x left them alone. To keep them, move the check to `checkly_browser_check` or `checkly_multistep_check` and set `script_path` and the `dependency` blocks there, since those resources also clear values that are absent from the configuration. Or keep managing the check with the Checkly CLI.
+
 To switch a check, heartbeat, TCP or maintenance window resource to its new type without recreating it, change the resource type and add a `moved` block. This works in the same plan as the provider upgrade:
 
 ```terraform
