@@ -1066,53 +1066,54 @@ func TestAccCheckGroupV2EnvironmentVariable(t *testing.T) {
 				resource "checkly_check_group_v2" "test" {
 					name = "env-var-test"
 
-					environment_variable {
-						key    = "BASE_URL"
-						value  = "https://api.example.com"
-						locked = false
-					}
-
-					environment_variable {
-						key    = "API_TOKEN"
-						value  = "secret"
-						locked = true
-					}
+					environment_variables = [
+						{
+							key    = "BASE_URL"
+							value  = "https://api.example.com"
+							locked = false
+						},
+						{
+							key    = "API_TOKEN"
+							value  = "secret"
+							locked = true
+						},
+					]
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					checkGroupV2Resource,
-					"environment_variable.#",
+					"environment_variables.#",
 					"2",
 				),
 				resource.TestCheckResourceAttr(
 					checkGroupV2Resource,
-					"environment_variable.0.key",
+					"environment_variables.0.key",
 					"BASE_URL",
 				),
 				resource.TestCheckResourceAttr(
 					checkGroupV2Resource,
-					"environment_variable.0.value",
+					"environment_variables.0.value",
 					"https://api.example.com",
 				),
 				resource.TestCheckResourceAttr(
 					checkGroupV2Resource,
-					"environment_variable.0.locked",
+					"environment_variables.0.locked",
 					"false",
 				),
 				resource.TestCheckResourceAttr(
 					checkGroupV2Resource,
-					"environment_variable.1.key",
+					"environment_variables.1.key",
 					"API_TOKEN",
 				),
 				resource.TestCheckResourceAttr(
 					checkGroupV2Resource,
-					"environment_variable.1.value",
+					"environment_variables.1.value",
 					"secret",
 				),
 				resource.TestCheckResourceAttr(
 					checkGroupV2Resource,
-					"environment_variable.1.locked",
+					"environment_variables.1.locked",
 					"true",
 				),
 			),
@@ -1126,7 +1127,7 @@ func TestAccCheckGroupV2EnvironmentVariable(t *testing.T) {
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					checkGroupV2Resource,
-					"environment_variable.#",
+					"environment_variables.#",
 					"0",
 				),
 			),

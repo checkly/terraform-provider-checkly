@@ -41,17 +41,18 @@ resource "checkly_check_group" "test_group1" {
     }
   }
 
-  environment_variable {
-    key    = "TEST_ENV_VAR"
-    value  = "Hello world"
-    locked = false
-  }
-
-  environment_variable {
-    key    = "ADDITIONAL_ENV_VAR"
-    value  = "test value"
-    locked = true
-  }
+  environment_variables = [
+    {
+      key    = "TEST_ENV_VAR"
+      value  = "Hello world"
+      locked = false
+    },
+    {
+      key    = "ADDITIONAL_ENV_VAR"
+      value  = "test value"
+      locked = true
+    },
+  ]
 
   use_global_alert_settings = false
 

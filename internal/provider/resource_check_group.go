@@ -49,7 +49,7 @@ type CheckGroupResourceModel struct {
 	Locations                 types.Set    `tfsdk:"locations"`
 	PrivateLocations          types.Set    `tfsdk:"private_locations"`
 	Tags                      types.Set    `tfsdk:"tags"`
-	EnvironmentVariable       types.List   `tfsdk:"environment_variable"`
+	EnvironmentVariables      types.List   `tfsdk:"environment_variables"`
 	SetupSnippetID            types.Int64  `tfsdk:"setup_snippet_id"`
 	TeardownSnippetID         types.Int64  `tfsdk:"teardown_snippet_id"`
 	LocalSetupScript          types.String `tfsdk:"local_setup_script"`
@@ -174,8 +174,6 @@ func (r *CheckGroupResource) Schema(ctx context.Context, req resource.SchemaRequ
 			}),
 			doubleCheckAttributeName:              doubleCheckAttributeSchema(),
 			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{}),
-		},
-		Blocks: map[string]schema.Block{
 			environmentVariableAttributeName: makeEnvironmentVariableSchema(EnvironmentVariableAttributeSchemaOptions{
 				Description: "Insert environment variables into the runtime environment. Only relevant for browser checks. Use global environment variables whenever possible.",
 			}),
@@ -399,7 +397,7 @@ func checkGroupFromModel(ctx context.Context, model *CheckGroupResourceModel, di
 		RunParallel:               model.RunParallel.ValueBoolPointer(),
 		Locations:                 stringsFromSetOrEmpty(ctx, model.Locations, diags),
 		Tags:                      stringsFromSetOrEmpty(ctx, model.Tags, diags),
-		EnvironmentVariables:      environmentVariablesFromList(ctx, model.EnvironmentVariable, diags),
+		EnvironmentVariables:      environmentVariablesFromList(ctx, model.EnvironmentVariables, diags),
 		SetupSnippetID:            pointerOrNilWhenZero(model.SetupSnippetID.ValueInt64()),
 		TearDownSnippetID:         pointerOrNilWhenZero(model.TeardownSnippetID.ValueInt64()),
 		LocalSetupScript:          pointerOrNilWhenZero(model.LocalSetupScript.ValueString()),
@@ -448,7 +446,7 @@ func checkGroupToModel(ctx context.Context, group *checkly.GroupV2, model *Check
 	}
 
 	model.Tags = setFromStrings(ctx, group.Tags, diags)
-	model.EnvironmentVariable = environmentVariablesToList(ctx, group.EnvironmentVariables, model.EnvironmentVariable, diags)
+	model.EnvironmentVariables = environmentVariablesToList(ctx, group.EnvironmentVariables, model.EnvironmentVariables, diags)
 	model.SetupSnippetID = types.Int64Value(valueOrZero(group.SetupSnippetID))
 	model.TeardownSnippetID = types.Int64Value(valueOrZero(group.TearDownSnippetID))
 	model.LocalSetupScript = types.StringValue(valueOrZero(group.LocalSetupScript))

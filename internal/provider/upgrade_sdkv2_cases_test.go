@@ -454,10 +454,12 @@ resource "checkly_check" "test" {
   use_global_alert_settings = false
   script                    = "console.log('test')"
 
-  environment_variable {
-    key   = "BASE_URL"
-    value = "https://www.checklyhq.com"
-  }
+  environment_variables = [
+    {
+      key   = "BASE_URL"
+      value = "https://www.checklyhq.com"
+    },
+  ]
 
   alert_settings = {
     escalation_type = "TIME_BASED"
@@ -477,6 +479,42 @@ resource "checkly_check" "test" {
     max_duration_seconds = 300
     same_region          = false
   }
+}
+`),
+
+	// The deprecated environment_variables map becomes the
+	// environment_variables list. A single entry keeps the order the API
+	// returns independent of SDK v2's map iteration order.
+	"check_browser_environment_variables_map": newSDKv2UpgradeCase(`
+resource "checkly_check" "test" {
+  name                      = "tf-upgrade-{{id}}-check-browser-env-map"
+  type                      = "BROWSER"
+  frequency                 = 720
+  activated                 = true
+  locations                 = ["eu-central-1"]
+  use_global_alert_settings = true
+  script                    = "console.log('test')"
+
+  environment_variables = {
+    BASE_URL = "https://www.checklyhq.com"
+  }
+}
+`, `
+resource "checkly_check" "test" {
+  name                      = "tf-upgrade-{{id}}-check-browser-env-map"
+  type                      = "BROWSER"
+  frequency                 = 720
+  activated                 = true
+  locations                 = ["eu-central-1"]
+  use_global_alert_settings = true
+  script                    = "console.log('test')"
+
+  environment_variables = [
+    {
+      key   = "BASE_URL"
+      value = "https://www.checklyhq.com"
+    },
+  ]
 }
 `),
 
@@ -927,11 +965,13 @@ resource "checkly_check_group" "test" {
     }
   }
 
-  environment_variable {
-    key    = "FOO"
-    value  = "BAR"
-    locked = false
-  }
+  environment_variables = [
+    {
+      key    = "FOO"
+      value  = "BAR"
+      locked = false
+    },
+  ]
 
   alert_settings = {
     escalation_type = "RUN_BASED"
@@ -1128,11 +1168,13 @@ resource "checkly_check_group_v2" "test" {
     inline_script = "console.log('teardown')"
   }
 
-  environment_variable {
-    key    = "FOO"
-    value  = "bar"
-    locked = true
-  }
+  environment_variables = [
+    {
+      key    = "FOO"
+      value  = "bar"
+      locked = true
+    },
+  ]
 
   enforce_locations = {
     enabled           = true
@@ -2716,11 +2758,13 @@ resource "checkly_playwright_check_suite" "test" {
     }
   }
 
-  environment_variable {
-    key    = "FOO"
-    value  = "bar"
-    locked = false
-  }
+  environment_variables = [
+    {
+      key    = "FOO"
+      value  = "bar"
+      locked = false
+    },
+  ]
 
   alert_settings = {
     escalation_type = "RUN_BASED"
@@ -2808,10 +2852,12 @@ resource "checkly_browser_check" "test" {
   use_global_alert_settings = true
   script                    = "console.log('test')"
 
-  environment_variable {
-    key   = "BASE_URL"
-    value = "https://www.checklyhq.com"
-  }
+  environment_variables = [
+    {
+      key   = "BASE_URL"
+      value = "https://www.checklyhq.com"
+    },
+  ]
 }
 
 moved {

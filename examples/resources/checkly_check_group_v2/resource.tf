@@ -72,18 +72,19 @@ resource "checkly_check_group_v2" "production-api" {
   }
 
   # Environment variables available to all checks in the group.
-  environment_variable {
-    key    = "BASE_URL"
-    value  = "https://api.example.com"
-    locked = false
-  }
-
-  environment_variable {
-    key    = "API_TOKEN"
-    value  = "super-secret-token"
-    locked = true
-    secret = true
-  }
+  environment_variables = [
+    {
+      key    = "BASE_URL"
+      value  = "https://api.example.com"
+      locked = false
+    },
+    {
+      key    = "API_TOKEN"
+      value  = "super-secret-token"
+      locked = true
+      secret = true
+    },
+  ]
 
   # Default runtime for checks that don't specify their own.
   default_runtime = {

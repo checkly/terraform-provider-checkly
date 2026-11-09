@@ -371,8 +371,8 @@ func TestEnvironmentVariableResourceValueLimit(t *testing.T) {
 
 // validateResourceConfigWithEnvironmentVariables validates a configuration
 // of the resource r of type typeName that sets only attributes and n
-// environment_variable blocks with the given value. It returns the error
-// diagnostics about the environment_variable blocks.
+// environment variables with the given value. It returns the error
+// diagnostics about the environment_variables attribute.
 func validateResourceConfigWithEnvironmentVariables(t *testing.T, r resource.Resource, typeName string, attributes map[string]tftypes.Value, n int, value string) []*tfprotov6.Diagnostic {
 	t.Helper()
 
@@ -393,7 +393,7 @@ func validateResourceConfigWithEnvironmentVariables(t *testing.T, r resource.Res
 	})
 }
 
-func TestEnvironmentVariableBlockLimits(t *testing.T) {
+func TestEnvironmentVariableLimits(t *testing.T) {
 	cases := []struct {
 		resource   resource.Resource
 		typeName   string

@@ -48,7 +48,7 @@ type CheckGroupV2ResourceModel struct {
 	Activated                 types.Bool   `tfsdk:"activated"`
 	Muted                     types.Bool   `tfsdk:"muted"`
 	Tags                      types.Set    `tfsdk:"tags"`
-	EnvironmentVariable       types.List   `tfsdk:"environment_variable"`
+	EnvironmentVariables      types.List   `tfsdk:"environment_variables"`
 	SetupScript               types.Object `tfsdk:"setup_script"`
 	TeardownScript            types.Object `tfsdk:"teardown_script"`
 	DefaultRuntime            types.Object `tfsdk:"default_runtime"`
@@ -345,8 +345,6 @@ func (r *CheckGroupV2Resource) Schema(ctx context.Context, req resource.SchemaRe
 					},
 				},
 			},
-		},
-		Blocks: map[string]schema.Block{
 			environmentVariableAttributeName: makeEnvironmentVariableSchema(EnvironmentVariableAttributeSchemaOptions{
 				Description: "Insert environment variables into the runtime environment of checks in the group. " +
 					"Only relevant for check types that support environment variables. " +
@@ -732,7 +730,7 @@ func checkGroupV2FromModel(ctx context.Context, model *CheckGroupV2ResourceModel
 		Muted:                model.Muted.ValueBool(),
 		Tags:                 stringsFromSetOrEmpty(ctx, model.Tags, diags),
 		APICheckDefaults:     apiCheckDefaultsFromObject(ctx, model.APICheckDefaults, diags),
-		EnvironmentVariables: environmentVariablesFromList(ctx, model.EnvironmentVariable, diags),
+		EnvironmentVariables: environmentVariablesFromList(ctx, model.EnvironmentVariables, diags),
 	}
 
 	if runtime := model.DefaultRuntime; !runtime.IsNull() && !runtime.IsUnknown() {
@@ -812,7 +810,7 @@ func checkGroupV2ToModel(ctx context.Context, group *checkly.GroupV2, model *Che
 	model.Activated = types.BoolValue(group.Activated)
 	model.Muted = types.BoolValue(group.Muted)
 	model.Tags = setFromStrings(ctx, group.Tags, diags)
-	model.EnvironmentVariable = environmentVariablesToList(ctx, group.EnvironmentVariables, model.EnvironmentVariable, diags)
+	model.EnvironmentVariables = environmentVariablesToList(ctx, group.EnvironmentVariables, model.EnvironmentVariables, diags)
 	model.SetupScript = checkGroupV2ScriptToObject(group.SetupSnippetID, group.LocalSetupScript)
 	model.TeardownScript = checkGroupV2ScriptToObject(group.TearDownSnippetID, group.LocalTearDownScript)
 	model.DefaultRuntime = checkGroupV2DefaultRuntimeToObject(group.RuntimeID)

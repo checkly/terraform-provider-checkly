@@ -60,7 +60,7 @@ type CheckResourceModel struct {
 	Script                    types.String `tfsdk:"script"`
 	DegradedResponseTime      types.Int64  `tfsdk:"degraded_response_time"`
 	MaxResponseTime           types.Int64  `tfsdk:"max_response_time"`
-	EnvironmentVariable       types.List   `tfsdk:"environment_variable"`
+	EnvironmentVariables      types.List   `tfsdk:"environment_variables"`
 	Tags                      types.Set    `tfsdk:"tags"`
 	SSLCheckDomain            types.String `tfsdk:"ssl_check_domain"`
 	SetupSnippetID            types.Int64  `tfsdk:"setup_snippet_id"`
@@ -96,7 +96,7 @@ func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 			"Use a `moved` block to migrate existing resources without recreating them. " +
 			"When migrating an API check, note that the default `degraded_response_time` and `max_response_time` " +
 			"changed from 15000/30000 to 5000/20000 — set them explicitly to keep the previous thresholds. " +
-			"`checkly_api_check` has no `environment_variable` blocks, which never had an effect on API checks.",
+			"`checkly_api_check` has no `environment_variables` attribute, which never had an effect on API checks.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -256,8 +256,6 @@ func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 				Description: "An API check might have one request config. Only relevant when `type` is `API`.",
 			}),
 			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{}),
-		},
-		Blocks: map[string]schema.Block{
 			environmentVariableAttributeName: makeEnvironmentVariableSchema(EnvironmentVariableAttributeSchemaOptions{
 				Description: "Insert environment variables into the runtime environment. Only relevant for browser checks. Use global environment variables whenever possible.",
 			}),
@@ -324,7 +322,7 @@ func (r *CheckResource) ValidateConfig(ctx context.Context, req resource.Validat
 			path.Root(environmentVariableAttributeName),
 			"Environment Variables Have No Effect",
 			"API checks do not use environment variables, so the API does not store them and every plan "+
-				"shows them as a change. Remove the environment_variable blocks from this check.",
+				"shows them as a change. Remove environment_variables from this check.",
 		)
 	}
 
@@ -354,7 +352,7 @@ var checkAPIOnlyAttributes = []string{
 // checkIgnoredAttributes lists, for each check type, the checkly_check
 // attributes that the API endpoint of that type has no field for (see
 // apiCheckModelFromCheckModel and its siblings), so a configured value only
-// changes the state. environment_variable and ssl_check_domain on API checks
+// changes the state. environment_variables and ssl_check_domain on API checks
 // have diagnostics of their own.
 var checkIgnoredAttributes = map[checkly.CheckType][]string{
 	checkly.CheckTypeAPI:       {"script"},
@@ -944,7 +942,7 @@ func checkToModel(ctx context.Context, check checkly.Check, model *CheckResource
 		// The API does not store environment variables of API checks, so
 		// configured ones show as a change in every plan; ValidateConfig warns
 		// about them.
-		model.EnvironmentVariable = environmentVariablesToList(ctx, nil, prior.EnvironmentVariable, diags)
+		model.EnvironmentVariables = environmentVariablesToList(ctx, nil, prior.EnvironmentVariables, diags)
 		model.SetupSnippetID = types.Int64Value(typed.SetupSnippetID)
 		model.TeardownSnippetID = types.Int64Value(typed.TearDownSnippetID)
 		model.LocalSetupScript = types.StringValue(valueOrZero(typed.LocalSetupScript))
@@ -953,7 +951,7 @@ func checkToModel(ctx context.Context, check checkly.Check, model *CheckResource
 	case *checkly.BrowserCheck:
 		model.Type = types.StringValue(string(checkly.CheckTypeBrowser))
 		model.Script = types.StringValue(typed.Script)
-		model.EnvironmentVariable = environmentVariablesToList(ctx, typed.EnvironmentVariables, prior.EnvironmentVariable, diags)
+		model.EnvironmentVariables = environmentVariablesToList(ctx, typed.EnvironmentVariables, prior.EnvironmentVariables, diags)
 		// The prior value is preserved when the API reports no domain.
 		if typed.SSLCheckDomain != "" {
 			model.SSLCheckDomain = types.StringValue(typed.SSLCheckDomain)
@@ -962,7 +960,7 @@ func checkToModel(ctx context.Context, check checkly.Check, model *CheckResource
 	case *checkly.MultiStepCheck:
 		model.Type = types.StringValue(string(checkly.CheckTypeMultiStep))
 		model.Script = types.StringValue(typed.Script)
-		model.EnvironmentVariable = environmentVariablesToList(ctx, typed.EnvironmentVariables, prior.EnvironmentVariable, diags)
+		model.EnvironmentVariables = environmentVariablesToList(ctx, typed.EnvironmentVariables, prior.EnvironmentVariables, diags)
 		checkKeepAPICheckAttributes(model)
 	}
 }

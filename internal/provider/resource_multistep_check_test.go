@@ -389,7 +389,7 @@ func TestAccMultistepCheckUnsetSweepScalars(t *testing.T) {
 }
 
 // TestAccMultistepCheckUnsetSweepCollections sets the tags, locations and
-// private_locations collections and the environment_variable block, then
+// private_locations collections and the environment_variables list, then
 // removes them, verifying that removal clears the values remotely.
 // Dependencies have dedicated removal coverage in another test.
 func TestAccMultistepCheckUnsetSweepCollections(t *testing.T) {
@@ -415,17 +415,18 @@ func TestAccMultistepCheckUnsetSweepCollections(t *testing.T) {
 					tags              = ["sweep-a", "sweep-b"]
 					script            = "console.log('test')"
 
-					environment_variable {
-						key    = "SWEEP_FOO"
-						value  = "bar"
-						locked = false
-					}
-
-					environment_variable {
-						key    = "SWEEP_SECRET"
-						value  = "s3cr3t"
-						secret = true
-					}
+					environment_variables = [
+						{
+							key    = "SWEEP_FOO"
+							value  = "bar"
+							locked = false
+						},
+						{
+							key    = "SWEEP_SECRET"
+							value  = "s3cr3t"
+							secret = true
+						},
+					]
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
@@ -446,7 +447,7 @@ func TestAccMultistepCheckUnsetSweepCollections(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_multistep_check.test",
-					"environment_variable.#",
+					"environment_variables.#",
 					"2",
 				),
 			),
@@ -476,7 +477,7 @@ func TestAccMultistepCheckUnsetSweepCollections(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_multistep_check.test",
-					"environment_variable.#",
+					"environment_variables.#",
 					"0",
 				),
 				resource.TestCheckResourceAttr(

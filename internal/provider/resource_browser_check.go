@@ -51,7 +51,7 @@ type BrowserCheckResourceModel struct {
 	Script                    types.String `tfsdk:"script"`
 	ScriptPath                types.String `tfsdk:"script_path"`
 	Dependency                types.List   `tfsdk:"dependency"`
-	EnvironmentVariable       types.List   `tfsdk:"environment_variable"`
+	EnvironmentVariables      types.List   `tfsdk:"environment_variables"`
 	Tags                      types.Set    `tfsdk:"tags"`
 	SSLCheckDomain            types.String `tfsdk:"ssl_check_domain"`
 	RuntimeID                 types.String `tfsdk:"runtime_id"`
@@ -189,6 +189,9 @@ func (r *BrowserCheckResource) Schema(ctx context.Context, req resource.SchemaRe
 				SupportsOnlyOnNetworkError: true,
 			}),
 			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{}),
+			environmentVariableAttributeName: makeEnvironmentVariableSchema(EnvironmentVariableAttributeSchemaOptions{
+				Description: "Insert environment variables into the runtime environment. Use global environment variables whenever possible.",
+			}),
 		},
 		Blocks: map[string]schema.Block{
 			"dependency": schema.ListNestedBlock{
@@ -206,9 +209,6 @@ func (r *BrowserCheckResource) Schema(ctx context.Context, req resource.SchemaRe
 					},
 				},
 			},
-			environmentVariableAttributeName: makeEnvironmentVariableSchema(EnvironmentVariableAttributeSchemaOptions{
-				Description: "Insert environment variables into the runtime environment. Use global environment variables whenever possible.",
-			}),
 		},
 	}
 }
@@ -360,7 +360,7 @@ func browserCheckModelFromCheckModel(source *CheckResourceModel) BrowserCheckRes
 		Script:                    source.Script,
 		ScriptPath:                types.StringNull(),
 		Dependency:                types.ListValueMust(types.ObjectType{AttrTypes: scriptDependencyAttrTypes}, []attr.Value{}),
-		EnvironmentVariable:       source.EnvironmentVariable,
+		EnvironmentVariables:      source.EnvironmentVariables,
 		Tags:                      source.Tags,
 		SSLCheckDomain:            source.SSLCheckDomain,
 		RuntimeID:                 source.RuntimeID,
@@ -407,7 +407,7 @@ func browserCheckFromModel(ctx context.Context, model *BrowserCheckResourceModel
 		Script:                    model.Script.ValueString(),
 		ScriptPath:                optionalStringPointer(model.ScriptPath),
 		Dependencies:              scriptDependenciesFromList(ctx, model.Dependency, diags),
-		EnvironmentVariables:      environmentVariablesFromList(ctx, model.EnvironmentVariable, diags),
+		EnvironmentVariables:      environmentVariablesFromList(ctx, model.EnvironmentVariables, diags),
 		SSLCheckDomain:            model.SSLCheckDomain.ValueString(),
 		Tags:                      stringsFromSet(ctx, model.Tags, diags),
 		AlertSettings:             &alertSettings,
@@ -485,7 +485,7 @@ func browserCheckToModel(ctx context.Context, c *checkly.BrowserCheck, model *Br
 	}
 
 	model.Dependency = scriptDependenciesToList(ctx, c.Dependencies, prior.Dependency, diags)
-	model.EnvironmentVariable = environmentVariablesToList(ctx, c.EnvironmentVariables, prior.EnvironmentVariable, diags)
+	model.EnvironmentVariables = environmentVariablesToList(ctx, c.EnvironmentVariables, prior.EnvironmentVariables, diags)
 	model.Tags = stringSetFromAPIEmptyIfUnknown(ctx, c.Tags, prior.Tags, diags)
 
 	// An empty SSL check domain is not tracked by the Checkly API. A

@@ -453,7 +453,7 @@ func (r *APICheckResource) MoveState(ctx context.Context) []resource.StateMover 
 
 // apiCheckModelFromCheckModel converts a checkly_check model of an API check.
 // The source values are mapped over one-to-one, dropping the attributes that
-// do not apply to API checks (type, script, environment_variable and
+// do not apply to API checks (type, script, environment_variables and
 // ssl_check_domain).
 func apiCheckModelFromCheckModel(source *CheckResourceModel) APICheckResourceModel {
 	return APICheckResourceModel{

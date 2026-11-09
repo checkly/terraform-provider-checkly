@@ -7,7 +7,10 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 )
 
 func TestAccBrowserCheckResourceBasic(t *testing.T) {
@@ -186,51 +189,81 @@ func TestAccBrowserCheckResourceEnvironmentVariables(t *testing.T) {
 				locations                 = ["us-east-1"]
 				script                    = "console.log('test')"
 
-				environment_variable {
-					key    = "FOO"
-					value  = "bar"
-					locked = false
-				}
-
-				environment_variable {
-					key    = "SECRET"
-					value  = "s3cr3t"
-					secret = true
-				}
+				environment_variables = [
+					{
+						key    = "FOO"
+						value  = "bar"
+						locked = false
+					},
+					{
+						key    = "SECRET"
+						value  = "s3cr3t"
+						secret = true
+					},
+				]
 			}`,
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_browser_check.test",
-					"environment_variable.#",
+					"environment_variables.#",
 					"2",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_browser_check.test",
-					"environment_variable.0.key",
+					"environment_variables.0.key",
 					"FOO",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_browser_check.test",
-					"environment_variable.0.value",
+					"environment_variables.0.value",
 					"bar",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_browser_check.test",
-					"environment_variable.1.key",
+					"environment_variables.1.key",
 					"SECRET",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_browser_check.test",
-					"environment_variable.1.value",
+					"environment_variables.1.value",
 					"s3cr3t",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_browser_check.test",
-					"environment_variable.1.secret",
+					"environment_variables.1.secret",
 					"true",
 				),
 			),
 		},
+		// An empty list removes all variables and is stored as an empty
+		// list, not null; otherwise the post-apply plan would not be empty.
+		{
+			Config: `resource "checkly_browser_check" "test" {
+				name                      = "Browser Check Resource Env Vars"
+				activated                 = true
+				frequency                 = 720
+				use_global_alert_settings = true
+				locations                 = ["us-east-1"]
+				script                    = "console.log('test')"
+
+				environment_variables = []
+			}`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_browser_check.test",
+					"environment_variables.#",
+					"0",
+				),
+			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue(
+					"checkly_browser_check.test",
+					tfjsonpath.New("environment_variables"),
+					knownvalue.ListExact([]knownvalue.Check{}),
+				),
+			},
+		},
+		// Leaving the attribute out stores null.
 		{
 			Config: `resource "checkly_browser_check" "test" {
 				name                      = "Browser Check Resource Env Vars"
@@ -241,10 +274,11 @@ func TestAccBrowserCheckResourceEnvironmentVariables(t *testing.T) {
 				script                    = "console.log('test')"
 			}`,
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
+				// Unlike a check of the element count, which also passes
+				// for an empty list, this fails unless the value is null.
+				resource.TestCheckNoResourceAttr(
 					"checkly_browser_check.test",
-					"environment_variable.#",
-					"0",
+					"environment_variables",
 				),
 			),
 		},

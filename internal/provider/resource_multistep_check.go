@@ -51,7 +51,7 @@ type MultistepCheckResourceModel struct {
 	Script                    types.String `tfsdk:"script"`
 	ScriptPath                types.String `tfsdk:"script_path"`
 	Dependency                types.List   `tfsdk:"dependency"`
-	EnvironmentVariable       types.List   `tfsdk:"environment_variable"`
+	EnvironmentVariables      types.List   `tfsdk:"environment_variables"`
 	Tags                      types.Set    `tfsdk:"tags"`
 	RuntimeID                 types.String `tfsdk:"runtime_id"`
 	AlertChannelSubscriptions types.Set    `tfsdk:"alert_channel_subscriptions"`
@@ -184,6 +184,9 @@ func (r *MultistepCheckResource) Schema(ctx context.Context, req resource.Schema
 				SupportsOnlyOnNetworkError: true,
 			}),
 			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{}),
+			environmentVariableAttributeName: makeEnvironmentVariableSchema(EnvironmentVariableAttributeSchemaOptions{
+				Description: "Insert environment variables into the runtime environment. Use global environment variables whenever possible.",
+			}),
 		},
 		Blocks: map[string]schema.Block{
 			"dependency": schema.ListNestedBlock{
@@ -201,9 +204,6 @@ func (r *MultistepCheckResource) Schema(ctx context.Context, req resource.Schema
 					},
 				},
 			},
-			environmentVariableAttributeName: makeEnvironmentVariableSchema(EnvironmentVariableAttributeSchemaOptions{
-				Description: "Insert environment variables into the runtime environment. Use global environment variables whenever possible.",
-			}),
 		},
 	}
 }
@@ -365,7 +365,7 @@ func multistepCheckModelFromCheckModel(source *CheckResourceModel) MultistepChec
 		Script:                    source.Script,
 		ScriptPath:                types.StringNull(),
 		Dependency:                types.ListValueMust(types.ObjectType{AttrTypes: scriptDependencyAttrTypes}, []attr.Value{}),
-		EnvironmentVariable:       source.EnvironmentVariable,
+		EnvironmentVariables:      source.EnvironmentVariables,
 		Tags:                      source.Tags,
 		RuntimeID:                 source.RuntimeID,
 		AlertChannelSubscriptions: source.AlertChannelSubscriptions,
@@ -440,7 +440,7 @@ func multistepCheckFromModel(ctx context.Context, model *MultistepCheckResourceM
 		Script:                    model.Script.ValueString(),
 		ScriptPath:                optionalStringPointer(model.ScriptPath),
 		Dependencies:              scriptDependenciesFromList(ctx, model.Dependency, diags),
-		EnvironmentVariables:      environmentVariablesFromList(ctx, model.EnvironmentVariable, diags),
+		EnvironmentVariables:      environmentVariablesFromList(ctx, model.EnvironmentVariables, diags),
 		Tags:                      stringsFromSet(ctx, model.Tags, diags),
 		AlertSettings:             &alertSettings,
 		UseGlobalAlertSettings:    model.UseGlobalAlertSettings.ValueBool(),
@@ -517,7 +517,7 @@ func multistepCheckToModel(ctx context.Context, c *checkly.MultiStepCheck, model
 	}
 
 	model.Dependency = scriptDependenciesToList(ctx, c.Dependencies, prior.Dependency, diags)
-	model.EnvironmentVariable = environmentVariablesToList(ctx, c.EnvironmentVariables, prior.EnvironmentVariable, diags)
+	model.EnvironmentVariables = environmentVariablesToList(ctx, c.EnvironmentVariables, prior.EnvironmentVariables, diags)
 	model.Tags = stringSetFromAPIEmptyIfUnknown(ctx, c.Tags, prior.Tags, diags)
 
 	if c.RuntimeID != nil && *c.RuntimeID != "" {

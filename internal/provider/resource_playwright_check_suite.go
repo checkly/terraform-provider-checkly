@@ -62,7 +62,7 @@ type PlaywrightCheckSuiteResourceModel struct {
 	Muted                     types.Bool   `tfsdk:"muted"`
 	RunParallel               types.Bool   `tfsdk:"run_parallel"`
 	Locations                 types.Set    `tfsdk:"locations"`
-	EnvironmentVariable       types.List   `tfsdk:"environment_variable"`
+	EnvironmentVariables      types.List   `tfsdk:"environment_variables"`
 	Tags                      types.Set    `tfsdk:"tags"`
 	AlertChannelSubscriptions types.Set    `tfsdk:"alert_channel_subscriptions"`
 	PrivateLocations          types.Set    `tfsdk:"private_locations"`
@@ -386,8 +386,6 @@ func (r *PlaywrightCheckSuiteResource) Schema(ctx context.Context, req resource.
 				},
 			},
 			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{}),
-		},
-		Blocks: map[string]schema.Block{
 			environmentVariableAttributeName: makeEnvironmentVariableSchema(EnvironmentVariableAttributeSchemaOptions{
 				Description: "Insert environment variables into the execution environment.",
 			}),
@@ -556,7 +554,7 @@ func playwrightCheckSuiteFromModel(
 		TriggerIncident:           triggerIncidentFromObject(ctx, model.TriggerIncident, diags),
 		Intent:                    checkIntentFromObject(ctx, model.Intent, diags),
 		AIAutoRepairEnabled:       model.AIAutoRepairEnabled.ValueBoolPointer(),
-		EnvironmentVariables:      environmentVariablesFromList(ctx, model.EnvironmentVariable, diags),
+		EnvironmentVariables:      environmentVariablesFromList(ctx, model.EnvironmentVariables, diags),
 	}
 
 	// An empty description clears any previously set value.
@@ -744,11 +742,7 @@ func playwrightCheckSuiteToModel(
 	}
 	model.PrivateLocations = stringSetFromAPIEmptyIfUnknown(ctx, privateLocations, model.PrivateLocations, diags)
 
-	if len(check.EnvironmentVariables) == 0 && model.EnvironmentVariable.IsNull() {
-		// Keep null; an absent block list stays absent.
-	} else {
-		model.EnvironmentVariable = environmentVariablesToList(ctx, check.EnvironmentVariables, model.EnvironmentVariable, diags)
-	}
+	model.EnvironmentVariables = environmentVariablesToList(ctx, check.EnvironmentVariables, model.EnvironmentVariables, diags)
 
 	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, check.AlertChannelSubscriptions, model.AlertChannelSubscriptions, diags)
 

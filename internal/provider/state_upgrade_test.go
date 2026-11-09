@@ -84,6 +84,19 @@ func sdkv2FixtureWith(t *testing.T, name string, edit func(obj map[string]any)) 
 	return string(b)
 }
 
+// environmentVariablesList returns an environment_variables value with a
+// single variable that is neither locked nor secret.
+func environmentVariablesList(t *testing.T, key, value string) types.List {
+	t.Helper()
+
+	return environmentVariableTestList(t, []EnvironmentVariableModel{{
+		Key:    types.StringValue(key),
+		Value:  types.StringValue(value),
+		Locked: types.BoolValue(false),
+		Secret: types.BoolValue(false),
+	}})
+}
+
 // alertChannelSubscriptionsSet returns an alert_channel_subscriptions value
 // with a single subscription.
 func alertChannelSubscriptionsSet(channelID int64, activated bool) types.Set {
@@ -199,6 +212,7 @@ func TestUpgradeSDKv2State(t *testing.T) {
 		requireStateValue(t, state, path.Root("default_runtime").AtName("runtime_id"), types.StringValue("2024.09"))
 		requireStateValue(t, state, path.Root("setup_script").AtName("inline_script"), types.StringValue("console.log('x')"))
 		requireStateNull(t, state, path.Root("setup_script").AtName("snippet_id"))
+		requireStateNull(t, state, path.Root(environmentVariableAttributeName))
 		requireStateNull(t, state, path.Root("teardown_script"))
 	})
 
@@ -327,8 +341,10 @@ func TestUpgradeSDKv2State(t *testing.T) {
 	})
 
 	t.Run("check", func(t *testing.T) {
-		// ssl_check and environment_variables have been removed.
+		// ssl_check has been removed. The deprecated environment_variables
+		// map becomes the environment_variables list.
 		state := upgradeSDKv2Fixture(t, NewCheckResource(), "check")
+		requireStateValue(t, state, path.Root(environmentVariableAttributeName), environmentVariablesList(t, "A", "b"))
 		requireStateValue(t, state, path.Root("type"), types.StringValue("API"))
 		requireStateValue(t, state, path.Root("double_check"), types.BoolValue(true))
 		requireStateNull(t, state, path.Root(checkIntentAttributeName))
@@ -343,6 +359,15 @@ func TestUpgradeSDKv2State(t *testing.T) {
 		// list, which upgrades to a null object.
 		state := upgradeSDKv2Fixture(t, NewCheckResource(), "check_browser")
 		requireStateNull(t, state, path.Root("request"))
+		// The environment_variable list becomes environment_variables.
+		requireStateValue(t, state, path.Root(environmentVariableAttributeName), environmentVariablesList(t, "K", "v"))
+	})
+
+	t.Run("check_multistep", func(t *testing.T) {
+		// SDK v2 stored no environment variables as an empty
+		// environment_variable list and a null environment_variables map.
+		state := upgradeSDKv2Fixture(t, NewCheckResource(), "check_multistep")
+		requireStateNull(t, state, path.Root(environmentVariableAttributeName))
 	})
 }
 
@@ -560,6 +585,9 @@ func TestMoveSDKv2State(t *testing.T) {
 			fixture:    "check_browser",
 			attr:       path.Root("script"),
 			want:       types.StringValue("console.log(1)"),
+			check: func(t *testing.T, state tfsdk.State) {
+				requireStateValue(t, state, path.Root(environmentVariableAttributeName), environmentVariablesList(t, "K", "v"))
+			},
 		},
 		"checkly_check to checkly_multistep_check": {
 			target:     NewMultistepCheckResource(),

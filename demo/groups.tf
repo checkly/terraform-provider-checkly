@@ -63,12 +63,14 @@ resource "checkly_check_group" "check-group-3" {
     }
   }
 
-  environment_variable {
-    key    = "API_KEY"
-    value  = "wuZeo4aeQu1ia4aezuiphookagheiwoh"
-    locked = true
-    secret = true
-  }
+  environment_variables = [
+    {
+      key    = "API_KEY"
+      value  = "wuZeo4aeQu1ia4aezuiphookagheiwoh"
+      locked = true
+      secret = true
+    },
+  ]
 
   alert_settings = {
     escalation_type = "RUN_BASED"

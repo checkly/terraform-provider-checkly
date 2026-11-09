@@ -15,10 +15,10 @@ import (
 	"github.com/checkly/checkly-go-sdk/v2"
 )
 
-const environmentVariableAttributeName = "environment_variable"
+const environmentVariableAttributeName = "environment_variables"
 
-// EnvironmentVariableModel describes the environment_variable block data
-// model.
+// EnvironmentVariableModel describes an element of the environment_variables
+// attribute.
 type EnvironmentVariableModel struct {
 	Key    types.String `tfsdk:"key"`
 	Value  types.String `tfsdk:"value"`
@@ -34,26 +34,28 @@ var environmentVariableAttrTypes = map[string]attr.Type{
 }
 
 // EnvironmentVariableAttributeSchemaOptions customizes the
-// environment_variable block schema for a specific resource.
+// environment_variables attribute schema for a specific resource.
 type EnvironmentVariableAttributeSchemaOptions struct {
-	// Description overrides the default block description.
+	// Description overrides the default attribute description.
 	Description string
 }
 
 // makeEnvironmentVariableSchema returns the schema for the
-// environment_variable block.
+// environment_variables attribute. It is optional without a default, so
+// leaving it out stores null; see environmentVariablesToList.
 //
 // The validators enforce the API's limits on the number of variables and the
 // length of their values. The API doesn't reject a check or check group
 // variable that exceeds them: it drops the variable, so the apply would fail
 // with a result inconsistent with the plan.
-func makeEnvironmentVariableSchema(options EnvironmentVariableAttributeSchemaOptions) schema.ListNestedBlock {
-	return schema.ListNestedBlock{
+func makeEnvironmentVariableSchema(options EnvironmentVariableAttributeSchemaOptions) schema.ListNestedAttribute {
+	return schema.ListNestedAttribute{
+		Optional:    true,
 		Description: fmt.Sprintf("%s At most %d variables.", options.Description, maxEnvironmentVariables),
 		Validators: []validator.List{
 			listvalidator.SizeAtMost(maxEnvironmentVariables),
 		},
-		NestedObject: schema.NestedBlockObject{
+		NestedObject: schema.NestedAttributeObject{
 			Attributes: map[string]schema.Attribute{
 				"key": schema.StringAttribute{
 					Required:    true,
@@ -84,8 +86,9 @@ func makeEnvironmentVariableSchema(options EnvironmentVariableAttributeSchemaOpt
 	}
 }
 
-// environmentVariablesFromList converts the environment_variable block value
-// to its API representation.
+// environmentVariablesFromList converts the environment_variables attribute
+// value to its API representation. Null converts to no variables, which
+// clears them in Checkly.
 func environmentVariablesFromList(ctx context.Context, list types.List, diags *diag.Diagnostics) []checkly.EnvironmentVariable {
 	res := []checkly.EnvironmentVariable{}
 
@@ -112,13 +115,19 @@ func environmentVariablesFromList(ctx context.Context, list types.List, diags *d
 }
 
 // environmentVariablesToList converts the API representation of environment
-// variables to the environment_variable block value.
+// variables to the environment_variables attribute value. The API reports no
+// variables as an empty array, so no variables convert to null when prior
+// (the planned or previously stored value) is null or unknown, and to an
+// empty list when it is known.
 //
 // The Checkly API does not return the value of secret environment variables.
-// For those, the value from prior (the planned or previously stored block
-// value) is preserved, matched by key, so that the resulting value stays
-// consistent with the plan.
+// For those, the value from prior is preserved, matched by key, so that the
+// resulting value stays consistent with the plan.
 func environmentVariablesToList(ctx context.Context, evs []checkly.EnvironmentVariable, prior types.List, diags *diag.Diagnostics) types.List {
+	if len(evs) == 0 && (prior.IsNull() || prior.IsUnknown()) {
+		return types.ListNull(types.ObjectType{AttrTypes: environmentVariableAttrTypes})
+	}
+
 	priorValues := map[string]types.String{}
 
 	if !prior.IsNull() && !prior.IsUnknown() {

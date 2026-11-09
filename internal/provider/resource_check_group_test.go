@@ -339,53 +339,54 @@ func TestAccCheckGroupWithEnvironmentVariable(t *testing.T) {
 					concurrency = 1
 					locations   = ["eu-central-1"]
 
-					environment_variable {
-						key    = "FOO"
-						value  = "bar"
-						locked = false
-					}
-
-					environment_variable {
-						key    = "SECRET"
-						value  = "s3cr3t"
-						locked = true
-					}
+					environment_variables = [
+						{
+							key    = "FOO"
+							value  = "bar"
+							locked = false
+						},
+						{
+							key    = "SECRET"
+							value  = "s3cr3t"
+							locked = true
+						},
+					]
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_check_group.test",
-					"environment_variable.#",
+					"environment_variables.#",
 					"2",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_check_group.test",
-					"environment_variable.0.key",
+					"environment_variables.0.key",
 					"FOO",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_check_group.test",
-					"environment_variable.0.value",
+					"environment_variables.0.value",
 					"bar",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_check_group.test",
-					"environment_variable.0.locked",
+					"environment_variables.0.locked",
 					"false",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_check_group.test",
-					"environment_variable.1.key",
+					"environment_variables.1.key",
 					"SECRET",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_check_group.test",
-					"environment_variable.1.value",
+					"environment_variables.1.value",
 					"s3cr3t",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_check_group.test",
-					"environment_variable.1.locked",
+					"environment_variables.1.locked",
 					"true",
 				),
 			),
@@ -403,16 +404,18 @@ func TestAccCheckGroupEnvironmentVariableRemoval(t *testing.T) {
 					concurrency = 1
 					locations   = ["eu-central-1"]
 
-					environment_variable {
-						key   = "FOO"
-						value = "bar"
-					}
+					environment_variables = [
+						{
+							key   = "FOO"
+							value = "bar"
+						},
+					]
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_check_group.test",
-					"environment_variable.#",
+					"environment_variables.#",
 					"1",
 				),
 			),
@@ -429,7 +432,7 @@ func TestAccCheckGroupEnvironmentVariableRemoval(t *testing.T) {
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_check_group.test",
-					"environment_variable.#",
+					"environment_variables.#",
 					"0",
 				),
 			),
