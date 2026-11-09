@@ -587,6 +587,9 @@ func TestMoveSDKv2State(t *testing.T) {
 			want:       types.StringValue("console.log(1)"),
 			check: func(t *testing.T, state tfsdk.State) {
 				requireStateValue(t, state, path.Root(environmentVariableAttributeName), environmentVariablesList(t, "K", "v"))
+				// checkly_check has no dependencies, so the moved check has
+				// none either.
+				requireStateNull(t, state, path.Root(scriptDependenciesAttributeName))
 			},
 		},
 		"checkly_check to checkly_multistep_check": {
@@ -595,6 +598,9 @@ func TestMoveSDKv2State(t *testing.T) {
 			fixture:    "check_multistep",
 			attr:       path.Root("script"),
 			want:       types.StringValue("console.log(2)"),
+			check: func(t *testing.T, state tfsdk.State) {
+				requireStateNull(t, state, path.Root(scriptDependenciesAttributeName))
+			},
 		},
 		"checkly_tcp_check to checkly_tcp_monitor": {
 			target:     NewTCPMonitorResource(),

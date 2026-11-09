@@ -77,9 +77,10 @@ test('visit page', async ({ page }) => {
 })
 EOT
 
-  dependency {
-    path    = "__checks__/util.ts"
-    content = <<EOT
+  dependencies = [
+    {
+      path    = "__checks__/util.ts"
+      content = <<EOT
 import { expect } from '@playwright/test'
 
 export async function visitPage(page, url) {
@@ -87,7 +88,8 @@ export async function visitPage(page, url) {
     expect(response.status()).toBeLessThan(400)
 }
 EOT
-  }
+    },
+  ]
 }
 
 # An alternative syntax for adding the script is by referencing an external file

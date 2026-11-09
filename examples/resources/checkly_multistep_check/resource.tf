@@ -50,9 +50,10 @@ test('public stats', async ({ request }) => {
 })
 EOT
 
-  dependency {
-    path    = "__checks__/util.ts"
-    content = <<EOT
+  dependencies = [
+    {
+      path    = "__checks__/util.ts"
+      content = <<EOT
 import { expect } from '@playwright/test'
 
 export async function getStats(request) {
@@ -61,7 +62,8 @@ export async function getStats(request) {
     return response.json()
 }
 EOT
-  }
+    },
+  ]
 }
 
 # Migrating an existing checkly_check of type MULTI_STEP without recreating it

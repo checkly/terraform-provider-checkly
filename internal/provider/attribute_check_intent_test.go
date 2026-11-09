@@ -575,7 +575,7 @@ func TestAccBrowserCheckIntent(t *testing.T) {
 				}
 			`, name, attributes)
 		},
-		importIgnore: []string{"dependency"},
+		importIgnore: []string{"dependencies"},
 		set: func(ctx context.Context, client checkly.Client, id string, intent *checkly.CheckIntent, aiAutoRepair *bool) error {
 			check, err := client.GetBrowserCheck(ctx, id)
 			if err != nil {
@@ -609,7 +609,7 @@ func TestAccMultistepCheckIntent(t *testing.T) {
 				}
 			`, name, attributes)
 		},
-		importIgnore: []string{"dependency"},
+		importIgnore: []string{"dependencies"},
 		set: func(ctx context.Context, client checkly.Client, id string, intent *checkly.CheckIntent, aiAutoRepair *bool) error {
 			check, err := client.GetMultiStepCheck(ctx, id)
 			if err != nil {

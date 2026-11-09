@@ -7,6 +7,9 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 )
 
 func TestAccMultistepCheckResourceBasic(t *testing.T) {
@@ -113,15 +116,16 @@ func TestAccMultistepCheckResourceDependencies(t *testing.T) {
 				script_path               = "__checks__/main.spec.ts"
 				script                    = "console.log('main')"
 
-				dependency {
-					path    = "__checks__/util.ts"
-					content = "export const foo = 'bar'"
-				}
-
-				dependency {
-					path    = "__checks__/data.json"
-					content = "{\"foo\": \"bar\"}"
-				}
+				dependencies = [
+					{
+						path    = "__checks__/util.ts"
+						content = "export const foo = 'bar'"
+					},
+					{
+						path    = "__checks__/data.json"
+						content = "{\"foo\": \"bar\"}"
+					},
+				]
 			}`,
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
@@ -131,22 +135,22 @@ func TestAccMultistepCheckResourceDependencies(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_multistep_check.test",
-					"dependency.#",
+					"dependencies.#",
 					"2",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_multistep_check.test",
-					"dependency.0.path",
+					"dependencies.0.path",
 					"__checks__/util.ts",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_multistep_check.test",
-					"dependency.0.content",
+					"dependencies.0.content",
 					"export const foo = 'bar'",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_multistep_check.test",
-					"dependency.1.path",
+					"dependencies.1.path",
 					"__checks__/data.json",
 				),
 			),
@@ -162,25 +166,26 @@ func TestAccMultistepCheckResourceDependencies(t *testing.T) {
 				script_path               = "__checks__/main.spec.ts"
 				script                    = "console.log('main')"
 
-				dependency {
-					path    = "__checks__/util.ts"
-					content = "export const foo = 'baz'"
-				}
-
-				dependency {
-					path    = "__checks__/data.json"
-					content = "{\"foo\": \"bar\"}"
-				}
+				dependencies = [
+					{
+						path    = "__checks__/util.ts"
+						content = "export const foo = 'baz'"
+					},
+					{
+						path    = "__checks__/data.json"
+						content = "{\"foo\": \"bar\"}"
+					},
+				]
 			}`,
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_multistep_check.test",
-					"dependency.#",
+					"dependencies.#",
 					"2",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_multistep_check.test",
-					"dependency.0.content",
+					"dependencies.0.content",
 					"export const foo = 'baz'",
 				),
 			),
@@ -193,12 +198,40 @@ func TestAccMultistepCheckResourceDependencies(t *testing.T) {
 			// existing state keeps the configured order. An imported state
 			// has no prior value to recover the configured order from, so
 			// the element order may legitimately differ.
-			ImportStateVerifyIgnore: []string{"dependency"},
+			ImportStateVerifyIgnore: []string{"dependencies"},
 		},
 		{
-			// Removing every dependency block must clear the dependencies
-			// remotely; otherwise the post-apply refresh would report the
-			// remote dependencies as drift and fail this step.
+			// An empty list must clear the dependencies remotely and is
+			// stored as an empty list, not null; otherwise the post-apply
+			// refresh and plan would not be empty.
+			Config: `resource "checkly_multistep_check" "test" {
+				name                      = "Multistep Check Resource Dependencies"
+				activated                 = true
+				frequency                 = 720
+				use_global_alert_settings = true
+				locations                 = ["us-east-1"]
+				runtime_id                = "2023.09"
+				script                    = "console.log('main')"
+
+				dependencies = []
+			}`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(
+					"checkly_multistep_check.test",
+					"dependencies.#",
+					"0",
+				),
+			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue(
+					"checkly_multistep_check.test",
+					tfjsonpath.New("dependencies"),
+					knownvalue.ListExact([]knownvalue.Check{}),
+				),
+			},
+		},
+		{
+			// Leaving the attribute out stores null.
 			Config: `resource "checkly_multistep_check" "test" {
 				name                      = "Multistep Check Resource Dependencies"
 				activated                 = true
@@ -209,10 +242,11 @@ func TestAccMultistepCheckResourceDependencies(t *testing.T) {
 				script                    = "console.log('main')"
 			}`,
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
+				// Unlike a check of the element count, which also passes
+				// for an empty list, this fails unless the value is null.
+				resource.TestCheckNoResourceAttr(
 					"checkly_multistep_check.test",
-					"dependency.#",
-					"0",
+					"dependencies",
 				),
 			),
 		},

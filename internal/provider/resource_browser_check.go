@@ -50,7 +50,7 @@ type BrowserCheckResourceModel struct {
 	Locations                 types.Set    `tfsdk:"locations"`
 	Script                    types.String `tfsdk:"script"`
 	ScriptPath                types.String `tfsdk:"script_path"`
-	Dependency                types.List   `tfsdk:"dependency"`
+	Dependencies              types.List   `tfsdk:"dependencies"`
 	EnvironmentVariables      types.List   `tfsdk:"environment_variables"`
 	Tags                      types.Set    `tfsdk:"tags"`
 	SSLCheckDomain            types.String `tfsdk:"ssl_check_domain"`
@@ -192,23 +192,7 @@ func (r *BrowserCheckResource) Schema(ctx context.Context, req resource.SchemaRe
 			environmentVariableAttributeName: makeEnvironmentVariableSchema(EnvironmentVariableAttributeSchemaOptions{
 				Description: "Insert environment variables into the runtime environment. Use global environment variables whenever possible.",
 			}),
-		},
-		Blocks: map[string]schema.Block{
-			"dependency": schema.ListNestedBlock{
-				Description: "Script dependency files for editor-style multi-file scripts. Use together with `script_path` to mirror a multi-file layout.",
-				NestedObject: schema.NestedBlockObject{
-					Attributes: map[string]schema.Attribute{
-						"path": schema.StringAttribute{
-							Required:    true,
-							Description: "The path of the dependency file.",
-						},
-						"content": schema.StringAttribute{
-							Required:    true,
-							Description: "The content of the dependency file.",
-						},
-					},
-				},
-			},
+			scriptDependenciesAttributeName: makeScriptDependenciesSchema(),
 		},
 	}
 }
@@ -344,7 +328,7 @@ func (r *BrowserCheckResource) MoveState(ctx context.Context) []resource.StateMo
 // browserCheckModelFromCheckModel converts a checkly_check model of a browser
 // check. The frequency_offset, request, response time, snippet and local
 // script attributes of checkly_check do not exist on checkly_browser_check
-// and are discarded. The script_path and dependency attributes are new and
+// and are discarded. The script_path and dependencies attributes are new and
 // have no source value.
 func browserCheckModelFromCheckModel(source *CheckResourceModel) BrowserCheckResourceModel {
 	return BrowserCheckResourceModel{
@@ -359,7 +343,7 @@ func browserCheckModelFromCheckModel(source *CheckResourceModel) BrowserCheckRes
 		Locations:                 source.Locations,
 		Script:                    source.Script,
 		ScriptPath:                types.StringNull(),
-		Dependency:                types.ListValueMust(types.ObjectType{AttrTypes: scriptDependencyAttrTypes}, []attr.Value{}),
+		Dependencies:              types.ListNull(types.ObjectType{AttrTypes: scriptDependencyAttrTypes}),
 		EnvironmentVariables:      source.EnvironmentVariables,
 		Tags:                      source.Tags,
 		SSLCheckDomain:            source.SSLCheckDomain,
@@ -406,7 +390,7 @@ func browserCheckFromModel(ctx context.Context, model *BrowserCheckResourceModel
 		Locations:                 locations,
 		Script:                    model.Script.ValueString(),
 		ScriptPath:                optionalStringPointer(model.ScriptPath),
-		Dependencies:              scriptDependenciesFromList(ctx, model.Dependency, diags),
+		Dependencies:              scriptDependenciesFromList(ctx, model.Dependencies, diags),
 		EnvironmentVariables:      environmentVariablesFromList(ctx, model.EnvironmentVariables, diags),
 		SSLCheckDomain:            model.SSLCheckDomain.ValueString(),
 		Tags:                      stringsFromSet(ctx, model.Tags, diags),
@@ -434,7 +418,7 @@ func browserCheckFromModel(ctx context.Context, model *BrowserCheckResourceModel
 // are already known at plan time (defaults included) and must be kept as
 // planned; only the values that may still be unknown in the plan (the ID and
 // the optional+computed alert_settings and retry_strategy objects) are
-// resolved from the API response. Notably, the dependency block value is kept
+// resolved from the API response. Notably, the dependencies value is kept
 // as planned because create and update API responses do not echo
 // dependencies; only reads include them.
 func browserCheckResolveComputedValues(ctx context.Context, c *checkly.BrowserCheck, model *BrowserCheckResourceModel, diags *diag.Diagnostics) {
@@ -484,7 +468,7 @@ func browserCheckToModel(ctx context.Context, c *checkly.BrowserCheck, model *Br
 		model.ScriptPath = types.StringNull()
 	}
 
-	model.Dependency = scriptDependenciesToList(ctx, c.Dependencies, prior.Dependency, diags)
+	model.Dependencies = scriptDependenciesToList(ctx, c.Dependencies, prior.Dependencies, diags)
 	model.EnvironmentVariables = environmentVariablesToList(ctx, c.EnvironmentVariables, prior.EnvironmentVariables, diags)
 	model.Tags = stringSetFromAPIEmptyIfUnknown(ctx, c.Tags, prior.Tags, diags)
 

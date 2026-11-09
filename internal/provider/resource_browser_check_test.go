@@ -297,15 +297,16 @@ func TestAccBrowserCheckResourceDependencies(t *testing.T) {
 				script_path               = "__checks__/main.spec.ts"
 				script                    = "console.log('main')"
 
-				dependency {
-					path    = "__checks__/util.ts"
-					content = "export const foo = 'bar'"
-				}
-
-				dependency {
-					path    = "__checks__/data.json"
-					content = "{\"foo\": \"bar\"}"
-				}
+				dependencies = [
+					{
+						path    = "__checks__/util.ts"
+						content = "export const foo = 'bar'"
+					},
+					{
+						path    = "__checks__/data.json"
+						content = "{\"foo\": \"bar\"}"
+					},
+				]
 			}`,
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
@@ -315,22 +316,22 @@ func TestAccBrowserCheckResourceDependencies(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_browser_check.test",
-					"dependency.#",
+					"dependencies.#",
 					"2",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_browser_check.test",
-					"dependency.0.path",
+					"dependencies.0.path",
 					"__checks__/util.ts",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_browser_check.test",
-					"dependency.0.content",
+					"dependencies.0.content",
 					"export const foo = 'bar'",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_browser_check.test",
-					"dependency.1.path",
+					"dependencies.1.path",
 					"__checks__/data.json",
 				),
 			),
@@ -345,25 +346,26 @@ func TestAccBrowserCheckResourceDependencies(t *testing.T) {
 				script_path               = "__checks__/main.spec.ts"
 				script                    = "console.log('main')"
 
-				dependency {
-					path    = "__checks__/util.ts"
-					content = "export const foo = 'baz'"
-				}
-
-				dependency {
-					path    = "__checks__/data.json"
-					content = "{\"foo\": \"bar\"}"
-				}
+				dependencies = [
+					{
+						path    = "__checks__/util.ts"
+						content = "export const foo = 'baz'"
+					},
+					{
+						path    = "__checks__/data.json"
+						content = "{\"foo\": \"bar\"}"
+					},
+				]
 			}`,
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_browser_check.test",
-					"dependency.#",
+					"dependencies.#",
 					"2",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_browser_check.test",
-					"dependency.0.content",
+					"dependencies.0.content",
 					"export const foo = 'baz'",
 				),
 			),
@@ -376,10 +378,10 @@ func TestAccBrowserCheckResourceDependencies(t *testing.T) {
 			// existing state keeps the configured order. An imported state
 			// has no prior value to recover the configured order from, so
 			// the element order may legitimately differ.
-			ImportStateVerifyIgnore: []string{"dependency"},
+			ImportStateVerifyIgnore: []string{"dependencies"},
 		},
 		{
-			// Removing every dependency block must clear the dependencies
+			// Removing every dependency must clear the dependencies
 			// remotely; otherwise the post-apply refresh would report the
 			// remote dependencies as drift and fail this step.
 			Config: `resource "checkly_browser_check" "test" {
@@ -393,7 +395,7 @@ func TestAccBrowserCheckResourceDependencies(t *testing.T) {
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_browser_check.test",
-					"dependency.#",
+					"dependencies.#",
 					"0",
 				),
 			),

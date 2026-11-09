@@ -20,8 +20,6 @@ import (
 // one of is a single nested attribute (`x = { ... }`) instead. An entry that no schema
 // uses any more fails the test, so the list stays exact.
 var repeatedBlocks = map[string]bool{
-	"checkly_browser_check.dependency":                 true,
-	"checkly_multistep_check.dependency":               true,
 	"checkly_status_page.card":                         true,
 	"checkly_status_page.card.service_attachment":      true,
 	"checkly_status_page_v3_automation_rule.component": true,
@@ -125,7 +123,7 @@ func walkDataSourceAttributes(t *testing.T, where string, attrs map[string]datas
 
 // TestOnlyRepeatedBlocks keeps every object that a resource or data source
 // can hold at most one of a single nested attribute: blocks are reserved for
-// repeated objects such as dependency, and no block or nested
+// repeated objects such as card, and no block or nested
 // list or set attribute, at any depth, is capped at one element.
 func TestOnlyRepeatedBlocks(t *testing.T) {
 	seen := make(map[string]bool)
