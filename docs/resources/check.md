@@ -212,7 +212,7 @@ resource "checkly_check" "example_check" {
 - `max_response_time` (Number) The response time in milliseconds starting from which a check should be considered failing. Possible values are between 0 and 30000. Only relevant when `type` is `API`. (Default `30000`).
 - `muted` (Boolean) Determines if any notifications will be sent out when a check fails/degrades/recovers.
 - `private_locations` (Set of String) An array of one or more private locations slugs.
-- `request` (Attributes) An API check might have one request config. (see [below for nested schema](#nestedatt--request))
+- `request` (Attributes) An API check might have one request config. Only relevant when `type` is `API`. (see [below for nested schema](#nestedatt--request))
 - `retry_strategy` (Attributes) A strategy for retrying failed check/monitor runs. (see [below for nested schema](#nestedatt--retry_strategy))
 - `run_parallel` (Boolean) Determines if the check should run in all selected locations in parallel or round-robin.
 - `runtime_id` (String) The id of the runtime to use for this check.
