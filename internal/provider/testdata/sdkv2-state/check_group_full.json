@@ -1,0 +1,82 @@
+{
+    "activated": true,
+    "alert_channel_subscription": [
+        {
+            "activated": true,
+            "channel_id": 7
+        }
+    ],
+    "alert_settings": [
+        {
+            "escalation_type": "RUN_BASED",
+            "parallel_run_failure_threshold": [
+                {
+                    "enabled": false,
+                    "percentage": 10
+                }
+            ],
+            "reminders": [
+                {
+                    "amount": 1,
+                    "interval": 5
+                }
+            ],
+            "run_based_escalation": [
+                {
+                    "failed_run_threshold": 2
+                }
+            ],
+            "ssl_certificates": [],
+            "time_based_escalation": []
+        }
+    ],
+    "api_check_defaults": [
+        {
+            "assertion": [],
+            "basic_auth": [
+                {
+                    "password": "p",
+                    "username": "u"
+                }
+            ],
+            "headers": {},
+            "query_parameters": {},
+            "url": "https://example.com"
+        }
+    ],
+    "concurrency": 2,
+    "double_check": false,
+    "environment_variable": [],
+    "environment_variables": {
+        "K": "v"
+    },
+    "id": "123",
+    "local_setup_script": "console.log('s')",
+    "local_teardown_script": "",
+    "locations": [
+        "eu-west-1"
+    ],
+    "muted": false,
+    "name": "g",
+    "private_locations": [],
+    "retry_strategy": [
+        {
+            "base_backoff_seconds": 60,
+            "max_duration_seconds": 600,
+            "max_retries": 2,
+            "only_on": [
+                {
+                    "network_error": true
+                }
+            ],
+            "same_region": true,
+            "type": "LINEAR"
+        }
+    ],
+    "run_parallel": true,
+    "runtime_id": "",
+    "setup_snippet_id": 0,
+    "tags": [],
+    "teardown_snippet_id": 0,
+    "use_global_alert_settings": false
+}

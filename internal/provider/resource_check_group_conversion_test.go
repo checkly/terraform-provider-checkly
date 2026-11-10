@@ -262,3 +262,290 @@ func TestPlanUnconfiguredAlertSettingsAsUnknown(t *testing.T) {
 		})
 	}
 }
+
+// checkGroupModelForMove returns the model of a checkly_check_group that
+// configures nothing optional, as checkly_check_group stores it: zero snippet
+// IDs and scripts, no alert settings, and no retries.
+func checkGroupModelForMove() CheckGroupResourceModel {
+	stringSet := types.SetNull(types.StringType)
+	return CheckGroupResourceModel{
+		ID:                        types.StringValue("42"),
+		Name:                      types.StringValue("g"),
+		Concurrency:               types.Int64Value(1),
+		Activated:                 types.BoolValue(true),
+		Muted:                     types.BoolValue(false),
+		RunParallel:               types.BoolValue(false),
+		Locations:                 stringSet,
+		PrivateLocations:          stringSet,
+		Tags:                      stringSet,
+		EnvironmentVariables:      types.ListNull(types.ObjectType{AttrTypes: environmentVariableAttrTypes}),
+		SetupSnippetID:            types.Int64Value(0),
+		TeardownSnippetID:         types.Int64Value(0),
+		LocalSetupScript:          types.StringValue(""),
+		LocalTeardownScript:       types.StringValue(""),
+		RuntimeID:                 types.StringNull(),
+		AlertChannelSubscriptions: types.SetNull(types.ObjectType{AttrTypes: alertChannelSubscriptionAttrTypes}),
+		AlertSettings:             types.ObjectNull(alertSettingsAttrTypes),
+		UseGlobalAlertSettings:    types.BoolValue(true),
+		DoubleCheck:               types.BoolValue(false),
+		APICheckDefaults:          apiCheckDefaultsDefaultObject(),
+		RetryStrategy:             noRetriesObject(true),
+	}
+}
+
+func TestCheckGroupV2ModelFromCheckGroupModel(t *testing.T) {
+	ctx := context.Background()
+
+	stringSet := func(values ...string) types.Set {
+		elements := make([]attr.Value, 0, len(values))
+		for _, value := range values {
+			elements = append(elements, types.StringValue(value))
+		}
+		return types.SetValueMust(types.StringType, elements)
+	}
+	enabled := func(attrTypes map[string]attr.Type, values map[string]attr.Value) types.Object {
+		values["enabled"] = types.BoolValue(true)
+		return types.ObjectValueMust(attrTypes, values)
+	}
+	var diags diag.Diagnostics
+	alertSettings := alertSettingsToObject(ctx, checkly.AlertSettings{
+		EscalationType:     checkly.EscalationTypeRunBased,
+		RunBasedEscalation: checkly.RunBasedEscalation{FailedRunThreshold: 2},
+	}, types.ObjectNull(alertSettingsAttrTypes), &diags)
+	// checkGroupToModel stores a group without alert settings as zero values
+	// with an empty escalation type.
+	zeroAlertSettings := alertSettingsToObject(ctx, checkly.AlertSettings{}, types.ObjectNull(alertSettingsAttrTypes), &diags)
+	fallback := retryStrategyToObject(ctx, &checkly.RetryStrategy{Type: checkly.RetryStrategyTypeFallback}, types.ObjectNull(retryStrategyAttrTypes(true)), &diags)
+	if diags.HasError() {
+		t.Fatal(diags)
+	}
+	secretVariables := environmentVariableTestList(t, []EnvironmentVariableModel{{
+		Key:    types.StringValue("TOKEN"),
+		Value:  types.StringValue("s3cret"),
+		Locked: types.BoolValue(false),
+		Secret: types.BoolValue(true),
+	}})
+
+	cases := map[string]struct {
+		edit  func(source *CheckGroupResourceModel)
+		check func(t *testing.T, target CheckGroupV2ResourceModel)
+	}{
+		"a group without optional settings": {
+			check: func(t *testing.T, target CheckGroupV2ResourceModel) {
+				requireValue(t, "id", target.ID, types.StringValue("42"))
+				requireValue(t, "tags", target.Tags, types.SetNull(types.StringType))
+				requireValue(t, "enforce_locations", target.EnforceLocations, checkGroupV2DisabledEnforcementObject(checkGroupV2EnforceLocationsAttrTypes))
+				requireValue(t, "enforce_alert_settings", target.EnforceAlertSettings, enabled(checkGroupV2EnforceAlertSettingsAttrTypes, map[string]attr.Value{
+					alertSettingsAttributeName:            types.ObjectNull(alertSettingsAttrTypes),
+					"use_global_alert_settings":           types.BoolValue(true),
+					alertChannelSubscriptionAttributeName: types.SetNull(checkGroupV2AlertChannelSubscriptionSetType.ElemType),
+				}))
+				requireValue(t, "enforce_retry_strategy", target.EnforceRetryStrategy, enabled(checkGroupV2EnforceRetryStrategyAttrTypes, map[string]attr.Value{
+					retryStrategyAttributeName: noRetriesObject(true),
+				}))
+				requireValue(t, "enforce_scheduling_strategy", target.EnforceSchedulingStrategy, enabled(checkGroupV2EnforceSchedulingStrategyAttrTypes, map[string]attr.Value{
+					"run_parallel": types.BoolValue(false),
+				}))
+				requireValue(t, "setup_script", target.SetupScript, types.ObjectNull(checkGroupV2ScriptAttrTypes))
+				requireValue(t, "teardown_script", target.TeardownScript, types.ObjectNull(checkGroupV2ScriptAttrTypes))
+				requireValue(t, "default_runtime", target.DefaultRuntime, types.ObjectNull(checkGroupV2DefaultRuntimeAttrTypes))
+				requireValue(t, "api_check_defaults", target.APICheckDefaults, apiCheckDefaultsDefaultObject())
+			},
+		},
+		"empty collections become null": {
+			edit: func(source *CheckGroupResourceModel) {
+				source.Tags = stringSet()
+				source.Locations = stringSet()
+				source.PrivateLocations = stringSet()
+				source.AlertChannelSubscriptions = types.SetValueMust(types.ObjectType{AttrTypes: alertChannelSubscriptionAttrTypes}, []attr.Value{})
+			},
+			check: func(t *testing.T, target CheckGroupV2ResourceModel) {
+				requireValue(t, "tags", target.Tags, types.SetNull(types.StringType))
+				requireValue(t, "enforce_locations", target.EnforceLocations, checkGroupV2DisabledEnforcementObject(checkGroupV2EnforceLocationsAttrTypes))
+				requireValue(t, "enforce_alert_settings.alert_channel_subscriptions", target.EnforceAlertSettings.Attributes()[alertChannelSubscriptionAttributeName], types.SetNull(checkGroupV2AlertChannelSubscriptionSetType.ElemType))
+			},
+		},
+		"tags and locations": {
+			edit: func(source *CheckGroupResourceModel) {
+				source.Tags = stringSet("a")
+				source.Locations = stringSet()
+				source.PrivateLocations = stringSet("dc-1")
+			},
+			check: func(t *testing.T, target CheckGroupV2ResourceModel) {
+				requireValue(t, "tags", target.Tags, stringSet("a"))
+				requireValue(t, "enforce_locations", target.EnforceLocations, enabled(checkGroupV2EnforceLocationsAttrTypes, map[string]attr.Value{
+					"locations":         types.SetNull(types.StringType),
+					"private_locations": stringSet("dc-1"),
+				}))
+			},
+		},
+		"alert settings": {
+			edit: func(source *CheckGroupResourceModel) {
+				source.AlertSettings = alertSettings
+				source.UseGlobalAlertSettings = types.BoolValue(false)
+				source.AlertChannelSubscriptions = alertChannelSubscriptionsSet(7, true)
+			},
+			check: func(t *testing.T, target CheckGroupV2ResourceModel) {
+				requireValue(t, "enforce_alert_settings", target.EnforceAlertSettings, enabled(checkGroupV2EnforceAlertSettingsAttrTypes, map[string]attr.Value{
+					alertSettingsAttributeName:            alertSettings,
+					"use_global_alert_settings":           types.BoolValue(false),
+					alertChannelSubscriptionAttributeName: alertChannelSubscriptionsSet(7, true),
+				}))
+			},
+		},
+		"alert settings with an empty escalation type": {
+			edit: func(source *CheckGroupResourceModel) {
+				source.AlertSettings = zeroAlertSettings
+				source.UseGlobalAlertSettings = types.BoolNull()
+			},
+			check: func(t *testing.T, target CheckGroupV2ResourceModel) {
+				attrs := target.EnforceAlertSettings.Attributes()
+				requireValue(t, "enforce_alert_settings.enabled", attrs["enabled"], types.BoolValue(true))
+				requireValue(t, "enforce_alert_settings.alert_settings", attrs[alertSettingsAttributeName], types.ObjectNull(alertSettingsAttrTypes))
+				requireValue(t, "enforce_alert_settings.use_global_alert_settings", attrs["use_global_alert_settings"], types.BoolValue(false))
+			},
+		},
+		"no retry strategy": {
+			edit: func(source *CheckGroupResourceModel) {
+				source.RetryStrategy = types.ObjectNull(retryStrategyAttrTypes(true))
+			},
+			check: func(t *testing.T, target CheckGroupV2ResourceModel) {
+				requireValue(t, "enforce_retry_strategy", target.EnforceRetryStrategy, enabled(checkGroupV2EnforceRetryStrategyAttrTypes, map[string]attr.Value{
+					retryStrategyAttributeName: noRetriesObject(true),
+				}))
+			},
+		},
+		"a FALLBACK retry strategy": {
+			edit: func(source *CheckGroupResourceModel) {
+				source.RetryStrategy = fallback
+			},
+			check: func(t *testing.T, target CheckGroupV2ResourceModel) {
+				requireValue(t, "enforce_retry_strategy", target.EnforceRetryStrategy, checkGroupV2DisabledEnforcementObject(checkGroupV2EnforceRetryStrategyAttrTypes))
+			},
+		},
+		"double_check": {
+			edit: func(source *CheckGroupResourceModel) {
+				source.DoubleCheck = types.BoolValue(true)
+				source.RetryStrategy = doubleCheckRetryStrategy(true)
+			},
+			check: func(t *testing.T, target CheckGroupV2ResourceModel) {
+				requireValue(t, "enforce_retry_strategy", target.EnforceRetryStrategy, enabled(checkGroupV2EnforceRetryStrategyAttrTypes, map[string]attr.Value{
+					retryStrategyAttributeName: doubleCheckRetryStrategy(true),
+				}))
+			},
+		},
+		"run_parallel": {
+			edit: func(source *CheckGroupResourceModel) {
+				source.RunParallel = types.BoolValue(true)
+			},
+			check: func(t *testing.T, target CheckGroupV2ResourceModel) {
+				requireValue(t, "enforce_scheduling_strategy.run_parallel", target.EnforceSchedulingStrategy.Attributes()["run_parallel"], types.BoolValue(true))
+			},
+		},
+		"scripts and runtime": {
+			edit: func(source *CheckGroupResourceModel) {
+				source.SetupSnippetID = types.Int64Value(3)
+				source.LocalSetupScript = types.StringValue("setup")
+				source.LocalTeardownScript = types.StringValue("teardown")
+				source.RuntimeID = types.StringValue("2025.04")
+			},
+			check: func(t *testing.T, target CheckGroupV2ResourceModel) {
+				// Both values of a phase are kept, as the API stores them.
+				requireValue(t, "setup_script", target.SetupScript, types.ObjectValueMust(checkGroupV2ScriptAttrTypes, map[string]attr.Value{
+					"snippet_id":    types.Int64Value(3),
+					"inline_script": types.StringValue("setup"),
+				}))
+				requireValue(t, "teardown_script", target.TeardownScript, types.ObjectValueMust(checkGroupV2ScriptAttrTypes, map[string]attr.Value{
+					"snippet_id":    types.Int64Null(),
+					"inline_script": types.StringValue("teardown"),
+				}))
+				requireValue(t, "default_runtime", target.DefaultRuntime, types.ObjectValueMust(checkGroupV2DefaultRuntimeAttrTypes, map[string]attr.Value{
+					"runtime_id": types.StringValue("2025.04"),
+				}))
+			},
+		},
+		"an empty runtime ID": {
+			edit: func(source *CheckGroupResourceModel) {
+				source.RuntimeID = types.StringValue("")
+			},
+			check: func(t *testing.T, target CheckGroupV2ResourceModel) {
+				requireValue(t, "default_runtime", target.DefaultRuntime, types.ObjectNull(checkGroupV2DefaultRuntimeAttrTypes))
+			},
+		},
+		"no environment variables": {
+			edit: func(source *CheckGroupResourceModel) {
+				source.EnvironmentVariables = types.ListValueMust(types.ObjectType{AttrTypes: environmentVariableAttrTypes}, []attr.Value{})
+			},
+			check: func(t *testing.T, target CheckGroupV2ResourceModel) {
+				requireValue(t, "environment_variables", target.EnvironmentVariables, types.ListNull(types.ObjectType{AttrTypes: environmentVariableAttrTypes}))
+			},
+		},
+		"secret environment variables": {
+			edit: func(source *CheckGroupResourceModel) {
+				source.EnvironmentVariables = secretVariables
+			},
+			check: func(t *testing.T, target CheckGroupV2ResourceModel) {
+				requireValue(t, "environment_variables", target.EnvironmentVariables, secretVariables)
+			},
+		},
+	}
+
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			source := checkGroupModelForMove()
+			if c.edit != nil {
+				c.edit(&source)
+			}
+
+			var diags diag.Diagnostics
+			target := checkGroupV2ModelFromCheckGroupModel(ctx, &source, &diags)
+			if diags.HasError() {
+				t.Fatal(diags)
+			}
+			c.check(t, target)
+		})
+	}
+}
+
+// requireValue fails the test unless got equals want.
+func requireValue(t *testing.T, name string, got, want attr.Value) {
+	t.Helper()
+
+	if !got.Equal(want) {
+		t.Errorf("%s = %s, want %s", name, got, want)
+	}
+}
+
+// A `moved` block from a checkly_check_group written by this provider moves
+// its state, which the framework has decoded with the checkly_check_group
+// schema, to the checkly_check_group_v2 schema.
+func TestCheckGroupV2MoveStateFromCurrentState(t *testing.T) {
+	ctx := context.Background()
+
+	var sourceSchema resource.SchemaResponse
+	NewCheckGroupResource().Schema(ctx, resource.SchemaRequest{}, &sourceSchema)
+
+	model := checkGroupModelForMove()
+	model.Locations = types.SetValueMust(types.StringType, []attr.Value{types.StringValue("eu-west-1")})
+	sourceState := tfsdk.State{Schema: sourceSchema.Schema}
+	if diags := sourceState.Set(ctx, &model); diags.HasError() {
+		t.Fatal(diags)
+	}
+
+	resp := moveState(t, NewCheckGroupV2Resource(), resource.MoveStateRequest{
+		SourceProviderAddress: "registry.terraform.io/checkly/checkly",
+		SourceTypeName:        "checkly_check_group",
+		SourceSchemaVersion:   sourceSchema.Schema.Version,
+		SourceState:           &sourceState,
+	})
+	if resp.Diagnostics.HasError() {
+		t.Fatalf("move diagnostics: %v", resp.Diagnostics)
+	}
+
+	var target CheckGroupV2ResourceModel
+	if diags := resp.TargetState.Get(ctx, &target); diags.HasError() {
+		t.Fatal(diags)
+	}
+	requireValue(t, "id", target.ID, types.StringValue("42"))
+	requireValue(t, "enforce_locations.locations", target.EnforceLocations.Attributes()["locations"], model.Locations)
+}

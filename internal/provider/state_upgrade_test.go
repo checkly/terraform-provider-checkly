@@ -133,6 +133,18 @@ func requireStateNull(t *testing.T, state tfsdk.State, p path.Path) {
 	}
 }
 
+// moveState runs the state mover of target, which has exactly one, on req.
+func moveState(t *testing.T, target resource.Resource, req resource.MoveStateRequest) resource.MoveStateResponse {
+	t.Helper()
+	ctx := context.Background()
+
+	var schemaResp resource.SchemaResponse
+	target.Schema(ctx, resource.SchemaRequest{}, &schemaResp)
+	resp := resource.MoveStateResponse{TargetState: tfsdk.State{Schema: schemaResp.Schema}}
+	target.(resource.ResourceWithMoveState).MoveState(ctx)[0].StateMover(ctx, req, &resp)
+	return resp
+}
+
 func TestUpgradeSDKv2State(t *testing.T) {
 	t.Run("url_monitor", func(t *testing.T) {
 		state := upgradeSDKv2Fixture(t, NewURLMonitorResource(), "url_monitor")
@@ -729,6 +741,38 @@ func TestMoveSDKv2State(t *testing.T) {
 				requireStateNull(t, state, visibility.AtName("service_ids"))
 			},
 		},
+		"checkly_check_group to checkly_check_group_v2": {
+			target:     NewCheckGroupV2Resource(),
+			sourceType: "checkly_check_group",
+			fixture:    "check_group_full",
+			attr:       path.Root("enforce_retry_strategy").AtName(retryStrategyAttributeName).AtName("type"),
+			want:       types.StringValue("LINEAR"),
+			check: func(t *testing.T, state tfsdk.State) {
+				locations := path.Root("enforce_locations")
+				requireStateValue(t, state, locations.AtName("enabled"), types.BoolValue(true))
+				requireStateValue(t, state, locations.AtName("locations"), types.SetValueMust(types.StringType, []attr.Value{types.StringValue("eu-west-1")}))
+				requireStateNull(t, state, locations.AtName("private_locations"))
+
+				scheduling := path.Root("enforce_scheduling_strategy")
+				requireStateValue(t, state, scheduling.AtName("enabled"), types.BoolValue(true))
+				requireStateValue(t, state, scheduling.AtName("run_parallel"), types.BoolValue(true))
+
+				alerts := path.Root("enforce_alert_settings")
+				requireStateValue(t, state, alerts.AtName("enabled"), types.BoolValue(true))
+				requireStateValue(t, state, alerts.AtName("use_global_alert_settings"), types.BoolValue(false))
+				requireStateValue(t, state, alerts.AtName(alertSettingsAttributeName).AtName("run_based_escalation").AtName("failed_run_threshold"), types.Int64Value(2))
+				requireStateValue(t, state, alerts.AtName(alertChannelSubscriptionAttributeName), alertChannelSubscriptionsSet(7, true))
+
+				requireStateValue(t, state, path.Root("enforce_retry_strategy").AtName("enabled"), types.BoolValue(true))
+				requireStateValue(t, state, path.Root(environmentVariableAttributeName), environmentVariablesList(t, "K", "v"))
+				requireStateValue(t, state, path.Root("setup_script").AtName("inline_script"), types.StringValue("console.log('s')"))
+				requireStateNull(t, state, path.Root("setup_script").AtName("snippet_id"))
+				requireStateNull(t, state, path.Root("teardown_script"))
+				requireStateNull(t, state, path.Root("default_runtime"))
+				requireStateNull(t, state, path.Root("tags"))
+				requireStateValue(t, state, path.Root(apiCheckDefaultsAttributeName).AtName("basic_auth").AtName("username"), types.StringValue("u"))
+			},
+		},
 	}
 
 	for name, c := range cases {
@@ -812,20 +856,8 @@ func TestSDKv2StateUpgradeCoverage(t *testing.T) {
 // A mover must leave state it does not handle to other movers, and refuse
 // moves that would lose data.
 func TestMoveSDKv2StateRejections(t *testing.T) {
-	ctx := context.Background()
-
-	move := func(t *testing.T, target resource.Resource, req resource.MoveStateRequest) resource.MoveStateResponse {
-		t.Helper()
-
-		var schemaResp resource.SchemaResponse
-		target.Schema(ctx, resource.SchemaRequest{}, &schemaResp)
-		resp := resource.MoveStateResponse{TargetState: tfsdk.State{Schema: schemaResp.Schema}}
-		target.(resource.ResourceWithMoveState).MoveState(ctx)[0].StateMover(ctx, req, &resp)
-		return resp
-	}
-
 	t.Run("a check of another type", func(t *testing.T) {
-		resp := move(t, NewAPICheckResource(), resource.MoveStateRequest{
+		resp := moveState(t, NewAPICheckResource(), resource.MoveStateRequest{
 			SourceProviderAddress: "registry.terraform.io/checkly/checkly",
 			SourceTypeName:        "checkly_check",
 			SourceSchemaVersion:   sdkv2SchemaVersion,
@@ -854,8 +886,8 @@ func TestMoveSDKv2StateRejections(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			for _, target := range []resource.Resource{NewAPICheckResource(), NewHeartbeatMonitorResource()} {
-				resp := move(t, target, req)
+			for _, target := range []resource.Resource{NewAPICheckResource(), NewHeartbeatMonitorResource(), NewCheckGroupV2Resource()} {
+				resp := moveState(t, target, req)
 				if resp.Diagnostics.HasError() {
 					t.Fatalf("unexpected diagnostics: %v", resp.Diagnostics)
 				}
@@ -867,7 +899,7 @@ func TestMoveSDKv2StateRejections(t *testing.T) {
 	}
 
 	t.Run("state that cannot be decoded", func(t *testing.T) {
-		resp := move(t, NewHeartbeatMonitorResource(), resource.MoveStateRequest{
+		resp := moveState(t, NewHeartbeatMonitorResource(), resource.MoveStateRequest{
 			SourceProviderAddress: "registry.terraform.io/checkly/checkly",
 			SourceTypeName:        "checkly_heartbeat",
 			SourceSchemaVersion:   sdkv2SchemaVersion + 1,
