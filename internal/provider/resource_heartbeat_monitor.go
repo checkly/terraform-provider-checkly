@@ -117,12 +117,7 @@ func (r *HeartbeatMonitorResource) Schema(ctx context.Context, req resource.Sche
 			alertSettingsAttributeName: makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{
 				Monitor: true,
 			}),
-			"use_global_alert_settings": schema.BoolAttribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     booldefault.StaticBool(false),
-				Description: "When true, the account level alert settings will be used, not the alert setting defined on this check.",
-			},
+			useGlobalAlertSettingsAttributeName: makeUseGlobalAlertSettingsAttributeSchema("monitor"),
 			"heartbeat": schema.SingleNestedAttribute{
 				Required:    true,
 				Description: "The heartbeat schedule and grace period.",

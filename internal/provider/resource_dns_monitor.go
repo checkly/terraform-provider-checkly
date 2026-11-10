@@ -182,12 +182,7 @@ func (r *DNSMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 			alertSettingsAttributeName: makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{
 				Monitor: true,
 			}),
-			"use_global_alert_settings": schema.BoolAttribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     booldefault.StaticBool(true),
-				Description: "When true, the account level alert settings will be used, not the alert setting defined on this monitor. (Default `true`).",
-			},
+			useGlobalAlertSettingsAttributeName: makeUseGlobalAlertSettingsAttributeSchema("monitor"),
 			"group_id": schema.Int64Attribute{
 				Optional:    true,
 				Computed:    true,

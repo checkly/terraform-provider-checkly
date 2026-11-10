@@ -515,7 +515,7 @@ func TestAccGRPCMonitorUnsetAllAttributes(t *testing.T) {
 				degraded_response_time    = 3000
 				max_response_time         = 8000
 				group_id                  = checkly_check_group.test.id
-				use_global_alert_settings = true
+				use_global_alert_settings = false
 				private_locations         = [checkly_private_location.test.slug_name]
 				runtime_id                = "2023.09"
 
@@ -576,7 +576,7 @@ func TestAccGRPCMonitorUnsetAllAttributes(t *testing.T) {
 				resource.TestCheckResourceAttr(name, "should_fail", "false"),
 				resource.TestCheckResourceAttr(name, "run_parallel", "false"),
 				resource.TestCheckResourceAttr(name, "group_id", "0"),
-				resource.TestCheckResourceAttr(name, "use_global_alert_settings", "false"),
+				resource.TestCheckResourceAttr(name, "use_global_alert_settings", "true"),
 				resource.TestCheckResourceAttr(name, "alert_channel_subscriptions.#", "0"),
 				resource.TestCheckResourceAttr(name, "retry_strategy.type", "NO_RETRIES"),
 				resource.TestCheckNoResourceAttr(name, "trigger_incident"),

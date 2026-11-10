@@ -1138,7 +1138,7 @@ func TestAccTCPMonitorUnsetSweepBooleansAndTags(t *testing.T) {
 					muted                     = true
 					should_fail               = true
 					run_parallel              = true
-					use_global_alert_settings = true
+					use_global_alert_settings = false
 					tags                      = ["sweep-a", "sweep-b"]
 					request = {
 						hostname = "api.checklyhq.com"
@@ -1165,7 +1165,7 @@ func TestAccTCPMonitorUnsetSweepBooleansAndTags(t *testing.T) {
 				resource.TestCheckResourceAttr(
 					"checkly_tcp_monitor.test",
 					"use_global_alert_settings",
-					"true",
+					"false",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_tcp_monitor.test",
@@ -1206,7 +1206,7 @@ func TestAccTCPMonitorUnsetSweepBooleansAndTags(t *testing.T) {
 				resource.TestCheckResourceAttr(
 					"checkly_tcp_monitor.test",
 					"use_global_alert_settings",
-					"false",
+					"true",
 				),
 				resource.TestCheckNoResourceAttr(
 					"checkly_tcp_monitor.test",

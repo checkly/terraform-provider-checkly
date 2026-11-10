@@ -131,7 +131,7 @@ moved {
 - `should_fail` (Boolean) Allows to invert the behaviour of when a check is considered to fail. (Default `false`).
 - `tags` (Set of String) A list of tags for organizing and filtering checks.
 - `trigger_incident` (Attributes) Create and resolve an incident based on the alert configuration. Useful for status page automation. (see [below for nested schema](#nestedatt--trigger_incident))
-- `use_global_alert_settings` (Boolean) When true, the account level alert settings will be used, not the alert setting defined on this check. (Default `false`).
+- `use_global_alert_settings` (Boolean) When true, the account level alert settings are used instead of the `alert_settings` of this check. Defaults to `true` when `alert_settings` is not set, and to `false` when it is.
 
 ### Read-Only
 

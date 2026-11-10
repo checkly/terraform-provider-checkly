@@ -33,6 +33,19 @@ type sdkv2UpgradeCase struct {
 	// updated in place once after the upgrade. The plan after that update
 	// must be empty.
 	expectUpdate string
+
+	// expectDiff, if set, is the change that the update of expectUpdate must
+	// plan: one "attribute: before -> after" line per changed attribute,
+	// sorted by attribute name.
+	expectDiff string
+}
+
+// withUpdate returns the case expecting a one-time in-place update of address
+// that changes exactly what diff describes.
+func (c sdkv2UpgradeCase) withUpdate(address, diff string) sdkv2UpgradeCase {
+	c.expectUpdate = address
+	c.expectDiff = diff
+	return c
 }
 
 // TestAccUpgradeFromSDKv2 applies each case with the SDK v2 release, then
@@ -59,10 +72,10 @@ func TestAccUpgradeFromSDKv2(t *testing.T) {
 					},
 					Config: c.sdkv2Config,
 				},
-				upgradeStep(c.config, c.expectUpdate),
+				upgradeStep(c.config, c.expectUpdate, c.expectDiff),
 			}
 			if c.expectUpdate != "" {
-				steps = append(steps, upgradeStep(c.config, ""))
+				steps = append(steps, upgradeStep(c.config, "", ""))
 			}
 
 			accTest(t, resource.TestCase{
@@ -77,13 +90,13 @@ func TestAccUpgradeFromSDKv2(t *testing.T) {
 
 // upgradeStep plans and applies config with this provider and fails unless
 // the plan was empty or, if expectUpdate is set, only updated that resource
-// in place.
+// in place, with exactly the change expectDiff describes if that is set.
 //
 // The plan is recorded rather than checked before the apply: a step that
 // fails before applying leaves state at the SDK v2 schema version, which
 // the test framework then cannot read back with this provider, so it would
 // skip destroying the resources.
-func upgradeStep(config, expectUpdate string) resource.TestStep {
+func upgradeStep(config, expectUpdate, expectDiff string) resource.TestStep {
 	recorder := &planChangeRecorder{}
 
 	return resource.TestStep{
@@ -98,6 +111,9 @@ func upgradeStep(config, expectUpdate string) resource.TestStep {
 				expected, ok := changes[expectUpdate]
 				if !ok || !expected.actions.Update() {
 					return fmt.Errorf("expected an in-place update of %s, got:\n%s", expectUpdate, formatPlanChanges(changes))
+				}
+				if got := unindentedDiff(expected.diff); expectDiff != "" && got != expectDiff {
+					return fmt.Errorf("expected %s to change\n%s\ngot:\n%s", expectUpdate, expectDiff, got)
 				}
 				delete(changes, expectUpdate)
 			}
@@ -195,6 +211,16 @@ func planValueJSON(value any) string {
 		return fmt.Sprintf("%v", value)
 	}
 	return string(b)
+}
+
+// unindentedDiff returns the diff of a plannedChange without the indentation
+// that formats it for a failure message.
+func unindentedDiff(diff string) string {
+	lines := strings.Split(diff, "\n")
+	for i, line := range lines {
+		lines[i] = strings.TrimSpace(line)
+	}
+	return strings.Join(lines, "\n")
 }
 
 func formatPlanChanges(changes map[string]plannedChange) string {
