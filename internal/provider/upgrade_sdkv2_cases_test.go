@@ -3164,4 +3164,240 @@ moved {
   to   = checkly_maintenance_window.test
 }
 `),
+
+	// A group moves to checkly_check_group_v2 with the settings it applies
+	// to its checks as enabled enforce_* attributes. use_global_alert_settings
+	// moves as v1.x stored it. The API never returns secret values, so only
+	// the move can keep the TOKEN variable; the empty plan shows that it did.
+	"moved_check_group_to_check_group_v2": newSDKv2UpgradeCase(upgradeEmailChannelSDKv2+`
+resource "checkly_check_group" "test" {
+  name                      = "tf-upgrade-{{id}}-moved-group"
+  activated                 = true
+  muted                     = false
+  concurrency               = 3
+  run_parallel              = true
+  locations                 = ["eu-central-1", "us-east-1"]
+  tags                      = ["tf-upgrade"]
+  use_global_alert_settings = false
+  local_setup_script        = "setup-test"
+  local_teardown_script     = "teardown-test"
+
+  api_check_defaults {
+    url = "http://example.com/"
+    headers = {
+      X-Test = "foo"
+    }
+    query_parameters = {
+      query = "foo"
+    }
+    assertion {
+      source     = "STATUS_CODE"
+      property   = ""
+      comparison = "EQUALS"
+      target     = "200"
+    }
+    basic_auth {
+      username = "user"
+      password = "pass"
+    }
+  }
+
+  environment_variable {
+    key    = "FOO"
+    value  = "BAR"
+    locked = false
+  }
+
+  environment_variable {
+    key    = "TOKEN"
+    value  = "s3cret"
+    secret = true
+  }
+
+  alert_settings {
+    escalation_type = "RUN_BASED"
+    run_based_escalation {
+      failed_run_threshold = 1
+    }
+    reminders {
+      amount   = 2
+      interval = 5
+    }
+    parallel_run_failure_threshold {
+      enabled    = false
+      percentage = 10
+    }
+  }
+
+  retry_strategy {
+    type                 = "FIXED"
+    base_backoff_seconds = 60
+    max_retries          = 2
+    max_duration_seconds = 600
+    same_region          = true
+    only_on {
+      network_error = true
+    }
+  }
+
+  alert_channel_subscription {
+    channel_id = checkly_alert_channel.email.id
+    activated  = true
+  }
+}
+`, upgradeEmailChannel+`
+resource "checkly_check_group_v2" "test" {
+  name        = "tf-upgrade-{{id}}-moved-group"
+  activated   = true
+  muted       = false
+  concurrency = 3
+  tags        = ["tf-upgrade"]
+
+  setup_script = {
+    inline_script = "setup-test"
+  }
+
+  teardown_script = {
+    inline_script = "teardown-test"
+  }
+
+  api_check_defaults = {
+    url = "http://example.com/"
+    headers = {
+      X-Test = "foo"
+    }
+    query_parameters = {
+      query = "foo"
+    }
+    assertions = [
+      {
+        source     = "STATUS_CODE"
+        property   = ""
+        comparison = "EQUALS"
+        target     = "200"
+      },
+    ]
+    basic_auth = {
+      username = "user"
+      password = "pass"
+    }
+  }
+
+  environment_variables = [
+    {
+      key    = "FOO"
+      value  = "BAR"
+      locked = false
+    },
+    {
+      key    = "TOKEN"
+      value  = "s3cret"
+      secret = true
+    },
+  ]
+
+  enforce_locations = {
+    enabled   = true
+    locations = ["eu-central-1", "us-east-1"]
+  }
+
+  enforce_scheduling_strategy = {
+    enabled      = true
+    run_parallel = true
+  }
+
+  enforce_alert_settings = {
+    enabled                   = true
+    use_global_alert_settings = false
+    alert_settings = {
+      escalation_type = "RUN_BASED"
+      run_based_escalation = {
+        failed_run_threshold = 1
+      }
+      reminders = {
+        amount   = 2
+        interval = 5
+      }
+      parallel_run_failure_threshold = {
+        enabled    = false
+        percentage = 10
+      }
+    }
+    alert_channel_subscriptions = [
+      {
+        channel_id = checkly_alert_channel.email.id
+        activated  = true
+      },
+    ]
+  }
+
+  enforce_retry_strategy = {
+    enabled = true
+    retry_strategy = {
+      type                 = "FIXED"
+      base_backoff_seconds = 60
+      max_retries          = 2
+      max_duration_seconds = 600
+      same_region          = true
+      only_on = {
+        network_error = true
+      }
+    }
+  }
+}
+
+moved {
+  from = checkly_check_group.test
+  to   = checkly_check_group_v2.test
+}
+`),
+
+	// The API reads double_check back as the retry strategy it stands for,
+	// which the v2 configuration enforces. v1.x stored the unset
+	// use_global_alert_settings as false, and the move keeps that value
+	// instead of deriving it as checkly_check_group does on its next plan.
+	"moved_check_group_double_check_to_check_group_v2": newSDKv2UpgradeCase(`
+resource "checkly_check_group" "test" {
+  name         = "tf-upgrade-{{id}}-moved-group-double-check"
+  activated    = true
+  concurrency  = 1
+  locations    = ["eu-central-1"]
+  double_check = true
+}
+`, `
+resource "checkly_check_group_v2" "test" {
+  name = "tf-upgrade-{{id}}-moved-group-double-check"
+
+  enforce_locations = {
+    enabled   = true
+    locations = ["eu-central-1"]
+  }
+
+  enforce_alert_settings = {
+    enabled                   = true
+    use_global_alert_settings = false
+  }
+
+  enforce_retry_strategy = {
+    enabled = true
+    retry_strategy = {
+      type                 = "FIXED"
+      max_retries          = 1
+      base_backoff_seconds = 0
+      max_duration_seconds = 600
+      same_region          = false
+    }
+  }
+
+  enforce_scheduling_strategy = {
+    enabled      = true
+    run_parallel = false
+  }
+}
+
+moved {
+  from = checkly_check_group.test
+  to   = checkly_check_group_v2.test
+}
+`),
 }
