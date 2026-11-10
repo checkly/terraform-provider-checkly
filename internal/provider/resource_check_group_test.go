@@ -1484,84 +1484,492 @@ func TestAccCheckGroupAlertChannelSubscriptions(t *testing.T) {
 	})
 }
 
-// TestAccCheckGroupSwitchToV2 follows the documented way of switching an
-// existing group from the deprecated checkly_check_group to
-// checkly_check_group_v2: import the group as checkly_check_group_v2, then
-// remove the checkly_check_group resource from state without destroying it.
-// Both resource types manage the same API object, so the imported group must
-// match its equivalent configuration without changes. That configuration
-// enforces the settings checkly_check_group always applies to its checks.
-func TestAccCheckGroupSwitchToV2(t *testing.T) {
-	name := fmt.Sprintf("tf-acc-group-switch-%d", acctest.RandInt())
-	v1 := fmt.Sprintf(`
-		resource "checkly_check_group" "test" {
-			name        = %q
-			activated   = true
-			concurrency = 1
-			locations   = ["eu-central-1"]
-		}
-	`, name)
-	v2 := fmt.Sprintf(`
-		resource "checkly_check_group_v2" "test" {
-			name = %q
+// TestAccCheckGroupMovedToV2 switches existing groups from the deprecated
+// checkly_check_group to checkly_check_group_v2 with a `moved` block. Both
+// resource types manage the same API object, so the moved group must match
+// its equivalent configuration without changes. That configuration enforces
+// the settings checkly_check_group always applies to its checks: alert
+// settings, retry strategy, scheduling strategy, and locations when the group
+// has any.
+//
+// use_global_alert_settings moves as stored: checkly_check_group derives
+// true for a group without alert_settings and false for one with them, and
+// the v2 configuration has to state that value.
+func TestAccCheckGroupMovedToV2(t *testing.T) {
+	const (
+		v1Address = "checkly_check_group.test"
+		v2Address = "checkly_check_group_v2.test"
+	)
 
-			enforce_locations = {
-				enabled   = true
-				locations = ["eu-central-1"]
-			}
-
-			enforce_alert_settings = {
-				enabled                   = true
-				use_global_alert_settings = true
-			}
-
-			enforce_retry_strategy = {
-				enabled = true
-				retry_strategy = {
-					type = "NO_RETRIES"
+	// Resources that some configurations reference, named after the group
+	// (%[1]s). Private location slugs are unique per account and limited to
+	// 30 characters, so the private location gets a short random slug
+	// (%[2]s) instead.
+	const (
+		alertChannel = `
+			resource "checkly_alert_channel" "email" {
+				email = {
+					address = "%[1]s@example.com"
 				}
 			}
-
-			enforce_scheduling_strategy = {
-				enabled      = true
-				run_parallel = false
+		`
+		snippet = `
+			resource "checkly_snippet" "test" {
+				name   = "%[1]s-snippet"
+				script = "console.log('snippet')"
 			}
-		}
-	`, name)
-	accTestCase(t, []resource.TestStep{
-		{
-			Config: v1,
-		},
-		{
-			Config: v1 + v2 + `
-				import {
-					to = checkly_check_group_v2.test
-					id = checkly_check_group.test.id
+		`
+		privateLocation = `
+			resource "checkly_private_location" "test" {
+				name      = "%[1]s"
+				slug_name = "%[2]s"
+				icon      = "bell-fill"
+			}
+		`
+	)
+
+	cases := map[string]struct {
+		v1, v2 string
+		// dependencies holds the resources both configurations reference.
+		dependencies string
+		// useGlobalAlertSettings is the value checkly_check_group stores.
+		useGlobalAlertSettings string
+		// expectUpdate is set when the move plans a one-time update of the
+		// group, after which the plan must be empty.
+		expectUpdate bool
+		stateChecks  []statecheck.StateCheck
+	}{
+		"minimal": {
+			v1: `
+				resource "checkly_check_group" "test" {
+					name        = "%s"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
 				}
 			`,
-			ConfigPlanChecks: resource.ConfigPlanChecks{
-				PreApply: []plancheck.PlanCheck{
-					plancheck.ExpectResourceAction("checkly_check_group_v2.test", plancheck.ResourceActionNoop),
-				},
-			},
-		},
-		{
-			Config: v2 + `
-				removed {
-					from = checkly_check_group.test
+			v2: `
+				resource "checkly_check_group_v2" "test" {
+					name = "%s"
 
-					lifecycle {
-						destroy = false
+					enforce_locations = {
+						enabled   = true
+						locations = ["eu-central-1"]
+					}
+
+					enforce_alert_settings = {
+						enabled                   = true
+						use_global_alert_settings = true
+					}
+
+					enforce_retry_strategy = {
+						enabled = true
+						retry_strategy = {
+							type = "NO_RETRIES"
+						}
+					}
+
+					enforce_scheduling_strategy = {
+						enabled      = true
+						run_parallel = false
 					}
 				}
 			`,
-			ConfigPlanChecks: resource.ConfigPlanChecks{
-				PreApply: []plancheck.PlanCheck{
-					plancheck.ExpectResourceAction("checkly_check_group_v2.test", plancheck.ResourceActionNoop),
-				},
+			useGlobalAlertSettings: "true",
+			stateChecks: []statecheck.StateCheck{
+				// checkly_check_group sends the default alert settings for a
+				// group that configures none, and the API stores them. They
+				// move with the group, and the v2 configuration may leave
+				// them out because alert_settings is computed.
+				statecheck.ExpectKnownValue(v2Address, tfjsonpath.New("enforce_alert_settings").AtMapKey("alert_settings").AtMapKey("escalation_type"), knownvalue.StringExact("RUN_BASED")),
 			},
 		},
-	})
+		"full": {
+			v1: `
+				resource "checkly_check_group" "test" {
+					name                = "%s"
+					activated           = true
+					muted               = true
+					concurrency         = 2
+					run_parallel        = true
+					locations           = ["eu-central-1", "us-east-1"]
+					tags                = ["tf-acc"]
+					runtime_id          = "2023.09"
+					local_setup_script  = "console.log('setup')"
+					teardown_snippet_id = checkly_snippet.test.id
+
+					api_check_defaults = {
+						url = "https://api.example.com/"
+						headers = {
+							X-Test = "1"
+						}
+						query_parameters = {
+							q = "1"
+						}
+						basic_auth = {
+							username = "user"
+							password = "pass"
+						}
+					}
+
+					environment_variables = [
+						{
+							key   = "PLAIN"
+							value = "plain"
+						},
+						{
+							key    = "TOKEN"
+							value  = "s3cret"
+							secret = true
+						},
+					]
+
+					alert_settings = {
+						escalation_type = "RUN_BASED"
+						run_based_escalation = {
+							failed_run_threshold = 2
+						}
+						reminders = {
+							amount   = 1
+							interval = 5
+						}
+						parallel_run_failure_threshold = {
+							enabled    = false
+							percentage = 10
+						}
+					}
+
+					retry_strategy = {
+						type                 = "FIXED"
+						base_backoff_seconds = 30
+						max_retries          = 2
+						max_duration_seconds = 300
+						same_region          = false
+						only_on = {
+							network_error = true
+						}
+					}
+
+					alert_channel_subscriptions = [
+						{
+							channel_id = checkly_alert_channel.email.id
+							activated  = true
+						},
+					]
+				}
+			`,
+			v2: `
+				resource "checkly_check_group_v2" "test" {
+					name        = "%s"
+					activated   = true
+					muted       = true
+					concurrency = 2
+					tags        = ["tf-acc"]
+
+					default_runtime = {
+						runtime_id = "2023.09"
+					}
+
+					setup_script = {
+						inline_script = "console.log('setup')"
+					}
+
+					teardown_script = {
+						snippet_id = checkly_snippet.test.id
+					}
+
+					api_check_defaults = {
+						url = "https://api.example.com/"
+						headers = {
+							X-Test = "1"
+						}
+						query_parameters = {
+							q = "1"
+						}
+						basic_auth = {
+							username = "user"
+							password = "pass"
+						}
+					}
+
+					environment_variables = [
+						{
+							key   = "PLAIN"
+							value = "plain"
+						},
+						{
+							key    = "TOKEN"
+							value  = "s3cret"
+							secret = true
+						},
+					]
+
+					enforce_locations = {
+						enabled   = true
+						locations = ["eu-central-1", "us-east-1"]
+					}
+
+					enforce_scheduling_strategy = {
+						enabled      = true
+						run_parallel = true
+					}
+
+					enforce_alert_settings = {
+						enabled                   = true
+						use_global_alert_settings = false
+						alert_settings = {
+							escalation_type = "RUN_BASED"
+							run_based_escalation = {
+								failed_run_threshold = 2
+							}
+							reminders = {
+								amount   = 1
+								interval = 5
+							}
+							parallel_run_failure_threshold = {
+								enabled    = false
+								percentage = 10
+							}
+						}
+						alert_channel_subscriptions = [
+							{
+								channel_id = checkly_alert_channel.email.id
+								activated  = true
+							},
+						]
+					}
+
+					enforce_retry_strategy = {
+						enabled = true
+						retry_strategy = {
+							type                 = "FIXED"
+							base_backoff_seconds = 30
+							max_retries          = 2
+							max_duration_seconds = 300
+							same_region          = false
+							only_on = {
+								network_error = true
+							}
+						}
+					}
+				}
+			`,
+			// The API never returns secret values, so only the move can keep
+			// the TOKEN variable; the no-op plan shows that it did.
+			dependencies:           alertChannel + snippet,
+			useGlobalAlertSettings: "false",
+		},
+		"without_locations": {
+			v1: `
+				resource "checkly_check_group" "test" {
+					name        = "%s"
+					activated   = true
+					concurrency = 1
+				}
+			`,
+			v2: `
+				resource "checkly_check_group_v2" "test" {
+					name = "%s"
+
+					enforce_alert_settings = {
+						enabled                   = true
+						use_global_alert_settings = true
+					}
+
+					enforce_retry_strategy = {
+						enabled = true
+						retry_strategy = {
+							type = "NO_RETRIES"
+						}
+					}
+
+					enforce_scheduling_strategy = {
+						enabled      = true
+						run_parallel = false
+					}
+				}
+			`,
+			useGlobalAlertSettings: "true",
+		},
+		"double_check": {
+			v1: `
+				resource "checkly_check_group" "test" {
+					name         = "%s"
+					activated    = true
+					concurrency  = 1
+					locations    = ["eu-central-1"]
+					double_check = true
+				}
+			`,
+			v2: `
+				resource "checkly_check_group_v2" "test" {
+					name = "%s"
+
+					enforce_locations = {
+						enabled   = true
+						locations = ["eu-central-1"]
+					}
+
+					enforce_alert_settings = {
+						enabled                   = true
+						use_global_alert_settings = true
+					}
+
+					enforce_retry_strategy = {
+						enabled = true
+						retry_strategy = {
+							type                 = "FIXED"
+							max_retries          = 1
+							base_backoff_seconds = 0
+							max_duration_seconds = 600
+							same_region          = false
+						}
+					}
+
+					enforce_scheduling_strategy = {
+						enabled      = true
+						run_parallel = false
+					}
+				}
+			`,
+			useGlobalAlertSettings: "true",
+		},
+		// Only private locations: enforce_locations holds them, and its
+		// locations stay null.
+		"private_locations": {
+			v1: `
+				resource "checkly_check_group" "test" {
+					name              = "%s"
+					activated         = true
+					concurrency       = 1
+					private_locations = [checkly_private_location.test.slug_name]
+				}
+			`,
+			v2: `
+				resource "checkly_check_group_v2" "test" {
+					name = "%s"
+
+					enforce_locations = {
+						enabled           = true
+						private_locations = [checkly_private_location.test.slug_name]
+					}
+
+					enforce_alert_settings = {
+						enabled                   = true
+						use_global_alert_settings = true
+					}
+
+					enforce_retry_strategy = {
+						enabled = true
+						retry_strategy = {
+							type = "NO_RETRIES"
+						}
+					}
+
+					enforce_scheduling_strategy = {
+						enabled      = true
+						run_parallel = false
+					}
+				}
+			`,
+			dependencies:           privateLocation,
+			useGlobalAlertSettings: "true",
+		},
+		// checkly_check_group_v2 takes either a snippet or a script for a
+		// phase. This case pins the outcome for a group with both: the
+		// configured inline script is kept, and the move plans an update that
+		// clears the snippet. Which of the two the runner executed before the
+		// move is not established.
+		"both_scripts": {
+			v1: `
+				resource "checkly_check_group" "test" {
+					name               = "%s"
+					activated          = true
+					concurrency        = 1
+					locations          = ["eu-central-1"]
+					setup_snippet_id   = checkly_snippet.test.id
+					local_setup_script = "console.log('setup')"
+				}
+			`,
+			v2: `
+				resource "checkly_check_group_v2" "test" {
+					name = "%s"
+
+					setup_script = {
+						inline_script = "console.log('setup')"
+					}
+
+					enforce_locations = {
+						enabled   = true
+						locations = ["eu-central-1"]
+					}
+
+					enforce_alert_settings = {
+						enabled                   = true
+						use_global_alert_settings = true
+					}
+
+					enforce_retry_strategy = {
+						enabled = true
+						retry_strategy = {
+							type = "NO_RETRIES"
+						}
+					}
+
+					enforce_scheduling_strategy = {
+						enabled      = true
+						run_parallel = false
+					}
+				}
+			`,
+			dependencies:           snippet,
+			useGlobalAlertSettings: "true",
+			expectUpdate:           true,
+			stateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue(v2Address, tfjsonpath.New("setup_script").AtMapKey("snippet_id"), knownvalue.Null()),
+			},
+		},
+	}
+
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			groupName := fmt.Sprintf("tf-acc-group-move-%s-%d", name, acctest.RandInt())
+			slug := fmt.Sprintf("tf-group-move-%d", acctest.RandInt()%100000)
+			// Formatting an empty string would append an %!(EXTRA ...) error
+			// to the configuration. The constants use indexed verbs, so an
+			// argument that one of them leaves unused is not an error.
+			var dependencies string
+			if c.dependencies != "" {
+				dependencies = fmt.Sprintf(c.dependencies, groupName, slug)
+			}
+
+			moveAction := plancheck.ResourceActionNoop
+			if c.expectUpdate {
+				moveAction = plancheck.ResourceActionUpdate
+			}
+
+			accTestCase(t, []resource.TestStep{
+				{
+					Config: dependencies + fmt.Sprintf(c.v1, groupName),
+					Check:  resource.TestCheckResourceAttr(v1Address, "use_global_alert_settings", c.useGlobalAlertSettings),
+				},
+				{
+					Config: dependencies + fmt.Sprintf(c.v2, groupName) + `
+						moved {
+							from = checkly_check_group.test
+							to   = checkly_check_group_v2.test
+						}
+					`,
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction(v2Address, moveAction),
+						},
+					},
+					ConfigStateChecks: c.stateChecks,
+				},
+			})
+		})
+	}
 }
 
 // TestAccCheckGroupDoubleCheck covers the deprecated double_check attribute,

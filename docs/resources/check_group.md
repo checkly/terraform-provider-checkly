@@ -4,14 +4,14 @@ page_title: "checkly_check_group Resource - terraform-provider-checkly"
 subcategory: ""
 description: |-
   Check groups allow you to group together a set of related checks, which can also share default settings for various attributes.
-  The checkly_check_group resource type is deprecated in favor of checkly_check_group_v2, which does not impose implicit defaults on its checks, and will be removed in a future version of the provider. Both resource types manage the same check groups, so an existing group can be switched over by importing it as a checkly_check_group_v2 resource and removing the checkly_check_group resource from state. See the v2 upgrade guide for the steps.
+  The checkly_check_group resource type is deprecated in favor of checkly_check_group_v2, which does not impose implicit defaults on its checks, and will be removed in a future version of the provider. Both resource types manage the same check groups, so an existing group can be switched over with a moved block to a checkly_check_group_v2 resource. See the v2 upgrade guide for how its configuration translates.
 ---
 
 # checkly_check_group (Resource)
 
 Check groups allow you to group together a set of related checks, which can also share default settings for various attributes.
 
-The `checkly_check_group` resource type is deprecated in favor of `checkly_check_group_v2`, which does not impose implicit defaults on its checks, and will be removed in a future version of the provider. Both resource types manage the same check groups, so an existing group can be switched over by importing it as a `checkly_check_group_v2` resource and removing the `checkly_check_group` resource from state. See the v2 upgrade guide for the steps.
+The `checkly_check_group` resource type is deprecated in favor of `checkly_check_group_v2`, which does not impose implicit defaults on its checks, and will be removed in a future version of the provider. Both resource types manage the same check groups, so an existing group can be switched over with a `moved` block to a `checkly_check_group_v2` resource. See the v2 upgrade guide for how its configuration translates.
 
 ## Example Usage
 
@@ -310,6 +310,7 @@ The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/c
 
 ```shell
 # checkly_check_group is deprecated; to start managing an existing resource, import it as checkly_check_group_v2 instead.
+# A group already managed as checkly_check_group switches to checkly_check_group_v2 with a moved block; see the v2 upgrade guide.
 # Import an existing check group using its numeric ID.
 # The ID is returned by the Checkly API at GET /v1/check-groups.
 terraform import checkly_check_group.example 12345

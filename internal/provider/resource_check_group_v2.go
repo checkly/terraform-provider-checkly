@@ -27,6 +27,7 @@ var (
 	_ resource.ResourceWithUpgradeState = (*CheckGroupV2Resource)(nil)
 	_ resource.ResourceWithImportState  = (*CheckGroupV2Resource)(nil)
 	_ resource.ResourceWithModifyPlan   = (*CheckGroupV2Resource)(nil)
+	_ resource.ResourceWithMoveState    = (*CheckGroupV2Resource)(nil)
 )
 
 // NewCheckGroupV2Resource returns a new checkly_check_group_v2 resource.
@@ -540,6 +541,142 @@ func (r *CheckGroupV2Resource) Delete(ctx context.Context, req resource.DeleteRe
 
 func (r *CheckGroupV2Resource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+}
+
+// MoveState enables `moved` blocks from the deprecated checkly_check_group
+// resource type, which manages the same check groups; see
+// checkGroupV2ModelFromCheckGroupModel for how its state is converted.
+func (r *CheckGroupV2Resource) MoveState(ctx context.Context) []resource.StateMover {
+	var schemaResp resource.SchemaResponse
+	(&CheckGroupResource{}).Schema(ctx, resource.SchemaRequest{}, &schemaResp)
+	sourceSchema := schemaResp.Schema
+
+	return []resource.StateMover{
+		{
+			SourceSchema: &sourceSchema,
+			StateMover: func(ctx context.Context, req resource.MoveStateRequest, resp *resource.MoveStateResponse) {
+				sourceState := moveSourceState(ctx, req, sourceSchema, &resp.Diagnostics, "checkly_check_group")
+				if sourceState == nil {
+					return
+				}
+
+				var source CheckGroupResourceModel
+				resp.Diagnostics.Append(sourceState.Get(ctx, &source)...)
+				if resp.Diagnostics.HasError() {
+					return
+				}
+
+				target := checkGroupV2ModelFromCheckGroupModel(ctx, &source, &resp.Diagnostics)
+				if resp.Diagnostics.HasError() {
+					return
+				}
+				resp.Diagnostics.Append(resp.TargetState.Set(ctx, &target)...)
+			},
+		},
+	}
+}
+
+// checkGroupV2ModelFromCheckGroupModel converts a checkly_check_group model
+// to the checkly_check_group_v2 model of the same group.
+//
+// A checkly_check_group always sends its alert settings, retry strategy and
+// scheduling strategy, and its locations, to the API, so they apply to the
+// group's checks. Each of them becomes an enabled enforce_* attribute; only
+// locations stay unenforced when the group has none, because the API treats
+// an empty location list as no enforcement.
+//
+// Values carry over unchanged except for the representations that differ
+// between the two resource types:
+//   - Empty collections, environment variables included, become null, which
+//     is what checkly_check_group_v2 stores for an omitted collection.
+//   - Alert settings with an empty escalation type are what
+//     checkly_check_group stores for a group without alert settings, and
+//     become null.
+//   - A missing retry strategy is the API's default of no retries. A
+//     FALLBACK strategy, which leaves each check its own, becomes a disabled
+//     enforcement.
+//   - A snippet ID of 0 and an empty script or runtime ID mean none. A group
+//     with both a snippet and a script for the same phase keeps both, as the
+//     API stores them.
+//   - double_check is dropped: retry_strategy already holds the strategy it
+//     stands for.
+func checkGroupV2ModelFromCheckGroupModel(ctx context.Context, source *CheckGroupResourceModel, diags *diag.Diagnostics) CheckGroupV2ResourceModel {
+	// A null prior makes setNullIfUnset return null for every empty set.
+	nullIfEmpty := func(set types.Set) types.Set {
+		return setNullIfUnset(ctx, set, types.SetNull(set.ElementType(ctx)))
+	}
+
+	environmentVariables := source.EnvironmentVariables
+	if len(environmentVariables.Elements()) == 0 {
+		environmentVariables = types.ListNull(environmentVariables.ElementType(ctx))
+	}
+
+	target := CheckGroupV2ResourceModel{
+		ID:                   source.ID,
+		Name:                 source.Name,
+		Concurrency:          source.Concurrency,
+		Activated:            source.Activated,
+		Muted:                source.Muted,
+		Tags:                 nullIfEmpty(source.Tags),
+		EnvironmentVariables: environmentVariables,
+		APICheckDefaults:     source.APICheckDefaults,
+		SetupScript: checkGroupV2ScriptToObject(
+			pointerOrNilWhenZero(source.SetupSnippetID.ValueInt64()),
+			pointerOrNilWhenZero(source.LocalSetupScript.ValueString()),
+		),
+		TeardownScript: checkGroupV2ScriptToObject(
+			pointerOrNilWhenZero(source.TeardownSnippetID.ValueInt64()),
+			pointerOrNilWhenZero(source.LocalTeardownScript.ValueString()),
+		),
+		DefaultRuntime: checkGroupV2DefaultRuntimeToObject(pointerOrNilWhenZero(source.RuntimeID.ValueString())),
+	}
+
+	alertSettings := source.AlertSettings
+	if alertSettings.IsUnknown() || stringAttrValue(alertSettings.Attributes()["escalation_type"]) == "" {
+		alertSettings = types.ObjectNull(alertSettingsAttrTypes)
+	}
+	enforceAlertSettings, d := types.ObjectValue(checkGroupV2EnforceAlertSettingsAttrTypes, map[string]attr.Value{
+		"enabled":                             types.BoolValue(true),
+		alertSettingsAttributeName:            alertSettings,
+		"use_global_alert_settings":           types.BoolValue(source.UseGlobalAlertSettings.ValueBool()),
+		alertChannelSubscriptionAttributeName: nullIfEmpty(source.AlertChannelSubscriptions),
+	})
+	diags.Append(d...)
+	target.EnforceAlertSettings = enforceAlertSettings
+
+	locations := nullIfEmpty(source.Locations)
+	privateLocations := nullIfEmpty(source.PrivateLocations)
+	enforceLocations, d := types.ObjectValue(checkGroupV2EnforceLocationsAttrTypes, map[string]attr.Value{
+		"enabled":           types.BoolValue(!locations.IsNull() || !privateLocations.IsNull()),
+		"locations":         locations,
+		"private_locations": privateLocations,
+	})
+	diags.Append(d...)
+	target.EnforceLocations = enforceLocations
+
+	retryStrategy := source.RetryStrategy
+	if retryStrategy.IsNull() || retryStrategy.IsUnknown() {
+		retryStrategy = noRetriesObject(true)
+	}
+	if stringAttrValue(retryStrategy.Attributes()["type"]) == "FALLBACK" {
+		target.EnforceRetryStrategy = checkGroupV2DisabledEnforcementObject(checkGroupV2EnforceRetryStrategyAttrTypes)
+	} else {
+		enforceRetryStrategy, d := types.ObjectValue(checkGroupV2EnforceRetryStrategyAttrTypes, map[string]attr.Value{
+			"enabled":                  types.BoolValue(true),
+			retryStrategyAttributeName: retryStrategy,
+		})
+		diags.Append(d...)
+		target.EnforceRetryStrategy = enforceRetryStrategy
+	}
+
+	enforceSchedulingStrategy, d := types.ObjectValue(checkGroupV2EnforceSchedulingStrategyAttrTypes, map[string]attr.Value{
+		"enabled":      types.BoolValue(true),
+		"run_parallel": types.BoolValue(source.RunParallel.ValueBool()),
+	})
+	diags.Append(d...)
+	target.EnforceSchedulingStrategy = enforceSchedulingStrategy
+
+	return target
 }
 
 // checkGroupV2ScriptValidator validates that a setup_script/teardown_script
