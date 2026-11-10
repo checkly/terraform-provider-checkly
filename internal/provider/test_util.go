@@ -1,8 +1,6 @@
 package provider
 
 import (
-	"encoding/json"
-	"fmt"
 	"os"
 	"regexp"
 	"testing"
@@ -10,7 +8,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/checkly/checkly-go-sdk/v2"
 )
@@ -98,28 +95,5 @@ func accTest(t *testing.T, testCase resource.TestCase) {
 		resource.Test(t, testCase)
 	} else {
 		resource.ParallelTest(t, testCase)
-	}
-}
-
-// testCheckResourceAttrExpr tests resource attributes using regular
-// expressions applied to the JSON-marshaled attribute map. This helps testing
-// collections which have irregular indices.
-func testCheckResourceAttrExpr(resource, attrExpr, value string) func(s *terraform.State) error {
-	return func(s *terraform.State) error {
-		if len(s.Modules) < 1 {
-			return fmt.Errorf("testCheckResourceAttrExpr: state has no modules")
-		}
-		if _, ok := s.Modules[0].Resources[resource]; !ok {
-			return fmt.Errorf("Resource not found: %s", resource)
-		}
-		marshaled, _ := json.Marshal(s.Modules[0].Resources[resource].Primary.Attributes)
-		r, err := regexp.Compile(attrExpr)
-		if err != nil {
-			return err
-		}
-		if !r.MatchString(string(marshaled)) {
-			return fmt.Errorf(`Couldn't find [%s: "%s"] in %s`, attrExpr, value, string(marshaled))
-		}
-		return err
 	}
 }

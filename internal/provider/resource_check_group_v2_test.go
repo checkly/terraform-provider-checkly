@@ -108,12 +108,12 @@ func TestAccCheckGroupV2EnforceLocations(t *testing.T) {
 					"enforce_locations.locations.#",
 					"2",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemAttr(
 					checkGroupV2Resource,
 					"enforce_locations.locations.*",
 					"us-east-1",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemAttr(
 					checkGroupV2Resource,
 					"enforce_locations.locations.*",
 					"eu-west-1",
@@ -123,7 +123,7 @@ func TestAccCheckGroupV2EnforceLocations(t *testing.T) {
 					"enforce_locations.private_locations.#",
 					"1",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemAttr(
 					checkGroupV2Resource,
 					"enforce_locations.private_locations.*",
 					slug,
@@ -1033,12 +1033,12 @@ func TestAccCheckGroupV2Tags(t *testing.T) {
 					"tags.#",
 					"2",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemAttr(
 					checkGroupV2Resource,
 					"tags.*",
 					"production",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemAttr(
 					checkGroupV2Resource,
 					"tags.*",
 					"api",
@@ -1540,20 +1540,14 @@ func TestAccCheckGroupV2ApiCheckDefaults(t *testing.T) {
 					"api_check_defaults.query_parameters.version",
 					"v2",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemNestedAttrs(
 					checkGroupV2Resource,
-					"api_check_defaults.assertions.*.source",
-					"STATUS_CODE",
-				),
-				testCheckResourceAttrExpr(
-					checkGroupV2Resource,
-					"api_check_defaults.assertions.*.comparison",
-					"EQUALS",
-				),
-				testCheckResourceAttrExpr(
-					checkGroupV2Resource,
-					"api_check_defaults.assertions.*.target",
-					"200",
+					"api_check_defaults.assertions.*",
+					map[string]string{
+						"source":     "STATUS_CODE",
+						"comparison": "EQUALS",
+						"target":     "200",
+					},
 				),
 				resource.TestCheckResourceAttr(
 					checkGroupV2Resource,
@@ -1830,7 +1824,7 @@ func TestAccCheckGroupV2UnsetSweepEnforceLocationsChange(t *testing.T) {
 					"enforce_locations.locations.#",
 					"1",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemAttr(
 					checkGroupV2Resource,
 					"enforce_locations.locations.*",
 					"eu-central-1",

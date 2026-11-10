@@ -79,12 +79,12 @@ func TestAccURLMonitorBasic(t *testing.T) {
 					"activated",
 					"true",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemAttr(
 					"checkly_url_monitor.test",
 					"locations.*",
 					"eu-central-1",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemAttr(
 					"checkly_url_monitor.test",
 					"locations.*",
 					"us-east-1",
@@ -147,9 +147,9 @@ func TestAccURLMonitorFull(t *testing.T) {
 					"max_response_time",
 					"5000",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_url_monitor.test",
-					`"locations.#"`,
+					"locations.#",
 					"3",
 				),
 				resource.TestCheckResourceAttr(
@@ -1951,10 +1951,10 @@ func TestAccURLMonitorUnsetSweepRequest(t *testing.T) {
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
-				testCheckResourceAttrExpr("checkly_url_monitor.test", `follow_redirects":"false"`, "false"),
-				testCheckResourceAttrExpr("checkly_url_monitor.test", `skip_ssl":"true"`, "true"),
-				testCheckResourceAttrExpr("checkly_url_monitor.test", `ip_family":"IPv6"`, "IPv6"),
-				testCheckResourceAttrExpr("checkly_url_monitor.test", `assertions.#":"1"`, "1"),
+				resource.TestCheckResourceAttr("checkly_url_monitor.test", "request.follow_redirects", "false"),
+				resource.TestCheckResourceAttr("checkly_url_monitor.test", "request.skip_ssl", "true"),
+				resource.TestCheckResourceAttr("checkly_url_monitor.test", "request.ip_family", "IPv6"),
+				resource.TestCheckResourceAttr("checkly_url_monitor.test", "request.assertions.#", "1"),
 			),
 		},
 		{
@@ -1970,9 +1970,9 @@ func TestAccURLMonitorUnsetSweepRequest(t *testing.T) {
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
-				testCheckResourceAttrExpr("checkly_url_monitor.test", `follow_redirects":"true"`, "true"),
-				testCheckResourceAttrExpr("checkly_url_monitor.test", `skip_ssl":"false"`, "false"),
-				testCheckResourceAttrExpr("checkly_url_monitor.test", `ip_family":"IPv4"`, "IPv4"),
+				resource.TestCheckResourceAttr("checkly_url_monitor.test", "request.follow_redirects", "true"),
+				resource.TestCheckResourceAttr("checkly_url_monitor.test", "request.skip_ssl", "false"),
+				resource.TestCheckResourceAttr("checkly_url_monitor.test", "request.ip_family", "IPv4"),
 				resource.TestCheckNoResourceAttr("checkly_url_monitor.test", "request.assertions"),
 			),
 		},
