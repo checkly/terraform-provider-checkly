@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -12,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -114,22 +112,16 @@ func (r *CheckGroupResource) Schema(ctx context.Context, req resource.SchemaRequ
 			"locations": schema.SetAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
-				Computed:    true,
-				Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})),
 				Description: "An array of one or more data center locations where to run the checks.",
 			},
 			"private_locations": schema.SetAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
-				Computed:    true,
-				Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})),
 				Description: "An array of one or more private locations slugs.",
 			},
 			"tags": schema.SetAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
-				Computed:    true,
-				Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})),
 				Description: "Tags for organizing and filtering checks.",
 			},
 			"setup_snippet_id": schema.Int64Attribute{
@@ -432,15 +424,9 @@ func checkGroupToModel(ctx context.Context, group *checkly.GroupV2, model *Check
 	model.Activated = types.BoolValue(group.Activated)
 	model.Muted = types.BoolValue(group.Muted)
 	model.RunParallel = types.BoolValue(valueOrZero(group.RunParallel))
-	model.Locations = setFromStrings(ctx, group.Locations, diags)
-
-	if group.PrivateLocations != nil {
-		model.PrivateLocations = setFromStrings(ctx, *group.PrivateLocations, diags)
-	} else {
-		model.PrivateLocations = setFromStrings(ctx, nil, diags)
-	}
-
-	model.Tags = setFromStrings(ctx, group.Tags, diags)
+	model.Locations = stringSetFromAPINullIfUnset(ctx, group.Locations, model.Locations, diags)
+	model.PrivateLocations = stringSetFromAPINullIfUnset(ctx, valueOrZero(group.PrivateLocations), model.PrivateLocations, diags)
+	model.Tags = stringSetFromAPINullIfUnset(ctx, group.Tags, model.Tags, diags)
 	model.EnvironmentVariables = environmentVariablesToList(ctx, group.EnvironmentVariables, model.EnvironmentVariables, diags)
 	model.SetupSnippetID = types.Int64Value(valueOrZero(group.SetupSnippetID))
 	model.TeardownSnippetID = types.Int64Value(valueOrZero(group.TearDownSnippetID))

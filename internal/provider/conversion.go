@@ -6,6 +6,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/checkly/checkly-go-sdk/v2"
 )
 
 // stringsFromSet converts a set of strings to a Go slice. Null and unknown
@@ -46,30 +48,10 @@ func setFromStrings(ctx context.Context, values []string, diags *diag.Diagnostic
 	return set
 }
 
-// stringSetFromAPINullIfUnset converts a string slice from the API to a set of strings.
-// The API reports an unset collection as an empty array, so an empty value
-// converts to null when the prior value (planned or previously stored) is
-// null or unknown. An optional attribute absent from the configuration thus
-// stays null instead of drifting to an empty set.
+// stringSetFromAPINullIfUnset converts a string slice from the API to a set
+// of strings, null when empty and unset before (see setNullIfUnset).
 func stringSetFromAPINullIfUnset(ctx context.Context, values []string, prior types.Set, diags *diag.Diagnostics) types.Set {
-	if len(values) == 0 && (prior.IsNull() || prior.IsUnknown()) {
-		return types.SetNull(types.StringType)
-	}
-
-	return setFromStrings(ctx, values, diags)
-}
-
-// stringSetFromAPIEmptyIfUnknown converts a string slice from the API to a
-// set of strings. An empty value keeps the prior value when that is null, so
-// that an omitted collection does not cause drift against an empty API
-// response. Unlike stringSetFromAPINullIfUnset, an unknown prior value converts to an
-// empty set.
-func stringSetFromAPIEmptyIfUnknown(ctx context.Context, values []string, prior types.Set, diags *diag.Diagnostics) types.Set {
-	if len(values) == 0 && prior.IsNull() {
-		return prior
-	}
-
-	return setFromStrings(ctx, values, diags)
+	return setNullIfUnset(ctx, setFromStrings(ctx, values, diags), prior)
 }
 
 // stringsFromList converts a list of strings to a Go slice. Null and unknown
@@ -109,6 +91,50 @@ func stringListFromAPINullIfUnset(ctx context.Context, values []string, prior ty
 	}
 
 	return listFromStrings(ctx, values, diags)
+}
+
+// setNullIfUnset returns a null set in place of an empty set when the prior
+// value (planned or previously stored) is null or unknown. The API reports an
+// unset collection as empty, so an optional attribute absent from the
+// configuration thus stays null instead of drifting to an empty set.
+func setNullIfUnset(ctx context.Context, set types.Set, prior types.Set) types.Set {
+	if len(set.Elements()) == 0 && (prior.IsNull() || prior.IsUnknown()) {
+		return types.SetNull(set.ElementType(ctx))
+	}
+
+	return set
+}
+
+// stringMapFromAPINullIfUnset converts the API's key-value pair
+// representation to a map of strings. No pairs convert to null when prior is
+// null or unknown, by the same rule as setNullIfUnset.
+func stringMapFromAPINullIfUnset(ctx context.Context, kvs []checkly.KeyValue, prior types.Map, diags *diag.Diagnostics) types.Map {
+	if len(kvs) == 0 && (prior.IsNull() || prior.IsUnknown()) {
+		return types.MapNull(types.StringType)
+	}
+
+	values := map[string]string{}
+	for _, kv := range kvs {
+		values[kv.Key] = kv.Value
+	}
+
+	m, d := types.MapValueFrom(ctx, types.StringType, values)
+	diags.Append(d...)
+
+	return m
+}
+
+// priorAttribute returns the attribute called name of prior, the planned or
+// previously stored value of an object attribute, or null when prior is null
+// or unknown.
+func priorAttribute[T attr.Value](prior types.Object, name string, null T) T {
+	if !prior.IsNull() && !prior.IsUnknown() {
+		if value, ok := prior.Attributes()[name].(T); ok {
+			return value
+		}
+	}
+
+	return null
 }
 
 // optionalStringPointer converts an optional string value to a *string,

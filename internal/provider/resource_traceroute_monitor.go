@@ -15,7 +15,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -290,8 +289,6 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 					// not generated from this schema.
 					"assertions": schema.SetNestedAttribute{
 						Optional:    true,
-						Computed:    true,
-						Default:     setdefault.StaticValue(types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{})),
 						Description: "A request can have multiple assertions. The allowed comparisons, properties, and target formats depend on the assertion source — see the [Assertion Reference](#assertion-reference) below.",
 						NestedObject: schema.NestedAttributeObject{
 							// Attributes nested in this set attribute must
@@ -596,7 +593,7 @@ func tracerouteMonitorToModel(ctx context.Context, c *checkly.TracerouteMonitor,
 	model.GroupID = types.Int64Value(c.GroupID)
 	model.GroupOrder = types.Int64Value(int64(c.GroupOrder))
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, model.RetryStrategy, diags)
-	model.Request = tracerouteMonitorRequestToObject(ctx, c.Request, diags)
+	model.Request = tracerouteMonitorRequestToObject(ctx, c.Request, model.Request, diags)
 	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, model.AlertChannelSubscriptions, diags)
 	model.TriggerIncident = triggerIncidentToObject(ctx, c.TriggerIncident, diags)
 }
@@ -665,7 +662,7 @@ func tracerouteMonitorRequestFromModel(ctx context.Context, model TracerouteMoni
 
 // tracerouteMonitorRequestToObject converts the API representation of a
 // traceroute request to the request attribute value.
-func tracerouteMonitorRequestToObject(ctx context.Context, r checkly.TracerouteRequest, diags *diag.Diagnostics) types.Object {
+func tracerouteMonitorRequestToObject(ctx context.Context, r checkly.TracerouteRequest, prior types.Object, diags *diag.Diagnostics) types.Object {
 	// The API defaults ptrLookup to true, so a missing value reads as true.
 	ptrLookup := true
 	if r.PtrLookup != nil {
@@ -681,7 +678,7 @@ func tracerouteMonitorRequestToObject(ctx context.Context, r checkly.TracerouteR
 		MaxUnknownHops: types.Int64Value(int64(r.MaxUnknownHops)),
 		PtrLookup:      types.BoolValue(ptrLookup),
 		Timeout:        types.Int64Value(int64(r.Timeout)),
-		Assertions:     assertionsToSet(ctx, r.Assertions, diags),
+		Assertions:     assertionsToSet(ctx, r.Assertions, priorAssertions(prior), diags),
 	})
 	diags.Append(d...)
 

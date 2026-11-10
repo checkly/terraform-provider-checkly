@@ -17,7 +17,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -319,17 +318,13 @@ func (r *AlertChannelResource) Schema(ctx context.Context, req resource.SchemaRe
 					},
 					"headers": schema.MapAttribute{
 						Optional:    true,
-						Computed:    true,
 						Sensitive:   true,
-						Default:     mapdefault.StaticValue(types.MapValueMust(types.StringType, map[string]attr.Value{})),
 						ElementType: types.StringType,
 						Description: "HTTP headers to send with the webhook request, as a map of header names to values.",
 					},
 					"query_parameters": schema.MapAttribute{
 						Optional:    true,
-						Computed:    true,
 						Sensitive:   true,
-						Default:     mapdefault.StaticValue(types.MapValueMust(types.StringType, map[string]attr.Value{})),
 						ElementType: types.StringType,
 						Description: "Query parameters to add to the webhook URL, as a map of parameter names to values.",
 					},
@@ -811,8 +806,8 @@ func alertChannelWebhookToObject(ctx context.Context, cfg *checkly.AlertChannelW
 	return alertChannelObjectFrom(ctx, alertChannelWebhookAttrTypes, alertChannelWebhookModel{
 		Name:            types.StringValue(cfg.Name),
 		Method:          types.StringValue(cfg.Method),
-		Headers:         alertChannelMapFromKeyValues(ctx, cfg.Headers, diags),
-		QueryParameters: alertChannelMapFromKeyValues(ctx, cfg.QueryParameters, diags),
+		Headers:         stringMapFromAPINullIfUnset(ctx, cfg.Headers, priorModel.Headers, diags),
+		QueryParameters: stringMapFromAPINullIfUnset(ctx, cfg.QueryParameters, priorModel.QueryParameters, diags),
 		// The API returns "" for optional string fields that are not set.
 		Template:      stringValueOrPriorEmpty(cfg.Template, priorModel.Template),
 		URL:           types.StringValue(cfg.URL),
@@ -885,18 +880,4 @@ func alertChannelKeyValuesFromMap(ctx context.Context, m types.Map, diags *diag.
 	}
 
 	return kvs
-}
-
-// alertChannelMapFromKeyValues converts the API's key-value pair
-// representation to a map of strings.
-func alertChannelMapFromKeyValues(ctx context.Context, kvs []checkly.KeyValue, diags *diag.Diagnostics) types.Map {
-	values := map[string]string{}
-	for _, kv := range kvs {
-		values[kv.Key] = kv.Value
-	}
-
-	m, d := types.MapValueFrom(ctx, types.StringType, values)
-	diags.Append(d...)
-
-	return m
 }

@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -228,8 +227,6 @@ func (r *TCPMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 					},
 					"assertions": schema.SetNestedAttribute{
 						Optional:    true,
-						Computed:    true,
-						Default:     setdefault.StaticValue(types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{})),
 						Description: "A request can have multiple assertions.",
 						NestedObject: schema.NestedAttributeObject{
 							// Attributes nested in this set attribute must
@@ -544,7 +541,7 @@ func tcpMonitorToModel(ctx context.Context, c *checkly.TCPMonitor, model *TCPMon
 	model.GroupID = types.Int64Value(c.GroupID)
 	model.GroupOrder = types.Int64Value(int64(c.GroupOrder))
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, model.RetryStrategy, diags)
-	model.Request = tcpMonitorRequestToObject(ctx, c.Request, diags)
+	model.Request = tcpMonitorRequestToObject(ctx, c.Request, model.Request, diags)
 	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, model.AlertChannelSubscriptions, diags)
 	model.TriggerIncident = triggerIncidentToObject(ctx, c.TriggerIncident, diags)
 }
@@ -568,12 +565,12 @@ func tcpMonitorRequestFromObject(ctx context.Context, obj types.Object, diags *d
 
 // tcpMonitorRequestToObject converts the API representation of a TCP request
 // to the request attribute value.
-func tcpMonitorRequestToObject(ctx context.Context, request checkly.TCPRequest, diags *diag.Diagnostics) types.Object {
+func tcpMonitorRequestToObject(ctx context.Context, request checkly.TCPRequest, prior types.Object, diags *diag.Diagnostics) types.Object {
 	obj, d := types.ObjectValue(tcpMonitorRequestAttrTypes, map[string]attr.Value{
 		"hostname":   types.StringValue(request.Hostname),
 		"port":       types.Int64Value(int64(request.Port)),
 		"data":       types.StringValue(request.Data),
-		"assertions": assertionsToSet(ctx, request.Assertions, diags),
+		"assertions": assertionsToSet(ctx, request.Assertions, priorAssertions(prior), diags),
 		"ip_family":  types.StringValue(string(request.IPFamily)),
 	})
 	diags.Append(d...)

@@ -335,7 +335,7 @@ Both resource types manage the same check groups, so you can switch a group over
    }
    ```
 
-1. Run `terraform plan`. The import should not plan an update; if it does, adjust the configuration until it does not, unless you mean to change the group.
+1. Run `terraform plan`. The import should not plan an update; if it does, adjust the configuration until it does not, unless you mean to change the group. An attribute set to an empty value, such as `tags = []`, plans an update after the import that changes nothing (see [Expected one-time changes](#expected-one-time-changes)); leave it out instead.
 1. Apply. Then remove the `import` block, replace the `checkly_check_group` resource with a `removed` block, so that Terraform forgets it without deleting the group, and point references such as `group_id` at the new resource:
 
    ```terraform
@@ -377,7 +377,7 @@ resource "checkly_maintenance_window" "example" {
 
 ## Expected one-time changes
 
-- v1.x stored an unset optional string, number or collection as an empty value (`""`, `0` or `[]`), and v2 stores it as null. If your configuration sets such an attribute to an empty value explicitly, for example `tags = []` or `repeat_interval = 0`, the first plan shows an in-place update to that empty value. Removing the attribute from the configuration has the same effect and avoids the update.
+- v1.x stored an unset optional string, number or collection as an empty value (`""`, `0`, `[]` or `{}`), and v2 stores it as null. If your configuration sets such an attribute to an empty value explicitly, for example `tags = []`, `headers = {}` or `repeat_interval = 0`, the first plan shows an in-place update to that empty value. The same goes for the first plan after an import, which also stores null for an empty value. Removing the attribute from the configuration has the same effect and avoids the update. Expressions that read such an attribute get null instead of the empty value when it is not configured, so `length()` or `concat()` over it fails. Write `x == null ? [] : x` for a list or set and `x == null ? {} : x` for a map, for example `length(checkly_check_group.example.tags == null ? [] : checkly_check_group.example.tags)`, or set the attribute in your configuration.
 - v1.x could not clear these attributes: leaving one out kept the stored value, and every plan showed the same change. v2 clears them, so a value set in the web app and absent from your configuration is erased by the first apply. To keep such a value, add it to your configuration.
   - `checkly_status_page`: `custom_domain`, `logo`, `redirect_to` and `favicon`.
   - `checkly_dashboard`: `custom_domain`, `logo`, `link`, `description` and `favicon`.

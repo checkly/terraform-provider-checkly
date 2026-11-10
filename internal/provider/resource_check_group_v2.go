@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -198,8 +197,6 @@ func (r *CheckGroupV2Resource) Schema(ctx context.Context, req resource.SchemaRe
 			"tags": schema.SetAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
-				Computed:    true,
-				Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})),
 				Description: "Additional tags to append to all checks in the group.",
 			},
 			"enforce_alert_settings": schema.SingleNestedAttribute{
@@ -809,7 +806,7 @@ func checkGroupV2ToModel(ctx context.Context, group *checkly.GroupV2, model *Che
 	model.Concurrency = types.Int64Value(int64(group.Concurrency))
 	model.Activated = types.BoolValue(group.Activated)
 	model.Muted = types.BoolValue(group.Muted)
-	model.Tags = setFromStrings(ctx, group.Tags, diags)
+	model.Tags = stringSetFromAPINullIfUnset(ctx, group.Tags, model.Tags, diags)
 	model.EnvironmentVariables = environmentVariablesToList(ctx, group.EnvironmentVariables, model.EnvironmentVariables, diags)
 	model.SetupScript = checkGroupV2ScriptToObject(group.SetupSnippetID, group.LocalSetupScript)
 	model.TeardownScript = checkGroupV2ScriptToObject(group.TearDownSnippetID, group.LocalTearDownScript)

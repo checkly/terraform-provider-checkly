@@ -16,7 +16,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -353,8 +352,6 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 					},
 					"metadata": schema.SetNestedAttribute{
 						Optional:    true,
-						Computed:    true,
-						Default:     setdefault.StaticValue(types.SetValueMust(types.ObjectType{AttrTypes: grpcMonitorMetadataAttrTypes}, []attr.Value{})),
 						Description: "gRPC metadata (request headers) sent with the call.",
 						NestedObject: schema.NestedAttributeObject{
 							// Attributes nested in this set attribute must
@@ -389,8 +386,6 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 					// generated from this schema.
 					"assertions": schema.SetNestedAttribute{
 						Optional:    true,
-						Computed:    true,
-						Default:     setdefault.StaticValue(types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{})),
 						Description: "A request can have multiple assertions. The allowed comparisons, properties, and target formats depend on the assertion source — see the [Assertion Reference](#assertion-reference) below.",
 						NestedObject: schema.NestedAttributeObject{
 							// Attributes nested in this set attribute must
@@ -852,7 +847,7 @@ func grpcMonitorToModel(ctx context.Context, c *checkly.GRPCMonitor, model *GRPC
 	model.GroupID = types.Int64Value(c.GroupID)
 	model.GroupOrder = types.Int64Value(int64(c.GroupOrder))
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, model.RetryStrategy, diags)
-	model.Request = grpcMonitorRequestToObject(ctx, c.Request, diags)
+	model.Request = grpcMonitorRequestToObject(ctx, c.Request, model.Request, diags)
 	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, model.AlertChannelSubscriptions, diags)
 	model.TriggerIncident = triggerIncidentToObject(ctx, c.TriggerIncident, diags)
 }
@@ -907,7 +902,7 @@ func grpcMonitorRequestFromModel(ctx context.Context, model GRPCMonitorRequestMo
 
 // grpcMonitorRequestToObject converts the API representation of a gRPC
 // request to the request attribute value.
-func grpcMonitorRequestToObject(ctx context.Context, r checkly.GRPCRequest, diags *diag.Diagnostics) types.Object {
+func grpcMonitorRequestToObject(ctx context.Context, r checkly.GRPCRequest, prior types.Object, diags *diag.Diagnostics) types.Object {
 	obj, d := types.ObjectValueFrom(ctx, grpcMonitorRequestAttrTypes, GRPCMonitorRequestModel{
 		Host:              types.StringValue(r.URL),
 		Port:              types.Int64Value(int64(grpcPortToInt(r.Port))),
@@ -923,8 +918,8 @@ func grpcMonitorRequestToObject(ctx context.Context, r checkly.GRPCRequest, diag
 		BfbsContent:       types.StringValue(r.GRPCConfig.BfbsContent),
 		Method:            types.StringValue(r.GRPCConfig.Method),
 		Message:           types.StringValue(r.GRPCConfig.Message),
-		Metadata:          grpcMonitorMetadataToSet(ctx, r.GRPCConfig.Metadata, diags),
-		Assertions:        assertionsToSet(ctx, r.Assertions, diags),
+		Metadata:          grpcMonitorMetadataToSet(ctx, r.GRPCConfig.Metadata, priorAttribute(prior, "metadata", types.SetNull(types.ObjectType{AttrTypes: grpcMonitorMetadataAttrTypes})), diags),
+		Assertions:        assertionsToSet(ctx, r.Assertions, priorAssertions(prior), diags),
 	})
 	diags.Append(d...)
 
@@ -972,8 +967,9 @@ func grpcMonitorMetadataFromSet(ctx context.Context, set types.Set, diags *diag.
 }
 
 // grpcMonitorMetadataToSet converts the API representation of gRPC metadata
-// to the request.metadata set value.
-func grpcMonitorMetadataToSet(ctx context.Context, metadata []checkly.GRPCMetadata, diags *diag.Diagnostics) types.Set {
+// to the request.metadata set value. No metadata converts to null when
+// prior, the planned or previously stored value, is null or unknown.
+func grpcMonitorMetadataToSet(ctx context.Context, metadata []checkly.GRPCMetadata, prior types.Set, diags *diag.Diagnostics) types.Set {
 	models := make([]GRPCMonitorMetadataModel, len(metadata))
 	for i, m := range metadata {
 		models[i] = GRPCMonitorMetadataModel{
@@ -985,5 +981,5 @@ func grpcMonitorMetadataToSet(ctx context.Context, metadata []checkly.GRPCMetada
 	set, d := types.SetValueFrom(ctx, types.ObjectType{AttrTypes: grpcMonitorMetadataAttrTypes}, models)
 	diags.Append(d...)
 
-	return set
+	return setNullIfUnset(ctx, set, prior)
 }

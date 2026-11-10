@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -249,8 +248,6 @@ func (r *DNSMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 					},
 					"assertions": schema.SetNestedAttribute{
 						Optional:    true,
-						Computed:    true,
-						Default:     setdefault.StaticValue(types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{})),
 						Description: "Assertions to validate the DNS response.",
 						NestedObject: schema.NestedAttributeObject{
 							// Attributes nested in this set attribute must not use
@@ -539,7 +536,7 @@ func dnsMonitorToModel(ctx context.Context, c *checkly.DNSMonitor, model *DNSMon
 	}
 
 	model.UseGlobalAlertSettings = types.BoolValue(c.UseGlobalAlertSettings)
-	model.Request = dnsMonitorRequestToObject(ctx, c.Request, diags)
+	model.Request = dnsMonitorRequestToObject(ctx, c.Request, model.Request, diags)
 	model.GroupID = types.Int64Value(c.GroupID)
 	model.GroupOrder = types.Int64Value(int64(c.GroupOrder))
 	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, model.AlertChannelSubscriptions, diags)
@@ -569,13 +566,13 @@ func dnsMonitorRequestFromObject(ctx context.Context, obj types.Object, diags *d
 
 // dnsMonitorRequestToObject converts the API representation of the request
 // to the request attribute value.
-func dnsMonitorRequestToObject(ctx context.Context, r checkly.DNSRequest, diags *diag.Diagnostics) types.Object {
+func dnsMonitorRequestToObject(ctx context.Context, r checkly.DNSRequest, prior types.Object, diags *diag.Diagnostics) types.Object {
 	obj, d := types.ObjectValueFrom(ctx, dnsMonitorRequestAttrTypes, DNSMonitorRequestModel{
 		RecordType: types.StringValue(string(r.RecordType)),
 		Query:      types.StringValue(r.Query),
 		Protocol:   types.StringValue(string(r.Protocol)),
 		NameServer: dnsMonitorNameServerToObject(ctx, r.NameServer, r.Port, diags),
-		Assertions: assertionsToSet(ctx, r.Assertions, diags),
+		Assertions: assertionsToSet(ctx, r.Assertions, priorAssertions(prior), diags),
 	})
 	diags.Append(d...)
 

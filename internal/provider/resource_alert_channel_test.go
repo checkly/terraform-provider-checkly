@@ -11,6 +11,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 )
@@ -199,12 +202,14 @@ func TestAccWebhook(t *testing.T) {
 			  }`,
 			Check: resource.ComposeAggregateTestCheckFunc(
 				resource.TestCheckResourceAttr("checkly_alert_channel.webhook_ac", "webhook.method", "POST"),
-				resource.TestCheckResourceAttr("checkly_alert_channel.webhook_ac", "webhook.headers.%", "0"),
-				resource.TestCheckResourceAttr("checkly_alert_channel.webhook_ac", "webhook.query_parameters.%", "0"),
 				resource.TestCheckNoResourceAttr("checkly_alert_channel.webhook_ac", "webhook.template"),
 				resource.TestCheckNoResourceAttr("checkly_alert_channel.webhook_ac", "webhook.webhook_secret"),
 				resource.TestCheckNoResourceAttr("checkly_alert_channel.webhook_ac", "webhook.webhook_type"),
 			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue("checkly_alert_channel.webhook_ac", tfjsonpath.New("webhook").AtMapKey("headers"), knownvalue.Null()),
+				statecheck.ExpectKnownValue("checkly_alert_channel.webhook_ac", tfjsonpath.New("webhook").AtMapKey("query_parameters"), knownvalue.Null()),
+			},
 		},
 		// Optional strings configured as "" stay empty instead of refreshing
 		// to null.

@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -224,8 +223,6 @@ func (r *URLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 					},
 					"assertions": schema.SetNestedAttribute{
 						Optional:    true,
-						Computed:    true,
-						Default:     setdefault.StaticValue(types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{})),
 						Description: "Assertions to validate the HTTP response. URL monitors only support status code assertions.",
 						NestedObject: schema.NestedAttributeObject{
 							// Attributes nested in this set attribute must
@@ -512,7 +509,7 @@ func urlMonitorToModel(ctx context.Context, c *checkly.URLMonitor, model *URLMon
 	}
 
 	model.UseGlobalAlertSettings = types.BoolValue(c.UseGlobalAlertSettings)
-	model.Request = urlMonitorRequestToObject(ctx, c.Request, diags)
+	model.Request = urlMonitorRequestToObject(ctx, c.Request, model.Request, diags)
 	model.GroupID = types.Int64Value(c.GroupID)
 	model.GroupOrder = types.Int64Value(int64(c.GroupOrder))
 
@@ -546,12 +543,12 @@ func urlMonitorRequestFromObject(ctx context.Context, obj types.Object, diags *d
 
 // urlMonitorRequestToObject converts the API representation of the request
 // to the request attribute value.
-func urlMonitorRequestToObject(ctx context.Context, r checkly.URLRequest, diags *diag.Diagnostics) types.Object {
+func urlMonitorRequestToObject(ctx context.Context, r checkly.URLRequest, prior types.Object, diags *diag.Diagnostics) types.Object {
 	obj, d := types.ObjectValueFrom(ctx, urlMonitorRequestAttrTypes, URLMonitorRequestModel{
 		URL:             types.StringValue(r.URL),
 		FollowRedirects: types.BoolValue(r.FollowRedirects),
 		SkipSSL:         types.BoolValue(r.SkipSSL),
-		Assertions:      assertionsToSet(ctx, r.Assertions, diags),
+		Assertions:      assertionsToSet(ctx, r.Assertions, priorAssertions(prior), diags),
 		IPFamily:        types.StringValue(string(r.IPFamily)),
 	})
 	diags.Append(d...)

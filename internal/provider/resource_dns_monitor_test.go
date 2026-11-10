@@ -1757,7 +1757,7 @@ func TestAccDNSMonitorUnsetSweepRequest(t *testing.T) {
 			`,
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr("checkly_dns_monitor.test", "request.protocol", "UDP"),
-				resource.TestCheckResourceAttr("checkly_dns_monitor.test", "request.assertions.#", "0"),
+				resource.TestCheckNoResourceAttr("checkly_dns_monitor.test", "request.assertions"),
 			),
 		},
 	})

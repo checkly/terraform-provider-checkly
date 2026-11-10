@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -13,7 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -268,9 +266,7 @@ func (r *APICheckResource) Schema(ctx context.Context, req resource.SchemaReques
 			},
 			"private_locations": schema.SetAttribute{
 				Optional:    true,
-				Computed:    true,
 				ElementType: types.StringType,
-				Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})),
 				Description: "An array of one or more private locations slugs.",
 			},
 			triggerIncidentAttributeName:        makeTriggerIncidentSchema(),
@@ -687,10 +683,10 @@ func apiCheckToModel(ctx context.Context, c *checkly.APICheck, model *APICheckRe
 	model.Muted = types.BoolValue(c.Muted)
 	model.ShouldFail = types.BoolValue(c.ShouldFail)
 	model.RunParallel = types.BoolValue(c.RunParallel)
-	model.Locations = stringSetFromAPIEmptyIfUnknown(ctx, c.Locations, prior.Locations, diags)
+	model.Locations = stringSetFromAPINullIfUnset(ctx, c.Locations, prior.Locations, diags)
 	model.DegradedResponseTime = types.Int64Value(int64(c.DegradedResponseTime))
 	model.MaxResponseTime = types.Int64Value(int64(c.MaxResponseTime))
-	model.Tags = stringSetFromAPIEmptyIfUnknown(ctx, c.Tags, prior.Tags, diags)
+	model.Tags = stringSetFromAPINullIfUnset(ctx, c.Tags, prior.Tags, diags)
 	model.SetupSnippetID = types.Int64Value(c.SetupSnippetID)
 	model.TeardownSnippetID = types.Int64Value(c.TearDownSnippetID)
 	if c.LocalSetupScript != nil {
@@ -709,11 +705,7 @@ func apiCheckToModel(ctx context.Context, c *checkly.APICheck, model *APICheckRe
 		model.RuntimeID = types.StringNull()
 	}
 	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, prior.AlertChannelSubscriptions, diags)
-	if c.PrivateLocations != nil {
-		model.PrivateLocations = setFromStrings(ctx, *c.PrivateLocations, diags)
-	} else {
-		model.PrivateLocations = setFromStrings(ctx, nil, diags)
-	}
+	model.PrivateLocations = stringSetFromAPINullIfUnset(ctx, valueOrZero(c.PrivateLocations), prior.PrivateLocations, diags)
 	// When the API reports no alert settings, the prior value is kept;
 	// converting the absence of a value would overwrite the stored values
 	// with empty ones. Unknown values cannot be stored in state and resolve

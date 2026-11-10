@@ -13,6 +13,9 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 )
 
 const checkGroupV2Resource = "checkly_check_group_v2.test"
@@ -1042,19 +1045,28 @@ func TestAccCheckGroupV2Tags(t *testing.T) {
 				),
 			),
 		},
+		// An explicitly empty tags is stored as an empty set.
+		{
+			Config: `
+				resource "checkly_check_group_v2" "test" {
+					name = "tags-test"
+					tags = []
+				}
+			`,
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue(checkGroupV2Resource, tfjsonpath.New("tags"), knownvalue.SetExact([]knownvalue.Check{})),
+			},
+		},
+		// Leaving tags out stores null.
 		{
 			Config: `
 				resource "checkly_check_group_v2" "test" {
 					name = "tags-test"
 				}
 			`,
-			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
-					checkGroupV2Resource,
-					"tags.#",
-					"0",
-				),
-			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue(checkGroupV2Resource, tfjsonpath.New("tags"), knownvalue.Null()),
+			},
 		},
 	})
 }
@@ -1900,11 +1912,13 @@ func TestAccCheckGroupV2UnsetSweepAPICheckDefaults(t *testing.T) {
 			`,
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(checkGroupV2Resource, "api_check_defaults.url", "http://sweep2.example.com/"),
-				resource.TestCheckResourceAttr(checkGroupV2Resource, "api_check_defaults.headers.%", "0"),
-				resource.TestCheckResourceAttr(checkGroupV2Resource, "api_check_defaults.query_parameters.%", "0"),
-				resource.TestCheckResourceAttr(checkGroupV2Resource, "api_check_defaults.assertions.#", "0"),
 				resource.TestCheckNoResourceAttr(checkGroupV2Resource, "api_check_defaults.basic_auth.%"),
 			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue(checkGroupV2Resource, tfjsonpath.New("api_check_defaults").AtMapKey("headers"), knownvalue.Null()),
+				statecheck.ExpectKnownValue(checkGroupV2Resource, tfjsonpath.New("api_check_defaults").AtMapKey("query_parameters"), knownvalue.Null()),
+				statecheck.ExpectKnownValue(checkGroupV2Resource, tfjsonpath.New("api_check_defaults").AtMapKey("assertions"), knownvalue.Null()),
+			},
 		},
 	})
 }

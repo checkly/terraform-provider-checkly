@@ -15,7 +15,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -464,8 +463,6 @@ func (r *SSLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 					// too — it is not generated from this schema.
 					"assertions": schema.SetNestedAttribute{
 						Optional:    true,
-						Computed:    true,
-						Default:     setdefault.StaticValue(types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{})),
 						Description: "A request can have multiple assertions. The allowed comparisons, properties, and target formats depend on the assertion source — see the [Assertion Reference](#assertion-reference) below.",
 						NestedObject: schema.NestedAttributeObject{
 							// Attributes nested in this set attribute must
@@ -855,7 +852,7 @@ func sslMonitorRequestToObject(ctx context.Context, r checkly.SSLRequest, prior 
 		AlertDaysBeforeExpiry: types.Int64Value(int64(config.AlertDaysBeforeExpiry)),
 		SecurityBaseline:      sslMonitorSecurityBaselineToObject(ctx, config.SecurityBaseline, priorRequest.SecurityBaseline, diags),
 		ClientCertificate:     sslMonitorClientCertificateToObject(ctx, r, priorRequest.ClientCertificate, diags),
-		Assertions:            assertionsToSet(ctx, r.Assertions, diags),
+		Assertions:            assertionsToSet(ctx, r.Assertions, priorAssertions(prior), diags),
 	})
 	diags.Append(d...)
 

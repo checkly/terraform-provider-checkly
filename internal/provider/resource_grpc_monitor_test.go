@@ -588,7 +588,7 @@ func TestAccGRPCMonitorUnsetAllAttributes(t *testing.T) {
 				resource.TestCheckResourceAttr(name, "request.timeout", "60"),
 				resource.TestCheckResourceAttr(name, "request.message", ""),
 				resource.TestCheckResourceAttr(name, "request.metadata.#", "0"),
-				resource.TestCheckResourceAttr(name, "request.assertions.#", "0"),
+				resource.TestCheckNoResourceAttr(name, "request.assertions"),
 			),
 		},
 		{

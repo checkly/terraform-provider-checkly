@@ -15,7 +15,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -220,9 +219,7 @@ func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 			},
 			"private_locations": schema.SetAttribute{
 				Optional:    true,
-				Computed:    true,
 				ElementType: types.StringType,
-				Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})),
 				Description: "An array of one or more private locations slugs.",
 			},
 			triggerIncidentAttributeName:        makeTriggerIncidentSchema(),
@@ -904,11 +901,11 @@ func checkToModel(ctx context.Context, check checkly.Check, model *CheckResource
 	model.Muted = types.BoolValue(c.Muted)
 	model.ShouldFail = types.BoolValue(c.ShouldFail)
 	model.RunParallel = types.BoolValue(c.RunParallel)
-	model.Locations = stringSetFromAPIEmptyIfUnknown(ctx, c.Locations, prior.Locations, diags)
-	model.Tags = stringSetFromAPIEmptyIfUnknown(ctx, c.Tags, prior.Tags, diags)
+	model.Locations = stringSetFromAPINullIfUnset(ctx, c.Locations, prior.Locations, diags)
+	model.Tags = stringSetFromAPINullIfUnset(ctx, c.Tags, prior.Tags, diags)
 	model.RuntimeID = stringValueOrNull(valueOrZero(c.RuntimeID))
 	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, prior.AlertChannelSubscriptions, diags)
-	model.PrivateLocations = setFromStrings(ctx, valueOrZero(c.PrivateLocations), diags)
+	model.PrivateLocations = stringSetFromAPINullIfUnset(ctx, valueOrZero(c.PrivateLocations), prior.PrivateLocations, diags)
 	model.AlertSettings = alertSettingsToObject(ctx, valueOrZero(c.AlertSettings), prior.AlertSettings, diags)
 	model.UseGlobalAlertSettings = types.BoolValue(c.UseGlobalAlertSettings)
 	// The SDK's check types have no double_check, so the value in the model

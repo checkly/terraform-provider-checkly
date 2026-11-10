@@ -7,7 +7,10 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 )
 
 func TestAccCheckGroupEmptyConfig(t *testing.T) {
@@ -1050,12 +1053,14 @@ func TestAccCheckGroupUnsetSweepScalars(t *testing.T) {
 				resource.TestCheckResourceAttr("checkly_check_group.test", "concurrency", "5"),
 				resource.TestCheckResourceAttr("checkly_check_group.test", "muted", "false"),
 				resource.TestCheckResourceAttr("checkly_check_group.test", "run_parallel", "false"),
-				resource.TestCheckResourceAttr("checkly_check_group.test", "locations.#", "0"),
-				resource.TestCheckResourceAttr("checkly_check_group.test", "tags.#", "0"),
 				resource.TestCheckNoResourceAttr("checkly_check_group.test", "runtime_id"),
 				resource.TestCheckResourceAttr("checkly_check_group.test", "local_setup_script", ""),
 				resource.TestCheckResourceAttr("checkly_check_group.test", "local_teardown_script", ""),
 			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue("checkly_check_group.test", tfjsonpath.New("locations"), knownvalue.Null()),
+				statecheck.ExpectKnownValue("checkly_check_group.test", tfjsonpath.New("tags"), knownvalue.Null()),
+			},
 		},
 	})
 }
@@ -1168,9 +1173,50 @@ func TestAccCheckGroupUnsetSweepPrivateLocations(t *testing.T) {
 					locations   = ["eu-central-1"]
 				}
 			`, slug),
-			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr("checkly_check_group.test", "private_locations.#", "0"),
-			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue("checkly_check_group.test", tfjsonpath.New("private_locations"), knownvalue.Null()),
+			},
+		},
+	})
+}
+
+// TestAccCheckGroupEmptyCollections verifies that explicitly empty
+// collections are stored as empty sets and that leaving them out stores
+// null, without drift in either case. A group needs no location.
+func TestAccCheckGroupEmptyCollections(t *testing.T) {
+	const r = "checkly_check_group.test"
+	collections := []string{"locations", "private_locations", "tags"}
+	stateChecks := func(want knownvalue.Check) []statecheck.StateCheck {
+		var checks []statecheck.StateCheck
+		for _, name := range collections {
+			checks = append(checks, statecheck.ExpectKnownValue(r, tfjsonpath.New(name), want))
+		}
+		return checks
+	}
+
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_check_group" "test" {
+					name              = "group-empty-collections"
+					activated         = true
+					concurrency       = 1
+					locations         = []
+					private_locations = []
+					tags              = []
+				}
+			`,
+			ConfigStateChecks: stateChecks(knownvalue.SetExact([]knownvalue.Check{})),
+		},
+		{
+			Config: `
+				resource "checkly_check_group" "test" {
+					name        = "group-empty-collections"
+					activated   = true
+					concurrency = 1
+				}
+			`,
+			ConfigStateChecks: stateChecks(knownvalue.Null()),
 		},
 	})
 }
@@ -1237,13 +1283,16 @@ func TestAccCheckGroupUnsetSweepAPICheckDefaults(t *testing.T) {
 			`,
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr("checkly_check_group.test", "api_check_defaults.url", "http://sweep2.example.com/"),
-				resource.TestCheckResourceAttr("checkly_check_group.test", "api_check_defaults.headers.%", "0"),
-				resource.TestCheckResourceAttr("checkly_check_group.test", "api_check_defaults.query_parameters.%", "0"),
-				resource.TestCheckResourceAttr("checkly_check_group.test", "api_check_defaults.assertions.#", "0"),
 				resource.TestCheckNoResourceAttr("checkly_check_group.test", "api_check_defaults.basic_auth.%"),
 			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue("checkly_check_group.test", tfjsonpath.New("api_check_defaults").AtMapKey("headers"), knownvalue.Null()),
+				statecheck.ExpectKnownValue("checkly_check_group.test", tfjsonpath.New("api_check_defaults").AtMapKey("query_parameters"), knownvalue.Null()),
+				statecheck.ExpectKnownValue("checkly_check_group.test", tfjsonpath.New("api_check_defaults").AtMapKey("assertions"), knownvalue.Null()),
+			},
 		},
-		// Step 3: remove the whole object; it must reset to the empty default.
+		// Step 3: remove the whole object; it must reset to the default, an
+		// empty url with null collections.
 		{
 			Config: `
 				resource "checkly_check_group" "test" {
@@ -1255,11 +1304,13 @@ func TestAccCheckGroupUnsetSweepAPICheckDefaults(t *testing.T) {
 			`,
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr("checkly_check_group.test", "api_check_defaults.url", ""),
-				resource.TestCheckResourceAttr("checkly_check_group.test", "api_check_defaults.headers.%", "0"),
-				resource.TestCheckResourceAttr("checkly_check_group.test", "api_check_defaults.query_parameters.%", "0"),
-				resource.TestCheckResourceAttr("checkly_check_group.test", "api_check_defaults.assertions.#", "0"),
 				resource.TestCheckNoResourceAttr("checkly_check_group.test", "api_check_defaults.basic_auth.%"),
 			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue("checkly_check_group.test", tfjsonpath.New("api_check_defaults").AtMapKey("headers"), knownvalue.Null()),
+				statecheck.ExpectKnownValue("checkly_check_group.test", tfjsonpath.New("api_check_defaults").AtMapKey("query_parameters"), knownvalue.Null()),
+				statecheck.ExpectKnownValue("checkly_check_group.test", tfjsonpath.New("api_check_defaults").AtMapKey("assertions"), knownvalue.Null()),
+			},
 		},
 	})
 }

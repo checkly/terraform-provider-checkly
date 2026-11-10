@@ -124,8 +124,9 @@ func assertionsFromSet(ctx context.Context, set types.Set, diags *diag.Diagnosti
 }
 
 // assertionsToSet converts the API representation of assertions to an
-// assertion set value.
-func assertionsToSet(ctx context.Context, assertions []checkly.Assertion, diags *diag.Diagnostics) types.Set {
+// assertion set value. No assertions convert to null when prior, the planned
+// or previously stored value, is null or unknown.
+func assertionsToSet(ctx context.Context, assertions []checkly.Assertion, prior types.Set, diags *diag.Diagnostics) types.Set {
 	models := make([]assertionModel, len(assertions))
 	for i, assertion := range assertions {
 		models[i] = assertionModel{
@@ -139,5 +140,11 @@ func assertionsToSet(ctx context.Context, assertions []checkly.Assertion, diags 
 	set, d := types.SetValueFrom(ctx, types.ObjectType{AttrTypes: assertionAttrTypes}, models)
 	diags.Append(d...)
 
-	return set
+	return setNullIfUnset(ctx, set, prior)
+}
+
+// priorAssertions returns the assertions attribute of prior, an object
+// attribute value, or null when prior is null or unknown.
+func priorAssertions(prior types.Object) types.Set {
+	return priorAttribute(prior, "assertions", types.SetNull(types.ObjectType{AttrTypes: assertionAttrTypes}))
 }

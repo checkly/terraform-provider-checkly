@@ -1954,7 +1954,7 @@ func TestAccURLMonitorUnsetSweepRequest(t *testing.T) {
 				testCheckResourceAttrExpr("checkly_url_monitor.test", `follow_redirects":"true"`, "true"),
 				testCheckResourceAttrExpr("checkly_url_monitor.test", `skip_ssl":"false"`, "false"),
 				testCheckResourceAttrExpr("checkly_url_monitor.test", `ip_family":"IPv4"`, "IPv4"),
-				testCheckResourceAttrExpr("checkly_url_monitor.test", `assertions.#":"0"`, "0"),
+				resource.TestCheckNoResourceAttr("checkly_url_monitor.test", "request.assertions"),
 			),
 		},
 	})
