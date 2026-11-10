@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 )
@@ -570,7 +571,37 @@ func TestAccApiCheckResourceFrequencyValidation(t *testing.T) {
 		{
 			Config: `
 				resource "checkly_api_check" "test" {
-					name             = "api-check-resource-bad-high-frequency-offset"
+					name             = "api-check-resource-disabled-offset"
+					activated        = false
+					frequency        = 0
+					frequency_offset = 0
+					locations        = ["eu-central-1"]
+					request = {
+						url = "https://welcome.checklyhq.com"
+					}
+				}
+			`,
+			ExpectError: regexp.MustCompile(`"frequency_offset" is required when "frequency" is 0`),
+		},
+		{
+			Config: `
+				resource "checkly_api_check" "test" {
+					name             = "api-check-resource-extra-offset"
+					activated        = false
+					frequency        = 60
+					frequency_offset = 30
+					locations        = ["eu-central-1"]
+					request = {
+						url = "https://welcome.checklyhq.com"
+					}
+				}
+			`,
+			ExpectError: regexp.MustCompile(`"frequency_offset" can only be set when "frequency" is 0`),
+		},
+		{
+			Config: `
+				resource "checkly_api_check" "test" {
+					name             = "api-check-resource-bad-offset"
 					activated        = false
 					frequency        = 0
 					frequency_offset = 15
@@ -580,56 +611,22 @@ func TestAccApiCheckResourceFrequencyValidation(t *testing.T) {
 					}
 				}
 			`,
-			ExpectError: regexp.MustCompile(`must be 10, 20 or 30 when "frequency" is 0`),
+			ExpectError: regexp.MustCompile(`Attribute frequency_offset value must be one of`),
 		},
 		{
 			Config: `
-				resource "checkly_api_check" "test" {
-					name             = "api-check-resource-offset-too-small"
+				resource "checkly_api_check" "test-offset-10" {
+					name             = "api-check-resource-frequency-0-offset-10"
 					activated        = false
-					frequency        = 10
-					frequency_offset = 0
+					frequency        = 0
+					frequency_offset = 10
 					locations        = ["eu-central-1"]
 					request = {
 						url = "https://welcome.checklyhq.com"
 					}
 				}
-			`,
-			ExpectError: regexp.MustCompile(`value must be at least 1`),
-		},
-		{
-			Config: `
-				resource "checkly_api_check" "test" {
-					name             = "api-check-resource-offset-too-large-low-frequency"
-					activated        = false
-					frequency        = 10
-					frequency_offset = 101
-					locations        = ["eu-central-1"]
-					request = {
-						url = "https://welcome.checklyhq.com"
-					}
-				}
-			`,
-			ExpectError: regexp.MustCompile(`must be between 1 and 100`),
-		},
-		{
-			Config: `
-				resource "checkly_api_check" "test" {
-					name             = "api-check-resource-offset-too-large-high-frequency"
-					activated        = false
-					frequency        = 120
-					frequency_offset = 25
-					locations        = ["eu-central-1"]
-					request = {
-						url = "https://welcome.checklyhq.com"
-					}
-				}
-			`,
-			ExpectError: regexp.MustCompile(`must be between 1 and 24`),
-		},
-		{
-			Config: `
-				resource "checkly_api_check" "test-high-frequency" {
+
+				resource "checkly_api_check" "test-offset-20" {
 					name             = "api-check-resource-frequency-0-offset-20"
 					activated        = false
 					frequency        = 0
@@ -640,22 +637,11 @@ func TestAccApiCheckResourceFrequencyValidation(t *testing.T) {
 					}
 				}
 
-				resource "checkly_api_check" "test-low-frequency" {
-					name             = "api-check-resource-frequency-10-offset-100"
+				resource "checkly_api_check" "test-offset-30" {
+					name             = "api-check-resource-frequency-0-offset-30"
 					activated        = false
-					frequency        = 10
-					frequency_offset = 100
-					locations        = ["eu-central-1"]
-					request = {
-						url = "https://welcome.checklyhq.com"
-					}
-				}
-
-				resource "checkly_api_check" "test-slow-frequency" {
-					name             = "api-check-resource-frequency-120-offset-24"
-					activated        = false
-					frequency        = 120
-					frequency_offset = 24
+					frequency        = 0
+					frequency_offset = 30
 					locations        = ["eu-central-1"]
 					request = {
 						url = "https://welcome.checklyhq.com"
@@ -663,37 +649,39 @@ func TestAccApiCheckResourceFrequencyValidation(t *testing.T) {
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
-					"checkly_api_check.test-high-frequency",
-					"frequency",
-					"0",
-				),
-				resource.TestCheckResourceAttr(
-					"checkly_api_check.test-high-frequency",
-					"frequency_offset",
-					"20",
-				),
-				resource.TestCheckResourceAttr(
-					"checkly_api_check.test-low-frequency",
-					"frequency",
-					"10",
-				),
-				resource.TestCheckResourceAttr(
-					"checkly_api_check.test-low-frequency",
-					"frequency_offset",
-					"100",
-				),
-				resource.TestCheckResourceAttr(
-					"checkly_api_check.test-slow-frequency",
-					"frequency",
-					"120",
-				),
-				resource.TestCheckResourceAttr(
-					"checkly_api_check.test-slow-frequency",
-					"frequency_offset",
-					"24",
-				),
+				resource.TestCheckResourceAttr("checkly_api_check.test-offset-10", "frequency", "0"),
+				resource.TestCheckResourceAttr("checkly_api_check.test-offset-10", "frequency_offset", "10"),
+				resource.TestCheckResourceAttr("checkly_api_check.test-offset-20", "frequency", "0"),
+				resource.TestCheckResourceAttr("checkly_api_check.test-offset-20", "frequency_offset", "20"),
+				resource.TestCheckResourceAttr("checkly_api_check.test-offset-30", "frequency", "0"),
+				resource.TestCheckResourceAttr("checkly_api_check.test-offset-30", "frequency_offset", "30"),
 			),
+		},
+		{
+			// A frequency_offset of 0 is equivalent to leaving it unset and is
+			// kept in state even though the API reports its own offset for
+			// regular frequencies.
+			Config: `
+				resource "checkly_api_check" "test-disabled-offset" {
+					name             = "api-check-resource-frequency-60-offset-0"
+					activated        = false
+					frequency        = 60
+					frequency_offset = 0
+					locations        = ["eu-central-1"]
+					request = {
+						url = "https://welcome.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_api_check.test-disabled-offset", "frequency", "60"),
+				resource.TestCheckResourceAttr("checkly_api_check.test-disabled-offset", "frequency_offset", "0"),
+			),
+			ConfigPlanChecks: resource.ConfigPlanChecks{
+				PostApplyPostRefresh: []plancheck.PlanCheck{
+					plancheck.ExpectEmptyPlan(),
+				},
+			},
 		},
 	})
 }

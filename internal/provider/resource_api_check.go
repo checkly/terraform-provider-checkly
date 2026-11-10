@@ -97,19 +97,8 @@ func (r *APICheckResource) Schema(ctx context.Context, req resource.SchemaReques
 				Default:     stringdefault.StaticString(""),
 				Description: "A description of the check.",
 			},
-			frequencyAttributeName: makeFrequencyAttributeSchema(FrequencyAttributeSchemaOptions{AllowHighFrequency: true}),
-			frequencyOffsetAttributeName: schema.Int64Attribute{
-				Optional: true,
-				Description: "Spreads the scheduling of the check within its frequency window, defined in seconds. " +
-					"When `frequency` is `0` (high frequency), `frequency_offset` is required and defines how often " +
-					"the check runs; the allowed values are `10`, `20` and `30` seconds. " +
-					"For frequencies of 1 minute and above, `frequency_offset` is optional and offsets the run " +
-					"schedule to spread out load; the allowed range is 1 to `frequency * 10` when `frequency` is " +
-					"at most `60`, and 1 to `ceil(frequency / 5)` otherwise.",
-				Validators: []validator.Int64{
-					int64validator.AtLeast(1),
-				},
-			},
+			frequencyAttributeName:       makeFrequencyAttributeSchema(FrequencyAttributeSchemaOptions{AllowHighFrequency: true}),
+			frequencyOffsetAttributeName: makeFrequencyOffsetAttributeSchema(FrequencyOffsetAttributeSchemaOptions{}),
 			"degraded_response_time": schema.Int64Attribute{
 				Optional: true,
 				Computed: true,
@@ -172,7 +161,7 @@ func (r *APICheckResource) Schema(ctx context.Context, req resource.SchemaReques
 
 func (r *APICheckResource) ConfigValidators(ctx context.Context) []resource.ConfigValidator {
 	return []resource.ConfigValidator{
-		newAPICheckFrequencyOffsetConfigValidator(),
+		newFrequencyOffsetConfigValidator(),
 	}
 }
 
@@ -352,94 +341,6 @@ func apiCheckModelFromCheckModel(source *CheckResourceModel) APICheckResourceMod
 	}
 }
 
-var _ resource.ConfigValidator = (*apiCheckFrequencyOffsetConfigValidator)(nil)
-
-// apiCheckFrequencyOffsetConfigValidator validates the frequency_offset
-// attribute against the frequency attribute, mirroring the Checkly API's
-// validation rules for API checks: when frequency is 0 (high frequency),
-// frequency_offset is required and must be 10, 20 or 30 seconds; for
-// frequencies of at most 60 minutes, an optional frequency_offset must be
-// between 1 and frequency * 10; for higher frequencies it must be between 1
-// and ceil(frequency / 5).
-type apiCheckFrequencyOffsetConfigValidator struct{}
-
-// newAPICheckFrequencyOffsetConfigValidator returns a resource config
-// validator for the frequency_offset attribute of API checks.
-func newAPICheckFrequencyOffsetConfigValidator() resource.ConfigValidator {
-	return &apiCheckFrequencyOffsetConfigValidator{}
-}
-
-func (v *apiCheckFrequencyOffsetConfigValidator) Description(ctx context.Context) string {
-	return "frequency_offset is required and must be 10, 20 or 30 when frequency is 0; " +
-		"otherwise it is optional and its allowed range depends on frequency"
-}
-
-func (v *apiCheckFrequencyOffsetConfigValidator) MarkdownDescription(ctx context.Context) string {
-	return v.Description(ctx)
-}
-
-func (v *apiCheckFrequencyOffsetConfigValidator) ValidateResource(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
-	var frequency, offset types.Int64
-
-	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(frequencyAttributeName), &frequency)...)
-	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(frequencyOffsetAttributeName), &offset)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	if frequency.IsUnknown() || offset.IsUnknown() {
-		return
-	}
-
-	// The frequency attribute is optional+computed with a static default; an
-	// unset frequency validates against the default value.
-	frequencyValue := defaultFrequency
-	if !frequency.IsNull() {
-		frequencyValue = frequency.ValueInt64()
-	}
-
-	if offset.IsNull() {
-		if frequencyValue == 0 {
-			resp.Diagnostics.AddAttributeError(
-				path.Root(frequencyOffsetAttributeName),
-				"Missing Required Attribute",
-				`"frequency_offset" is required when "frequency" is 0`,
-			)
-		}
-		return
-	}
-
-	offsetValue := offset.ValueInt64()
-
-	switch {
-	case frequencyValue == 0:
-		if offsetValue != 10 && offsetValue != 20 && offsetValue != 30 {
-			resp.Diagnostics.AddAttributeError(
-				path.Root(frequencyOffsetAttributeName),
-				"Invalid Attribute Value",
-				`"frequency_offset" must be 10, 20 or 30 when "frequency" is 0`,
-			)
-		}
-	case frequencyValue <= 60:
-		if max := frequencyValue * 10; offsetValue < 1 || offsetValue > max {
-			resp.Diagnostics.AddAttributeError(
-				path.Root(frequencyOffsetAttributeName),
-				"Invalid Attribute Value",
-				fmt.Sprintf(`"frequency_offset" must be between 1 and %d when "frequency" is %d`, max, frequencyValue),
-			)
-		}
-	default:
-		// ceil(frequency / 5) in integer arithmetic.
-		if max := (frequencyValue + 4) / 5; offsetValue < 1 || offsetValue > max {
-			resp.Diagnostics.AddAttributeError(
-				path.Root(frequencyOffsetAttributeName),
-				"Invalid Attribute Value",
-				fmt.Sprintf(`"frequency_offset" must be between 1 and %d when "frequency" is %d`, max, frequencyValue),
-			)
-		}
-	}
-}
-
 // apiCheckFromModel converts the resource data model to its API
 // representation.
 func apiCheckFromModel(ctx context.Context, model *APICheckResourceModel, diags *diag.Diagnostics) checkly.APICheck {
@@ -543,13 +444,14 @@ func apiCheckToModel(ctx context.Context, c *checkly.APICheck, model *APICheckRe
 		model.Description = types.StringValue("")
 	}
 	model.Frequency = types.Int64Value(int64(c.Frequency))
-	// The API only persists a configured frequency offset for high frequency
-	// scheduling (frequency 0). For regular frequencies the API validates the
-	// configured value but stores an automatically assigned offset instead,
-	// so echoing the reported value back would cause perpetual drift; the
-	// prior value is preserved to stay consistent with the configuration.
+	// The API only tracks an offset for high frequency scheduling
+	// (frequency 0). For regular frequencies a configured value of 0
+	// (equivalent to unset) is preserved; any other value is cleared.
 	if c.Frequency == 0 {
 		model.FrequencyOffset = types.Int64Value(int64(c.FrequencyOffset))
+	} else if model.FrequencyOffset.IsUnknown() ||
+		(!model.FrequencyOffset.IsNull() && model.FrequencyOffset.ValueInt64() != 0) {
+		model.FrequencyOffset = types.Int64Null()
 	}
 	model.Activated = types.BoolValue(c.Activated)
 	model.Muted = types.BoolValue(c.Muted)

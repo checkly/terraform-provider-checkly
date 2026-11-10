@@ -295,7 +295,7 @@ moved {
 
 The per-type check resources have no `double_check`. Before moving a check that sets it, replace it with the equivalent `retry_strategy` shown under [Deprecated attributes](#deprecated-attributes), or the check stops retrying.
 
-When moving an API check from `checkly_check` to `checkly_api_check`, note that the default `degraded_response_time` and `max_response_time` are 5000 and 20000 instead of 15000 and 30000. Set them explicitly to keep the previous thresholds. Also remove `frequency_offset = 0`: `checkly_api_check` expresses a disabled offset by leaving `frequency_offset` unset and rejects 0.
+When moving an API check from `checkly_check` to `checkly_api_check`, note that the default `degraded_response_time` and `max_response_time` are 5000 and 20000 instead of 15000 and 30000. Set them explicitly to keep the previous thresholds.
 
 Check groups move to `checkly_check_group_v2` with a `moved` block too, but their configuration changes more than the resource type; see [Check groups](#check-groups).
 
