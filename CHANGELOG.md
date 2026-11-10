@@ -45,7 +45,7 @@ need changes. Follow the [upgrade guide](docs/guides/upgrading-to-v2.md).
 ### Deprecated
 - `checkly_check`, in favor of the per-type check resources.
 - `checkly_heartbeat`, `checkly_tcp_check` and `checkly_maintenance_windows`, in favor of `checkly_heartbeat_monitor`, `checkly_tcp_monitor` and `checkly_maintenance_window`. They keep working, and `moved` blocks switch them without recreating them.
-- `checkly_check_group`, in favor of `checkly_check_group_v2`.
+- `checkly_check_group`, in favor of `checkly_check_group_v2`. A `moved` block switches a group without recreating it; see [Check groups](docs/guides/upgrading-to-v2.md#check-groups) in the upgrade guide.
 - `checkly_status_page` and `checkly_status_page_service`, in favor of the v3 status page resources.
 - `slack` on `checkly_alert_channel`, in favor of `slack_app`.
 
