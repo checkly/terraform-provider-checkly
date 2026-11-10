@@ -473,11 +473,7 @@ func apiCheckToModel(ctx context.Context, c *checkly.APICheck, model *APICheckRe
 	} else {
 		model.LocalTeardownScript = types.StringValue("")
 	}
-	if c.RuntimeID != nil && *c.RuntimeID != "" {
-		model.RuntimeID = types.StringValue(*c.RuntimeID)
-	} else {
-		model.RuntimeID = types.StringNull()
-	}
+	model.RuntimeID = stringValueOrPriorEmpty(valueOrZero(c.RuntimeID), prior.RuntimeID)
 	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, prior.AlertChannelSubscriptions, diags)
 	model.PrivateLocations = stringSetFromAPINullIfUnset(ctx, valueOrZero(c.PrivateLocations), prior.PrivateLocations, diags)
 	// When the API reports no alert settings, the prior value is kept;

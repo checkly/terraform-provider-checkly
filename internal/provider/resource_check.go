@@ -855,7 +855,7 @@ func checkToModel(ctx context.Context, check checkly.Check, model *CheckResource
 	model.RunParallel = types.BoolValue(c.RunParallel)
 	model.Locations = stringSetFromAPINullIfUnset(ctx, c.Locations, prior.Locations, diags)
 	model.Tags = stringSetFromAPINullIfUnset(ctx, c.Tags, prior.Tags, diags)
-	model.RuntimeID = stringValueOrNull(valueOrZero(c.RuntimeID))
+	model.RuntimeID = stringValueOrPriorEmpty(valueOrZero(c.RuntimeID), prior.RuntimeID)
 	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, prior.AlertChannelSubscriptions, diags)
 	model.PrivateLocations = stringSetFromAPINullIfUnset(ctx, valueOrZero(c.PrivateLocations), prior.PrivateLocations, diags)
 	model.AlertSettings = alertSettingsToObject(ctx, valueOrZero(c.AlertSettings), prior.AlertSettings, diags)
