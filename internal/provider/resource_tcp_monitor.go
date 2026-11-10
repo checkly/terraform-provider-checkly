@@ -149,7 +149,10 @@ func (r *TCPMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 				Attributes: map[string]schema.Attribute{
 					"hostname": schema.StringAttribute{
 						Required:    true,
-						Description: "The hostname or IP to connect to. Do not include a scheme or a port in this value.",
+						Description: "The hostname or IP to connect to, of 1 to 2048 UTF-16 code units. Do not include a scheme or a port in this value. " + utf16CountingExplanation,
+						Validators: []validator.String{
+							utf16LengthBetween(1, 2048),
+						},
 					},
 					"port": schema.Int64Attribute{
 						Required:    true,

@@ -82,7 +82,10 @@ func apiCheckRequestAttributeSchema(opts apiCheckRequestAttributeSchemaOptions) 
 			},
 			"url": schema.StringAttribute{
 				Required:    true,
-				Description: "The URL to call.",
+				Description: "The URL to call, of 1 to 2048 UTF-16 code units. " + utf16CountingExplanation,
+				Validators: []validator.String{
+					utf16LengthBetween(1, 2048),
+				},
 			},
 			"follow_redirects": schema.BoolAttribute{
 				Optional:    true,

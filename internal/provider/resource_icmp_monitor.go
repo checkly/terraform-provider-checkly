@@ -146,7 +146,10 @@ func (r *ICMPMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 				Attributes: map[string]schema.Attribute{
 					"hostname": schema.StringAttribute{
 						Required:    true,
-						Description: "The hostname to ping.",
+						Description: "The hostname to ping, of 1 to 2048 UTF-16 code units. " + utf16CountingExplanation,
+						Validators: []validator.String{
+							utf16LengthBetween(1, 2048),
+						},
 					},
 					"ip_family": schema.StringAttribute{
 						Optional:    true,

@@ -76,6 +76,34 @@ func TestUTF16LengthBetweenErrorGivesTheCount(t *testing.T) {
 	}
 }
 
+func TestNoControlCharacters(t *testing.T) {
+	cases := map[string]struct {
+		value types.String
+		valid bool
+	}{
+		"null":                  {types.StringNull(), true},
+		"unknown":               {types.StringUnknown(), true},
+		"empty":                 {types.StringValue(""), true},
+		"a host name":           {types.StringValue("api.example.com"), true},
+		"NUL":                   {types.StringValue("a\x00b"), false},
+		"U+0001":                {types.StringValue("a\x01b"), false},
+		"a newline":             {types.StringValue("example.com\n"), false},
+		"U+001F":                {types.StringValue("a\x1fb"), false},
+		"DEL":                   {types.StringValue("a\x7fb"), false},
+		"the C1 control U+0085": {types.StringValue("a\u0085b"), true},
+		"emoji":                 {types.StringValue(emoji), true},
+	}
+
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			diags := validateString([]validator.String{noControlCharacters()}, path.Root("host"), c.value)
+			if diags.HasError() == c.valid {
+				t.Errorf("valid = %v, diagnostics: %v", c.valid, diags)
+			}
+		})
+	}
+}
+
 func TestIsAPIWhitespace(t *testing.T) {
 	cases := map[rune]bool{
 		' ':     true,

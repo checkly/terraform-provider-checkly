@@ -106,6 +106,17 @@ func (v trimmedStringValidator) ValidateString(ctx context.Context, req validato
 	}
 }
 
+// noControlCharactersRegex is the API's rule for host names sent to a
+// network probe: no C0 control characters (U+0000 to U+001F) and no DEL
+// (U+007F). C1 control characters, such as U+0085, are accepted.
+var noControlCharactersRegex = regexp.MustCompile(`^[^\x00-\x1f\x7f]*$`)
+
+// noControlCharacters returns a validator that rejects strings with
+// characters that noControlCharactersRegex excludes.
+func noControlCharacters() validator.String {
+	return stringvalidator.RegexMatches(noControlCharactersRegex, "must not contain control characters")
+}
+
 // The API's private location slug rule: 1 to 30 letters, digits and dashes,
 // not starting with the ID of a public location, such as "eu-central-1". Go
 // regular expressions have no lookahead, so the rule is two expressions,

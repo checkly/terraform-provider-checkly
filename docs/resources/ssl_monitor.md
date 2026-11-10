@@ -143,7 +143,7 @@ resource "checkly_ssl_monitor" "example-ssl-monitor-2" {
 
 Required:
 
-- `hostname` (String) The hostname to connect to and validate the TLS certificate of. Do not include a scheme or a port in this value.
+- `hostname` (String) The hostname to connect to and validate the TLS certificate of, of 1 to 2048 UTF-16 code units without control characters. Do not include a scheme or a port in this value. Most characters count as one; emoji and other characters outside the Basic Multilingual Plane count as two.
 
 Optional:
 
@@ -154,7 +154,7 @@ Optional:
 - `ip_family` (String) The IP family to use when executing the check. The value can be either `IPv4` or `IPv6`. (Default `IPv4`).
 - `port` (Number) The port number to connect to. Possible values are between 1 and 65535. (Default `443`).
 - `security_baseline` (Attributes) The SSL security baseline — a set of enforceable and advisory rules. Omit the attribute to inherit the account default baseline. Rules that are not listed keep their server defaults; removing a rule (or the whole attribute) resets it to its default on the next apply. Only listed rules are drift-checked: an external change to an unlisted rule is not shown by `terraform plan` and is reset on the next apply. (see [below for nested schema](#nestedatt--request--security_baseline))
-- `server_name` (String) An optional SNI server name to send in the TLS handshake. Defaults to `hostname` when unset.
+- `server_name` (String) An optional SNI server name to send in the TLS handshake, of at most 2048 UTF-16 code units without control characters. Defaults to `hostname` when unset. Most characters count as one; emoji and other characters outside the Basic Multilingual Plane count as two.
 - `skip_chain_validation` (Boolean) When true, the certificate chain is not validated against trusted roots (the certificate is still inspected for expiry and the security baseline). (Default `false`).
 
 <a id="nestedatt--request--assertions"></a>

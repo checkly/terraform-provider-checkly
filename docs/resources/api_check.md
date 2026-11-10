@@ -228,7 +228,7 @@ moved {
 
 Required:
 
-- `url` (String) The URL to call.
+- `url` (String) The URL to call, of 1 to 2048 UTF-16 code units. Most characters count as one; emoji and other characters outside the Basic Multilingual Plane count as two.
 
 Optional:
 

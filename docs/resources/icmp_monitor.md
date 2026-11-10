@@ -76,7 +76,7 @@ resource "checkly_icmp_monitor" "example-icmp-monitor" {
 
 Required:
 
-- `hostname` (String) The hostname to ping.
+- `hostname` (String) The hostname to ping, of 1 to 2048 UTF-16 code units. Most characters count as one; emoji and other characters outside the Basic Multilingual Plane count as two.
 
 Optional:
 

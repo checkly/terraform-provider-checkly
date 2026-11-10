@@ -272,7 +272,7 @@ Optional:
 Required:
 
 - `content` (String) The content of the dependency file.
-- `path` (String) The path of the dependency file.
+- `path` (String) The path of the dependency file, of 1 to 1000 UTF-16 code units. Most characters count as one; emoji and other characters outside the Basic Multilingual Plane count as two.
 
 
 <a id="nestedatt--environment_variables"></a>
