@@ -195,3 +195,46 @@ func TestKnownPriorAttribute(t *testing.T) {
 		})
 	}
 }
+
+func TestNullValueOf(t *testing.T) {
+	ctx := context.Background()
+	objectAttrTypes := map[string]attr.Type{"enabled": types.BoolType}
+
+	cases := map[string]struct {
+		typ  attr.Type
+		want attr.Value
+	}{
+		"bool":   {types.BoolType, types.BoolNull()},
+		"string": {types.StringType, types.StringNull()},
+		"int64":  {types.Int64Type, types.Int64Null()},
+		"object": {types.ObjectType{AttrTypes: objectAttrTypes}, types.ObjectNull(objectAttrTypes)},
+		"set":    {types.SetType{ElemType: types.StringType}, types.SetNull(types.StringType)},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			if got := nullValueOf(tc.typ); !got.Equal(tc.want) {
+				t.Errorf("nullValueOf(%s) = %#v, want %#v", tc.typ, got, tc.want)
+			}
+		})
+	}
+
+	// Every member type of the objects whose null members are built with
+	// nullValueOf.
+	objects := map[string]map[string]attr.Type{
+		"enforce_alert_settings":      checkGroupV2EnforceAlertSettingsAttrTypes,
+		"enforce_locations":           checkGroupV2EnforceLocationsAttrTypes,
+		"enforce_retry_strategy":      checkGroupV2EnforceRetryStrategyAttrTypes,
+		"enforce_scheduling_strategy": checkGroupV2EnforceSchedulingStrategyAttrTypes,
+		"alert_settings":              alertSettingsAttrTypes,
+	}
+	for objectName, attrTypes := range objects {
+		for name, typ := range attrTypes {
+			t.Run(objectName+"/"+name, func(t *testing.T) {
+				got := nullValueOf(typ)
+				if !got.IsNull() || !got.Type(ctx).Equal(typ) {
+					t.Errorf("nullValueOf(%s) = %#v, want a null value of that type", typ, got)
+				}
+			})
+		}
+	}
+}

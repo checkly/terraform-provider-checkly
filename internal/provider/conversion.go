@@ -2,12 +2,14 @@ package provider
 
 import (
 	"context"
+	"fmt"
 	"maps"
 	"slices"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-go/tftypes"
 
 	"github.com/checkly/checkly-go-sdk/v2"
 )
@@ -276,4 +278,18 @@ func valueContainsUnknown(ctx context.Context, value attr.Value) bool {
 	}
 
 	return !tfValue.IsFullyKnown()
+}
+
+// nullValueOf returns the null value of an attribute type. It panics when the
+// type cannot produce a null value, which only a malformed schema type can
+// cause.
+func nullValueOf(t attr.Type) attr.Value {
+	ctx := context.Background()
+
+	value, err := t.ValueFromTerraform(ctx, tftypes.NewValue(t.TerraformType(ctx), nil))
+	if err != nil {
+		panic(fmt.Sprintf("cannot build a null value of type %s: %s", t, err))
+	}
+
+	return value
 }
