@@ -75,77 +75,6 @@ func (r *APICheckResource) Metadata(ctx context.Context, req resource.MetadataRe
 	resp.TypeName = req.ProviderTypeName + "_api_check"
 }
 
-// apiCheckFrequencyAttributeSchema returns the schema for the frequency
-// attribute. Unlike the shared frequency attribute helper, the attribute is
-// optional+computed with a default of 10 minutes, matching the Checkly API
-// default for API checks.
-func apiCheckFrequencyAttributeSchema() schema.Int64Attribute {
-	allow := allowedValues[int64]{
-		{
-			Value:       0,
-			Description: "high frequency - use `frequency_offset` to define the actual frequency",
-		},
-		{
-			Value:       1,
-			Description: "1 minute",
-		},
-		{
-			Value:       2,
-			Description: "2 minutes",
-		},
-		{
-			Value:       5,
-			Description: "5 minutes",
-		},
-		{
-			Value:       10,
-			Description: "10 minutes",
-		},
-		{
-			Value:       15,
-			Description: "15 minutes",
-		},
-		{
-			Value:       30,
-			Description: "30 minutes",
-		},
-		{
-			Value:       60,
-			Description: "1 hour",
-		},
-		{
-			Value:       120,
-			Description: "2 hours",
-		},
-		{
-			Value:       180,
-			Description: "3 hours",
-		},
-		{
-			Value:       360,
-			Description: "6 hours",
-		},
-		{
-			Value:       720,
-			Description: "12 hours",
-		},
-		{
-			Value:       1440,
-			Description: "24 hours",
-		},
-	}
-
-	return schema.Int64Attribute{
-		Optional:    true,
-		Computed:    true,
-		Default:     int64default.StaticInt64(10),
-		Description: fmt.Sprintf("Controls how often the check should run. Defined in minutes. %s (Default `10`).", allow.String()),
-		Validators: []validator.Int64{
-			int64validator.OneOf(allow.Values()...),
-		},
-	}
-}
-
 func (r *APICheckResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: "API checks allow you to monitor your API endpoints for correctness, performance and availability, " +
@@ -168,7 +97,7 @@ func (r *APICheckResource) Schema(ctx context.Context, req resource.SchemaReques
 				Default:     stringdefault.StaticString(""),
 				Description: "A description of the check.",
 			},
-			frequencyAttributeName: apiCheckFrequencyAttributeSchema(),
+			frequencyAttributeName: makeFrequencyAttributeSchema(FrequencyAttributeSchemaOptions{AllowHighFrequency: true}),
 			frequencyOffsetAttributeName: schema.Int64Attribute{
 				Optional: true,
 				Description: "Spreads the scheduling of the check within its frequency window, defined in seconds. " +
@@ -237,7 +166,7 @@ func (r *APICheckResource) Schema(ctx context.Context, req resource.SchemaReques
 				Required:    true,
 			}),
 			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{}),
-		}, CommonCheckAttributeSchemaOptions{Subject: subjectCheck, ActivatedOptional: true, ShouldFail: true, RunParallel: true, Locations: true, GroupMembership: true, RuntimeID: true, ShouldFailNote: shouldFailErrorStatusNote}),
+		}, CommonCheckAttributeSchemaOptions{Subject: subjectCheck, ShouldFail: true, RunParallel: true, Locations: true, GroupMembership: true, RuntimeID: true, ShouldFailNote: shouldFailErrorStatusNote}),
 	}
 }
 
@@ -464,7 +393,7 @@ func (v *apiCheckFrequencyOffsetConfigValidator) ValidateResource(ctx context.Co
 
 	// The frequency attribute is optional+computed with a static default; an
 	// unset frequency validates against the default value.
-	frequencyValue := int64(10)
+	frequencyValue := defaultFrequency
 	if !frequency.IsNull() {
 		frequencyValue = frequency.ValueInt64()
 	}

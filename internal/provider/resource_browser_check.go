@@ -8,7 +8,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -68,19 +67,6 @@ func (r *BrowserCheckResource) Metadata(ctx context.Context, req resource.Metada
 	resp.TypeName = req.ProviderTypeName + "_browser_check"
 }
 
-// browserCheckFrequencySchema returns the schema for the frequency attribute.
-// Browser checks do not support high frequency scheduling, and the attribute
-// defaults to 10 minutes.
-func browserCheckFrequencySchema() schema.Int64Attribute {
-	frequency := makeFrequencyAttributeSchema(FrequencyAttributeSchemaOptions{})
-	frequency.Required = false
-	frequency.Optional = true
-	frequency.Computed = true
-	frequency.Default = int64default.StaticInt64(10)
-	frequency.Description += " (Default `10`)."
-	return frequency
-}
-
 func (r *BrowserCheckResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: "Browser checks allow you to monitor key user flows in a real browser using Playwright, so you get notified when flows break or slow down.",
@@ -102,7 +88,7 @@ func (r *BrowserCheckResource) Schema(ctx context.Context, req resource.SchemaRe
 				Default:     stringdefault.StaticString(""),
 				Description: "A description of the check.",
 			},
-			frequencyAttributeName: browserCheckFrequencySchema(),
+			frequencyAttributeName: makeFrequencyAttributeSchema(FrequencyAttributeSchemaOptions{}),
 			"script": schema.StringAttribute{
 				Required:    true,
 				Description: "A valid piece of Node.js JavaScript code describing a browser interaction with the Playwright framework.",
@@ -127,7 +113,7 @@ func (r *BrowserCheckResource) Schema(ctx context.Context, req resource.SchemaRe
 				Description: "Insert environment variables into the runtime environment. Use global environment variables whenever possible.",
 			}),
 			scriptDependenciesAttributeName: makeScriptDependenciesSchema(),
-		}, CommonCheckAttributeSchemaOptions{Subject: subjectCheck, ActivatedOptional: true, ShouldFail: true, RunParallel: true, Locations: true, GroupMembership: true, RuntimeID: true}),
+		}, CommonCheckAttributeSchemaOptions{Subject: subjectCheck, ShouldFail: true, RunParallel: true, Locations: true, GroupMembership: true, RuntimeID: true}),
 	}
 }
 

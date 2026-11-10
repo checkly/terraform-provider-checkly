@@ -10,6 +10,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 )
 
 func TestAccHeartbeatMonitorRequiredFields(t *testing.T) {
@@ -19,9 +23,32 @@ func TestAccHeartbeatMonitorRequiredFields(t *testing.T) {
 			Config:      config,
 			ExpectError: regexp.MustCompile(`The argument "name" is required, but no definition was found.`),
 		},
+	})
+}
+
+// activated takes the Checkly API default when omitted.
+func TestAccHeartbeatMonitorDefaultActivated(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
 		{
-			Config:      config,
-			ExpectError: regexp.MustCompile(`The argument "activated" is required, but no definition was found.`),
+			Config: `
+				resource "checkly_heartbeat_monitor" "test" {
+					name = "Heartbeat Monitor Defaults"
+					heartbeat = {
+						period      = 5
+						period_unit = "days"
+						grace       = 0
+						grace_unit  = "seconds"
+					}
+				}
+			`,
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue("checkly_heartbeat_monitor.test", tfjsonpath.New("activated"), knownvalue.Bool(true)),
+			},
+			ConfigPlanChecks: resource.ConfigPlanChecks{
+				PostApplyPostRefresh: []plancheck.PlanCheck{
+					plancheck.ExpectEmptyPlan(),
+				},
+			},
 		},
 	})
 }

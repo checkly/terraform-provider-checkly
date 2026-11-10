@@ -136,14 +136,6 @@ func TestAccSSLMonitorRequiredFields(t *testing.T) {
 			ExpectError: regexp.MustCompile(`The argument "name" is required, but no definition was found.`),
 		},
 		{
-			Config:      config,
-			ExpectError: regexp.MustCompile(`The argument "activated" is required, but no definition was found.`),
-		},
-		{
-			Config:      config,
-			ExpectError: regexp.MustCompile(`The argument "frequency" is required, but no definition was found.`),
-		},
-		{
 			// Terraform only reports the missing request attribute once
 			// the other required attributes are present.
 			Config: `

@@ -77,13 +77,12 @@ func TestCommonCheckAttributeSchemas(t *testing.T) {
 	optional := shape{optional: true}
 
 	all := CommonCheckAttributeSchemaOptions{
-		Subject:           subjectCheck,
-		ActivatedOptional: true,
-		ShouldFail:        true,
-		RunParallel:       true,
-		Locations:         true,
-		GroupMembership:   true,
-		RuntimeID:         true,
+		Subject:         subjectCheck,
+		ShouldFail:      true,
+		RunParallel:     true,
+		Locations:       true,
+		GroupMembership: true,
+		RuntimeID:       true,
 	}
 	allShapes := map[string]shape{
 		activatedAttributeName:        optionalDefault(types.BoolValue(true)),
@@ -109,7 +108,7 @@ func TestCommonCheckAttributeSchemas(t *testing.T) {
 		"zero value": {
 			CommonCheckAttributeSchemaOptions{Subject: subjectMonitor},
 			map[string]shape{
-				activatedAttributeName:              {required: true},
+				activatedAttributeName:              allShapes[activatedAttributeName],
 				mutedAttributeName:                  allShapes[mutedAttributeName],
 				tagsAttributeName:                   allShapes[tagsAttributeName],
 				useGlobalAlertSettingsAttributeName: allShapes[useGlobalAlertSettingsAttributeName],
@@ -248,9 +247,9 @@ func TestResourcesUseCommonCheckAttributes(t *testing.T) {
 	heartbeatMonitor := CommonCheckAttributeSchemaOptions{Subject: subjectMonitor, NoDegradedState: true}
 
 	options := map[string]CommonCheckAttributeSchemaOptions{
-		"checkly_api_check":              {Subject: subjectCheck, ActivatedOptional: true, ShouldFail: true, RunParallel: true, Locations: true, GroupMembership: true, RuntimeID: true, ShouldFailNote: shouldFailErrorStatusNote},
-		"checkly_browser_check":          {Subject: subjectCheck, ActivatedOptional: true, ShouldFail: true, RunParallel: true, Locations: true, GroupMembership: true, RuntimeID: true},
-		"checkly_multistep_check":        {Subject: subjectCheck, ActivatedOptional: true, ShouldFail: true, RunParallel: true, Locations: true, GroupMembership: true, RuntimeID: true, RuntimeIDNote: "The runtime must support multi-step checks."},
+		"checkly_api_check":              {Subject: subjectCheck, ShouldFail: true, RunParallel: true, Locations: true, GroupMembership: true, RuntimeID: true, ShouldFailNote: shouldFailErrorStatusNote},
+		"checkly_browser_check":          {Subject: subjectCheck, ShouldFail: true, RunParallel: true, Locations: true, GroupMembership: true, RuntimeID: true},
+		"checkly_multistep_check":        {Subject: subjectCheck, ShouldFail: true, RunParallel: true, Locations: true, GroupMembership: true, RuntimeID: true, RuntimeIDNote: "The runtime must support multi-step checks."},
 		"checkly_check":                  {Subject: subjectCheck, ShouldFail: true, RunParallel: true, Locations: true, GroupMembership: true, RuntimeID: true, ShouldFailNote: shouldFailErrorStatusNote},
 		"checkly_check_group":            {Subject: subjectCheckGroup, RunParallel: true, Locations: true, RuntimeID: true},
 		"checkly_url_monitor":            {Subject: subjectMonitor, ShouldFail: true, RunParallel: true, Locations: true, GroupMembership: true, ShouldFailNote: shouldFailErrorStatusNote},

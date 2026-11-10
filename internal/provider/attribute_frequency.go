@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
@@ -16,6 +17,10 @@ const (
 	frequencyAttributeName       = "frequency"
 	frequencyOffsetAttributeName = "frequency_offset"
 )
+
+// defaultFrequency is the frequency, in minutes, that applies when the
+// frequency attribute is not configured. It matches the Checkly API default.
+const defaultFrequency int64 = 10
 
 // FrequencyAttributeSchemaOptions customizes the frequency attribute schema
 // for a specific resource.
@@ -30,7 +35,7 @@ type FrequencyAttributeSchemaOptions struct {
 }
 
 // makeFrequencyAttributeSchema returns the schema for the frequency
-// attribute.
+// attribute, which defaults to defaultFrequency.
 func makeFrequencyAttributeSchema(options FrequencyAttributeSchemaOptions) schema.Int64Attribute {
 	name := "check"
 	if options.Monitor {
@@ -102,8 +107,10 @@ func makeFrequencyAttributeSchema(options FrequencyAttributeSchemaOptions) schem
 	}
 
 	return schema.Int64Attribute{
-		Required:    true,
-		Description: disclaimer + fmt.Sprintf("Controls how often the %s should run. Defined in minutes. %s", name, allow.String()),
+		Optional:    true,
+		Computed:    true,
+		Default:     int64default.StaticInt64(defaultFrequency),
+		Description: disclaimer + fmt.Sprintf("Controls how often the %s should run. Defined in minutes. %s (Default `%d`).", name, allow.String(), defaultFrequency),
 		Validators: []validator.Int64{
 			int64validator.OneOf(allow.Values()...),
 		},
@@ -193,20 +200,23 @@ func (v *frequencyOffsetConfigValidator) ValidateResource(ctx context.Context, r
 		return
 	}
 
+	// An unset frequency validates against the schema default.
+	frequencyValue := defaultFrequency
+	if !frequency.IsNull() {
+		frequencyValue = frequency.ValueInt64()
+	}
+
 	// A frequency_offset of 0 is equivalent to not setting it at all.
 	offsetDisabled := offset.IsNull() || offset.ValueInt64() == 0
 
 	switch {
-	case frequency.IsNull():
-		// Nothing to validate; frequency is a required attribute, so a
-		// missing value is reported separately.
-	case frequency.ValueInt64() > 0 && !offsetDisabled:
+	case frequencyValue > 0 && !offsetDisabled:
 		resp.Diagnostics.AddAttributeError(
 			path.Root(frequencyOffsetAttributeName),
 			"Invalid Attribute Combination",
 			`"frequency_offset" can only be set when "frequency" is 0`,
 		)
-	case frequency.ValueInt64() == 0 && offsetDisabled:
+	case frequencyValue == 0 && offsetDisabled:
 		resp.Diagnostics.AddAttributeError(
 			path.Root(frequencyOffsetAttributeName),
 			"Missing Required Attribute",

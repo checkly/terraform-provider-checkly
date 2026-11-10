@@ -191,13 +191,12 @@ resource "checkly_check" "example_check" {
 
 ### Required
 
-- `activated` (Boolean) Determines whether the check runs on its schedule.
-- `frequency` (Number) Controls how often the check should run. Defined in minutes. The allowed values are `0` (high frequency - use `frequency_offset` to define the actual frequency), `1` (1 minute), `2` (2 minutes), `5` (5 minutes), `10` (10 minutes), `15` (15 minutes), `30` (30 minutes), `60` (1 hour), `120` (2 hours), `180` (3 hours), `360` (6 hours), `720` (12 hours) and `1440` (24 hours).
 - `name` (String) The name of the check.
 - `type` (String) The type of the check. Possible values are `API`, `BROWSER`, and `MULTI_STEP`.
 
 ### Optional
 
+- `activated` (Boolean) Determines whether the check runs on its schedule. (Default `true`).
 - `ai_auto_repair_enabled` (Boolean) Overrides the account's automatic repair setting for this check. Leave it out to inherit the account setting. Automatic repair supports browser and multi-step checks only, so this setting has no effect on other check types today, and it needs an `intent` with at least one statement. A repair is saved to the check, so it shows as a change to `script`, and the next apply restores the configured script unless you copy the repaired script into the configuration or add `script` to `ignore_changes`. An override edited in the web app and absent from the configuration is removed by the next apply, every time. To leave it to the web app, add `ai_auto_repair_enabled` to `ignore_changes`.
 - `alert_channel_subscriptions` (Attributes Set) A set of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your check, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedatt--alert_channel_subscriptions))
 - `alert_settings` (Attributes) Determines the alert escalation policy for the check. (see [below for nested schema](#nestedatt--alert_settings))
@@ -205,6 +204,7 @@ resource "checkly_check" "example_check" {
 - `description` (String) A description of the check.
 - `double_check` (Boolean, Deprecated) Setting this to `true` will trigger a retry when a check fails from the failing region and another, randomly selected region before marking the check as failed. (Default `false`).
 - `environment_variables` (Attributes List) Insert environment variables into the runtime environment. Only relevant for browser checks. Use global environment variables whenever possible. At most 200 variables. (see [below for nested schema](#nestedatt--environment_variables))
+- `frequency` (Number) Controls how often the check should run. Defined in minutes. The allowed values are `0` (high frequency - use `frequency_offset` to define the actual frequency), `1` (1 minute), `2` (2 minutes), `5` (5 minutes), `10` (10 minutes), `15` (15 minutes), `30` (30 minutes), `60` (1 hour), `120` (2 hours), `180` (3 hours), `360` (6 hours), `720` (12 hours) and `1440` (24 hours). (Default `10`).
 - `frequency_offset` (Number) Only relevant when `type` is `API`. When `frequency` is `0` (high frequency), `frequency_offset` is required and it alone controls how often the check should run. Defined in seconds. The allowed values are `0` (disabled - use `frequency` to define the actual frequency), `10` (10 seconds), `20` (20 seconds) and `30` (30 seconds).
 - `group_id` (Number) The ID of the check group the check is part of. (Default `0`, no group).
 - `group_order` (Number) The position of the check in its check group, which sets the order in which the checks and monitors of the group run when the group is triggered from the API or CI/CD. (Default `0`).

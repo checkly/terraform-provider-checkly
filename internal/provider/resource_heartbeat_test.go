@@ -14,10 +14,6 @@ func TestAccHeartbeatRequiredFields(t *testing.T) {
 			Config:      config,
 			ExpectError: regexp.MustCompile(`The argument "name" is required, but no definition was found.`),
 		},
-		{
-			Config:      config,
-			ExpectError: regexp.MustCompile(`The argument "activated" is required, but no definition was found.`),
-		},
 	})
 }
 
