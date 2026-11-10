@@ -75,7 +75,7 @@ func TestSensitiveAttributes(t *testing.T) {
 		"checkly_client_certificate":   {"private_key", "passphrase"},
 		"checkly_environment_variable": {"value"},
 		"checkly_dashboard":            {"key"},
-		"checkly_private_location":     {"keys"},
+		"checkly_private_location":     {"keys", "proxy_url"},
 		"checkly_alert_channel": {
 			"slack.url",
 			"webhook.url",
