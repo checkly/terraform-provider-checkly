@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 )
@@ -169,6 +170,47 @@ func TestAccPlaywrightCheckSuiteDescriptionRemoval(t *testing.T) {
 				"description",
 				"",
 			),
+		},
+	})
+}
+
+// TestAccPlaywrightCheckSuitePrivateLocationsOnly verifies that a suite
+// running only in a private location, with locations omitted, applies
+// cleanly and leaves no diff after refresh.
+func TestAccPlaywrightCheckSuitePrivateLocationsOnly(t *testing.T) {
+	// Private location slugs are unique per account and limited to 30
+	// characters, so a short random suffix avoids collisions between runs.
+	slug := fmt.Sprintf("tf-pw-private-%d", acctest.RandInt()%100000)
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: playwrightCheckSuiteBase + fmt.Sprintf(`
+				resource "checkly_private_location" "test" {
+					name      = %[1]q
+					slug_name = %[1]q
+				}
+
+				resource "checkly_playwright_check_suite" "test" {
+					name                      = "PW Check private locations only"
+					activated                 = true
+					frequency                 = 720
+					use_global_alert_settings = true
+					private_locations         = [checkly_private_location.test.slug_name]
+
+					bundle = {
+						id       = checkly_playwright_code_bundle.test.id
+						metadata = checkly_playwright_code_bundle.test.metadata
+					}
+				}
+			`, slug),
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckNoResourceAttr("checkly_playwright_check_suite.test", "locations.#"),
+				resource.TestCheckResourceAttr("checkly_playwright_check_suite.test", "private_locations.#", "1"),
+			),
+			ConfigPlanChecks: resource.ConfigPlanChecks{
+				PostApplyPostRefresh: []plancheck.PlanCheck{
+					plancheck.ExpectEmptyPlan(),
+				},
+			},
 		},
 	})
 }
