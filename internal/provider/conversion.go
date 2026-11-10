@@ -221,16 +221,6 @@ func int64OrNullWhenUnknown(value types.Int64) types.Int64 {
 	return value
 }
 
-// boolOrNullWhenUnknown resolves an unknown value to null. Useful when an
-// optional+computed value turns out to have no value tracked by the API.
-func boolOrNullWhenUnknown(value types.Bool) types.Bool {
-	if value.IsUnknown() {
-		return types.BoolNull()
-	}
-
-	return value
-}
-
 // stringOrNullWhenUnknown resolves an unknown value to null. Useful when an
 // optional+computed value turns out to have no value tracked by the API.
 func stringOrNullWhenUnknown(value types.String) types.String {
