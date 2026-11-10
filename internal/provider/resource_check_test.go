@@ -2307,7 +2307,8 @@ func TestAccCheckAlertChannelSubscriptions(t *testing.T) {
 
 // TestAccCheckDoubleCheck covers the deprecated double_check attribute, which
 // implies a single retry in another region when retry_strategy is not
-// configured, and switches back to no retries when removed.
+// configured, switches back to no retries when removed, and may be false
+// alongside a configured retry_strategy.
 func TestAccCheckDoubleCheck(t *testing.T) {
 	config := func(doubleCheck string) string {
 		return fmt.Sprintf(`
@@ -2358,6 +2359,22 @@ func TestAccCheckDoubleCheck(t *testing.T) {
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(r, "double_check", "false"),
 				resource.TestCheckResourceAttr(r, "retry_strategy.type", "NO_RETRIES"),
+			),
+		},
+		{
+			// A false double_check means no double check, so it may accompany
+			// a retry_strategy, which then applies as configured.
+			Config: config(`
+				double_check = false
+				retry_strategy = {
+					type        = "FIXED"
+					max_retries = 3
+				}
+			`),
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(r, "double_check", "false"),
+				resource.TestCheckResourceAttr(r, "retry_strategy.type", "FIXED"),
+				resource.TestCheckResourceAttr(r, "retry_strategy.max_retries", "3"),
 			),
 		},
 	})

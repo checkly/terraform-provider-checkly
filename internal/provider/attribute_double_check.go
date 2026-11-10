@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/boolvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -25,9 +24,44 @@ func doubleCheckAttributeSchema() schema.BoolAttribute {
 		Description:        "Setting this to `true` will trigger a retry when a check fails from the failing region and another, randomly selected region before marking the check as failed. (Default `false`).",
 		DeprecationMessage: "The property `double_check` is deprecated and will be removed in a future version. To enable retries for failed check runs, use the `retry_strategy` property instead.",
 		Validators: []validator.Bool{
-			boolvalidator.ConflictsWith(path.MatchRoot(retryStrategyAttributeName)),
+			doubleCheckValidator{},
 		},
 	}
+}
+
+var _ validator.Bool = doubleCheckValidator{}
+
+// doubleCheckValidator rejects double_check = true together with a configured
+// retry_strategy, because both define how failed runs are retried. A false
+// double_check means no double check and may accompany a retry_strategy.
+// Unknown values are not validated, as they are known only at apply time.
+type doubleCheckValidator struct{}
+
+func (v doubleCheckValidator) Description(ctx context.Context) string {
+	return "retry_strategy cannot be configured when double_check is true"
+}
+
+func (v doubleCheckValidator) MarkdownDescription(ctx context.Context) string {
+	return "`retry_strategy` cannot be configured when `double_check` is `true`"
+}
+
+func (v doubleCheckValidator) ValidateBool(ctx context.Context, req validator.BoolRequest, resp *validator.BoolResponse) {
+	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() || !req.ConfigValue.ValueBool() {
+		return
+	}
+
+	var retryStrategy types.Object
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(retryStrategyAttributeName), &retryStrategy)...)
+	if resp.Diagnostics.HasError() || retryStrategy.IsNull() || retryStrategy.IsUnknown() {
+		return
+	}
+
+	resp.Diagnostics.AddAttributeError(
+		req.Path,
+		"Invalid Attribute Combination",
+		"`retry_strategy` cannot be set when `double_check` is `true`. Remove `double_check` or set it "+
+			"to `false` to use `retry_strategy`.",
+	)
 }
 
 // doubleCheckRetryStrategy is the retry strategy the API applies to a check or
