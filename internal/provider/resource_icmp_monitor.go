@@ -426,16 +426,7 @@ func icmpMonitorToModel(ctx context.Context, c *checkly.ICMPMonitor, model *ICMP
 	}
 
 	model.Frequency = types.Int64Value(int64(c.Frequency))
-
-	// The API only tracks an offset for high frequency scheduling
-	// (frequency 0). For regular frequencies a configured value of 0
-	// (equivalent to unset) is preserved; any other value is cleared.
-	if c.Frequency == 0 {
-		model.FrequencyOffset = types.Int64Value(int64(c.FrequencyOffset))
-	} else if model.FrequencyOffset.IsUnknown() ||
-		(!model.FrequencyOffset.IsNull() && model.FrequencyOffset.ValueInt64() != 0) {
-		model.FrequencyOffset = types.Int64Null()
-	}
+	model.FrequencyOffset = frequencyOffsetFromAPI(c.Frequency, c.FrequencyOffset, model.FrequencyOffset)
 
 	model.Activated = types.BoolValue(c.Activated)
 	model.Muted = types.BoolValue(c.Muted)
@@ -451,11 +442,7 @@ func icmpMonitorToModel(ctx context.Context, c *checkly.ICMPMonitor, model *ICMP
 	}
 	model.PrivateLocations = stringSetFromAPINullIfUnset(ctx, privateLocations, model.PrivateLocations, diags)
 
-	if c.AlertSettings != nil {
-		model.AlertSettings = alertSettingsToObject(ctx, *c.AlertSettings, model.AlertSettings, diags)
-	} else if model.AlertSettings.IsUnknown() {
-		model.AlertSettings = types.ObjectNull(alertSettingsAttrTypes)
-	}
+	model.AlertSettings = alertSettingsFromAPI(ctx, c.AlertSettings, model.AlertSettings, diags)
 
 	model.UseGlobalAlertSettings = types.BoolValue(c.UseGlobalAlertSettings)
 	model.Request = icmpMonitorRequestToObject(ctx, c.Request, model.Request, diags)

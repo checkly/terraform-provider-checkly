@@ -376,11 +376,7 @@ func multistepCheckFromModel(ctx context.Context, model *MultistepCheckResourceM
 func multistepCheckResolveComputedValues(ctx context.Context, c *checkly.MultiStepCheck, model *MultistepCheckResourceModel, diags *diag.Diagnostics) {
 	model.ID = types.StringValue(c.ID)
 
-	if c.AlertSettings != nil {
-		model.AlertSettings = alertSettingsToObject(ctx, *c.AlertSettings, model.AlertSettings, diags)
-	} else if model.AlertSettings.IsUnknown() {
-		model.AlertSettings = types.ObjectNull(alertSettingsAttrTypes)
-	}
+	model.AlertSettings = alertSettingsFromAPI(ctx, c.AlertSettings, model.AlertSettings, diags)
 
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, model.RetryStrategy, diags)
 }
@@ -434,11 +430,7 @@ func multistepCheckToModel(ctx context.Context, c *checkly.MultiStepCheck, model
 
 	model.PrivateLocations = stringSetFromAPINullIfUnset(ctx, valueOrZero(c.PrivateLocations), prior.PrivateLocations, diags)
 
-	if c.AlertSettings != nil {
-		model.AlertSettings = alertSettingsToObject(ctx, *c.AlertSettings, prior.AlertSettings, diags)
-	} else if model.AlertSettings.IsUnknown() {
-		model.AlertSettings = types.ObjectNull(alertSettingsAttrTypes)
-	}
+	model.AlertSettings = alertSettingsFromAPI(ctx, c.AlertSettings, prior.AlertSettings, diags)
 
 	model.UseGlobalAlertSettings = types.BoolValue(c.UseGlobalAlertSettings)
 	model.GroupID = types.Int64Value(c.GroupID)

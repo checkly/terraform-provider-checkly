@@ -167,6 +167,28 @@ func makeFrequencyOffsetAttributeSchema(options FrequencyOffsetAttributeSchemaOp
 	}
 }
 
+// frequencyOffsetFromAPI resolves the frequency_offset attribute from an API
+// response for the URL, DNS and ICMP monitors. The API only tracks an offset
+// for high frequency scheduling (frequency 0), so its value is used only then.
+// For regular frequencies a prior (planned or previously stored) value of 0,
+// which is equivalent to unset, or null is preserved; any other value is
+// cleared.
+//
+// The gRPC, SSL, TCP and traceroute monitors (int64OrNullWhenUnknown) and the
+// check resources deliberately keep a non-zero prior instead, so switching
+// them to this function would change their behaviour.
+func frequencyOffsetFromAPI(frequency, offset int, prior types.Int64) types.Int64 {
+	if frequency == 0 {
+		return types.Int64Value(int64(offset))
+	}
+	// ValueInt64 is 0 for a null value, so null is preserved as well.
+	if prior.IsUnknown() || prior.ValueInt64() != 0 {
+		return types.Int64Null()
+	}
+
+	return prior
+}
+
 var _ resource.ConfigValidator = (*frequencyOffsetConfigValidator)(nil)
 
 // frequencyOffsetConfigValidator validates that frequency_offset is set when

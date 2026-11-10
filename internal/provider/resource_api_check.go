@@ -417,15 +417,7 @@ func apiCheckFromModel(ctx context.Context, model *APICheckResourceModel, diags 
 func apiCheckResolveComputedValues(ctx context.Context, c *checkly.APICheck, model *APICheckResourceModel, diags *diag.Diagnostics) {
 	model.ID = types.StringValue(c.ID)
 
-	// When the API reports no alert settings, the planned value is kept;
-	// converting the absence of a value would overwrite planned values with
-	// empty ones. Unknown values cannot be stored in state and resolve to
-	// null.
-	if c.AlertSettings != nil {
-		model.AlertSettings = alertSettingsToObject(ctx, *c.AlertSettings, model.AlertSettings, diags)
-	} else if model.AlertSettings.IsUnknown() {
-		model.AlertSettings = types.ObjectNull(alertSettingsAttrTypes)
-	}
+	model.AlertSettings = alertSettingsFromAPI(ctx, c.AlertSettings, model.AlertSettings, diags)
 
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, model.RetryStrategy, diags)
 }
@@ -480,15 +472,7 @@ func apiCheckToModel(ctx context.Context, c *checkly.APICheck, model *APICheckRe
 	}
 	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, prior.AlertChannelSubscriptions, diags)
 	model.PrivateLocations = stringSetFromAPINullIfUnset(ctx, valueOrZero(c.PrivateLocations), prior.PrivateLocations, diags)
-	// When the API reports no alert settings, the prior value is kept;
-	// converting the absence of a value would overwrite the stored values
-	// with empty ones. Unknown values cannot be stored in state and resolve
-	// to null.
-	if c.AlertSettings != nil {
-		model.AlertSettings = alertSettingsToObject(ctx, *c.AlertSettings, prior.AlertSettings, diags)
-	} else if model.AlertSettings.IsUnknown() {
-		model.AlertSettings = types.ObjectNull(alertSettingsAttrTypes)
-	}
+	model.AlertSettings = alertSettingsFromAPI(ctx, c.AlertSettings, prior.AlertSettings, diags)
 	model.UseGlobalAlertSettings = types.BoolValue(c.UseGlobalAlertSettings)
 	model.Request = apiCheckRequestToObject(ctx, c.Request, prior.Request, diags)
 	model.GroupID = types.Int64Value(c.GroupID)

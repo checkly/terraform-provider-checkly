@@ -129,3 +129,28 @@ func TestFrequencyOffsetConfigValidatorUnsetFrequency(t *testing.T) {
 		})
 	}
 }
+
+func TestFrequencyOffsetFromAPI(t *testing.T) {
+	cases := map[string]struct {
+		frequency int
+		offset    int
+		prior     types.Int64
+		want      types.Int64
+	}{
+		"high frequency uses the API value":       {0, 20, types.Int64Null(), types.Int64Value(20)},
+		"high frequency ignores the prior":        {0, 10, types.Int64Value(30), types.Int64Value(10)},
+		"high frequency resolves unknown":         {0, 10, types.Int64Unknown(), types.Int64Value(10)},
+		"regular frequency keeps null":            {10, 0, types.Int64Null(), types.Int64Null()},
+		"regular frequency keeps 0":               {10, 0, types.Int64Value(0), types.Int64Value(0)},
+		"regular frequency clears unknown":        {10, 0, types.Int64Unknown(), types.Int64Null()},
+		"regular frequency clears another offset": {10, 0, types.Int64Value(20), types.Int64Null()},
+	}
+
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			if got := frequencyOffsetFromAPI(c.frequency, c.offset, c.prior); !got.Equal(c.want) {
+				t.Errorf("got %v, want %v", got, c.want)
+			}
+		})
+	}
+}
