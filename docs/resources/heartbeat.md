@@ -37,7 +37,7 @@ resource "checkly_heartbeat" "example-heartbeat" {
 
 ### Required
 
-- `activated` (Boolean) Determines if the check is running or not. Possible values `true`, and `false`.
+- `activated` (Boolean) Determines whether the monitor runs on its schedule.
 - `heartbeat` (Attributes) The heartbeat schedule and grace period. (see [below for nested schema](#nestedatt--heartbeat))
 - `name` (String) The name of the check.
 
@@ -46,8 +46,8 @@ resource "checkly_heartbeat" "example-heartbeat" {
 - `alert_channel_subscriptions` (Attributes Set) A set of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your monitor, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedatt--alert_channel_subscriptions))
 - `alert_settings` (Attributes) Determines the alert escalation policy for the monitor. (see [below for nested schema](#nestedatt--alert_settings))
 - `description` (String) A description of the monitor.
-- `muted` (Boolean) Determines if any notifications will be sent out when a check fails/degrades/recovers.
-- `tags` (Set of String) A list of tags for organizing and filtering checks.
+- `muted` (Boolean) Determines whether notifications are sent when the monitor fails or recovers. (Default `false`).
+- `tags` (Set of String) Tags for organizing and filtering checks and monitors.
 - `trigger_incident` (Attributes) Create and resolve an incident based on the alert configuration. Useful for status page automation. (see [below for nested schema](#nestedatt--trigger_incident))
 - `use_global_alert_settings` (Boolean) When true, the account level alert settings are used instead of the `alert_settings` of this monitor. Defaults to `true` when `alert_settings` is not set, and to `false` when it is.
 

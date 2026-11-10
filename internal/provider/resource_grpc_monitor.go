@@ -130,7 +130,7 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 	resp.Schema = schema.Schema{
 		Version:     sdkv2SchemaVersion + 1,
 		Description: "gRPC monitors allow you to monitor gRPC services, either via a health check (HEALTH mode) or by invoking a unary method (BEHAVIOR mode).",
-		Attributes: map[string]schema.Attribute{
+		Attributes: withCommonCheckAttributes(map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
 				Description: "The ID of the monitor.",
@@ -155,33 +155,6 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 			frequencyOffsetAttributeName: makeFrequencyOffsetAttributeSchema(FrequencyOffsetAttributeSchemaOptions{
 				Monitor: true,
 			}),
-			"activated": schema.BoolAttribute{
-				Required:    true,
-				Description: "Determines if the monitor is running or not. Possible values `true`, and `false`.",
-			},
-			"muted": schema.BoolAttribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     booldefault.StaticBool(false),
-				Description: "Determines if any notifications will be sent out when a monitor fails/degrades/recovers.",
-			},
-			"should_fail": schema.BoolAttribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     booldefault.StaticBool(false),
-				Description: "Allows to invert the behaviour of when a monitor is considered to fail.",
-			},
-			"run_parallel": schema.BoolAttribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     booldefault.StaticBool(false),
-				Description: "Determines if the monitor should run in all selected locations in parallel or round-robin.",
-			},
-			"locations": schema.SetAttribute{
-				Optional:    true,
-				ElementType: types.StringType,
-				Description: "An array of one or more data center locations where to run this monitor. (Default [\"us-east-1\"])",
-			},
 			"degraded_response_time": schema.Int64Attribute{
 				Optional:    true,
 				Computed:    true,
@@ -200,37 +173,10 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 					int64validator.Between(0, 180000),
 				},
 			},
-			"tags": schema.SetAttribute{
-				Optional:    true,
-				ElementType: types.StringType,
-				Description: "A list of tags for organizing and filtering checks and monitors.",
-			},
-			"runtime_id": schema.StringAttribute{
-				Optional:    true,
-				Description: "The ID of the runtime to use for this monitor.",
-			},
-			"private_locations": schema.SetAttribute{
-				Optional:    true,
-				ElementType: types.StringType,
-				Description: "An array of one or more private locations slugs.",
-			},
 			triggerIncidentAttributeName: makeTriggerIncidentSchema(),
 			alertSettingsAttributeName: makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{
 				Monitor: true,
 			}),
-			useGlobalAlertSettingsAttributeName: makeUseGlobalAlertSettingsAttributeSchema("monitor"),
-			"group_id": schema.Int64Attribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     int64default.StaticInt64(0),
-				Description: "The id of the check group this monitor is part of.",
-			},
-			"group_order": schema.Int64Attribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     int64default.StaticInt64(0),
-				Description: "The position of this monitor in a check group. It determines in what order checks and monitors are run when a group is triggered from the API or from CI/CD.",
-			},
 			retryStrategyAttributeName: makeRetryStrategyAttributeSchema(RetryStrategyAttributeSchemaOptions{
 				SupportsOnlyOnNetworkError: false,
 			}),
@@ -422,7 +368,7 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{
 				Monitor: true,
 			}),
-		},
+		}, CommonCheckAttributeSchemaOptions{Subject: subjectMonitor, ShouldFail: true, RunParallel: true, Locations: true, GroupMembership: true, RuntimeID: true}),
 	}
 }
 

@@ -145,7 +145,7 @@ resource "checkly_check_group" "test_group1" {
 
 ### Required
 
-- `activated` (Boolean) Determines if the checks in the group are running or not.
+- `activated` (Boolean) Determines whether the checks and monitors in the group run on their schedule.
 - `concurrency` (Number) Determines how many checks are run concurrently when triggering a check group from CI/CD or through the API.
 - `name` (String) The name of the check group.
 
@@ -158,14 +158,14 @@ resource "checkly_check_group" "test_group1" {
 - `environment_variables` (Attributes List) Insert environment variables into the runtime environment. Only relevant for browser checks. Use global environment variables whenever possible. At most 200 variables. (see [below for nested schema](#nestedatt--environment_variables))
 - `local_setup_script` (String) A valid piece of Node.js code to run in the setup phase of an API check in this group.
 - `local_teardown_script` (String) A valid piece of Node.js code to run in the teardown phase of an API check in this group.
-- `locations` (Set of String) An array of one or more data center locations where to run the checks.
-- `muted` (Boolean) Determines if any notifications will be sent out when a check in this group fails and/or recovers.
-- `private_locations` (Set of String) An array of one or more private locations slugs.
+- `locations` (Set of String) The data center locations to run the checks and monitors in the group from, such as `us-east-1`.
+- `muted` (Boolean) Determines whether notifications are sent when a check or monitor in the group fails or recovers. (Default `false`).
+- `private_locations` (Set of String) The slugs of the private locations to run the checks and monitors in the group from.
 - `retry_strategy` (Attributes) A strategy for retrying failed check/monitor runs. (see [below for nested schema](#nestedatt--retry_strategy))
-- `run_parallel` (Boolean) Determines if the checks in the group should run in all selected locations in parallel or round-robin.
-- `runtime_id` (String) The id of the runtime to use for this group.
+- `run_parallel` (Boolean) Determines whether the checks and monitors in the group run in all their locations in parallel instead of round-robin. (Default `false`).
+- `runtime_id` (String) The ID of the runtime to use for the checks in the group. When unset, the account's default runtime is used.
 - `setup_snippet_id` (Number) An ID reference to a snippet to use in the setup phase of an API check.
-- `tags` (Set of String) Tags for organizing and filtering checks.
+- `tags` (Set of String) Tags for organizing and filtering checks and monitors. The checks and monitors in the group also carry these tags, for example when maintenance windows and status page automation rules select checks by tag.
 - `teardown_snippet_id` (Number) An ID reference to a snippet to use in the teardown phase of an API check.
 - `use_global_alert_settings` (Boolean) When true, the account level alert settings are used instead of the `alert_settings` of this check group. Defaults to `true` when `alert_settings` is not set, and to `false` when it is.
 

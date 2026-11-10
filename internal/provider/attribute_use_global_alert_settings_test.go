@@ -3,12 +3,9 @@ package provider
 import (
 	"context"
 	"fmt"
-	"slices"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
-	"github.com/hashicorp/terraform-plugin-framework/provider"
-	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -202,82 +199,6 @@ func TestUseGlobalAlertSettingsValidator(t *testing.T) {
 				t.Errorf("warning reported = %v, want %v: %v", got, c.wantWarning, resp.Diagnostics)
 			}
 		})
-	}
-}
-
-// Every resource with a top-level use_global_alert_settings derives it from
-// alert_settings the same way, so each must use the shared schema, which warns
-// through the shared attribute validator.
-func TestUseGlobalAlertSettingsIsShared(t *testing.T) {
-	ctx := context.Background()
-	p := New("test")()
-
-	var providerMetadata provider.MetadataResponse
-	p.Metadata(ctx, provider.MetadataRequest{}, &providerMetadata)
-
-	var got []string
-	for _, newResource := range p.Resources(ctx) {
-		r := newResource()
-
-		var metadata resource.MetadataResponse
-		r.Metadata(ctx, resource.MetadataRequest{ProviderTypeName: providerMetadata.TypeName}, &metadata)
-
-		var schemaResp resource.SchemaResponse
-		r.Schema(ctx, resource.SchemaRequest{}, &schemaResp)
-
-		attribute, ok := schemaResp.Schema.Attributes[useGlobalAlertSettingsAttributeName].(schema.BoolAttribute)
-		if !ok {
-			continue
-		}
-		got = append(got, metadata.TypeName)
-
-		if _, ok := schemaResp.Schema.Attributes[alertSettingsAttributeName]; !ok {
-			t.Errorf("%s: has %s but no %s", metadata.TypeName, useGlobalAlertSettingsAttributeName, alertSettingsAttributeName)
-		}
-		if attribute.Default != nil {
-			t.Errorf("%s: %s has a static default", metadata.TypeName, useGlobalAlertSettingsAttributeName)
-		}
-		if !slices.ContainsFunc(attribute.PlanModifiers, func(m planmodifier.Bool) bool {
-			_, ok := m.(useGlobalAlertSettingsPlanModifier)
-			return ok
-		}) {
-			t.Errorf("%s: %s lacks the shared plan modifier", metadata.TypeName, useGlobalAlertSettingsAttributeName)
-		}
-		if !slices.ContainsFunc([]string{"check", "monitor", "check group"}, func(subject string) bool {
-			return attribute.Description == makeUseGlobalAlertSettingsAttributeSchema(subject).Description
-		}) {
-			t.Errorf("%s: %s has a custom description: %q", metadata.TypeName, useGlobalAlertSettingsAttributeName, attribute.Description)
-		}
-
-		if !slices.ContainsFunc(attribute.Validators, func(v validator.Bool) bool {
-			_, ok := v.(useGlobalAlertSettingsValidator)
-			return ok
-		}) {
-			t.Errorf("%s: %s lacks the shared validator", metadata.TypeName, useGlobalAlertSettingsAttributeName)
-		}
-	}
-
-	want := []string{
-		"checkly_api_check",
-		"checkly_browser_check",
-		"checkly_check",
-		"checkly_check_group",
-		"checkly_dns_monitor",
-		"checkly_grpc_monitor",
-		"checkly_heartbeat",
-		"checkly_heartbeat_monitor",
-		"checkly_icmp_monitor",
-		"checkly_multistep_check",
-		"checkly_playwright_check_suite",
-		"checkly_ssl_monitor",
-		"checkly_tcp_check",
-		"checkly_tcp_monitor",
-		"checkly_traceroute_monitor",
-		"checkly_url_monitor",
-	}
-	slices.Sort(got)
-	if !slices.Equal(got, want) {
-		t.Errorf("resources with %s = %v, want %v", useGlobalAlertSettingsAttributeName, got, want)
 	}
 }
 

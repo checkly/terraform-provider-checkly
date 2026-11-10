@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
@@ -89,7 +88,7 @@ func (r *ICMPMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 	resp.Schema = schema.Schema{
 		Version:     sdkv2SchemaVersion + 1,
 		Description: "Creates an ICMP Monitor to check host availability using ping.",
-		Attributes: map[string]schema.Attribute{
+		Attributes: withCommonCheckAttributes(map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
 				Description: "The ID of the monitor.",
@@ -114,27 +113,6 @@ func (r *ICMPMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 			frequencyOffsetAttributeName: makeFrequencyOffsetAttributeSchema(FrequencyOffsetAttributeSchemaOptions{
 				Monitor: true,
 			}),
-			"activated": schema.BoolAttribute{
-				Required:    true,
-				Description: "Determines whether the monitor will run periodically or not after being deployed.",
-			},
-			"muted": schema.BoolAttribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     booldefault.StaticBool(false),
-				Description: "Determines if any notifications will be sent out when the monitor fails and/or recovers. (Default `false`).",
-			},
-			"run_parallel": schema.BoolAttribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     booldefault.StaticBool(false),
-				Description: "Determines whether the monitor should run on all selected locations in parallel or round-robin. (Default `false`).",
-			},
-			"locations": schema.SetAttribute{
-				Optional:    true,
-				ElementType: types.StringType,
-				Description: "An array of one or more data center locations where to run this monitor.",
-			},
 			"degraded_packet_loss_threshold": schema.Int64Attribute{
 				Optional:    true,
 				Computed:    true,
@@ -157,33 +135,10 @@ func (r *ICMPMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 					int64validator.Between(1, 100),
 				},
 			},
-			"tags": schema.SetAttribute{
-				Optional:    true,
-				ElementType: types.StringType,
-				Description: "A list of tags for organizing and filtering checks and monitors.",
-			},
-			"private_locations": schema.SetAttribute{
-				Optional:    true,
-				ElementType: types.StringType,
-				Description: "The slugs of the private locations to run the monitor from. A private location runs ICMP monitors with agent v7.0.0 or later and the `NET_RAW` capability.",
-			},
 			triggerIncidentAttributeName: makeTriggerIncidentSchema(),
 			alertSettingsAttributeName: makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{
 				Monitor: true,
 			}),
-			useGlobalAlertSettingsAttributeName: makeUseGlobalAlertSettingsAttributeSchema("monitor"),
-			"group_id": schema.Int64Attribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     int64default.StaticInt64(0),
-				Description: "The ID of the check group that this monitor is part of.",
-			},
-			"group_order": schema.Int64Attribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     int64default.StaticInt64(0),
-				Description: "The position of the monitor in the check group. It determines in what order checks and monitors are run when a group is triggered from the API or from CI/CD.",
-			},
 			retryStrategyAttributeName: makeRetryStrategyAttributeSchema(RetryStrategyAttributeSchemaOptions{}),
 			"request": schema.SingleNestedAttribute{
 				Required:    true,
@@ -257,7 +212,7 @@ func (r *ICMPMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{
 				Monitor: true,
 			}),
-		},
+		}, CommonCheckAttributeSchemaOptions{Subject: subjectMonitor, RunParallel: true, Locations: true, GroupMembership: true, PrivateLocationsNote: "A private location runs ICMP monitors with agent v7.0.0 or later and the `NET_RAW` capability."}),
 	}
 }
 

@@ -9,7 +9,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
@@ -151,7 +150,7 @@ func (r *APICheckResource) Schema(ctx context.Context, req resource.SchemaReques
 	resp.Schema = schema.Schema{
 		Description: "API checks allow you to monitor your API endpoints for correctness, performance and availability, " +
 			"and set up alerting, so you get a notification when things break or slow down.",
-		Attributes: map[string]schema.Attribute{
+		Attributes: withCommonCheckAttributes(map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
 				Description: "The ID of the check.",
@@ -182,35 +181,6 @@ func (r *APICheckResource) Schema(ctx context.Context, req resource.SchemaReques
 					int64validator.AtLeast(1),
 				},
 			},
-			"activated": schema.BoolAttribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     booldefault.StaticBool(true),
-				Description: "Determines if the check is running or not. Possible values `true`, and `false`. (Default `true`).",
-			},
-			"muted": schema.BoolAttribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     booldefault.StaticBool(false),
-				Description: "Determines if any notifications will be sent out when a check fails/degrades/recovers.",
-			},
-			"should_fail": schema.BoolAttribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     booldefault.StaticBool(false),
-				Description: "Allows to invert the behaviour of when a check is considered to fail. Allows for validating error status like 404.",
-			},
-			"run_parallel": schema.BoolAttribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     booldefault.StaticBool(false),
-				Description: "Determines if the check should run in all selected locations in parallel or round-robin.",
-			},
-			"locations": schema.SetAttribute{
-				Optional:    true,
-				ElementType: types.StringType,
-				Description: "An array of one or more data center locations where to run the this check. (Default [\"us-east-1\"])",
-			},
 			"degraded_response_time": schema.Int64Attribute{
 				Optional: true,
 				Computed: true,
@@ -230,11 +200,6 @@ func (r *APICheckResource) Schema(ctx context.Context, req resource.SchemaReques
 					int64validator.Between(0, 30000),
 				},
 				Description: "The response time in milliseconds starting from which a check should be considered failing. Possible values are between 0 and 30000. (Default `20000`).",
-			},
-			"tags": schema.SetAttribute{
-				Optional:    true,
-				ElementType: types.StringType,
-				Description: "A list of tags for organizing and filtering checks.",
 			},
 			"setup_snippet_id": schema.Int64Attribute{
 				Optional:    true,
@@ -260,32 +225,10 @@ func (r *APICheckResource) Schema(ctx context.Context, req resource.SchemaReques
 				Default:     stringdefault.StaticString(""),
 				Description: "A valid piece of Node.js code to run in the teardown phase.",
 			},
-			"runtime_id": schema.StringAttribute{
-				Optional:    true,
-				Description: "The id of the runtime to use for this check.",
-			},
-			"private_locations": schema.SetAttribute{
-				Optional:    true,
-				ElementType: types.StringType,
-				Description: "An array of one or more private locations slugs.",
-			},
-			triggerIncidentAttributeName:        makeTriggerIncidentSchema(),
-			checkIntentAttributeName:            makeCheckIntentSchema(),
-			aiAutoRepairEnabledAttributeName:    makeAIAutoRepairEnabledSchema(),
-			alertSettingsAttributeName:          makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{}),
-			useGlobalAlertSettingsAttributeName: makeUseGlobalAlertSettingsAttributeSchema("check"),
-			"group_id": schema.Int64Attribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     int64default.StaticInt64(0),
-				Description: "The id of the check group this check is part of.",
-			},
-			"group_order": schema.Int64Attribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     int64default.StaticInt64(0),
-				Description: "The position of this check in a check group. It determines in what order checks are run when a group is triggered from the API or from CI/CD.",
-			},
+			triggerIncidentAttributeName:     makeTriggerIncidentSchema(),
+			checkIntentAttributeName:         makeCheckIntentSchema(),
+			aiAutoRepairEnabledAttributeName: makeAIAutoRepairEnabledSchema(),
+			alertSettingsAttributeName:       makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{}),
 			retryStrategyAttributeName: makeRetryStrategyAttributeSchema(RetryStrategyAttributeSchemaOptions{
 				SupportsOnlyOnNetworkError: true,
 			}),
@@ -294,7 +237,7 @@ func (r *APICheckResource) Schema(ctx context.Context, req resource.SchemaReques
 				Required:    true,
 			}),
 			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{}),
-		},
+		}, CommonCheckAttributeSchemaOptions{Subject: subjectCheck, ActivatedOptional: true, ShouldFail: true, RunParallel: true, Locations: true, GroupMembership: true, RuntimeID: true, ShouldFailNote: shouldFailErrorStatusNote}),
 	}
 }
 

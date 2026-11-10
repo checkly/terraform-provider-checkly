@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -174,7 +173,7 @@ func (r *PlaywrightCheckSuiteResource) Schema(ctx context.Context, req resource.
 	resp.Schema = schema.Schema{
 		Version:     sdkv2SchemaVersion + 1,
 		Description: "Creates a Playwright check from a code bundle.",
-		Attributes: map[string]schema.Attribute{
+		Attributes: withCommonCheckAttributes(map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
 				Description: "The ID of the check.",
@@ -196,44 +195,12 @@ func (r *PlaywrightCheckSuiteResource) Schema(ctx context.Context, req resource.
 				Monitor:            false,
 				AllowHighFrequency: false,
 			}),
-			"activated": schema.BoolAttribute{
-				Required:    true,
-				Description: "Determines whether the check will run periodically or not after being deployed.",
-			},
-			"muted": schema.BoolAttribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     booldefault.StaticBool(false),
-				Description: "Determines if any notifications will be sent out when the check fails and/or recovers. (Default `false`).",
-			},
-			"run_parallel": schema.BoolAttribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     booldefault.StaticBool(false),
-				Description: "Determines whether the check should run on all selected locations in parallel or round-robin. (Default `false`).",
-			},
-			"locations": schema.SetAttribute{
-				Optional:    true,
-				ElementType: types.StringType,
-				Description: "An array of one or more data center locations where to run the this check.",
-			},
-			"tags": schema.SetAttribute{
-				Optional:    true,
-				ElementType: types.StringType,
-				Description: "A list of tags for organizing and filtering checks and monitors.",
-			},
-			"private_locations": schema.SetAttribute{
-				Optional:    true,
-				ElementType: types.StringType,
-				Description: "An array of one or more private locations slugs.",
-			},
 			triggerIncidentAttributeName:     makeTriggerIncidentSchema(),
 			checkIntentAttributeName:         makeCheckIntentSchema(),
 			aiAutoRepairEnabledAttributeName: makeAIAutoRepairEnabledSchema(),
 			alertSettingsAttributeName: makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{
 				Monitor: false,
 			}),
-			useGlobalAlertSettingsAttributeName: makeUseGlobalAlertSettingsAttributeSchema("check"),
 			"runtime": schema.SingleNestedAttribute{
 				Optional:    true,
 				Computed:    true,
@@ -354,18 +321,6 @@ func (r *PlaywrightCheckSuiteResource) Schema(ctx context.Context, req resource.
 					},
 				},
 			},
-			"group_id": schema.Int64Attribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     int64default.StaticInt64(0),
-				Description: "The ID of the check group that this check is part of.",
-			},
-			"group_order": schema.Int64Attribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     int64default.StaticInt64(0),
-				Description: "The position of the check in the check group. It determines in what order checks and monitors are run when a group is triggered from the API or from CI/CD.",
-			},
 			"bundle": schema.SingleNestedAttribute{
 				Required:    true,
 				Description: "Attaches a code bundle to the check.",
@@ -384,7 +339,7 @@ func (r *PlaywrightCheckSuiteResource) Schema(ctx context.Context, req resource.
 			environmentVariableAttributeName: makeEnvironmentVariableSchema(EnvironmentVariableAttributeSchemaOptions{
 				Description: "Insert environment variables into the execution environment.",
 			}),
-		},
+		}, CommonCheckAttributeSchemaOptions{Subject: subjectCheck, RunParallel: true, Locations: true, GroupMembership: true, NoDegradedState: true}),
 	}
 }
 
