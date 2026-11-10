@@ -26,13 +26,32 @@ func TestAccCheckRequiredFields(t *testing.T) {
 			Config:      config,
 			ExpectError: regexp.MustCompile(`The argument "name" is required, but no definition was found.`),
 		},
+	})
+}
+
+// activated and frequency take the Checkly API defaults when omitted.
+func TestAccCheckDefaultActivatedAndFrequency(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
 		{
-			Config:      config,
-			ExpectError: regexp.MustCompile(`The argument "activated" is required, but no definition was found.`),
-		},
-		{
-			Config:      config,
-			ExpectError: regexp.MustCompile(`The argument "frequency" is required, but no definition was found.`),
+			Config: `
+				resource "checkly_check" "test" {
+					name      = "Check Defaults"
+					type      = "API"
+					locations = ["eu-central-1"]
+					request = {
+						url = "https://api.checklyhq.com/public-stats"
+					}
+				}
+			`,
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue("checkly_check.test", tfjsonpath.New("activated"), knownvalue.Bool(true)),
+				statecheck.ExpectKnownValue("checkly_check.test", tfjsonpath.New("frequency"), knownvalue.Int64Exact(10)),
+			},
+			ConfigPlanChecks: resource.ConfigPlanChecks{
+				PostApplyPostRefresh: []plancheck.PlanCheck{
+					plancheck.ExpectEmptyPlan(),
+				},
+			},
 		},
 	})
 }
@@ -51,10 +70,6 @@ func TestAccBrowserCheckInvalidInputs(t *testing.T) {
 		{
 			Config:      config,
 			ExpectError: regexp.MustCompile(`Inappropriate value for attribute "activated"`),
-		},
-		{
-			Config:      config,
-			ExpectError: regexp.MustCompile(`The argument "frequency" is required`),
 		},
 		{
 			Config:      config,

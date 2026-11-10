@@ -42,15 +42,12 @@ const shouldFailErrorStatusNote = "Use it to validate an error status such as 40
 // Subject) yields the attributes every such resource has: activated, muted,
 // tags and use_global_alert_settings.
 type CommonCheckAttributeSchemaOptions struct {
-	Subject CheckSubject
-	// ActivatedOptional makes activated optional with a default of true;
-	// otherwise it is required.
-	ActivatedOptional bool
-	ShouldFail        bool // should_fail
-	RunParallel       bool // run_parallel
-	Locations         bool // locations and private_locations
-	GroupMembership   bool // group_id and group_order
-	RuntimeID         bool // runtime_id
+	Subject         CheckSubject
+	ShouldFail      bool // should_fail
+	RunParallel     bool // run_parallel
+	Locations       bool // locations and private_locations
+	GroupMembership bool // group_id and group_order
+	RuntimeID       bool // runtime_id
 	// NoDegradedState words muted for a subject that fails or recovers but
 	// is never degraded, such as a heartbeat monitor.
 	NoDegradedState bool
@@ -127,13 +124,6 @@ func activatedAttributeSchema(o CommonCheckAttributeSchemaOptions) schema.BoolAt
 	description := fmt.Sprintf("Determines whether the %s runs on its schedule.", o.Subject)
 	if o.Subject == subjectCheckGroup {
 		description = "Determines whether the checks and monitors in the group run on their schedule."
-	}
-
-	if !o.ActivatedOptional {
-		return schema.BoolAttribute{
-			Required:    true,
-			Description: description,
-		}
 	}
 
 	return schema.BoolAttribute{

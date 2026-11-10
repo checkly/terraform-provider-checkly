@@ -24,9 +24,27 @@ func TestAccCheckGroupEmptyConfig(t *testing.T) {
 			Config:      config,
 			ExpectError: regexp.MustCompile(`The argument "concurrency" is required`),
 		},
+	})
+}
+
+// activated takes the Checkly API default when omitted.
+func TestAccCheckGroupDefaultActivated(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
 		{
-			Config:      config,
-			ExpectError: regexp.MustCompile(`The argument "activated" is required`),
+			Config: `
+				resource "checkly_check_group" "test" {
+					name        = "Check Group Defaults"
+					concurrency = 1
+				}
+			`,
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue("checkly_check_group.test", tfjsonpath.New("activated"), knownvalue.Bool(true)),
+			},
+			ConfigPlanChecks: resource.ConfigPlanChecks{
+				PostApplyPostRefresh: []plancheck.PlanCheck{
+					plancheck.ExpectEmptyPlan(),
+				},
+			},
 		},
 	})
 }

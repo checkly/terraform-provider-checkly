@@ -82,10 +82,10 @@ func TestAccApiCheckResourceBasic(t *testing.T) {
 	})
 }
 
-// TestAccApiCheckResourceDefaults verifies the attribute defaults that
-// differ from the deprecated checkly_check resource: activated defaults to
-// true, frequency to 10, degraded_response_time to 5000 and
-// max_response_time to 20000.
+// TestAccApiCheckResourceDefaults verifies the attribute defaults:
+// activated defaults to true and frequency to 10, as on every check, and
+// degraded_response_time to 5000 and max_response_time to 20000, which
+// differ from the deprecated checkly_check resource.
 func TestAccApiCheckResourceDefaults(t *testing.T) {
 	accTestCase(t, []resource.TestStep{
 		{

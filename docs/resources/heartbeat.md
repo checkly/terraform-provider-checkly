@@ -37,12 +37,12 @@ resource "checkly_heartbeat" "example-heartbeat" {
 
 ### Required
 
-- `activated` (Boolean) Determines whether the monitor runs on its schedule.
 - `heartbeat` (Attributes) The heartbeat schedule and grace period. (see [below for nested schema](#nestedatt--heartbeat))
 - `name` (String) The name of the check.
 
 ### Optional
 
+- `activated` (Boolean) Determines whether the monitor runs on its schedule. (Default `true`).
 - `alert_channel_subscriptions` (Attributes Set) A set of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your monitor, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedatt--alert_channel_subscriptions))
 - `alert_settings` (Attributes) Determines the alert escalation policy for the monitor. (see [below for nested schema](#nestedatt--alert_settings))
 - `description` (String) A description of the monitor.

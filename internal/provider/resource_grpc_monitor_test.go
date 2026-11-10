@@ -161,14 +161,6 @@ func TestAccGRPCMonitorRequiredFields(t *testing.T) {
 		},
 		{
 			Config:      config,
-			ExpectError: regexp.MustCompile(`The argument "activated" is required, but no definition was found.`),
-		},
-		{
-			Config:      config,
-			ExpectError: regexp.MustCompile(`The argument "frequency" is required, but no definition was found.`),
-		},
-		{
-			Config:      config,
 			ExpectError: regexp.MustCompile(`The argument "request" is required, but no definition was found.`),
 		},
 	})

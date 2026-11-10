@@ -145,12 +145,12 @@ resource "checkly_check_group" "test_group1" {
 
 ### Required
 
-- `activated` (Boolean) Determines whether the checks and monitors in the group run on their schedule.
 - `concurrency` (Number) Determines how many checks are run concurrently when triggering a check group from CI/CD or through the API.
 - `name` (String) The name of the check group.
 
 ### Optional
 
+- `activated` (Boolean) Determines whether the checks and monitors in the group run on their schedule. (Default `true`).
 - `alert_channel_subscriptions` (Attributes Set) A set of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your check, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedatt--alert_channel_subscriptions))
 - `alert_settings` (Attributes) Determines the alert escalation policy for the check. (see [below for nested schema](#nestedatt--alert_settings))
 - `api_check_defaults` (Attributes) Default settings for API checks in this group. (see [below for nested schema](#nestedatt--api_check_defaults))

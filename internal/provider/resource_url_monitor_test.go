@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 
@@ -27,15 +28,33 @@ func TestAccURLMonitorRequiredFields(t *testing.T) {
 		},
 		{
 			Config:      config,
-			ExpectError: regexp.MustCompile(`The argument "activated" is required, but no definition was found.`),
-		},
-		{
-			Config:      config,
-			ExpectError: regexp.MustCompile(`The argument "frequency" is required, but no definition was found.`),
-		},
-		{
-			Config:      config,
 			ExpectError: regexp.MustCompile(`The argument "request" is required, but no definition was found.`),
+		},
+	})
+}
+
+// activated and frequency take the Checkly API defaults when omitted.
+func TestAccURLMonitorDefaultActivatedAndFrequency(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_url_monitor" "test" {
+					name      = "URL Monitor Defaults"
+					locations = ["eu-central-1"]
+					request = {
+						url = "https://api.checklyhq.com"
+					}
+				}
+			`,
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue("checkly_url_monitor.test", tfjsonpath.New("activated"), knownvalue.Bool(true)),
+				statecheck.ExpectKnownValue("checkly_url_monitor.test", tfjsonpath.New("frequency"), knownvalue.Int64Exact(10)),
+			},
+			ConfigPlanChecks: resource.ConfigPlanChecks{
+				PostApplyPostRefresh: []plancheck.PlanCheck{
+					plancheck.ExpectEmptyPlan(),
+				},
+			},
 		},
 	})
 }
