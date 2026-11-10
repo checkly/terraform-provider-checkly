@@ -312,7 +312,7 @@ Both resource types manage the same check groups, so you can switch a group over
 
      enforce_alert_settings = {
        enabled                   = true
-       use_global_alert_settings = false
+       use_global_alert_settings = false # as on the v1 group: true if it sets no alert_settings
        # alert_settings = { ... } as on the v1 group
      }
 
