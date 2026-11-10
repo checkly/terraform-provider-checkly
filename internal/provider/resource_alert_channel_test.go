@@ -7,9 +7,13 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
+	fwresource "github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
@@ -54,6 +58,90 @@ func TestWebhookTypeValidation(t *testing.T) {
 
 	if errs := validate("WEBHOOK_UNKNOWN"); len(errs) == 0 {
 		t.Error("expected 'WEBHOOK_UNKNOWN' to be invalid, but got no errors")
+	}
+}
+
+func TestAlertChannelConfigValidatorsExactlyOneChannel(t *testing.T) {
+	ctx := context.Background()
+
+	var schemaResp fwresource.SchemaResponse
+	NewAlertChannelResource().Schema(ctx, fwresource.SchemaRequest{}, &schemaResp)
+	objectType := schemaResp.Schema.Type().TerraformType(ctx).(tftypes.Object)
+
+	email := objectWith(objectType.AttributeTypes["email"].(tftypes.Object), map[string]tftypes.Value{
+		"address": tftypes.NewValue(tftypes.String, "info@example.com"),
+	})
+	sms := objectWith(objectType.AttributeTypes["sms"].(tftypes.Object), map[string]tftypes.Value{
+		"name":   tftypes.NewValue(tftypes.String, "smsalerts"),
+		"number": tftypes.NewValue(tftypes.String, "+4917512345678"),
+	})
+	unknownSlack := tftypes.NewValue(objectType.AttributeTypes["slack"], tftypes.UnknownValue)
+	emailPath := path.Root("email")
+	const wantDetail = "Exactly one of these attributes must be configured: [email,slack,slack_app,sms,call,webhook,opsgenie,pagerduty]"
+
+	cases := map[string]struct {
+		values      map[string]tftypes.Value
+		wantSummary string
+		wantPath    *path.Path
+	}{
+		"none": {
+			wantSummary: "Missing Attribute Configuration",
+		},
+		"one": {
+			values: map[string]tftypes.Value{"email": email},
+		},
+		"two": {
+			values:      map[string]tftypes.Value{"email": email, "sms": sms},
+			wantSummary: "Invalid Attribute Combination",
+			wantPath:    &emailPath,
+		},
+		"two and unknown": {
+			values:      map[string]tftypes.Value{"email": email, "sms": sms, "slack": unknownSlack},
+			wantSummary: "Invalid Attribute Combination",
+			wantPath:    &emailPath,
+		},
+		"only unknown": {
+			values: map[string]tftypes.Value{"slack": unknownSlack},
+		},
+		"one and unknown": {
+			values: map[string]tftypes.Value{"email": email, "slack": unknownSlack},
+		},
+	}
+
+	r := NewAlertChannelResource().(fwresource.ResourceWithConfigValidators)
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			config := tfsdk.Config{Schema: schemaResp.Schema, Raw: objectWith(objectType, tc.values)}
+
+			var diags []string
+			var resp fwresource.ValidateConfigResponse
+			for _, v := range r.ConfigValidators(ctx) {
+				v.ValidateResource(ctx, fwresource.ValidateConfigRequest{Config: config}, &resp)
+			}
+			for _, d := range resp.Diagnostics.Errors() {
+				diags = append(diags, d.Summary()+": "+d.Detail())
+			}
+
+			if tc.wantSummary == "" {
+				if len(diags) != 0 {
+					t.Fatalf("unexpected errors: %v", diags)
+				}
+				return
+			}
+			if len(diags) != 1 {
+				t.Fatalf("got %d errors, want 1: %v", len(diags), diags)
+			}
+			got := resp.Diagnostics.Errors()[0]
+			if got.Summary() != tc.wantSummary || got.Detail() != wantDetail {
+				t.Errorf("got %q: %q, want %q: %q", got.Summary(), got.Detail(), tc.wantSummary, wantDetail)
+			}
+			if tc.wantPath != nil {
+				withPath, ok := got.(diag.DiagnosticWithPath)
+				if !ok || !withPath.Path().Equal(*tc.wantPath) {
+					t.Errorf("diagnostic %v is not anchored at %s", got, *tc.wantPath)
+				}
+			}
+		})
 	}
 }
 
@@ -287,7 +375,7 @@ func TestAccFail(t *testing.T) {
 		{
 			Config: `resource "checkly_alert_channel" "t1" {
 			}`,
-			Error: `An alert channel requires exactly one channel type attribute`,
+			Error: `Exactly one of these attributes must be configured: [email,slack,slack_app,sms,call,webhook,opsgenie,pagerduty]`,
 		},
 		{
 			Config: `resource "checkly_alert_channel" "t1" {
@@ -299,7 +387,7 @@ func TestAccFail(t *testing.T) {
 					number = "+4917512345678"
 				}
 			}`,
-			Error: `An alert channel cannot contain more than one channel type, but these are configured: email, sms.`,
+			Error: `Invalid Attribute Combination`,
 		},
 	}
 	for key, tc := range cases {

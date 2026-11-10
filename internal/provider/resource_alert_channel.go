@@ -3,10 +3,10 @@ package provider
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/resourcevalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -167,20 +167,6 @@ var alertChannelWebhookTypes = allowedValues[string]{
 	{Value: "WEBHOOK_SPIKESH"},
 	{Value: "WEBHOOK_SPLUNK"},
 	{Value: "WEBHOOK_TELEGRAM"},
-}
-
-// alertChannelTypeAttributeNames lists the schema attributes that each
-// configure one alert channel type. Exactly one of them must be present in a
-// configuration.
-var alertChannelTypeAttributeNames = []string{
-	"email",
-	"slack",
-	"slack_app",
-	"sms",
-	"call",
-	"webhook",
-	"opsgenie",
-	"pagerduty",
 }
 
 func (r *AlertChannelResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -393,60 +379,20 @@ func (r *AlertChannelResource) Schema(ctx context.Context, req resource.SchemaRe
 	}
 }
 
+// ConfigValidators requires exactly one channel type attribute, because the
+// Checkly API stores a single channel configuration per alert channel.
 func (r *AlertChannelResource) ConfigValidators(ctx context.Context) []resource.ConfigValidator {
 	return []resource.ConfigValidator{
-		alertChannelExactlyOneChannelValidator{},
-	}
-}
-
-// alertChannelExactlyOneChannelValidator validates that a configuration
-// contains exactly one channel type attribute. The Checkly API stores a single
-// channel configuration per alert channel.
-type alertChannelExactlyOneChannelValidator struct{}
-
-func (v alertChannelExactlyOneChannelValidator) Description(ctx context.Context) string {
-	return fmt.Sprintf("Exactly one of these attributes must be configured: %s.", strings.Join(alertChannelTypeAttributeNames, ", "))
-}
-
-func (v alertChannelExactlyOneChannelValidator) MarkdownDescription(ctx context.Context) string {
-	return v.Description(ctx)
-}
-
-func (v alertChannelExactlyOneChannelValidator) ValidateResource(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
-	var configured []string
-	unknown := false
-
-	for _, name := range alertChannelTypeAttributeNames {
-		var obj types.Object
-
-		resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(name), &obj)...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-
-		if obj.IsUnknown() {
-			unknown = true
-			continue
-		}
-
-		if !obj.IsNull() {
-			configured = append(configured, name)
-		}
-	}
-
-	if len(configured) > 1 {
-		resp.Diagnostics.AddError(
-			"Invalid Alert Channel Configuration",
-			fmt.Sprintf("An alert channel cannot contain more than one channel type, but these are configured: %s.", strings.Join(configured, ", ")),
-		)
-		return
-	}
-
-	if len(configured) == 0 && !unknown {
-		resp.Diagnostics.AddError(
-			"Invalid Alert Channel Configuration",
-			fmt.Sprintf("An alert channel requires exactly one channel type attribute: %s.", strings.Join(alertChannelTypeAttributeNames, ", ")),
-		)
+		resourcevalidator.ExactlyOneOf(
+			path.MatchRoot("email"),
+			path.MatchRoot("slack"),
+			path.MatchRoot("slack_app"),
+			path.MatchRoot("sms"),
+			path.MatchRoot("call"),
+			path.MatchRoot("webhook"),
+			path.MatchRoot("opsgenie"),
+			path.MatchRoot("pagerduty"),
+		),
 	}
 }
 
