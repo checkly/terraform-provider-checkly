@@ -186,9 +186,13 @@ environment_variables = [for key, value in var.environment : {
 }]
 ```
 
-Leaving out `alert_channel_subscriptions`, `environment_variables` or `components` still removes them in Checkly, as leaving out all the blocks did in v1.x. Leaving out `request.assertions` or `api_check_defaults.assertions` removes all assertions too, and stores an empty set. Leaving out `runtime.playwright.devices` while `runtime.auto_detect` is enabled, which is the default, selects the default devices: chromium, firefox and webkit.
+Leaving out `alert_channel_subscriptions`, `environment_variables` or `components` still removes them in Checkly, as leaving out all the blocks did in v1.x. Leaving out `request.assertions` or `api_check_defaults.assertions` removes all assertions too, and stores null (see [Unset collections are null](#unset-collections-are-null)). Leaving out `runtime.playwright.devices` while `runtime.auto_detect` is enabled, which is the default, selects the default devices: chromium, firefox and webkit.
 
 As with [single nested objects](#single-nested-objects-are-attributes), a misspelled name inside an element is ignored instead of raising an error. Entries in `ignore_changes` and references to these attributes, such as `checkly_url_monitor.example.alert_channel_subscription`, must use the new names too.
+
+### Unset collections are null
+
+An optional collection without a default, such as `tags`, `locations`, `private_locations` or `request.assertions`, is null when your configuration leaves it out. v1.x stored an empty list, set or map instead. The API treats both the same, but expressions that read such an attribute from a resource get null, so `length()` or `concat()` over it fails. Write `x == null ? [] : x` for a list or set and `x == null ? {} : x` for a map, for example `length(checkly_check_group.example.tags == null ? [] : checkly_check_group.example.tags)`, or set the attribute in your configuration. Passing the attribute on to another resource, as in `locations = checkly_check_group.example.locations`, keeps working, since null is valid there too.
 
 ### Removed attributes
 
@@ -377,7 +381,7 @@ resource "checkly_maintenance_window" "example" {
 
 ## Expected one-time changes
 
-- v1.x stored an unset optional string, number or collection as an empty value (`""`, `0`, `[]` or `{}`), and v2 stores it as null. If your configuration sets such an attribute to an empty value explicitly, for example `tags = []`, `headers = {}` or `repeat_interval = 0`, the first plan shows an in-place update to that empty value. The same goes for the first plan after an import, which also stores null for an empty value. Removing the attribute from the configuration has the same effect and avoids the update. Expressions that read such an attribute get null instead of the empty value when it is not configured, so `length()` or `concat()` over it fails. Write `x == null ? [] : x` for a list or set and `x == null ? {} : x` for a map, for example `length(checkly_check_group.example.tags == null ? [] : checkly_check_group.example.tags)`, or set the attribute in your configuration.
+- v1.x stored an unset optional string, number or collection as an empty value (`""`, `0`, `[]` or `{}`), and v2 stores it as null. If your configuration sets such an attribute to an empty value explicitly, for example `tags = []`, `headers = {}` or `repeat_interval = 0`, the first plan shows an in-place update to that empty value. The same goes for the first plan after an import, which also stores null for an empty value. Removing the attribute from the configuration has the same effect and avoids the update. Expressions over an unset collection are affected too; see [Unset collections are null](#unset-collections-are-null).
 - v1.x could not clear these attributes: leaving one out kept the stored value, and every plan showed the same change. v2 clears them, so a value set in the web app and absent from your configuration is erased by the first apply. To keep such a value, add it to your configuration.
   - `checkly_status_page`: `custom_domain`, `logo`, `redirect_to` and `favicon`.
   - `checkly_dashboard`: `custom_domain`, `logo`, `link`, `description` and `favicon`.
