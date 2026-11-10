@@ -340,7 +340,7 @@ func TestAccHeartbeatMonitorUnsetSweepBooleansAndTags(t *testing.T) {
 					name                      = "heartbeat-unset-sweep-basics"
 					activated                 = true
 					muted                     = true
-					use_global_alert_settings = true
+					use_global_alert_settings = false
 					tags                      = ["sweep-a", "sweep-b"]
 					heartbeat = {
 						period      = 5
@@ -359,7 +359,7 @@ func TestAccHeartbeatMonitorUnsetSweepBooleansAndTags(t *testing.T) {
 				resource.TestCheckResourceAttr(
 					"checkly_heartbeat_monitor.test",
 					"use_global_alert_settings",
-					"true",
+					"false",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_heartbeat_monitor.test",
@@ -398,7 +398,7 @@ func TestAccHeartbeatMonitorUnsetSweepBooleansAndTags(t *testing.T) {
 				resource.TestCheckResourceAttr(
 					"checkly_heartbeat_monitor.test",
 					"use_global_alert_settings",
-					"false",
+					"true",
 				),
 				resource.TestCheckNoResourceAttr(
 					"checkly_heartbeat_monitor.test",

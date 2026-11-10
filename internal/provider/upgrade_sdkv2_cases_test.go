@@ -362,6 +362,9 @@ resource "checkly_check" "test" {
 }
 `),
 
+	// Neither alert_settings nor use_global_alert_settings is set, which v1.x
+	// stored as false. The derived value is true, so the first plan switches
+	// the resource to the account level alert settings.
 	"check_group_double_check": newSDKv2UpgradeCase(`
 resource "checkly_check_group" "test" {
   name         = "tf-upgrade-{{id}}-group-double-check"
@@ -378,7 +381,7 @@ resource "checkly_check_group" "test" {
   locations    = ["eu-central-1"]
   double_check = true
 }
-`),
+`).withUpdate("checkly_check_group.test", "use_global_alert_settings: false -> true"),
 
 	"check_multistep": newSDKv2UpgradeCase(`
 resource "checkly_check" "test" {
@@ -2107,6 +2110,9 @@ resource "checkly_url_monitor" "test" {
 }
 `),
 
+	// alert_settings is set without use_global_alert_settings, which v1.x
+	// stored as true. The derived value is false, so the first plan lets the
+	// configured alert_settings take effect.
 	"dns_monitor": newSDKv2UpgradeCase(`
 resource "checkly_dns_monitor" "test" {
   name                   = "tf-upgrade-{{id}}-dns-monitor"
@@ -2213,8 +2219,11 @@ resource "checkly_dns_monitor" "test" {
     same_region          = false
   }
 }
-`),
+`).withUpdate("checkly_dns_monitor.test", "use_global_alert_settings: true -> false"),
 
+	// alert_settings is set without use_global_alert_settings, which v1.x
+	// stored as true. The derived value is false, so the first plan lets the
+	// configured alert_settings take effect.
 	"icmp_monitor": newSDKv2UpgradeCase(`
 resource "checkly_icmp_monitor" "test" {
   name                           = "tf-upgrade-{{id}}-icmp-monitor"
@@ -2299,7 +2308,7 @@ resource "checkly_icmp_monitor" "test" {
     same_region          = true
   }
 }
-`),
+`).withUpdate("checkly_icmp_monitor.test", "use_global_alert_settings: true -> false"),
 
 	"grpc_monitor": newSDKv2UpgradeCase(`
 resource "checkly_grpc_monitor" "test" {
@@ -2655,6 +2664,10 @@ resource "checkly_ssl_monitor" "test" {
 
 	// No client_certificate or security_baseline: the API fills in its
 	// defaults, which SDK v2 stored.
+	//
+	// Neither alert_settings nor use_global_alert_settings is set, which v1.x
+	// stored as false. The derived value is true, so the first plan switches
+	// the resource to the account level alert settings.
 	"ssl_monitor_minimal": newSDKv2UpgradeCase(`
 resource "checkly_ssl_monitor" "test" {
   name      = "tf-upgrade-{{id}}-ssl-monitor-minimal"
@@ -2677,7 +2690,7 @@ resource "checkly_ssl_monitor" "test" {
     hostname = "api.checklyhq.com"
   }
 }
-`),
+`).withUpdate("checkly_ssl_monitor.test", "use_global_alert_settings: false -> true"),
 
 	"playwright_check_suite": newSDKv2UpgradeCase(upgradeCodeBundleSDKv2+`
 resource "checkly_playwright_check_suite" "test" {
@@ -3023,6 +3036,9 @@ moved {
 }
 `),
 
+	// Neither alert_settings nor use_global_alert_settings is set, which v1.x
+	// stored as false. The derived value is true, so the first plan switches
+	// the resource to the account level alert settings.
 	"moved_heartbeat_to_heartbeat_monitor": newSDKv2UpgradeCase(`
 resource "checkly_heartbeat" "test" {
   name      = "tf-upgrade-{{id}}-moved-heartbeat"
@@ -3052,7 +3068,7 @@ moved {
   from = checkly_heartbeat.test
   to   = checkly_heartbeat_monitor.test
 }
-`),
+`).withUpdate("checkly_heartbeat_monitor.test", "use_global_alert_settings: false -> true"),
 
 	"moved_maintenance_windows_to_maintenance_window": newSDKv2UpgradeCase(`
 resource "checkly_maintenance_windows" "test" {

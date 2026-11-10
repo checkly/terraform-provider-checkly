@@ -1461,7 +1461,7 @@ func TestAccCheckGroupSwitchToV2(t *testing.T) {
 
 			enforce_alert_settings = {
 				enabled                   = true
-				use_global_alert_settings = false
+				use_global_alert_settings = true
 			}
 
 			enforce_retry_strategy = {
@@ -1618,6 +1618,10 @@ func TestAccCheckGroupWithoutAlertSettings(t *testing.T) {
 					}
 				`, groupName, concurrency, alertSettings)
 			}
+			// Without alert_settings, checkly_check_group plans
+			// use_global_alert_settings = true, which would switch the group
+			// to the account level alert settings.
+			const keepOwnAlertSettings = "use_global_alert_settings = false"
 			const removeV2 = `
 				removed {
 					from = checkly_check_group_v2.test
@@ -1633,7 +1637,7 @@ func TestAccCheckGroupWithoutAlertSettings(t *testing.T) {
 					Config: v2,
 				},
 				{
-					Config: v2 + v1(1, "") + `
+					Config: v2 + v1(1, keepOwnAlertSettings) + `
 						import {
 							to = checkly_check_group.test
 							id = checkly_check_group_v2.test.id
@@ -1642,7 +1646,7 @@ func TestAccCheckGroupWithoutAlertSettings(t *testing.T) {
 					Check: resource.TestCheckResourceAttr("checkly_check_group.test", "alert_settings.escalation_type", ""),
 				},
 				{
-					Config: removeV2 + v1(2, ""),
+					Config: removeV2 + v1(2, keepOwnAlertSettings),
 					Check: resource.ComposeTestCheckFunc(
 						resource.TestCheckResourceAttr("checkly_check_group.test", "concurrency", "2"),
 						resource.TestCheckResourceAttr("checkly_check_group.test", "alert_settings.escalation_type", ""),

@@ -65,7 +65,7 @@ resource "checkly_icmp_monitor" "example-icmp-monitor" {
 - `run_parallel` (Boolean) Determines whether the monitor should run on all selected locations in parallel or round-robin. (Default `false`).
 - `tags` (Set of String) A list of tags for organizing and filtering checks and monitors.
 - `trigger_incident` (Attributes) Create and resolve an incident based on the alert configuration. Useful for status page automation. (see [below for nested schema](#nestedatt--trigger_incident))
-- `use_global_alert_settings` (Boolean) When true, the account level alert settings will be used, not the alert setting defined on this monitor. (Default `true`).
+- `use_global_alert_settings` (Boolean) When true, the account level alert settings are used instead of the `alert_settings` of this monitor. Defaults to `true` when `alert_settings` is not set, and to `false` when it is.
 
 ### Read-Only
 

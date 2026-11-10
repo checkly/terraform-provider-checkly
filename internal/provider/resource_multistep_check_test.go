@@ -319,7 +319,7 @@ func TestAccMultistepCheckUnsetSweepScalars(t *testing.T) {
 					muted                     = true
 					should_fail               = true
 					run_parallel              = true
-					use_global_alert_settings = true
+					use_global_alert_settings = false
 					runtime_id                = "2023.09"
 					script_path               = "__checks__/sweep.spec.ts"
 					locations                 = ["us-east-1"]
@@ -355,7 +355,7 @@ func TestAccMultistepCheckUnsetSweepScalars(t *testing.T) {
 				resource.TestCheckResourceAttr(
 					"checkly_multistep_check.test",
 					"use_global_alert_settings",
-					"true",
+					"false",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_multistep_check.test",
@@ -407,7 +407,7 @@ func TestAccMultistepCheckUnsetSweepScalars(t *testing.T) {
 				resource.TestCheckResourceAttr(
 					"checkly_multistep_check.test",
 					"use_global_alert_settings",
-					"false",
+					"true",
 				),
 				resource.TestCheckNoResourceAttr(
 					"checkly_multistep_check.test",

@@ -160,14 +160,9 @@ func (r *CheckGroupResource) Schema(ctx context.Context, req resource.SchemaRequ
 				Optional:    true,
 				Description: "The id of the runtime to use for this group.",
 			},
-			alertSettingsAttributeName: makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{}),
-			"use_global_alert_settings": schema.BoolAttribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     booldefault.StaticBool(false),
-				Description: "When true, the account level alert settings will be used, not the alert setting defined on this check group.",
-			},
-			apiCheckDefaultsAttributeName: makeAPICheckDefaultsAttributeSchema(),
+			alertSettingsAttributeName:          makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{}),
+			useGlobalAlertSettingsAttributeName: makeUseGlobalAlertSettingsAttributeSchema("check group"),
+			apiCheckDefaultsAttributeName:       makeAPICheckDefaultsAttributeSchema(),
 			retryStrategyAttributeName: makeRetryStrategyAttributeSchema(RetryStrategyAttributeSchemaOptions{
 				SupportsOnlyOnNetworkError: true,
 				DoubleCheck:                true,

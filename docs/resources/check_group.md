@@ -167,7 +167,7 @@ resource "checkly_check_group" "test_group1" {
 - `setup_snippet_id` (Number) An ID reference to a snippet to use in the setup phase of an API check.
 - `tags` (Set of String) Tags for organizing and filtering checks.
 - `teardown_snippet_id` (Number) An ID reference to a snippet to use in the teardown phase of an API check.
-- `use_global_alert_settings` (Boolean) When true, the account level alert settings will be used, not the alert setting defined on this check group.
+- `use_global_alert_settings` (Boolean) When true, the account level alert settings are used instead of the `alert_settings` of this check group. Defaults to `true` when `alert_settings` is not set, and to `false` when it is.
 
 ### Read-Only
 

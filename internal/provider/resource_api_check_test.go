@@ -119,7 +119,7 @@ func TestAccApiCheckResourceDefaults(t *testing.T) {
 				resource.TestCheckResourceAttr(
 					"checkly_api_check.test",
 					"use_global_alert_settings",
-					"false",
+					"true",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_api_check.test",
@@ -794,7 +794,7 @@ func TestAccApiCheckUnsetSweepScalars(t *testing.T) {
 					muted                     = true
 					should_fail               = true
 					run_parallel              = true
-					use_global_alert_settings = true
+					use_global_alert_settings = false
 					runtime_id                = "2023.09"
 					locations                 = ["eu-central-1"]
 					request = {
@@ -826,7 +826,7 @@ func TestAccApiCheckUnsetSweepScalars(t *testing.T) {
 				resource.TestCheckResourceAttr(
 					"checkly_api_check.test",
 					"use_global_alert_settings",
-					"true",
+					"false",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_api_check.test",
@@ -870,7 +870,7 @@ func TestAccApiCheckUnsetSweepScalars(t *testing.T) {
 				resource.TestCheckResourceAttr(
 					"checkly_api_check.test",
 					"use_global_alert_settings",
-					"false",
+					"true",
 				),
 				resource.TestCheckNoResourceAttr(
 					"checkly_api_check.test",
