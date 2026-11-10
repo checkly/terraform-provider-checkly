@@ -189,7 +189,9 @@ resource "checkly_check_group_v2" "use-global-alerts" {
   name = "Use Global Alert Settings"
 
   enforce_alert_settings = {
-    enabled                   = true
+    enabled = true
+    # The provider derives true anyway when the enforcement sets no
+    # alert_settings; this example only states it explicitly.
     use_global_alert_settings = true
   }
 }

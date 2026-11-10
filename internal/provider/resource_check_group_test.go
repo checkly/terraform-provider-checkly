@@ -1510,9 +1510,11 @@ func TestAccCheckGroupAlertChannelSubscriptions(t *testing.T) {
 // settings, retry strategy, scheduling strategy, and locations when the group
 // has any.
 //
-// use_global_alert_settings moves as stored: checkly_check_group derives
-// true for a group without alert_settings and false for one with them, and
-// the v2 configuration has to state that value.
+// use_global_alert_settings moves as stored. checkly_check_group derives
+// true for a group without alert_settings and false for one with them, the
+// same as an enabled enforce_alert_settings of checkly_check_group_v2, so a
+// v2 configuration can leave it out, as the minimal and full cases do. The
+// other cases state it, which also matches.
 func TestAccCheckGroupMovedToV2(t *testing.T) {
 	const (
 		v1Address = "checkly_check_group.test"
@@ -1576,8 +1578,7 @@ func TestAccCheckGroupMovedToV2(t *testing.T) {
 					}
 
 					enforce_alert_settings = {
-						enabled                   = true
-						use_global_alert_settings = true
+						enabled = true
 					}
 
 					enforce_retry_strategy = {
@@ -1733,8 +1734,7 @@ func TestAccCheckGroupMovedToV2(t *testing.T) {
 					}
 
 					enforce_alert_settings = {
-						enabled                   = true
-						use_global_alert_settings = false
+						enabled = true
 						alert_settings = {
 							escalation_type = "RUN_BASED"
 							run_based_escalation = {

@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/checkly/checkly-go-sdk/v2"
@@ -214,15 +215,8 @@ func (r *CheckGroupV2Resource) Schema(ctx context.Context, req resource.SchemaRe
 						Required:    true,
 						Description: "Determines whether the enforced alert settings should be active.",
 					},
-					alertSettingsAttributeName: makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{}),
-					"use_global_alert_settings": schema.BoolAttribute{
-						Optional: true,
-						Computed: true,
-						Default:  booldefault.StaticBool(false),
-						Description: "Whether to use account level alert settings instead of the group's alert " +
-							"settings." +
-							"Default (`false`).",
-					},
+					alertSettingsAttributeName:          makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{}),
+					useGlobalAlertSettingsAttributeName: makeCheckGroupV2UseGlobalAlertSettingsAttributeSchema(),
 					alertChannelSubscriptionAttributeName: schema.SetNestedAttribute{
 						Optional: true,
 						Description: "A set of channel IDs and whether they're activated or not. If you don't " +
@@ -887,10 +881,7 @@ func checkGroupV2FromModel(ctx context.Context, model *CheckGroupV2ResourceModel
 			group.AlertSettings = &settings
 		}
 
-		if v, ok := attrs["use_global_alert_settings"].(types.Bool); ok && !v.IsNull() && !v.IsUnknown() {
-			val := v.ValueBool()
-			group.UseGlobalAlertSettings = &val
-		}
+		group.UseGlobalAlertSettings = checkGroupV2UseGlobalAlertSettingsFromAttributes(attrs)
 
 		if v, ok := attrs[alertChannelSubscriptionAttributeName].(types.Set); ok && !v.IsNull() && !v.IsUnknown() {
 			group.AlertChannelSubscriptions = alertChannelSubscriptionsFromSet(ctx, v, diags)
@@ -929,6 +920,29 @@ func checkGroupV2FromModel(ctx context.Context, model *CheckGroupV2ResourceModel
 	}
 
 	return group
+}
+
+// checkGroupV2UseGlobalAlertSettingsFromAttributes returns the
+// use_global_alert_settings of an enabled enforce_alert_settings value for
+// the API request. A value that is still unknown, because whether the
+// enforcement is enabled or whether alert_settings is set was unknown at plan
+// time, resolves the way checkGroupV2UseGlobalAlertSettingsPlanModifier
+// derives it: false when alert_settings is set, and true otherwise. A planned
+// alert_settings that is still unknown is computed rather than configured,
+// so it counts as not set. Sending the derived value lets the next plan
+// converge instead of leaving the choice to the API.
+func checkGroupV2UseGlobalAlertSettingsFromAttributes(attrs map[string]attr.Value) *bool {
+	v, ok := attrs[useGlobalAlertSettingsAttributeName].(types.Bool)
+	if !ok || v.IsNull() {
+		return nil
+	}
+	if !v.IsUnknown() {
+		return v.ValueBoolPointer()
+	}
+
+	alertSettings, _ := attrs[alertSettingsAttributeName].(types.Object)
+	useGlobal := alertSettings.IsNull() || alertSettings.IsUnknown()
+	return &useGlobal
 }
 
 // checkGroupV2ToModel updates the model to match the API representation of
@@ -1112,4 +1126,107 @@ func checkGroupV2EnforceSchedulingStrategyToObject(ctx context.Context, group *c
 	diags.Append(d...)
 
 	return obj
+}
+
+// makeCheckGroupV2UseGlobalAlertSettingsAttributeSchema returns the schema of
+// enforce_alert_settings.use_global_alert_settings of checkly_check_group_v2.
+// It is derived from the alert_settings next to it like the top-level
+// attribute of other resources, but only while the enforcement is enabled;
+// the API ignores all of a disabled enforcement's settings.
+func makeCheckGroupV2UseGlobalAlertSettingsAttributeSchema() schema.BoolAttribute {
+	attribute := makeUseGlobalAlertSettingsAttributeSchema("check group")
+	attribute.Description += " The value is derived only while `enabled` is `true`. While the enforcement stays " +
+		"disabled, the stored value is kept and has no effect; disabling an enabled enforcement resets it to null."
+	attribute.PlanModifiers = []planmodifier.Bool{
+		checkGroupV2UseGlobalAlertSettingsPlanModifier{},
+	}
+	attribute.Validators = []validator.Bool{
+		checkGroupV2UseGlobalAlertSettingsValidator{},
+	}
+	return attribute
+}
+
+// checkGroupV2EnforcementEnabledInConfig reads the configured enforcement
+// object that contains the attribute at p. It reports whether the object is
+// configured with enabled set to true; known is false when the object or its
+// enabled flag is unknown.
+func checkGroupV2EnforcementEnabledInConfig(ctx context.Context, config tfsdk.Config, p path.Path) (enabled, known bool, diags diag.Diagnostics) {
+	var enforcement types.Object
+	diags = config.GetAttribute(ctx, p.ParentPath(), &enforcement)
+	if diags.HasError() || enforcement.IsUnknown() {
+		return false, false, diags
+	}
+	if !enforcement.IsNull() && enforcement.Attributes()["enabled"].IsUnknown() {
+		return false, false, diags
+	}
+	return checkGroupV2EnforcementEnabled(enforcement), true, diags
+}
+
+var _ planmodifier.Bool = checkGroupV2UseGlobalAlertSettingsPlanModifier{}
+
+// checkGroupV2UseGlobalAlertSettingsPlanModifier derives an unconfigured
+// enforce_alert_settings.use_global_alert_settings from the enforced
+// alert_settings while the enforcement is enabled, as
+// useGlobalAlertSettingsPlanModifier does for a top-level attribute.
+//
+// For a disabled or omitted enforcement it leaves the value that the
+// enforcement's default and plan modifiers produced, so that a disabled
+// enforcement keeps its stored value. If that value is still unknown, which
+// happens when an enforcement is created disabled or gets disabled, it plans
+// null, the value of the disabled enforcement default.
+type checkGroupV2UseGlobalAlertSettingsPlanModifier struct{}
+
+func (m checkGroupV2UseGlobalAlertSettingsPlanModifier) Description(ctx context.Context) string {
+	return "While the enforcement is enabled, plans true when alert_settings is not configured, and false when it is."
+}
+
+func (m checkGroupV2UseGlobalAlertSettingsPlanModifier) MarkdownDescription(ctx context.Context) string {
+	return m.Description(ctx)
+}
+
+func (m checkGroupV2UseGlobalAlertSettingsPlanModifier) PlanModifyBool(ctx context.Context, req planmodifier.BoolRequest, resp *planmodifier.BoolResponse) {
+	if req.Plan.Raw.IsNull() || !req.ConfigValue.IsNull() {
+		return
+	}
+
+	enabled, known, diags := checkGroupV2EnforcementEnabledInConfig(ctx, req.Config, req.Path)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	switch {
+	case !known:
+		// Whether the enforcement is enabled is known only at apply time.
+		resp.PlanValue = types.BoolUnknown()
+	case enabled:
+		planDerivedUseGlobalAlertSettings(ctx, req, resp)
+	case resp.PlanValue.IsUnknown():
+		resp.PlanValue = types.BoolNull()
+	}
+}
+
+var _ validator.Bool = checkGroupV2UseGlobalAlertSettingsValidator{}
+
+// checkGroupV2UseGlobalAlertSettingsValidator gives the warning of
+// useGlobalAlertSettingsValidator for an enabled enforcement only. A disabled
+// enforcement applies neither attribute, so there is nothing to warn about.
+type checkGroupV2UseGlobalAlertSettingsValidator struct{}
+
+func (v checkGroupV2UseGlobalAlertSettingsValidator) Description(ctx context.Context) string {
+	return useGlobalAlertSettingsValidator{}.Description(ctx)
+}
+
+func (v checkGroupV2UseGlobalAlertSettingsValidator) MarkdownDescription(ctx context.Context) string {
+	return v.Description(ctx)
+}
+
+func (v checkGroupV2UseGlobalAlertSettingsValidator) ValidateBool(ctx context.Context, req validator.BoolRequest, resp *validator.BoolResponse) {
+	enabled, known, diags := checkGroupV2EnforcementEnabledInConfig(ctx, req.Config, req.Path)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() || !known || !enabled {
+		return
+	}
+
+	useGlobalAlertSettingsValidator{}.ValidateBool(ctx, req, resp)
 }
