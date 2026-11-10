@@ -1502,7 +1502,9 @@ func TestAccCheckGroupMovedToV2(t *testing.T) {
 	)
 
 	// Resources that some configurations reference, named after the group
-	// (%[1]s).
+	// (%[1]s). Private location slugs are unique per account and limited to
+	// 30 characters, so the private location gets a short random slug
+	// (%[2]s) instead.
 	const (
 		alertChannel = `
 			resource "checkly_alert_channel" "email" {
@@ -1515,6 +1517,13 @@ func TestAccCheckGroupMovedToV2(t *testing.T) {
 			resource "checkly_snippet" "test" {
 				name   = "%[1]s-snippet"
 				script = "console.log('snippet')"
+			}
+		`
+		privateLocation = `
+			resource "checkly_private_location" "test" {
+				name      = "%[1]s"
+				slug_name = "%[2]s"
+				icon      = "bell-fill"
 			}
 		`
 	)
@@ -1825,9 +1834,52 @@ func TestAccCheckGroupMovedToV2(t *testing.T) {
 			`,
 			useGlobalAlertSettings: "true",
 		},
+		// Only private locations: enforce_locations holds them, and its
+		// locations stay null.
+		"private_locations": {
+			v1: `
+				resource "checkly_check_group" "test" {
+					name              = "%s"
+					activated         = true
+					concurrency       = 1
+					private_locations = [checkly_private_location.test.slug_name]
+				}
+			`,
+			v2: `
+				resource "checkly_check_group_v2" "test" {
+					name = "%s"
+
+					enforce_locations = {
+						enabled           = true
+						private_locations = [checkly_private_location.test.slug_name]
+					}
+
+					enforce_alert_settings = {
+						enabled                   = true
+						use_global_alert_settings = true
+					}
+
+					enforce_retry_strategy = {
+						enabled = true
+						retry_strategy = {
+							type = "NO_RETRIES"
+						}
+					}
+
+					enforce_scheduling_strategy = {
+						enabled      = true
+						run_parallel = false
+					}
+				}
+			`,
+			dependencies:           privateLocation,
+			useGlobalAlertSettings: "true",
+		},
 		// checkly_check_group_v2 takes either a snippet or a script for a
-		// phase, so a group with both keeps the configured script, and the
-		// move plans an update that clears the snippet.
+		// phase. This case pins the outcome for a group with both: the
+		// configured inline script is kept, and the move plans an update that
+		// clears the snippet. Which of the two the runner executed before the
+		// move is not established.
 		"both_scripts": {
 			v1: `
 				resource "checkly_check_group" "test" {
@@ -1882,11 +1934,13 @@ func TestAccCheckGroupMovedToV2(t *testing.T) {
 	for name, c := range cases {
 		t.Run(name, func(t *testing.T) {
 			groupName := fmt.Sprintf("tf-acc-group-move-%s-%d", name, acctest.RandInt())
+			slug := fmt.Sprintf("tf-group-move-%d", acctest.RandInt()%100000)
 			// Formatting an empty string would append an %!(EXTRA ...) error
-			// to the configuration.
+			// to the configuration. The constants use indexed verbs, so an
+			// argument that one of them leaves unused is not an error.
 			var dependencies string
 			if c.dependencies != "" {
-				dependencies = fmt.Sprintf(c.dependencies, groupName)
+				dependencies = fmt.Sprintf(c.dependencies, groupName, slug)
 			}
 
 			moveAction := plancheck.ResourceActionNoop
