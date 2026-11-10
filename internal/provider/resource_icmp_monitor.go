@@ -106,11 +106,11 @@ func (r *ICMPMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 				Description: "A description of the monitor.",
 			},
 			frequencyAttributeName: makeFrequencyAttributeSchema(FrequencyAttributeSchemaOptions{
-				Monitor:            true,
+				Subject:            subjectMonitor,
 				AllowHighFrequency: true,
 			}),
 			frequencyOffsetAttributeName: makeFrequencyOffsetAttributeSchema(FrequencyOffsetAttributeSchemaOptions{
-				Monitor: true,
+				Subject: subjectMonitor,
 			}),
 			"degraded_packet_loss_threshold": schema.Int64Attribute{
 				Optional:    true,
@@ -136,7 +136,7 @@ func (r *ICMPMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 			},
 			triggerIncidentAttributeName: makeTriggerIncidentSchema(),
 			alertSettingsAttributeName: makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{
-				Monitor: true,
+				Subject: subjectMonitor,
 			}),
 			retryStrategyAttributeName: makeRetryStrategyAttributeSchema(RetryStrategyAttributeSchemaOptions{}),
 			"request": schema.SingleNestedAttribute{
@@ -212,7 +212,7 @@ func (r *ICMPMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 				},
 			},
 			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{
-				Monitor: true,
+				Subject: subjectMonitor,
 			}),
 		}, CommonCheckAttributeSchemaOptions{Subject: subjectMonitor, RunParallel: true, Locations: true, GroupMembership: true, PrivateLocationsNote: "A private location runs ICMP monitors with agent v7.0.0 or later and the `NET_RAW` capability."}),
 	}

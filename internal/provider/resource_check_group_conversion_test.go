@@ -165,7 +165,7 @@ func TestPlanUnconfiguredAlertSettingsAsUnknown(t *testing.T) {
 	}
 
 	s := schema.Schema{Attributes: map[string]schema.Attribute{
-		alertSettingsAttributeName: makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{}),
+		alertSettingsAttributeName: makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{Subject: subjectCheck}),
 	}}
 	raw := func(t *testing.T, value types.Object) tftypes.Value {
 		t.Helper()

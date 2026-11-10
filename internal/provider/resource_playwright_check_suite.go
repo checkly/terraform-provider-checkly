@@ -192,14 +192,14 @@ func (r *PlaywrightCheckSuiteResource) Schema(ctx context.Context, req resource.
 				Description: "A description of the check.",
 			},
 			frequencyAttributeName: makeFrequencyAttributeSchema(FrequencyAttributeSchemaOptions{
-				Monitor:            false,
+				Subject:            subjectCheck,
 				AllowHighFrequency: false,
 			}),
 			triggerIncidentAttributeName:     makeTriggerIncidentSchema(),
 			checkIntentAttributeName:         makeCheckIntentSchema(),
 			aiAutoRepairEnabledAttributeName: makeAIAutoRepairEnabledSchema(),
 			alertSettingsAttributeName: makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{
-				Monitor: false,
+				Subject: subjectCheck,
 			}),
 			"runtime": schema.SingleNestedAttribute{
 				Optional:    true,
@@ -335,7 +335,7 @@ func (r *PlaywrightCheckSuiteResource) Schema(ctx context.Context, req resource.
 					},
 				},
 			},
-			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{}),
+			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{Subject: subjectCheck}),
 			environmentVariableAttributeName: makeEnvironmentVariableSchema(EnvironmentVariableAttributeSchemaOptions{
 				Description: "Insert environment variables into the execution environment.",
 			}),

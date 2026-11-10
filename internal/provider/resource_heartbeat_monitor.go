@@ -98,7 +98,7 @@ func (r *HeartbeatMonitorResource) Schema(ctx context.Context, req resource.Sche
 			},
 			triggerIncidentAttributeName: makeTriggerIncidentSchema(),
 			alertSettingsAttributeName: makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{
-				Monitor: true,
+				Subject: subjectMonitor,
 			}),
 			"heartbeat": schema.SingleNestedAttribute{
 				Required:    true,
@@ -141,7 +141,7 @@ func (r *HeartbeatMonitorResource) Schema(ctx context.Context, req resource.Sche
 				},
 			},
 			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{
-				Monitor: true,
+				Subject: subjectMonitor,
 			}),
 		}, CommonCheckAttributeSchemaOptions{Subject: subjectMonitor, NoDegradedState: true}),
 	}

@@ -183,9 +183,9 @@ func (r *CheckGroupV2Resource) Schema(ctx context.Context, req resource.SchemaRe
 						Required:    true,
 						Description: "Determines whether the enforced alert settings should be active.",
 					},
-					alertSettingsAttributeName:            makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{Group: true}),
+					alertSettingsAttributeName:            makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{Subject: subjectCheckGroup}),
 					useGlobalAlertSettingsAttributeName:   makeCheckGroupV2UseGlobalAlertSettingsAttributeSchema(),
-					alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{Group: true}),
+					alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{Subject: subjectCheckGroup}),
 				},
 			},
 			"enforce_locations": schema.SingleNestedAttribute{

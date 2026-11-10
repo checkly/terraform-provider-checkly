@@ -25,23 +25,17 @@ const defaultFrequency int64 = 10
 // FrequencyAttributeSchemaOptions customizes the frequency attribute schema
 // for a specific resource.
 type FrequencyAttributeSchemaOptions struct {
-	// Monitor adapts descriptions to talk about monitors instead of checks.
-	Monitor bool
+	// Subject names what the resource schedules: subjectCheck or
+	// subjectMonitor.
+	Subject CheckSubject
 	// AllowHighFrequency permits the value 0, which enables sub-minute
 	// scheduling controlled by the frequency_offset attribute.
 	AllowHighFrequency bool
-	// Disclaimer is prepended to the attribute description.
-	Disclaimer string
 }
 
 // makeFrequencyAttributeSchema returns the schema for the frequency
 // attribute, which defaults to defaultFrequency.
 func makeFrequencyAttributeSchema(options FrequencyAttributeSchemaOptions) schema.Int64Attribute {
-	name := "check"
-	if options.Monitor {
-		name = "monitor"
-	}
-
 	allow := allowedValues[int64]{
 		{
 			Value:       0,
@@ -101,16 +95,11 @@ func makeFrequencyAttributeSchema(options FrequencyAttributeSchemaOptions) schem
 		allow = allow[1:]
 	}
 
-	var disclaimer string
-	if options.Disclaimer != "" {
-		disclaimer = options.Disclaimer + " "
-	}
-
 	return schema.Int64Attribute{
 		Optional:    true,
 		Computed:    true,
 		Default:     int64default.StaticInt64(defaultFrequency),
-		Description: disclaimer + fmt.Sprintf("Controls how often the %s should run. Defined in minutes. %s (Default `%d`).", name, allow.String(), defaultFrequency),
+		Description: fmt.Sprintf("Controls how often the %s should run. Defined in minutes. %s (Default `%d`).", options.Subject, allow.String(), defaultFrequency),
 		Validators: []validator.Int64{
 			int64validator.OneOf(allow.Values()...),
 		},
@@ -120,8 +109,9 @@ func makeFrequencyAttributeSchema(options FrequencyAttributeSchemaOptions) schem
 // FrequencyOffsetAttributeSchemaOptions customizes the frequency_offset
 // attribute schema for a specific resource.
 type FrequencyOffsetAttributeSchemaOptions struct {
-	// Monitor adapts descriptions to talk about monitors instead of checks.
-	Monitor bool
+	// Subject names what the resource schedules: subjectCheck or
+	// subjectMonitor.
+	Subject CheckSubject
 	// Disclaimer is prepended to the attribute description.
 	Disclaimer string
 }
@@ -129,11 +119,6 @@ type FrequencyOffsetAttributeSchemaOptions struct {
 // makeFrequencyOffsetAttributeSchema returns the schema for the
 // frequency_offset attribute.
 func makeFrequencyOffsetAttributeSchema(options FrequencyOffsetAttributeSchemaOptions) schema.Int64Attribute {
-	name := "check"
-	if options.Monitor {
-		name = "monitor"
-	}
-
 	allow := allowedValues[int64]{
 		{
 			Value:       0,
@@ -160,7 +145,7 @@ func makeFrequencyOffsetAttributeSchema(options FrequencyOffsetAttributeSchemaOp
 
 	return schema.Int64Attribute{
 		Optional:    true,
-		Description: disclaimer + fmt.Sprintf("When `frequency` is `0` (high frequency), `frequency_offset` is required and it alone controls how often the %s should run. Defined in seconds. %s", name, allow.String()),
+		Description: disclaimer + fmt.Sprintf("When `frequency` is `0` (high frequency), `frequency_offset` is required and it alone controls how often the %s should run. Defined in seconds. %s", options.Subject, allow.String()),
 		Validators: []validator.Int64{
 			int64validator.OneOf(allow.Values()...),
 		},

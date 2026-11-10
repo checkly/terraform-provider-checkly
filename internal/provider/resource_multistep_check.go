@@ -87,7 +87,7 @@ func (r *MultistepCheckResource) Schema(ctx context.Context, req resource.Schema
 				Default:     stringdefault.StaticString(""),
 				Description: "A description of the check.",
 			},
-			frequencyAttributeName: makeFrequencyAttributeSchema(FrequencyAttributeSchemaOptions{}),
+			frequencyAttributeName: makeFrequencyAttributeSchema(FrequencyAttributeSchemaOptions{Subject: subjectCheck}),
 			"script": schema.StringAttribute{
 				Required:    true,
 				Description: "A valid piece of Node.js JavaScript code describing a multi-step interaction with the Playwright framework.",
@@ -99,11 +99,11 @@ func (r *MultistepCheckResource) Schema(ctx context.Context, req resource.Schema
 			triggerIncidentAttributeName:     makeTriggerIncidentSchema(),
 			checkIntentAttributeName:         makeCheckIntentSchema(),
 			aiAutoRepairEnabledAttributeName: makeAIAutoRepairEnabledSchema(),
-			alertSettingsAttributeName:       makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{}),
+			alertSettingsAttributeName:       makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{Subject: subjectCheck}),
 			retryStrategyAttributeName: makeRetryStrategyAttributeSchema(RetryStrategyAttributeSchemaOptions{
 				SupportsOnlyOnNetworkError: true,
 			}),
-			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{}),
+			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{Subject: subjectCheck}),
 			environmentVariableAttributeName: makeEnvironmentVariableSchema(EnvironmentVariableAttributeSchemaOptions{
 				Description: "Insert environment variables into the runtime environment. Use global environment variables whenever possible.",
 			}),
