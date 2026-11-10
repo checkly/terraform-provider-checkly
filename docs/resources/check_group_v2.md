@@ -300,7 +300,7 @@ resource "checkly_check_group_v2" "single-retry" {
 
 ### Optional
 
-- `activated` (Boolean) Determines whether activated checks in the group should run or not. Deactivating the group will prevent all checks in the group from running, regardless of their activated state. (Default `true`).
+- `activated` (Boolean) Determines whether the checks and monitors in the group run on their schedule. Deactivating the group stops all of them, regardless of their own `activated`. (Default `true`).
 - `api_check_defaults` (Attributes) Default settings for API checks in this group. (see [below for nested schema](#nestedatt--api_check_defaults))
 - `concurrency` (Number) Determines the number of checks to run concurrently when triggering the check group via CI/CD or the API. (Default `1`).
 - `default_runtime` (Attributes) Sets a default runtime for the group. Used as a fallback when a check belonging to the group has no runtime set. Takes precedence over the account default runtime. (see [below for nested schema](#nestedatt--default_runtime))
@@ -309,9 +309,9 @@ resource "checkly_check_group_v2" "single-retry" {
 - `enforce_retry_strategy` (Attributes) Enforces a retry strategy for the whole group. Overrides check configuration. (see [below for nested schema](#nestedatt--enforce_retry_strategy))
 - `enforce_scheduling_strategy` (Attributes) Enforces a scheduling strategy for the whole group. Overrides check configuration. (see [below for nested schema](#nestedatt--enforce_scheduling_strategy))
 - `environment_variables` (Attributes List) Insert environment variables into the runtime environment of checks in the group. Only relevant for check types that support environment variables. Use global environment variables whenever possible. At most 200 variables. (see [below for nested schema](#nestedatt--environment_variables))
-- `muted` (Boolean) Determines if any notifications will be sent out when a check in this group fails and/or recovers. Muting the group will deactivate all notifications for all checks in the group, regardless of their muted state. (Default `false`).
+- `muted` (Boolean) Determines whether notifications are sent when a check or monitor in the group fails or recovers. Muting the group mutes all of them, regardless of their own `muted`. (Default `false`).
 - `setup_script` (Attributes) A script to run in the setup phase of an API check. Runs in addition to the check's own setup script. (see [below for nested schema](#nestedatt--setup_script))
-- `tags` (Set of String) Additional tags to append to all checks in the group.
+- `tags` (Set of String) Tags for organizing and filtering checks and monitors. The checks and monitors in the group also carry these tags, for example when maintenance windows and status page automation rules select checks by tag.
 - `teardown_script` (Attributes) A script to run in the teardown phase of an API check. Runs in addition to the check's own teardown script. (see [below for nested schema](#nestedatt--teardown_script))
 
 ### Read-Only
@@ -373,8 +373,8 @@ Required:
 
 Optional:
 
-- `alert_channel_subscriptions` (Attributes Set) A set of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your group, we won't be able to alert you even if a check in the group starts failing. (see [below for nested schema](#nestedatt--enforce_alert_settings--alert_channel_subscriptions))
-- `alert_settings` (Attributes) Determines the alert escalation policy for the check. (see [below for nested schema](#nestedatt--enforce_alert_settings--alert_settings))
+- `alert_channel_subscriptions` (Attributes Set) A set of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your group, we won't be able to alert you even if a check or monitor in the group starts failing. (see [below for nested schema](#nestedatt--enforce_alert_settings--alert_channel_subscriptions))
+- `alert_settings` (Attributes) Determines the alert escalation policy for the checks and monitors in the group. (see [below for nested schema](#nestedatt--enforce_alert_settings--alert_settings))
 - `use_global_alert_settings` (Boolean) When true, the account level alert settings are used instead of the `alert_settings` of this check group. Defaults to `true` when `alert_settings` is not set, and to `false` when it is. The value is derived only while `enabled` is `true`. While the enforcement stays disabled, the stored value is kept and has no effect; disabling an enabled enforcement resets it to null.
 
 <a id="nestedatt--enforce_alert_settings--alert_channel_subscriptions"></a>
@@ -402,7 +402,7 @@ Optional:
 
 Optional:
 
-- `enabled` (Boolean) Whether parallel run failure threshold is enabled. Only applies if the check is scheduled for multiple locations in parallel. (Default `false`).
+- `enabled` (Boolean) Whether parallel run failure threshold is enabled. Only applies to the checks and monitors in the group that are scheduled for multiple locations in parallel. (Default `false`).
 - `percentage` (Number) Percentage of runs that must fail to trigger alert. Possible values are `10`, `20`, `30`, `40`, `50`, `60`, `70`, `80`, `90`, and `100`. (Default `10`).
 
 
@@ -420,7 +420,7 @@ Optional:
 
 Optional:
 
-- `failed_run_threshold` (Number) Send an alert notification after the given number of consecutive check runs have failed. Possible values are between `1` and `5`. (Default `1`).
+- `failed_run_threshold` (Number) Send an alert notification after the given number of consecutive runs of a check or monitor in the group have failed. Possible values are between `1` and `5`. (Default `1`).
 
 
 <a id="nestedatt--enforce_alert_settings--alert_settings--time_based_escalation"></a>
@@ -428,7 +428,7 @@ Optional:
 
 Optional:
 
-- `minutes_failing_threshold` (Number) Send an alert notification after the check has been failing for the given amount of time (in minutes). Possible values are `5`, `10`, `15`, and `30`. (Default `5`).
+- `minutes_failing_threshold` (Number) Send an alert notification after a check or monitor in the group has been failing for the given amount of time (in minutes). Possible values are `5`, `10`, `15`, and `30`. (Default `5`).
 
 
 

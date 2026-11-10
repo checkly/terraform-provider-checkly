@@ -166,16 +166,16 @@ moved {
 
 ### Optional
 
-- `activated` (Boolean) Determines whether the checks and monitors in the group run on their schedule. (Default `true`).
-- `alert_channel_subscriptions` (Attributes Set) A set of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your check, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedatt--alert_channel_subscriptions))
-- `alert_settings` (Attributes) Determines the alert escalation policy for the check. (see [below for nested schema](#nestedatt--alert_settings))
+- `activated` (Boolean) Determines whether the checks and monitors in the group run on their schedule. Deactivating the group stops all of them, regardless of their own `activated`. (Default `true`).
+- `alert_channel_subscriptions` (Attributes Set) A set of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your group, we won't be able to alert you even if a check or monitor in the group starts failing. (see [below for nested schema](#nestedatt--alert_channel_subscriptions))
+- `alert_settings` (Attributes) Determines the alert escalation policy for the checks and monitors in the group. (see [below for nested schema](#nestedatt--alert_settings))
 - `api_check_defaults` (Attributes) Default settings for API checks in this group. (see [below for nested schema](#nestedatt--api_check_defaults))
 - `double_check` (Boolean, Deprecated) Setting this to `true` will trigger a retry when a check fails from the failing region and another, randomly selected region before marking the check as failed. (Default `false`).
 - `environment_variables` (Attributes List) Insert environment variables into the runtime environment. Only relevant for browser checks. Use global environment variables whenever possible. At most 200 variables. (see [below for nested schema](#nestedatt--environment_variables))
 - `local_setup_script` (String) A valid piece of Node.js code to run in the setup phase of an API check in this group.
 - `local_teardown_script` (String) A valid piece of Node.js code to run in the teardown phase of an API check in this group.
 - `locations` (Set of String) The data center locations to run the checks and monitors in the group from, such as `us-east-1`.
-- `muted` (Boolean) Determines whether notifications are sent when a check or monitor in the group fails or recovers. (Default `false`).
+- `muted` (Boolean) Determines whether notifications are sent when a check or monitor in the group fails or recovers. Muting the group mutes all of them, regardless of their own `muted`. (Default `false`).
 - `private_locations` (Set of String) The slugs of the private locations to run the checks and monitors in the group from.
 - `retry_strategy` (Attributes) A strategy for retrying failed check/monitor runs. (see [below for nested schema](#nestedatt--retry_strategy))
 - `run_parallel` (Boolean) Determines whether the checks and monitors in the group run in all their locations in parallel instead of round-robin. (Default `false`).
@@ -214,7 +214,7 @@ Optional:
 
 Optional:
 
-- `enabled` (Boolean) Whether parallel run failure threshold is enabled. Only applies if the check is scheduled for multiple locations in parallel. (Default `false`).
+- `enabled` (Boolean) Whether parallel run failure threshold is enabled. Only applies to the checks and monitors in the group that are scheduled for multiple locations in parallel. (Default `false`).
 - `percentage` (Number) Percentage of runs that must fail to trigger alert. Possible values are `10`, `20`, `30`, `40`, `50`, `60`, `70`, `80`, `90`, and `100`. (Default `10`).
 
 
@@ -232,7 +232,7 @@ Optional:
 
 Optional:
 
-- `failed_run_threshold` (Number) Send an alert notification after the given number of consecutive check runs have failed. Possible values are between `1` and `5`. (Default `1`).
+- `failed_run_threshold` (Number) Send an alert notification after the given number of consecutive runs of a check or monitor in the group have failed. Possible values are between `1` and `5`. (Default `1`).
 
 
 <a id="nestedatt--alert_settings--time_based_escalation"></a>
@@ -240,7 +240,7 @@ Optional:
 
 Optional:
 
-- `minutes_failing_threshold` (Number) Send an alert notification after the check has been failing for the given amount of time (in minutes). Possible values are `5`, `10`, `15`, and `30`. (Default `5`).
+- `minutes_failing_threshold` (Number) Send an alert notification after a check or monitor in the group has been failing for the given amount of time (in minutes). Possible values are `5`, `10`, `15`, and `30`. (Default `5`).
 
 
 

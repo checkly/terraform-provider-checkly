@@ -32,7 +32,7 @@ resource "checkly_heartbeat_monitor" "example-heartbeat-monitor" {
 ### Required
 
 - `heartbeat` (Attributes) The heartbeat schedule and grace period. (see [below for nested schema](#nestedatt--heartbeat))
-- `name` (String) The name of the check.
+- `name` (String) The name of the monitor.
 
 ### Optional
 

@@ -132,7 +132,7 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 				Optional:    true,
 				Computed:    true,
 				Default:     int64default.StaticInt64(10000),
-				Description: "The response time in milliseconds starting from which a monitor should be considered degraded. Possible values are between 0 and 30000. (Default `10000`).",
+				Description: "The response time in milliseconds where the monitor should be considered degraded. Possible values are between `0` and `30000`. (Default `10000`).",
 				Validators: []validator.Int64{
 					int64validator.Between(0, 30000),
 				},
@@ -141,7 +141,7 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 				Optional:    true,
 				Computed:    true,
 				Default:     int64default.StaticInt64(20000),
-				Description: "The response time in milliseconds starting from which a monitor should be considered failing. Possible values are between 0 and 30000. (Default `20000`).",
+				Description: "The response time in milliseconds where the monitor should be considered failing. Possible values are between `0` and `30000`. (Default `20000`).",
 				Validators: []validator.Int64{
 					int64validator.Between(0, 30000),
 				},

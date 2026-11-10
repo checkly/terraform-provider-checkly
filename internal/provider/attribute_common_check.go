@@ -123,7 +123,8 @@ func describe(sentences ...string) string {
 func activatedAttributeSchema(o CommonCheckAttributeSchemaOptions) schema.BoolAttribute {
 	description := fmt.Sprintf("Determines whether the %s runs on its schedule.", o.Subject)
 	if o.Subject == subjectCheckGroup {
-		description = "Determines whether the checks and monitors in the group run on their schedule."
+		description = "Determines whether the checks and monitors in the group run on their schedule. Deactivating " +
+			"the group stops all of them, regardless of their own `activated`."
 	}
 
 	return schema.BoolAttribute{
@@ -140,7 +141,8 @@ func mutedAttributeSchema(o CommonCheckAttributeSchemaOptions) schema.BoolAttrib
 		description = fmt.Sprintf("Determines whether notifications are sent when the %s fails or recovers.", o.Subject)
 	}
 	if o.Subject == subjectCheckGroup {
-		description = "Determines whether notifications are sent when a check or monitor in the group fails or recovers."
+		description = "Determines whether notifications are sent when a check or monitor in the group fails or " +
+			"recovers. Muting the group mutes all of them, regardless of their own `muted`."
 	}
 
 	return schema.BoolAttribute{

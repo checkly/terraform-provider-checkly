@@ -181,7 +181,8 @@ func TestCommonCheckMutedWording(t *testing.T) {
 		},
 		"check group": {
 			CommonCheckAttributeSchemaOptions{Subject: subjectCheckGroup},
-			"Determines whether notifications are sent when a check or monitor in the group fails or recovers. (Default `false`).",
+			"Determines whether notifications are sent when a check or monitor in the group fails or recovers. " +
+				"Muting the group mutes all of them, regardless of their own `muted`. (Default `false`).",
 		},
 	}
 

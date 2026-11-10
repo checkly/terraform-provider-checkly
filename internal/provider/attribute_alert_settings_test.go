@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/checkly/checkly-go-sdk/v2"
@@ -9,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -130,5 +132,55 @@ func TestAlertSettingsFromAPI(t *testing.T) {
 				t.Errorf("got %v, want %v", got, c.want)
 			}
 		})
+	}
+}
+
+// TestAlertSettingsGroupWording checks that the alert settings and alert
+// channel subscriptions of both check group resources describe the checks and
+// monitors in the group, at every level, instead of a single check.
+func TestAlertSettingsGroupWording(t *testing.T) {
+	ctx := context.Background()
+	groupSchema := func(r resource.Resource) map[string]schema.Attribute {
+		var resp resource.SchemaResponse
+		r.Schema(ctx, resource.SchemaRequest{}, &resp)
+		return resp.Schema.Attributes
+	}
+	v1 := groupSchema(NewCheckGroupResource())
+	v2 := groupSchema(NewCheckGroupV2Resource())
+
+	attributes := map[string]schema.Attribute{
+		"checkly_check_group.alert_settings":              v1[alertSettingsAttributeName],
+		"checkly_check_group.alert_channel_subscriptions": v1[alertChannelSubscriptionAttributeName],
+		"checkly_check_group_v2.enforce_alert_settings":   v2["enforce_alert_settings"],
+	}
+
+	var check func(name string, a schema.Attribute)
+	check = func(name string, a schema.Attribute) {
+		d := a.GetDescription()
+		if strings.Contains(d, "the check ") || strings.Contains(d, "the check.") ||
+			strings.Contains(d, "check runs") || strings.Contains(d, "your check") {
+			t.Errorf("%s: description talks about a single check: %q", name, d)
+		}
+		var nested map[string]schema.Attribute
+		switch a := a.(type) {
+		case schema.SingleNestedAttribute:
+			nested = a.Attributes
+		case schema.SetNestedAttribute:
+			nested = a.NestedObject.Attributes
+		}
+		for n, child := range nested {
+			check(name+"."+n, child)
+		}
+	}
+	for name, a := range attributes {
+		if a == nil {
+			t.Fatalf("%s: attribute not found", name)
+		}
+		check(name, a)
+	}
+
+	want := "Determines the alert escalation policy for the checks and monitors in the group."
+	if got := v1[alertSettingsAttributeName].GetDescription(); got != want {
+		t.Errorf("checkly_check_group.alert_settings description = %q, want %q", got, want)
 	}
 }

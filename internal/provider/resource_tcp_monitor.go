@@ -102,7 +102,7 @@ func (r *TCPMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
-				Description: "The name of the check.",
+				Description: "The name of the monitor.",
 			},
 			"description": schema.StringAttribute{
 				Optional:    true,
@@ -121,7 +121,7 @@ func (r *TCPMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 				Optional:    true,
 				Computed:    true,
 				Default:     int64default.StaticInt64(4000),
-				Description: "The response time in milliseconds starting from which a check should be considered degraded. Possible values are between 0 and 5000. (Default `4000`).",
+				Description: "The response time in milliseconds where the monitor should be considered degraded. Possible values are between `0` and `5000`. (Default `4000`).",
 				Validators: []validator.Int64{
 					int64validator.Between(0, 5000),
 				},
@@ -130,7 +130,7 @@ func (r *TCPMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 				Optional:    true,
 				Computed:    true,
 				Default:     int64default.StaticInt64(5000),
-				Description: "The response time in milliseconds starting from which a check should be considered failing. Possible values are between 0 and 5000. (Default `5000`).",
+				Description: "The response time in milliseconds where the monitor should be considered failing. Possible values are between `0` and `5000`. (Default `5000`).",
 				Validators: []validator.Int64{
 					int64validator.Between(0, 5000),
 				},

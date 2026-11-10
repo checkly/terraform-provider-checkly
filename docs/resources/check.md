@@ -242,7 +242,7 @@ moved {
 - `ai_auto_repair_enabled` (Boolean) Overrides the account's automatic repair setting for this check. Leave it out to inherit the account setting. Automatic repair supports browser and multi-step checks only, so this setting has no effect on other check types today, and it needs an `intent` with at least one statement. A repair is saved to the check, so it shows as a change to `script`, and the next apply restores the configured script unless you copy the repaired script into the configuration or add `script` to `ignore_changes`. An override edited in the web app and absent from the configuration is removed by the next apply, every time. To leave it to the web app, add `ai_auto_repair_enabled` to `ignore_changes`.
 - `alert_channel_subscriptions` (Attributes Set) A set of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your check, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedatt--alert_channel_subscriptions))
 - `alert_settings` (Attributes) Determines the alert escalation policy for the check. (see [below for nested schema](#nestedatt--alert_settings))
-- `degraded_response_time` (Number) The response time in milliseconds starting from which a check should be considered degraded. Possible values are between 0 and 30000. Only relevant when `type` is `API`. (Default `15000`).
+- `degraded_response_time` (Number) The response time in milliseconds where the check should be considered degraded. Possible values are between `0` and `30000`. Only relevant when `type` is `API`. (Default `15000`).
 - `description` (String) A description of the check.
 - `double_check` (Boolean, Deprecated) Setting this to `true` will trigger a retry when a check fails from the failing region and another, randomly selected region before marking the check as failed. (Default `false`).
 - `environment_variables` (Attributes List) Insert environment variables into the runtime environment. Only relevant for browser checks. Use global environment variables whenever possible. At most 200 variables. (see [below for nested schema](#nestedatt--environment_variables))
@@ -254,7 +254,7 @@ moved {
 - `local_setup_script` (String) A valid piece of Node.js code to run in the setup phase of an API check.
 - `local_teardown_script` (String) A valid piece of Node.js code to run in the teardown phase of an API check.
 - `locations` (Set of String) The data center locations to run the check from, such as `us-east-1`. The check needs at least one location in `locations` or `private_locations`, unless it is part of a check group.
-- `max_response_time` (Number) The response time in milliseconds starting from which a check should be considered failing. Possible values are between 0 and 30000. Only relevant when `type` is `API`. (Default `30000`).
+- `max_response_time` (Number) The response time in milliseconds where the check should be considered failing. Possible values are between `0` and `30000`. Only relevant when `type` is `API`. (Default `30000`).
 - `muted` (Boolean) Determines whether notifications are sent when the check fails, degrades or recovers. (Default `false`).
 - `private_locations` (Set of String) The slugs of the private locations to run the check from.
 - `request` (Attributes) An API check might have one request config. Only relevant when `type` is `API`. (see [below for nested schema](#nestedatt--request))

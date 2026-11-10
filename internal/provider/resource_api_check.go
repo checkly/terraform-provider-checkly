@@ -106,7 +106,7 @@ func (r *APICheckResource) Schema(ctx context.Context, req resource.SchemaReques
 				Validators: []validator.Int64{
 					int64validator.Between(0, 30000),
 				},
-				Description: "The response time in milliseconds starting from which a check should be considered degraded. Possible values are between 0 and 30000. (Default `5000`).",
+				Description: "The response time in milliseconds where the check should be considered degraded. Possible values are between `0` and `30000`. (Default `5000`).",
 			},
 			"max_response_time": schema.Int64Attribute{
 				Optional: true,
@@ -116,7 +116,7 @@ func (r *APICheckResource) Schema(ctx context.Context, req resource.SchemaReques
 				Validators: []validator.Int64{
 					int64validator.Between(0, 30000),
 				},
-				Description: "The response time in milliseconds starting from which a check should be considered failing. Possible values are between 0 and 30000. (Default `20000`).",
+				Description: "The response time in milliseconds where the check should be considered failing. Possible values are between `0` and `30000`. (Default `20000`).",
 			},
 			"setup_snippet_id": schema.Int64Attribute{
 				Optional:    true,

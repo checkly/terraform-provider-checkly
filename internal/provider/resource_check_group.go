@@ -117,14 +117,14 @@ func (r *CheckGroupResource) Schema(ctx context.Context, req resource.SchemaRequ
 				Default:     stringdefault.StaticString(""),
 				Description: "A valid piece of Node.js code to run in the teardown phase of an API check in this group.",
 			},
-			alertSettingsAttributeName:    makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{}),
+			alertSettingsAttributeName:    makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{Group: true}),
 			apiCheckDefaultsAttributeName: makeAPICheckDefaultsAttributeSchema(),
 			retryStrategyAttributeName: makeRetryStrategyAttributeSchema(RetryStrategyAttributeSchemaOptions{
 				SupportsOnlyOnNetworkError: true,
 				DoubleCheck:                true,
 			}),
 			doubleCheckAttributeName:              doubleCheckAttributeSchema(),
-			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{}),
+			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{Group: true}),
 			environmentVariableAttributeName: makeEnvironmentVariableSchema(EnvironmentVariableAttributeSchemaOptions{
 				Description: "Insert environment variables into the runtime environment. Only relevant for browser checks. Use global environment variables whenever possible.",
 			}),
