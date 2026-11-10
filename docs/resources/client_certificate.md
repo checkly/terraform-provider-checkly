@@ -5,7 +5,7 @@ subcategory: ""
 description: |-
   Use client certificates to authenticate your API checks to APIs that require mutual TLS (mTLS) authentication, or any other authentication scheme where the requester needs to provide a certificate.
   Each client certificate is specific to a host name, e.g. acme.com or a wildcard such as *.acme.com, and will be used automatically by any API checks targeting that host. Set path to limit the certificate to requests under a URL path prefix.
-  Changing the value of any attribute forces a new resource to be created, except for adding or removing a trailing / of path, which the API ignores.
+  Changing the value of any attribute forces a new resource to be created, except for adding or removing a trailing / of path, which the API ignores, and for the first apply after an import. The API never returns private_key or passphrase, so the provider cannot check an imported certificate's key against the configured one: that apply records the configured values in Terraform state only and sends nothing to Checkly. To upload a different key, replace the resource, for example with terraform apply -replace.
 ---
 
 # checkly_client_certificate (Resource)
@@ -14,7 +14,7 @@ Use client certificates to authenticate your API checks to APIs that require mut
 
 Each client certificate is specific to a host name, e.g. `acme.com` or a wildcard such as `*.acme.com`, and will be used automatically by any API checks targeting that host. Set `path` to limit the certificate to requests under a URL path prefix.
 
-Changing the value of any attribute forces a new resource to be created, except for adding or removing a trailing `/` of `path`, which the API ignores.
+Changing the value of any attribute forces a new resource to be created, except for adding or removing a trailing `/` of `path`, which the API ignores, and for the first apply after an import. The API never returns `private_key` or `passphrase`, so the provider cannot check an imported certificate's key against the configured one: that apply records the configured values in Terraform state only and sends nothing to Checkly. To upload a different key, replace the resource, for example with `terraform apply -replace`.
 
 ## Example Usage
 
@@ -41,7 +41,7 @@ resource "checkly_client_certificate" "test" {
 
 - `certificate` (String) The client certificate in PEM format.
 - `host` (String) The host domain that the certificate should be used for (at most 255 characters). Wildcards are supported, e.g. `*.acme.com`.
-- `private_key` (String, Sensitive) The private key for the certificate in PEM format.
+- `private_key` (String, Sensitive) The private key for the certificate in PEM format. The API never returns it, so the provider cannot check an imported certificate's key against the configured one: the first apply after an import records the configured key and passphrase in Terraform state only and sends nothing to Checkly. To upload a different key, replace the resource, for example with `terraform apply -replace`.
 
 ### Optional
 

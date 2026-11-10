@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"strings"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	fwresource "github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -13,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
@@ -86,6 +89,12 @@ resource "checkly_client_certificate" "test" {
 			-----END CERTIFICATE-----
 		EOT
 }`
+	// A second resource for the same certificate, which the steps below
+	// import. Destroying both is fine: deleting a certificate that is
+	// already gone succeeds.
+	importedConfig := config + strings.Replace(config,
+		`resource "checkly_client_certificate" "test"`,
+		`resource "checkly_client_certificate" "imported"`, 1)
 	accTestCase(t, []resource.TestStep{
 		{
 			Config: config,
@@ -175,6 +184,48 @@ resource "checkly_client_certificate" "test" {
 				return nil
 			},
 		},
+		{
+			// The API never returns the private key or its passphrase, so the
+			// first plan after an import stores the configured ones in place
+			// instead of replacing the certificate.
+			ResourceName:       "checkly_client_certificate.test",
+			ImportState:        true,
+			ImportStateKind:    resource.ImportBlockWithID,
+			ExpectNonEmptyPlan: true,
+			ImportPlanChecks: resource.ImportPlanChecks{
+				PreApply: []plancheck.PlanCheck{
+					plancheck.ExpectResourceAction("checkly_client_certificate.test", plancheck.ResourceActionUpdate),
+				},
+			},
+		},
+		{
+			// Import the same certificate at a second address and keep it in
+			// state, so the next step can apply the configuration to it.
+			Config:             importedConfig,
+			ResourceName:       "checkly_client_certificate.imported",
+			ImportState:        true,
+			ImportStatePersist: true,
+			ImportStateIdFunc: func(s *terraform.State) (string, error) {
+				r, ok := s.RootModule().Resources["checkly_client_certificate.test"]
+				if !ok {
+					return "", fmt.Errorf("checkly_client_certificate.test not found in state")
+				}
+				return r.Primary.ID, nil
+			},
+		},
+		{
+			// The first apply after the import records the configured key and
+			// passphrase in state, after which the plan is empty.
+			Config: importedConfig,
+			ConfigPlanChecks: resource.ConfigPlanChecks{
+				PreApply: []plancheck.PlanCheck{
+					plancheck.ExpectResourceAction("checkly_client_certificate.imported", plancheck.ResourceActionUpdate),
+				},
+				PostApplyPostRefresh: []plancheck.PlanCheck{
+					plancheck.ExpectEmptyPlan(),
+				},
+			},
+		},
 	})
 }
 
@@ -212,5 +263,75 @@ func TestClientCertificatePathRequiresReplace(t *testing.T) {
 		if resp.RequiresReplace != c.want {
 			t.Errorf("path %s -> %s: RequiresReplace = %t, want %t", c.state, c.plan, resp.RequiresReplace, c.want)
 		}
+	}
+}
+
+func TestClientCertificateKeyRequiresReplace(t *testing.T) {
+	ctx := context.Background()
+
+	var schemaResp fwresource.SchemaResponse
+	NewClientCertificateResource().Schema(ctx, fwresource.SchemaRequest{}, &schemaResp)
+
+	// statePrivateKey is the private key in prior state for passphrase rows;
+	// private_key rows use their own state value.
+	cases := []struct {
+		name                string
+		attribute           string
+		state, plan         types.String
+		statePrivateKey     types.String
+		wantRequiresReplace bool
+	}{
+		{"changed private key", "private_key", types.StringValue("old key"), types.StringValue("new key"), types.String{}, true},
+		{"unknown private key", "private_key", types.StringValue("old key"), types.StringUnknown(), types.String{}, true},
+		{"private key after import", "private_key", types.StringNull(), types.StringValue("key"), types.String{}, false},
+		{"unknown private key after import", "private_key", types.StringNull(), types.StringUnknown(), types.String{}, false},
+		{"private key after a v1.x import", "private_key", types.StringValue(""), types.StringValue("key"), types.String{}, false},
+		{"added passphrase", "passphrase", types.StringNull(), types.StringValue("x"), types.StringValue("key"), true},
+		{"changed passphrase", "passphrase", types.StringValue("x"), types.StringValue("y"), types.StringValue("key"), true},
+		{"emptied passphrase", "passphrase", types.StringNull(), types.StringValue(""), types.StringValue("key"), false},
+		{"passphrase after import", "passphrase", types.StringNull(), types.StringValue("x"), types.StringNull(), false},
+		{"passphrase after a v1.x import", "passphrase", types.StringNull(), types.StringValue("x"), types.StringValue(""), false},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			model := ClientCertificateResourceModel{
+				ID:          types.StringValue("1"),
+				Host:        types.StringValue("acme.com"),
+				Path:        types.StringNull(),
+				Certificate: types.StringValue("certificate"),
+				PrivateKey:  c.state,
+				Passphrase:  types.StringNull(),
+				TrustedCA:   types.StringNull(),
+			}
+			if c.attribute == "passphrase" {
+				model.PrivateKey = c.statePrivateKey
+				model.Passphrase = c.state
+			}
+			state := tfsdk.State{Schema: schemaResp.Schema}
+			if diags := state.Set(ctx, &model); diags.HasError() {
+				t.Fatalf("setting state: %v", diags)
+			}
+			plan := tfsdk.Plan{Schema: schemaResp.Schema, Raw: state.Raw}
+
+			req := planmodifier.StringRequest{
+				Path:        path.Root(c.attribute),
+				StateValue:  c.state,
+				PlanValue:   c.plan,
+				ConfigValue: c.plan,
+				State:       state,
+				Plan:        plan,
+			}
+			resp := planmodifier.StringResponse{PlanValue: c.plan}
+			for _, m := range schemaResp.Schema.Attributes[c.attribute].(schema.StringAttribute).PlanModifiers {
+				m.PlanModifyString(ctx, req, &resp)
+			}
+			if resp.Diagnostics.HasError() {
+				t.Fatalf("plan modifiers: %v", resp.Diagnostics)
+			}
+			if resp.RequiresReplace != c.wantRequiresReplace {
+				t.Errorf("RequiresReplace = %t, want %t", resp.RequiresReplace, c.wantRequiresReplace)
+			}
+		})
 	}
 }

@@ -67,7 +67,13 @@ func (r *ClientCertificateResource) Schema(ctx context.Context, req resource.Sch
 			"\n\n" +
 			"Changing the value of any attribute forces a new resource to " +
 			"be created, except for adding or removing a trailing `/` of " +
-			"`path`, which the API ignores.",
+			"`path`, which the API ignores, and for the first apply after " +
+			"an import. The API never returns `private_key` or " +
+			"`passphrase`, so the provider cannot check an imported " +
+			"certificate's key against the configured one: that apply " +
+			"records the configured values in Terraform state only and " +
+			"sends nothing to Checkly. To upload a different key, replace " +
+			"the resource, for example with `terraform apply -replace`.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -124,11 +130,21 @@ func (r *ClientCertificateResource) Schema(ctx context.Context, req resource.Sch
 				},
 			},
 			"private_key": schema.StringAttribute{
-				Required:    true,
-				Sensitive:   true,
-				Description: "The private key for the certificate in PEM format.",
+				Required:  true,
+				Sensitive: true,
+				Description: "The private key for the certificate in PEM format. The API never returns it, so " +
+					"the provider cannot check an imported certificate's key against the configured one: the " +
+					"first apply after an import records the configured key and passphrase in Terraform state " +
+					"only and sends nothing to Checkly. To upload a different key, replace the resource, for " +
+					"example with `terraform apply -replace`.",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.RequiresReplaceIf(
+						func(ctx context.Context, req planmodifier.StringRequest, resp *stringplanmodifier.RequiresReplaceIfFuncResponse) {
+							resp.RequiresReplace = !isImportedPrivateKey(req.StateValue)
+						},
+						"Changing the private key forces a new resource to be created, except on the first apply after an import.",
+						"Changing the private key forces a new resource to be created, except on the first apply after an import.",
+					),
 				},
 			},
 			"passphrase": schema.StringAttribute{
@@ -140,9 +156,16 @@ func (r *ClientCertificateResource) Schema(ctx context.Context, req resource.Sch
 				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplaceIf(
-						requiresReplaceUnlessOnlyEmptiness,
-						"Changing the passphrase forces a new resource to be created.",
-						"Changing the passphrase forces a new resource to be created.",
+						func(ctx context.Context, req planmodifier.StringRequest, resp *stringplanmodifier.RequiresReplaceIfFuncResponse) {
+							var privateKey types.String
+							resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("private_key"), &privateKey)...)
+							if resp.Diagnostics.HasError() || isImportedPrivateKey(privateKey) {
+								return
+							}
+							requiresReplaceUnlessOnlyEmptiness(ctx, req, resp)
+						},
+						"Changing the passphrase forces a new resource to be created, except on the first apply after an import.",
+						"Changing the passphrase forces a new resource to be created, except on the first apply after an import.",
 					),
 				},
 			},
@@ -167,6 +190,17 @@ func (r *ClientCertificateResource) Schema(ctx context.Context, req resource.Sch
 func requiresReplaceUnlessOnlyEmptiness(ctx context.Context, req planmodifier.StringRequest, resp *stringplanmodifier.RequiresReplaceIfFuncResponse) {
 	resp.RequiresReplace = req.PlanValue.IsUnknown() ||
 		req.StateValue.ValueString() != req.PlanValue.ValueString()
+}
+
+// isImportedPrivateKey reports whether privateKey, read from prior state,
+// holds no key. The attribute is required, so that happens only after an
+// import, as the API never returns the key: null after a v2 import, "" after
+// a v1.x import that was never applied; ValueString returns "" for both. The
+// key and passphrase in the configuration then cannot be compared with the
+// certificate's, so the first apply records them in state instead of
+// replacing the certificate.
+func isImportedPrivateKey(privateKey types.String) bool {
+	return privateKey.ValueString() == ""
 }
 
 // UpgradeState upgrades state written by the provider's SDK v2
@@ -242,8 +276,10 @@ func (r *ClientCertificateResource) Read(ctx context.Context, req resource.ReadR
 }
 
 // Update only stores changes the API ignores: a path that changed by a
-// trailing slash, or a passphrase or trusted CA bundle switched between ""
-// and unset. Every other change requires replacement.
+// trailing slash, a passphrase or trusted CA bundle switched between "" and
+// unset, or the private key and passphrase configured for an imported
+// certificate, which the API cannot compare with the stored ones. Every other
+// change requires replacement.
 func (r *ClientCertificateResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var plan ClientCertificateResourceModel
 
