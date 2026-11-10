@@ -2,14 +2,11 @@ package provider
 
 import (
 	"context"
-	"sort"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectdefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/checkly/checkly-go-sdk/v2"
@@ -43,9 +40,9 @@ var apiCheckDefaultsAttrTypes = map[string]attr.Type{
 func apiCheckDefaultsDefaultObject() types.Object {
 	return types.ObjectValueMust(apiCheckDefaultsAttrTypes, map[string]attr.Value{
 		"url":              types.StringValue(""),
-		"headers":          types.MapValueMust(types.StringType, map[string]attr.Value{}),
-		"query_parameters": types.MapValueMust(types.StringType, map[string]attr.Value{}),
-		"assertions":       types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{}),
+		"headers":          types.MapNull(types.StringType),
+		"query_parameters": types.MapNull(types.StringType),
+		"assertions":       types.SetNull(types.ObjectType{AttrTypes: assertionAttrTypes}),
 		"basic_auth":       types.ObjectNull(apiCheckBasicAuthAttrTypes),
 	})
 }
@@ -67,21 +64,15 @@ func makeAPICheckDefaultsAttributeSchema() schema.SingleNestedAttribute {
 			"headers": schema.MapAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
-				Computed:    true,
-				Default:     mapdefault.StaticValue(types.MapValueMust(types.StringType, map[string]attr.Value{})),
 				Description: "Default headers for API checks in this group.",
 			},
 			"query_parameters": schema.MapAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
-				Computed:    true,
-				Default:     mapdefault.StaticValue(types.MapValueMust(types.StringType, map[string]attr.Value{})),
 				Description: "Default query parameters for API checks in this group.",
 			},
 			"assertions": schema.SetNestedAttribute{
 				Optional:    true,
-				Computed:    true,
-				Default:     setdefault.StaticValue(types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{})),
 				Description: "Default assertions for API checks in this group.",
 				NestedObject: schema.NestedAttributeObject{
 					// Attributes nested in this set attribute must not use
@@ -133,46 +124,6 @@ func makeAPICheckDefaultsAttributeSchema() schema.SingleNestedAttribute {
 	}
 }
 
-// apiCheckDefaultsKeyValuesFromMap converts a map of strings to its API
-// representation. Null and unknown maps convert to nil. The result is sorted
-// by key for determinism.
-func apiCheckDefaultsKeyValuesFromMap(ctx context.Context, m types.Map, diags *diag.Diagnostics) []checkly.KeyValue {
-	if m.IsNull() || m.IsUnknown() {
-		return nil
-	}
-
-	var values map[string]string
-	diags.Append(m.ElementsAs(ctx, &values, false)...)
-	if diags.HasError() {
-		return nil
-	}
-
-	keyValues := make([]checkly.KeyValue, 0, len(values))
-	for key, value := range values {
-		keyValues = append(keyValues, checkly.KeyValue{
-			Key:   key,
-			Value: value,
-		})
-	}
-
-	sort.Slice(keyValues, func(i, j int) bool {
-		return keyValues[i].Key < keyValues[j].Key
-	})
-
-	return keyValues
-}
-
-// apiCheckDefaultsMapFromKeyValues converts the API representation of
-// key-value pairs to a map of strings.
-func apiCheckDefaultsMapFromKeyValues(keyValues []checkly.KeyValue) types.Map {
-	elements := make(map[string]attr.Value, len(keyValues))
-	for _, keyValue := range keyValues {
-		elements[keyValue.Key] = types.StringValue(keyValue.Value)
-	}
-
-	return types.MapValueMust(types.StringType, elements)
-}
-
 // apiCheckDefaultsFromObject converts the api_check_defaults attribute value
 // to its API representation. Null and unknown values convert to empty API
 // check defaults.
@@ -184,8 +135,8 @@ func apiCheckDefaultsFromObject(ctx context.Context, obj types.Object, diags *di
 
 	defaults := checkly.APICheckDefaults{
 		BaseURL:         model.URL.ValueString(),
-		Headers:         apiCheckDefaultsKeyValuesFromMap(ctx, model.Headers, diags),
-		QueryParameters: apiCheckDefaultsKeyValuesFromMap(ctx, model.QueryParameters, diags),
+		Headers:         keyValuesFromStringMap(ctx, model.Headers, diags),
+		QueryParameters: keyValuesFromStringMap(ctx, model.QueryParameters, diags),
 		Assertions:      assertionsFromSet(ctx, model.Assertions, diags),
 	}
 
@@ -212,21 +163,18 @@ func apiCheckDefaultsToObject(ctx context.Context, defaults checkly.APICheckDefa
 			"username": types.StringValue(defaults.BasicAuth.Username),
 			"password": types.StringValue(defaults.BasicAuth.Password),
 		})
-	} else if !prior.IsNull() && !prior.IsUnknown() {
-		if priorBasicAuth, ok := prior.Attributes()["basic_auth"].(types.Object); ok &&
-			!priorBasicAuth.IsNull() && !priorBasicAuth.IsUnknown() {
-			priorAttrs := priorBasicAuth.Attributes()
-			if stringAttrValue(priorAttrs["username"]) == "" && stringAttrValue(priorAttrs["password"]) == "" {
-				basicAuth = priorBasicAuth
-			}
+	} else if priorBasicAuth := priorAttribute(prior, "basic_auth", types.ObjectNull(apiCheckBasicAuthAttrTypes)); !priorBasicAuth.IsNull() && !priorBasicAuth.IsUnknown() {
+		priorAttrs := priorBasicAuth.Attributes()
+		if stringAttrValue(priorAttrs["username"]) == "" && stringAttrValue(priorAttrs["password"]) == "" {
+			basicAuth = priorBasicAuth
 		}
 	}
 
 	obj, d := types.ObjectValue(apiCheckDefaultsAttrTypes, map[string]attr.Value{
 		"url":              types.StringValue(defaults.BaseURL),
-		"headers":          apiCheckDefaultsMapFromKeyValues(defaults.Headers),
-		"query_parameters": apiCheckDefaultsMapFromKeyValues(defaults.QueryParameters),
-		"assertions":       assertionsToSet(ctx, defaults.Assertions, diags),
+		"headers":          stringMapFromAPINullIfUnset(ctx, defaults.Headers, priorAttribute(prior, "headers", types.MapNull(types.StringType)), diags),
+		"query_parameters": stringMapFromAPINullIfUnset(ctx, defaults.QueryParameters, priorAttribute(prior, "query_parameters", types.MapNull(types.StringType)), diags),
+		"assertions":       assertionsToSet(ctx, defaults.Assertions, priorAssertions(prior), diags),
 		"basic_auth":       basicAuth,
 	})
 	diags.Append(d...)

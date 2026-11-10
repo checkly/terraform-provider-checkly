@@ -8,8 +8,11 @@ import (
 
 	"github.com/checkly/checkly-go-sdk/v2"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 )
 
 func TestAccCheckRequiredFields(t *testing.T) {
@@ -2482,6 +2485,45 @@ func TestAccCheckUpdateClearsRemovedValues(t *testing.T) {
 // TestAccCheckUpdateClearsScriptPath sets the script path and dependencies of
 // a browser check outside Terraform. checkly_check has no attributes for them,
 // so an update clears them.
+// TestAccCheckEmptyPrivateLocations verifies that an explicitly empty
+// private_locations is stored as an empty set and that leaving it out stores
+// null, without drift in either case.
+func TestAccCheckEmptyPrivateLocations(t *testing.T) {
+	config := func(privateLocations string) string {
+		return fmt.Sprintf(`
+			resource "checkly_check" "test" {
+				name                      = "tf-acc-check-empty-private-locations"
+				type                      = "API"
+				activated                 = false
+				frequency                 = 60
+				locations                 = ["eu-central-1"]
+				use_global_alert_settings = true
+				%s
+
+				request = {
+					url = "https://api.checklyhq.com/public-stats"
+				}
+			}
+		`, privateLocations)
+	}
+	const r = "checkly_check.test"
+
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: config(`private_locations = []`),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue(r, tfjsonpath.New("private_locations"), knownvalue.SetExact([]knownvalue.Check{})),
+			},
+		},
+		{
+			Config: config(""),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue(r, tfjsonpath.New("private_locations"), knownvalue.Null()),
+			},
+		},
+	})
+}
+
 func TestAccCheckUpdateClearsScriptPath(t *testing.T) {
 	config := func(name string) string {
 		return fmt.Sprintf(`

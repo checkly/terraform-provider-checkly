@@ -192,7 +192,7 @@ moved {
 
 ### Optional
 
-- `activated` (Boolean) Determines if the check is running or not. Possible values `true`, and `false`. (Default `true`).
+- `activated` (Boolean) Determines whether the check runs on its schedule. (Default `true`).
 - `ai_auto_repair_enabled` (Boolean) Overrides the account's automatic repair setting for this check. Leave it out to inherit the account setting. Automatic repair supports browser and multi-step checks only, so this setting has no effect on other check types today, and it needs an `intent` with at least one statement. A repair is saved to the check, so it shows as a change to `script`, and the next apply restores the configured script unless you copy the repaired script into the configuration or add `script` to `ignore_changes`. An override edited in the web app and absent from the configuration is removed by the next apply, every time. To leave it to the web app, add `ai_auto_repair_enabled` to `ignore_changes`.
 - `alert_channel_subscriptions` (Attributes Set) A set of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your check, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedatt--alert_channel_subscriptions))
 - `alert_settings` (Attributes) Determines the alert escalation policy for the check. (see [below for nested schema](#nestedatt--alert_settings))
@@ -200,21 +200,21 @@ moved {
 - `description` (String) A description of the check.
 - `frequency` (Number) Controls how often the check should run. Defined in minutes. The allowed values are `0` (high frequency - use `frequency_offset` to define the actual frequency), `1` (1 minute), `2` (2 minutes), `5` (5 minutes), `10` (10 minutes), `15` (15 minutes), `30` (30 minutes), `60` (1 hour), `120` (2 hours), `180` (3 hours), `360` (6 hours), `720` (12 hours) and `1440` (24 hours). (Default `10`).
 - `frequency_offset` (Number) Spreads the scheduling of the check within its frequency window, defined in seconds. When `frequency` is `0` (high frequency), `frequency_offset` is required and defines how often the check runs; the allowed values are `10`, `20` and `30` seconds. For frequencies of 1 minute and above, `frequency_offset` is optional and offsets the run schedule to spread out load; the allowed range is 1 to `frequency * 10` when `frequency` is at most `60`, and 1 to `ceil(frequency / 5)` otherwise.
-- `group_id` (Number) The id of the check group this check is part of.
-- `group_order` (Number) The position of this check in a check group. It determines in what order checks are run when a group is triggered from the API or from CI/CD.
+- `group_id` (Number) The ID of the check group the check is part of. (Default `0`, no group).
+- `group_order` (Number) The position of the check in its check group, which sets the order in which the checks and monitors of the group run when the group is triggered from the API or CI/CD. (Default `0`).
 - `intent` (Attributes) Guidance for root cause analysis and automatic repair: what this check protects, and which changes keep it meaningful. Automatic repair supports browser and multi-step checks only, and refuses an intent with no statements: a `goal` on its own is accepted here, but repair needs at least one statement in either `required_outcomes` or `must_preserve`. An intent edited in the web app and absent from the configuration is removed by the next apply, every time. To leave it to the web app, add `intent` to `ignore_changes`. (see [below for nested schema](#nestedatt--intent))
 - `local_setup_script` (String) A valid piece of Node.js code to run in the setup phase.
 - `local_teardown_script` (String) A valid piece of Node.js code to run in the teardown phase.
-- `locations` (Set of String) An array of one or more data center locations where to run the this check. (Default ["us-east-1"])
+- `locations` (Set of String) The data center locations to run the check from, such as `us-east-1`. The check needs at least one location in `locations` or `private_locations`, unless it is part of a check group.
 - `max_response_time` (Number) The response time in milliseconds starting from which a check should be considered failing. Possible values are between 0 and 30000. (Default `20000`).
-- `muted` (Boolean) Determines if any notifications will be sent out when a check fails/degrades/recovers.
-- `private_locations` (Set of String) An array of one or more private locations slugs.
+- `muted` (Boolean) Determines whether notifications are sent when the check fails, degrades or recovers. (Default `false`).
+- `private_locations` (Set of String) The slugs of the private locations to run the check from.
 - `retry_strategy` (Attributes) A strategy for retrying failed check/monitor runs. (see [below for nested schema](#nestedatt--retry_strategy))
-- `run_parallel` (Boolean) Determines if the check should run in all selected locations in parallel or round-robin.
-- `runtime_id` (String) The id of the runtime to use for this check.
+- `run_parallel` (Boolean) Determines whether the check runs in all its locations in parallel instead of in one location at a time, round-robin. (Default `false`).
+- `runtime_id` (String) The ID of the runtime to use for the check. When unset, the account's default runtime is used.
 - `setup_snippet_id` (Number) An ID reference to a snippet to use in the setup phase of an API check.
-- `should_fail` (Boolean) Allows to invert the behaviour of when a check is considered to fail. Allows for validating error status like 404.
-- `tags` (Set of String) A list of tags for organizing and filtering checks.
+- `should_fail` (Boolean) Inverts when the check is considered to fail. Use it to validate an error status such as 404. (Default `false`).
+- `tags` (Set of String) Tags for organizing and filtering checks and monitors.
 - `teardown_snippet_id` (Number) An ID reference to a snippet to use in the teardown phase of an API check.
 - `trigger_incident` (Attributes) Create and resolve an incident based on the alert configuration. Useful for status page automation. (see [below for nested schema](#nestedatt--trigger_incident))
 - `use_global_alert_settings` (Boolean) When true, the account level alert settings are used instead of the `alert_settings` of this check. Defaults to `true` when `alert_settings` is not set, and to `false` when it is.

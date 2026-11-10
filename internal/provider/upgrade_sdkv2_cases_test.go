@@ -330,6 +330,39 @@ resource "checkly_check" "test" {
 }
 `),
 
+	// v1.x stored the explicitly empty private_locations as []. The upgrade
+	// stores it as null, like an unset one, so the first plan sets it to []
+	// again, which changes nothing in the API.
+	"check_api_empty_private_locations": newSDKv2UpgradeCase(`
+resource "checkly_check" "test" {
+  name                      = "tf-upgrade-{{id}}-check-api-empty-pl"
+  type                      = "API"
+  frequency                 = 60
+  activated                 = true
+  locations                 = ["eu-central-1"]
+  private_locations         = []
+  use_global_alert_settings = true
+
+  request {
+    url = "https://api.checklyhq.com/public-stats"
+  }
+}
+`, `
+resource "checkly_check" "test" {
+  name                      = "tf-upgrade-{{id}}-check-api-empty-pl"
+  type                      = "API"
+  frequency                 = 60
+  activated                 = true
+  locations                 = ["eu-central-1"]
+  private_locations         = []
+  use_global_alert_settings = true
+
+  request = {
+    url = "https://api.checklyhq.com/public-stats"
+  }
+}
+`).withUpdate("checkly_check.test", "private_locations: null -> []"),
+
 	// double_check is deprecated but still works, so it must upgrade
 	// together with the retry strategy it implies.
 	"check_double_check": newSDKv2UpgradeCase(`
@@ -382,6 +415,32 @@ resource "checkly_check_group" "test" {
   double_check = true
 }
 `).withUpdate("checkly_check_group.test", "use_global_alert_settings: false -> true"),
+
+	// v1.x stored the explicitly empty tags and private_locations as []. The
+	// upgrade stores them as null, like unset ones, so the first plan sets
+	// them to [] again, which changes nothing in the API. The SDK v2 release
+	// rejects a group without a location, so locations is not empty.
+	"check_group_empty_collections": newSDKv2UpgradeCase(`
+resource "checkly_check_group" "test" {
+  name                      = "tf-upgrade-{{id}}-group-empty-collections"
+  activated                 = true
+  concurrency               = 1
+  locations                 = ["eu-central-1"]
+  private_locations         = []
+  tags                      = []
+  use_global_alert_settings = true
+}
+`, `
+resource "checkly_check_group" "test" {
+  name                      = "tf-upgrade-{{id}}-group-empty-collections"
+  activated                 = true
+  concurrency               = 1
+  locations                 = ["eu-central-1"]
+  private_locations         = []
+  tags                      = []
+  use_global_alert_settings = true
+}
+`).withUpdate("checkly_check_group.test", "private_locations: null -> []\ntags: null -> []"),
 
 	"check_multistep": newSDKv2UpgradeCase(`
 resource "checkly_check" "test" {
@@ -1022,6 +1081,21 @@ resource "checkly_check_group_v2" "test" {
   name = "tf-upgrade-{{id}}-group-v2-minimal"
 }
 `),
+
+	// v1.x stored the explicitly empty tags as []. The upgrade stores them as
+	// null, like unset ones, so the first plan sets them to [] again, which
+	// changes nothing in the API.
+	"check_group_v2_empty_tags": newSDKv2UpgradeCase(`
+resource "checkly_check_group_v2" "test" {
+  name = "tf-upgrade-{{id}}-group-v2-empty-tags"
+  tags = []
+}
+`, `
+resource "checkly_check_group_v2" "test" {
+  name = "tf-upgrade-{{id}}-group-v2-empty-tags"
+  tags = []
+}
+`).withUpdate("checkly_check_group_v2.test", "tags: null -> []"),
 
 	"check_group_v2": newSDKv2UpgradeCase(upgradeEmailChannelSDKv2+`
 resource "checkly_private_location" "test" {

@@ -8,7 +8,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -124,8 +123,6 @@ func apiCheckRequestAttributeSchema(opts apiCheckRequestAttributeSchemaOptions) 
 			},
 			"assertions": schema.SetNestedAttribute{
 				Optional:    true,
-				Computed:    true,
-				Default:     setdefault.StaticValue(types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{})),
 				Description: "A request can have multiple assertions.",
 				NestedObject: schema.NestedAttributeObject{
 					// Attributes nested in this set attribute must not use
@@ -201,8 +198,8 @@ func apiCheckRequestFromObject(ctx context.Context, obj types.Object, diags *dia
 		SkipSSL:         model.SkipSSL.ValueBool(),
 		Body:            model.Body.ValueString(),
 		BodyType:        checkly.BodyType(model.BodyType.ValueString()),
-		Headers:         apiCheckKeyValuesFromMap(ctx, model.Headers, diags),
-		QueryParameters: apiCheckKeyValuesFromMap(ctx, model.QueryParameters, diags),
+		Headers:         keyValuesFromStringMap(ctx, model.Headers, diags),
+		QueryParameters: keyValuesFromStringMap(ctx, model.QueryParameters, diags),
 		Assertions:      assertionsFromSet(ctx, model.Assertions, diags),
 		BasicAuth:       apiCheckBasicAuthFromObject(ctx, model.BasicAuth, diags),
 		IPFamily:        checkly.IPFamily(model.IPFamily.ValueString()),
@@ -211,13 +208,14 @@ func apiCheckRequestFromObject(ctx context.Context, obj types.Object, diags *dia
 
 // apiCheckRequestToObject converts the API representation of an API check
 // request config to the request attribute value. The prior attribute value
-// (the previously stored state) is consulted so that headers and query
-// parameters omitted from the configuration stay null instead of drifting
-// to empty maps.
+// (the previously stored state) is consulted so that headers, query
+// parameters and assertions omitted from the configuration stay null instead
+// of drifting to empty collections.
 func apiCheckRequestToObject(ctx context.Context, r checkly.Request, prior types.Object, diags *diag.Diagnostics) types.Object {
 	priorModel := apiCheckRequestModel{
 		Headers:         types.MapNull(types.StringType),
 		QueryParameters: types.MapNull(types.StringType),
+		Assertions:      types.SetNull(types.ObjectType{AttrTypes: assertionAttrTypes}),
 	}
 	if !prior.IsNull() && !prior.IsUnknown() {
 		diags.Append(prior.As(ctx, &priorModel, basetypes.ObjectAsOptions{})...)
@@ -231,63 +229,17 @@ func apiCheckRequestToObject(ctx context.Context, r checkly.Request, prior types
 		URL:             types.StringValue(r.URL),
 		FollowRedirects: types.BoolValue(r.FollowRedirects),
 		SkipSSL:         types.BoolValue(r.SkipSSL),
-		Headers:         apiCheckMapFromKeyValues(ctx, r.Headers, priorModel.Headers, diags),
-		QueryParameters: apiCheckMapFromKeyValues(ctx, r.QueryParameters, priorModel.QueryParameters, diags),
+		Headers:         stringMapFromAPINullIfUnset(ctx, r.Headers, priorModel.Headers, diags),
+		QueryParameters: stringMapFromAPINullIfUnset(ctx, r.QueryParameters, priorModel.QueryParameters, diags),
 		Body:            types.StringValue(r.Body),
 		BodyType:        types.StringValue(string(r.BodyType)),
-		Assertions:      assertionsToSet(ctx, r.Assertions, diags),
+		Assertions:      assertionsToSet(ctx, r.Assertions, priorModel.Assertions, diags),
 		BasicAuth:       apiCheckBasicAuthToObject(ctx, r.BasicAuth, diags),
 		IPFamily:        types.StringValue(string(r.IPFamily)),
 	})
 	diags.Append(d...)
 
 	return obj
-}
-
-// apiCheckKeyValuesFromMap converts a map of strings to the API's key-value
-// pair representation. Null and unknown maps convert to an empty (non-nil)
-// slice, which the API stores as "no entries".
-func apiCheckKeyValuesFromMap(ctx context.Context, m types.Map, diags *diag.Diagnostics) []checkly.KeyValue {
-	kvs := []checkly.KeyValue{}
-
-	if m.IsNull() || m.IsUnknown() {
-		return kvs
-	}
-
-	var values map[string]string
-	diags.Append(m.ElementsAs(ctx, &values, false)...)
-	if diags.HasError() {
-		return kvs
-	}
-
-	for key, value := range values {
-		kvs = append(kvs, checkly.KeyValue{
-			Key:   key,
-			Value: value,
-		})
-	}
-
-	return kvs
-}
-
-// apiCheckMapFromKeyValues converts the API's key-value pair representation
-// to a map of strings. An empty value converts to null when the prior value
-// is null, so that an omitted map does not cause drift against an empty API
-// response.
-func apiCheckMapFromKeyValues(ctx context.Context, kvs []checkly.KeyValue, prior types.Map, diags *diag.Diagnostics) types.Map {
-	if len(kvs) == 0 && prior.IsNull() {
-		return prior
-	}
-
-	values := map[string]string{}
-	for _, kv := range kvs {
-		values[kv.Key] = kv.Value
-	}
-
-	m, d := types.MapValueFrom(ctx, types.StringType, values)
-	diags.Append(d...)
-
-	return m
 }
 
 // apiCheckBasicAuthFromObject converts the request.basic_auth attribute

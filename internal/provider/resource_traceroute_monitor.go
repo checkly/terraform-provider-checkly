@@ -15,7 +15,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -105,7 +104,7 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 	resp.Schema = schema.Schema{
 		Version:     sdkv2SchemaVersion + 1,
 		Description: "Traceroute monitors trace the network path to a host and measure per-hop latency and packet loss.",
-		Attributes: map[string]schema.Attribute{
+		Attributes: withCommonCheckAttributes(map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
 				Description: "The ID of the monitor.",
@@ -130,33 +129,6 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 			frequencyOffsetAttributeName: makeFrequencyOffsetAttributeSchema(FrequencyOffsetAttributeSchemaOptions{
 				Monitor: true,
 			}),
-			"activated": schema.BoolAttribute{
-				Required:    true,
-				Description: "Determines if the monitor is running or not. Possible values `true`, and `false`.",
-			},
-			"muted": schema.BoolAttribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     booldefault.StaticBool(false),
-				Description: "Determines if any notifications will be sent out when a monitor fails/degrades/recovers.",
-			},
-			"should_fail": schema.BoolAttribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     booldefault.StaticBool(false),
-				Description: "Allows to invert the behaviour of when a monitor is considered to fail.",
-			},
-			"run_parallel": schema.BoolAttribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     booldefault.StaticBool(false),
-				Description: "Determines if the monitor should run in all selected locations in parallel or round-robin.",
-			},
-			"locations": schema.SetAttribute{
-				Optional:    true,
-				ElementType: types.StringType,
-				Description: "An array of one or more data center locations where to run this monitor. (Default [\"us-east-1\"])",
-			},
 			"degraded_response_time": schema.Int64Attribute{
 				Optional:    true,
 				Computed:    true,
@@ -175,37 +147,10 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 					int64validator.Between(0, 30000),
 				},
 			},
-			"tags": schema.SetAttribute{
-				Optional:    true,
-				ElementType: types.StringType,
-				Description: "A list of tags for organizing and filtering checks and monitors.",
-			},
-			"private_locations": schema.SetAttribute{
-				Optional:    true,
-				ElementType: types.StringType,
-				Description: "The slugs of the private locations to run the monitor from. A private location runs traceroute monitors with agent v8.4.0 or later and the `NET_RAW` capability.",
-			},
-			"runtime_id": schema.StringAttribute{
-				Optional:    true,
-				Description: "The ID of the runtime to use for this monitor.",
-			},
 			triggerIncidentAttributeName: makeTriggerIncidentSchema(),
 			alertSettingsAttributeName: makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{
 				Monitor: true,
 			}),
-			useGlobalAlertSettingsAttributeName: makeUseGlobalAlertSettingsAttributeSchema("monitor"),
-			"group_id": schema.Int64Attribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     int64default.StaticInt64(0),
-				Description: "The id of the check group this monitor is part of.",
-			},
-			"group_order": schema.Int64Attribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     int64default.StaticInt64(0),
-				Description: "The position of this monitor in a check group. It determines in what order checks and monitors are run when a group is triggered from the API or from CI/CD.",
-			},
 			retryStrategyAttributeName: makeRetryStrategyAttributeSchema(RetryStrategyAttributeSchemaOptions{
 				SupportsOnlyOnNetworkError: false,
 			}),
@@ -290,8 +235,6 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 					// not generated from this schema.
 					"assertions": schema.SetNestedAttribute{
 						Optional:    true,
-						Computed:    true,
-						Default:     setdefault.StaticValue(types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{})),
 						Description: "A request can have multiple assertions. The allowed comparisons, properties, and target formats depend on the assertion source — see the [Assertion Reference](#assertion-reference) below.",
 						NestedObject: schema.NestedAttributeObject{
 							// Attributes nested in this set attribute must
@@ -334,7 +277,7 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{
 				Monitor: true,
 			}),
-		},
+		}, CommonCheckAttributeSchemaOptions{Subject: subjectMonitor, ShouldFail: true, RunParallel: true, Locations: true, GroupMembership: true, RuntimeID: true, PrivateLocationsNote: "A private location runs traceroute monitors with agent v8.4.0 or later and the `NET_RAW` capability."}),
 	}
 }
 
@@ -596,7 +539,7 @@ func tracerouteMonitorToModel(ctx context.Context, c *checkly.TracerouteMonitor,
 	model.GroupID = types.Int64Value(c.GroupID)
 	model.GroupOrder = types.Int64Value(int64(c.GroupOrder))
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, model.RetryStrategy, diags)
-	model.Request = tracerouteMonitorRequestToObject(ctx, c.Request, diags)
+	model.Request = tracerouteMonitorRequestToObject(ctx, c.Request, model.Request, diags)
 	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, model.AlertChannelSubscriptions, diags)
 	model.TriggerIncident = triggerIncidentToObject(ctx, c.TriggerIncident, diags)
 }
@@ -665,7 +608,7 @@ func tracerouteMonitorRequestFromModel(ctx context.Context, model TracerouteMoni
 
 // tracerouteMonitorRequestToObject converts the API representation of a
 // traceroute request to the request attribute value.
-func tracerouteMonitorRequestToObject(ctx context.Context, r checkly.TracerouteRequest, diags *diag.Diagnostics) types.Object {
+func tracerouteMonitorRequestToObject(ctx context.Context, r checkly.TracerouteRequest, prior types.Object, diags *diag.Diagnostics) types.Object {
 	// The API defaults ptrLookup to true, so a missing value reads as true.
 	ptrLookup := true
 	if r.PtrLookup != nil {
@@ -681,7 +624,7 @@ func tracerouteMonitorRequestToObject(ctx context.Context, r checkly.TracerouteR
 		MaxUnknownHops: types.Int64Value(int64(r.MaxUnknownHops)),
 		PtrLookup:      types.BoolValue(ptrLookup),
 		Timeout:        types.Int64Value(int64(r.Timeout)),
-		Assertions:     assertionsToSet(ctx, r.Assertions, diags),
+		Assertions:     assertionsToSet(ctx, r.Assertions, priorAssertions(prior), diags),
 	})
 	diags.Append(d...)
 

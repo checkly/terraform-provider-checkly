@@ -173,8 +173,8 @@ func TestUpgradeSDKv2State(t *testing.T) {
 		// list.
 		requireStateNull(t, state, path.Root(alertChannelSubscriptionAttributeName))
 		// SDK v2 stores no assertions as an empty list, which upgrades to
-		// the empty set the attribute defaults to.
-		requireStateValue(t, state, path.Root("request").AtName("assertions"), types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{}))
+		// null.
+		requireStateNull(t, state, path.Root("request").AtName("assertions"))
 	})
 
 	t.Run("ssl_monitor", func(t *testing.T) {
@@ -188,7 +188,7 @@ func TestUpgradeSDKv2State(t *testing.T) {
 		requireStateValue(t, state, request.AtName("security_baseline").AtName("enabled"), types.BoolValue(true))
 		requireStateValue(t, state, request.AtName("security_baseline").AtName("min_tls_version").AtName("value"), types.StringValue("TLS1.2"))
 		requireStateNull(t, state, request.AtName("security_baseline").AtName("known_bad_ca"))
-		requireStateValue(t, state, request.AtName("assertions"), types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{}))
+		requireStateNull(t, state, request.AtName("assertions"))
 		requireStateValue(t, state, path.Root("retry_strategy").AtName("type"), types.StringValue("NO_RETRIES"))
 	})
 
@@ -206,6 +206,11 @@ func TestUpgradeSDKv2State(t *testing.T) {
 		requireStateValue(t, state, path.Root("enforce_retry_strategy").AtName("retry_strategy").AtName("only_on").AtName("network_error"), types.BoolValue(true))
 		requireStateValue(t, state, path.Root("enforce_scheduling_strategy").AtName("run_parallel"), types.BoolValue(true))
 		requireStateValue(t, state, path.Root("api_check_defaults").AtName("basic_auth").AtName("username"), types.StringValue("u"))
+		// SDK v2 stored the unset headers, query_parameters and assertions of
+		// api_check_defaults as empty collections.
+		requireStateNull(t, state, path.Root("api_check_defaults").AtName("headers"))
+		requireStateNull(t, state, path.Root("api_check_defaults").AtName("query_parameters"))
+		requireStateNull(t, state, path.Root("api_check_defaults").AtName("assertions"))
 		// SDK v2 stored default_runtime, setup_script and teardown_script as
 		// lists of at most one element, empty when not configured, and stored
 		// an unset snippet_id as 0.
@@ -214,6 +219,27 @@ func TestUpgradeSDKv2State(t *testing.T) {
 		requireStateNull(t, state, path.Root("setup_script").AtName("snippet_id"))
 		requireStateNull(t, state, path.Root(environmentVariableAttributeName))
 		requireStateNull(t, state, path.Root("teardown_script"))
+	})
+
+	t.Run("check_group_v2 with empty tags", func(t *testing.T) {
+		// SDK v2 stored unset tags as an empty set.
+		raw := sdkv2FixtureWith(t, "check_group_v2", func(obj map[string]any) {
+			obj["tags"] = []any{}
+		})
+		requireStateNull(t, upgradeSDKv2Raw(t, NewCheckGroupV2Resource(), raw), path.Root("tags"))
+	})
+
+	t.Run("check_group", func(t *testing.T) {
+		// SDK v2 stored unset tags and private_locations as empty sets.
+		state := upgradeSDKv2Fixture(t, NewCheckGroupResource(), "check_group")
+		requireStateNull(t, state, path.Root("tags"))
+		requireStateNull(t, state, path.Root("private_locations"))
+		requireStateValue(t, state, path.Root("locations"), types.SetValueMust(types.StringType, []attr.Value{types.StringValue("eu-central-1")}))
+
+		raw := sdkv2FixtureWith(t, "check_group", func(obj map[string]any) {
+			obj["locations"] = []any{}
+		})
+		requireStateNull(t, upgradeSDKv2Raw(t, NewCheckGroupResource(), raw), path.Root("locations"))
 	})
 
 	t.Run("check_group_v2 with default assertions", func(t *testing.T) {
@@ -316,7 +342,8 @@ func TestUpgradeSDKv2State(t *testing.T) {
 		requireStateNull(t, state, path.Root("email"))
 		requireStateNull(t, state, path.Root("slack_app"))
 		requireStateValue(t, state, path.Root("webhook").AtName("name"), types.StringValue("w"))
-		requireStateValue(t, state, path.Root("webhook").AtName("headers"), types.MapValueMust(types.StringType, map[string]attr.Value{}))
+		requireStateNull(t, state, path.Root("webhook").AtName("headers"))
+		requireStateNull(t, state, path.Root("webhook").AtName("query_parameters"))
 		requireStateNull(t, state, path.Root("webhook").AtName("template"))
 		requireStateNull(t, state, path.Root("webhook").AtName("webhook_secret"))
 	})
@@ -416,6 +443,14 @@ func TestUpgradeSDKv2State(t *testing.T) {
 		requireStateNull(t, state, path.Root(alertChannelSubscriptionAttributeName))
 	})
 
+	t.Run("check with empty private_locations", func(t *testing.T) {
+		// SDK v2 stored unset private_locations as an empty set.
+		raw := sdkv2FixtureWith(t, "check", func(obj map[string]any) {
+			obj["private_locations"] = []any{}
+		})
+		requireStateNull(t, upgradeSDKv2Raw(t, NewCheckResource(), raw), path.Root("private_locations"))
+	})
+
 	t.Run("check_browser", func(t *testing.T) {
 		// SDK v2 stores the absent request of a browser check as an empty
 		// list, which upgrades to a null object.
@@ -434,14 +469,15 @@ func TestUpgradeSDKv2State(t *testing.T) {
 }
 
 // requireSDKv2CheckRequest asserts the request upgraded from the "check"
-// fixture: the empty headers and query_parameters maps SDK v2 stored for the
-// unset optional maps are null, and the one-element basic_auth list is
-// unwrapped into an object.
+// fixture: the empty headers, query_parameters and assertions SDK v2 stored
+// for the unset optional collections are null, and the one-element
+// basic_auth list is unwrapped into an object.
 func requireSDKv2CheckRequest(t *testing.T, state tfsdk.State) {
 	t.Helper()
 	request := path.Root("request")
 	requireStateNull(t, state, request.AtName("headers"))
 	requireStateNull(t, state, request.AtName("query_parameters"))
+	requireStateNull(t, state, request.AtName("assertions"))
 	requireStateValue(t, state, request.AtName("basic_auth").AtName("username"), types.StringValue("u"))
 }
 

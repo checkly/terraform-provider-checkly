@@ -121,7 +121,7 @@ resource "checkly_playwright_check_suite" "example-playwright-check-custom" {
 
 ### Required
 
-- `activated` (Boolean) Determines whether the check will run periodically or not after being deployed.
+- `activated` (Boolean) Determines whether the check runs on its schedule.
 - `bundle` (Attributes) Attaches a code bundle to the check. (see [below for nested schema](#nestedatt--bundle))
 - `frequency` (Number) Controls how often the check should run. Defined in minutes. The allowed values are `1` (1 minute), `2` (2 minutes), `5` (5 minutes), `10` (10 minutes), `15` (15 minutes), `30` (30 minutes), `60` (1 hour), `120` (2 hours), `180` (3 hours), `360` (6 hours), `720` (12 hours) and `1440` (24 hours).
 - `name` (String) The name of the check.
@@ -133,15 +133,15 @@ resource "checkly_playwright_check_suite" "example-playwright-check-custom" {
 - `alert_settings` (Attributes) Determines the alert escalation policy for the check. (see [below for nested schema](#nestedatt--alert_settings))
 - `description` (String) A description of the check.
 - `environment_variables` (Attributes List) Insert environment variables into the execution environment. At most 200 variables. (see [below for nested schema](#nestedatt--environment_variables))
-- `group_id` (Number) The ID of the check group that this check is part of.
-- `group_order` (Number) The position of the check in the check group. It determines in what order checks and monitors are run when a group is triggered from the API or from CI/CD.
+- `group_id` (Number) The ID of the check group the check is part of. (Default `0`, no group).
+- `group_order` (Number) The position of the check in its check group, which sets the order in which the checks and monitors of the group run when the group is triggered from the API or CI/CD. (Default `0`).
 - `intent` (Attributes) Guidance for root cause analysis and automatic repair: what this check protects, and which changes keep it meaningful. Automatic repair supports browser and multi-step checks only, and refuses an intent with no statements: a `goal` on its own is accepted here, but repair needs at least one statement in either `required_outcomes` or `must_preserve`. An intent edited in the web app and absent from the configuration is removed by the next apply, every time. To leave it to the web app, add `intent` to `ignore_changes`. (see [below for nested schema](#nestedatt--intent))
-- `locations` (Set of String) An array of one or more data center locations where to run the this check.
-- `muted` (Boolean) Determines if any notifications will be sent out when the check fails and/or recovers. (Default `false`).
-- `private_locations` (Set of String) An array of one or more private locations slugs.
-- `run_parallel` (Boolean) Determines whether the check should run on all selected locations in parallel or round-robin. (Default `false`).
+- `locations` (Set of String) The data center locations to run the check from, such as `us-east-1`. The check needs at least one location in `locations` or `private_locations`, unless it is part of a check group.
+- `muted` (Boolean) Determines whether notifications are sent when the check fails or recovers. (Default `false`).
+- `private_locations` (Set of String) The slugs of the private locations to run the check from.
+- `run_parallel` (Boolean) Determines whether the check runs in all its locations in parallel instead of in one location at a time, round-robin. (Default `false`).
 - `runtime` (Attributes) Configure the runtime environment of the Playwright check. (see [below for nested schema](#nestedatt--runtime))
-- `tags` (Set of String) A list of tags for organizing and filtering checks and monitors.
+- `tags` (Set of String) Tags for organizing and filtering checks and monitors.
 - `trigger_incident` (Attributes) Create and resolve an incident based on the alert configuration. Useful for status page automation. (see [below for nested schema](#nestedatt--trigger_incident))
 - `use_global_alert_settings` (Boolean) When true, the account level alert settings are used instead of the `alert_settings` of this check. Defaults to `true` when `alert_settings` is not set, and to `false` when it is.
 

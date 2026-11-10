@@ -94,7 +94,7 @@ resource "checkly_tcp_monitor" "example-tcp-monitor-2" {
 
 ### Required
 
-- `activated` (Boolean) Determines if the check is running or not. Possible values `true`, and `false`.
+- `activated` (Boolean) Determines whether the monitor runs on its schedule.
 - `frequency` (Number) Controls how often the monitor should run. Defined in minutes. The allowed values are `0` (high frequency - use `frequency_offset` to define the actual frequency), `1` (1 minute), `2` (2 minutes), `5` (5 minutes), `10` (10 minutes), `15` (15 minutes), `30` (30 minutes), `60` (1 hour), `120` (2 hours), `180` (3 hours), `360` (6 hours), `720` (12 hours) and `1440` (24 hours).
 - `name` (String) The name of the check.
 - `request` (Attributes) The parameters for the TCP connection. (see [below for nested schema](#nestedatt--request))
@@ -106,17 +106,17 @@ resource "checkly_tcp_monitor" "example-tcp-monitor-2" {
 - `degraded_response_time` (Number) The response time in milliseconds starting from which a check should be considered degraded. Possible values are between 0 and 5000. (Default `4000`).
 - `description` (String) A description of the monitor.
 - `frequency_offset` (Number) When `frequency` is `0` (high frequency), `frequency_offset` is required and it alone controls how often the monitor should run. Defined in seconds. The allowed values are `0` (disabled - use `frequency` to define the actual frequency), `10` (10 seconds), `20` (20 seconds) and `30` (30 seconds).
-- `group_id` (Number) The id of the check group this check is part of.
-- `group_order` (Number) The position of this check in a check group. It determines in what order checks are run when a group is triggered from the API or from CI/CD.
-- `locations` (Set of String) An array of one or more data center locations where to run the this check.
+- `group_id` (Number) The ID of the check group the monitor is part of. (Default `0`, no group).
+- `group_order` (Number) The position of the monitor in its check group, which sets the order in which the checks and monitors of the group run when the group is triggered from the API or CI/CD. (Default `0`).
+- `locations` (Set of String) The data center locations to run the monitor from, such as `us-east-1`. The monitor needs at least one location in `locations` or `private_locations`, unless it is part of a check group.
 - `max_response_time` (Number) The response time in milliseconds starting from which a check should be considered failing. Possible values are between 0 and 5000. (Default `5000`).
-- `muted` (Boolean) Determines if any notifications will be sent out when a check fails/degrades/recovers.
-- `private_locations` (Set of String) An array of one or more private locations slugs.
+- `muted` (Boolean) Determines whether notifications are sent when the monitor fails, degrades or recovers. (Default `false`).
+- `private_locations` (Set of String) The slugs of the private locations to run the monitor from.
 - `retry_strategy` (Attributes) A strategy for retrying failed check/monitor runs. (see [below for nested schema](#nestedatt--retry_strategy))
-- `run_parallel` (Boolean) Determines if the check should run in all selected locations in parallel or round-robin.
-- `runtime_id` (String) The ID of the runtime to use for this check.
-- `should_fail` (Boolean) Allows to invert the behaviour of when a check is considered to fail.
-- `tags` (Set of String) A list of tags for organizing and filtering checks.
+- `run_parallel` (Boolean) Determines whether the monitor runs in all its locations in parallel instead of in one location at a time, round-robin. (Default `false`).
+- `runtime_id` (String) The ID of the runtime to use for the monitor.
+- `should_fail` (Boolean) Inverts when the monitor is considered to fail. (Default `false`).
+- `tags` (Set of String) Tags for organizing and filtering checks and monitors.
 - `trigger_incident` (Attributes) Create and resolve an incident based on the alert configuration. Useful for status page automation. (see [below for nested schema](#nestedatt--trigger_incident))
 - `use_global_alert_settings` (Boolean) When true, the account level alert settings are used instead of the `alert_settings` of this monitor. Defaults to `true` when `alert_settings` is not set, and to `false` when it is.
 

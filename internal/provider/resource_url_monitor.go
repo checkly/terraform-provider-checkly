@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -93,7 +92,7 @@ func (r *URLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 	resp.Schema = schema.Schema{
 		Version:     sdkv2SchemaVersion + 1,
 		Description: "Creates a URL Monitor to check HTTP endpoint availability and response times.",
-		Attributes: map[string]schema.Attribute{
+		Attributes: withCommonCheckAttributes(map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
 				Description: "The ID of the monitor.",
@@ -118,33 +117,6 @@ func (r *URLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 			frequencyOffsetAttributeName: makeFrequencyOffsetAttributeSchema(FrequencyOffsetAttributeSchemaOptions{
 				Monitor: true,
 			}),
-			"activated": schema.BoolAttribute{
-				Required:    true,
-				Description: "Determines whether the monitor will run periodically or not after being deployed.",
-			},
-			"muted": schema.BoolAttribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     booldefault.StaticBool(false),
-				Description: "Determines if any notifications will be sent out when the monitor fails and/or recovers. (Default `false`).",
-			},
-			"should_fail": schema.BoolAttribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     booldefault.StaticBool(false),
-				Description: "Allows to invert the behaviour of when the monitor is considered to fail. (Default `false`).",
-			},
-			"run_parallel": schema.BoolAttribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     booldefault.StaticBool(false),
-				Description: "Determines whether the monitor should run on all selected locations in parallel or round-robin. (Default `false`).",
-			},
-			"locations": schema.SetAttribute{
-				Optional:    true,
-				ElementType: types.StringType,
-				Description: "An array of one or more data center locations where to run the this monitor.",
-			},
 			"degraded_response_time": schema.Int64Attribute{
 				Optional:    true,
 				Computed:    true,
@@ -163,33 +135,10 @@ func (r *URLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 					int64validator.Between(0, 30000),
 				},
 			},
-			"tags": schema.SetAttribute{
-				Optional:    true,
-				ElementType: types.StringType,
-				Description: "A list of tags for organizing and filtering checks and monitors.",
-			},
-			"private_locations": schema.SetAttribute{
-				Optional:    true,
-				ElementType: types.StringType,
-				Description: "An array of one or more private locations slugs.",
-			},
 			triggerIncidentAttributeName: makeTriggerIncidentSchema(),
 			alertSettingsAttributeName: makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{
 				Monitor: true,
 			}),
-			useGlobalAlertSettingsAttributeName: makeUseGlobalAlertSettingsAttributeSchema("monitor"),
-			"group_id": schema.Int64Attribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     int64default.StaticInt64(0),
-				Description: "The ID of the check group that this monitor is part of.",
-			},
-			"group_order": schema.Int64Attribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     int64default.StaticInt64(0),
-				Description: "The position of the monitor in the check group. It determines in what order checks and monitors are run when a group is triggered from the API or from CI/CD.",
-			},
 			retryStrategyAttributeName: makeRetryStrategyAttributeSchema(RetryStrategyAttributeSchemaOptions{
 				SupportsOnlyOnNetworkError: true,
 			}),
@@ -224,8 +173,6 @@ func (r *URLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 					},
 					"assertions": schema.SetNestedAttribute{
 						Optional:    true,
-						Computed:    true,
-						Default:     setdefault.StaticValue(types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{})),
 						Description: "Assertions to validate the HTTP response. URL monitors only support status code assertions.",
 						NestedObject: schema.NestedAttributeObject{
 							// Attributes nested in this set attribute must
@@ -270,7 +217,7 @@ func (r *URLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{
 				Monitor: true,
 			}),
-		},
+		}, CommonCheckAttributeSchemaOptions{Subject: subjectMonitor, ShouldFail: true, RunParallel: true, Locations: true, GroupMembership: true, ShouldFailNote: shouldFailErrorStatusNote}),
 	}
 }
 
@@ -512,7 +459,7 @@ func urlMonitorToModel(ctx context.Context, c *checkly.URLMonitor, model *URLMon
 	}
 
 	model.UseGlobalAlertSettings = types.BoolValue(c.UseGlobalAlertSettings)
-	model.Request = urlMonitorRequestToObject(ctx, c.Request, diags)
+	model.Request = urlMonitorRequestToObject(ctx, c.Request, model.Request, diags)
 	model.GroupID = types.Int64Value(c.GroupID)
 	model.GroupOrder = types.Int64Value(int64(c.GroupOrder))
 
@@ -546,12 +493,12 @@ func urlMonitorRequestFromObject(ctx context.Context, obj types.Object, diags *d
 
 // urlMonitorRequestToObject converts the API representation of the request
 // to the request attribute value.
-func urlMonitorRequestToObject(ctx context.Context, r checkly.URLRequest, diags *diag.Diagnostics) types.Object {
+func urlMonitorRequestToObject(ctx context.Context, r checkly.URLRequest, prior types.Object, diags *diag.Diagnostics) types.Object {
 	obj, d := types.ObjectValueFrom(ctx, urlMonitorRequestAttrTypes, URLMonitorRequestModel{
 		URL:             types.StringValue(r.URL),
 		FollowRedirects: types.BoolValue(r.FollowRedirects),
 		SkipSSL:         types.BoolValue(r.SkipSSL),
-		Assertions:      assertionsToSet(ctx, r.Assertions, diags),
+		Assertions:      assertionsToSet(ctx, r.Assertions, priorAssertions(prior), diags),
 		IPFamily:        types.StringValue(string(r.IPFamily)),
 	})
 	diags.Append(d...)

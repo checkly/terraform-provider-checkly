@@ -4,15 +4,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -87,7 +84,7 @@ func browserCheckFrequencySchema() schema.Int64Attribute {
 func (r *BrowserCheckResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: "Browser checks allow you to monitor key user flows in a real browser using Playwright, so you get notified when flows break or slow down.",
-		Attributes: map[string]schema.Attribute{
+		Attributes: withCommonCheckAttributes(map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
 				Description: "The ID of the check.",
@@ -106,35 +103,6 @@ func (r *BrowserCheckResource) Schema(ctx context.Context, req resource.SchemaRe
 				Description: "A description of the check.",
 			},
 			frequencyAttributeName: browserCheckFrequencySchema(),
-			"activated": schema.BoolAttribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     booldefault.StaticBool(true),
-				Description: "Determines if the check is running or not. Possible values `true`, and `false`. (Default `true`).",
-			},
-			"muted": schema.BoolAttribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     booldefault.StaticBool(false),
-				Description: "Determines if any notifications will be sent out when a check fails/degrades/recovers. (Default `false`).",
-			},
-			"should_fail": schema.BoolAttribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     booldefault.StaticBool(false),
-				Description: "Allows to invert the behaviour of when a check is considered to fail. (Default `false`).",
-			},
-			"run_parallel": schema.BoolAttribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     booldefault.StaticBool(false),
-				Description: "Determines if the check should run in all selected locations in parallel or round-robin. (Default `false`).",
-			},
-			"locations": schema.SetAttribute{
-				Optional:    true,
-				ElementType: types.StringType,
-				Description: "An array of one or more data center locations where to run this check. (Default [\"us-east-1\"])",
-			},
 			"script": schema.StringAttribute{
 				Required:    true,
 				Description: "A valid piece of Node.js JavaScript code describing a browser interaction with the Playwright framework.",
@@ -143,43 +111,14 @@ func (r *BrowserCheckResource) Schema(ctx context.Context, req resource.SchemaRe
 				Optional:    true,
 				Description: "The path of the check's script file when using editor-style multi-file scripts (e.g. `entrypoint.spec.ts`).",
 			},
-			"tags": schema.SetAttribute{
-				Optional:    true,
-				ElementType: types.StringType,
-				Description: "A list of tags for organizing and filtering checks.",
-			},
 			"ssl_check_domain": schema.StringAttribute{
 				Optional:    true,
 				Description: "A valid fully qualified domain name (FQDN) to check its SSL certificate.",
 			},
-			"runtime_id": schema.StringAttribute{
-				Optional:    true,
-				Description: "The id of the runtime to use for this check.",
-			},
-			"private_locations": schema.SetAttribute{
-				Optional:    true,
-				Computed:    true,
-				ElementType: types.StringType,
-				Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})),
-				Description: "An array of one or more private locations slugs.",
-			},
-			triggerIncidentAttributeName:        makeTriggerIncidentSchema(),
-			checkIntentAttributeName:            makeCheckIntentSchema(),
-			aiAutoRepairEnabledAttributeName:    makeAIAutoRepairEnabledSchema(),
-			alertSettingsAttributeName:          makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{}),
-			useGlobalAlertSettingsAttributeName: makeUseGlobalAlertSettingsAttributeSchema("check"),
-			"group_id": schema.Int64Attribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     int64default.StaticInt64(0),
-				Description: "The id of the check group this check is part of.",
-			},
-			"group_order": schema.Int64Attribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     int64default.StaticInt64(0),
-				Description: "The position of this check in a check group. It determines in what order checks are run when a group is triggered from the API or from CI/CD.",
-			},
+			triggerIncidentAttributeName:     makeTriggerIncidentSchema(),
+			checkIntentAttributeName:         makeCheckIntentSchema(),
+			aiAutoRepairEnabledAttributeName: makeAIAutoRepairEnabledSchema(),
+			alertSettingsAttributeName:       makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{}),
 			retryStrategyAttributeName: makeRetryStrategyAttributeSchema(RetryStrategyAttributeSchemaOptions{
 				SupportsOnlyOnNetworkError: true,
 			}),
@@ -188,7 +127,7 @@ func (r *BrowserCheckResource) Schema(ctx context.Context, req resource.SchemaRe
 				Description: "Insert environment variables into the runtime environment. Use global environment variables whenever possible.",
 			}),
 			scriptDependenciesAttributeName: makeScriptDependenciesSchema(),
-		},
+		}, CommonCheckAttributeSchemaOptions{Subject: subjectCheck, ActivatedOptional: true, ShouldFail: true, RunParallel: true, Locations: true, GroupMembership: true, RuntimeID: true}),
 	}
 }
 
@@ -449,7 +388,7 @@ func browserCheckToModel(ctx context.Context, c *checkly.BrowserCheck, model *Br
 	model.Muted = types.BoolValue(c.Muted)
 	model.ShouldFail = types.BoolValue(c.ShouldFail)
 	model.RunParallel = types.BoolValue(c.RunParallel)
-	model.Locations = stringSetFromAPIEmptyIfUnknown(ctx, c.Locations, prior.Locations, diags)
+	model.Locations = stringSetFromAPINullIfUnset(ctx, c.Locations, prior.Locations, diags)
 	model.Script = types.StringValue(c.Script)
 
 	// An empty script path is not tracked by the Checkly API. A configured
@@ -465,7 +404,7 @@ func browserCheckToModel(ctx context.Context, c *checkly.BrowserCheck, model *Br
 
 	model.Dependencies = scriptDependenciesToList(ctx, c.Dependencies, prior.Dependencies, diags)
 	model.EnvironmentVariables = environmentVariablesToList(ctx, c.EnvironmentVariables, prior.EnvironmentVariables, diags)
-	model.Tags = stringSetFromAPIEmptyIfUnknown(ctx, c.Tags, prior.Tags, diags)
+	model.Tags = stringSetFromAPINullIfUnset(ctx, c.Tags, prior.Tags, diags)
 
 	// An empty SSL check domain is not tracked by the Checkly API. A
 	// configured empty value is preserved so that it does not drift to null.
@@ -486,11 +425,7 @@ func browserCheckToModel(ctx context.Context, c *checkly.BrowserCheck, model *Br
 
 	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, prior.AlertChannelSubscriptions, diags)
 
-	if c.PrivateLocations != nil {
-		model.PrivateLocations = setFromStrings(ctx, *c.PrivateLocations, diags)
-	} else {
-		model.PrivateLocations = setFromStrings(ctx, nil, diags)
-	}
+	model.PrivateLocations = stringSetFromAPINullIfUnset(ctx, valueOrZero(c.PrivateLocations), prior.PrivateLocations, diags)
 
 	if c.AlertSettings != nil {
 		model.AlertSettings = alertSettingsToObject(ctx, *c.AlertSettings, prior.AlertSettings, diags)

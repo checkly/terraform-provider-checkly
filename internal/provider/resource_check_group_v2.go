@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -198,8 +197,6 @@ func (r *CheckGroupV2Resource) Schema(ctx context.Context, req resource.SchemaRe
 			"tags": schema.SetAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
-				Computed:    true,
-				Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})),
 				Description: "Additional tags to append to all checks in the group.",
 			},
 			"enforce_alert_settings": schema.SingleNestedAttribute{
@@ -704,16 +701,6 @@ func checkGroupV2ObjectWithUnknownsNulled(ctx context.Context, obj types.Object)
 	return types.ObjectValueMust(attrTypes, attrValues)
 }
 
-// checkGroupV2PriorMember returns the named member of a prior enforcement
-// value, or nil when the prior value itself is null or unknown.
-func checkGroupV2PriorMember(prior types.Object, name string) attr.Value {
-	if prior.IsNull() || prior.IsUnknown() {
-		return nil
-	}
-
-	return prior.Attributes()[name]
-}
-
 // checkGroupV2FromModel converts the resource data model to its API
 // representation.
 func checkGroupV2FromModel(ctx context.Context, model *CheckGroupV2ResourceModel, diags *diag.Diagnostics) checkly.GroupV2 {
@@ -809,7 +796,7 @@ func checkGroupV2ToModel(ctx context.Context, group *checkly.GroupV2, model *Che
 	model.Concurrency = types.Int64Value(int64(group.Concurrency))
 	model.Activated = types.BoolValue(group.Activated)
 	model.Muted = types.BoolValue(group.Muted)
-	model.Tags = setFromStrings(ctx, group.Tags, diags)
+	model.Tags = stringSetFromAPINullIfUnset(ctx, group.Tags, model.Tags, diags)
 	model.EnvironmentVariables = environmentVariablesToList(ctx, group.EnvironmentVariables, model.EnvironmentVariables, diags)
 	model.SetupScript = checkGroupV2ScriptToObject(group.SetupSnippetID, group.LocalSetupScript)
 	model.TeardownScript = checkGroupV2ScriptToObject(group.TearDownSnippetID, group.LocalTearDownScript)
@@ -854,20 +841,11 @@ func checkGroupV2DefaultRuntimeToObject(runtimeID *string) types.Object {
 // enforcement) are preserved from prior; unknown prior values resolve to
 // null.
 func checkGroupV2EnforceAlertSettingsToObject(ctx context.Context, group *checkly.GroupV2, prior types.Object, diags *diag.Diagnostics) types.Object {
-	priorAlertSettings, ok := checkGroupV2PriorMember(prior, alertSettingsAttributeName).(types.Object)
-	if !ok || priorAlertSettings.IsUnknown() {
-		priorAlertSettings = types.ObjectNull(alertSettingsAttrTypes)
-	}
+	priorAlertSettings := knownPriorAttribute(prior, alertSettingsAttributeName, types.ObjectNull(alertSettingsAttrTypes))
 
-	useGlobal, ok := checkGroupV2PriorMember(prior, "use_global_alert_settings").(types.Bool)
-	if !ok || useGlobal.IsUnknown() {
-		useGlobal = types.BoolNull()
-	}
+	useGlobal := knownPriorAttribute(prior, "use_global_alert_settings", types.BoolNull())
 
-	subscriptions, ok := checkGroupV2PriorMember(prior, alertChannelSubscriptionAttributeName).(types.Set)
-	if !ok || subscriptions.IsUnknown() {
-		subscriptions = types.SetNull(checkGroupV2AlertChannelSubscriptionSetType.ElemType)
-	}
+	subscriptions := knownPriorAttribute(prior, alertChannelSubscriptionAttributeName, types.SetNull(checkGroupV2AlertChannelSubscriptionSetType.ElemType))
 
 	enforced := group.AlertSettings != nil ||
 		group.UseGlobalAlertSettings != nil ||
@@ -913,15 +891,9 @@ func checkGroupV2EnforceAlertSettingsToObject(ctx context.Context, group *checkl
 // the API does not track (for example, details of a disabled enforcement)
 // are preserved from prior; unknown prior values resolve to null.
 func checkGroupV2EnforceLocationsToObject(ctx context.Context, group *checkly.GroupV2, prior types.Object, diags *diag.Diagnostics) types.Object {
-	locations, ok := checkGroupV2PriorMember(prior, "locations").(types.Set)
-	if !ok || locations.IsUnknown() {
-		locations = types.SetNull(types.StringType)
-	}
+	locations := knownPriorAttribute(prior, "locations", types.SetNull(types.StringType))
 
-	privateLocations, ok := checkGroupV2PriorMember(prior, "private_locations").(types.Set)
-	if !ok || privateLocations.IsUnknown() {
-		privateLocations = types.SetNull(types.StringType)
-	}
+	privateLocations := knownPriorAttribute(prior, "private_locations", types.SetNull(types.StringType))
 
 	hasLocations := len(group.Locations) != 0
 	hasPrivateLocations := group.PrivateLocations != nil && len(*group.PrivateLocations) != 0
@@ -957,10 +929,7 @@ func checkGroupV2EnforceLocationsToObject(ctx context.Context, group *checkly.Gr
 // retry strategy of a disabled enforcement is preserved from prior; unknown
 // prior values resolve to null.
 func checkGroupV2EnforceRetryStrategyToObject(ctx context.Context, group *checkly.GroupV2, prior types.Object, diags *diag.Diagnostics) types.Object {
-	priorRetryStrategy, ok := checkGroupV2PriorMember(prior, retryStrategyAttributeName).(types.Object)
-	if !ok || priorRetryStrategy.IsUnknown() {
-		priorRetryStrategy = types.ObjectNull(retryStrategyAttrTypes(true))
-	}
+	priorRetryStrategy := knownPriorAttribute(prior, retryStrategyAttributeName, types.ObjectNull(retryStrategyAttrTypes(true)))
 
 	enforced := group.RetryStrategy == nil || group.RetryStrategy.Type != "FALLBACK"
 
@@ -984,10 +953,7 @@ func checkGroupV2EnforceRetryStrategyToObject(ctx context.Context, group *checkl
 // disabled enforcement is preserved from prior; unknown prior values resolve
 // to null.
 func checkGroupV2EnforceSchedulingStrategyToObject(ctx context.Context, group *checkly.GroupV2, prior types.Object, diags *diag.Diagnostics) types.Object {
-	runParallel, ok := checkGroupV2PriorMember(prior, "run_parallel").(types.Bool)
-	if !ok || runParallel.IsUnknown() {
-		runParallel = types.BoolNull()
-	}
+	runParallel := knownPriorAttribute(prior, "run_parallel", types.BoolNull())
 
 	enforced := group.RunParallel != nil
 	if enforced {

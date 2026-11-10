@@ -1230,7 +1230,7 @@ func TestAccICMPMonitorUnsetSweepRequest(t *testing.T) {
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "request.ip_family", "IPv4"),
 				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "request.ping_count", "10"),
-				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "request.assertions.#", "0"),
+				resource.TestCheckNoResourceAttr("checkly_icmp_monitor.test", "request.assertions"),
 			),
 		},
 	})

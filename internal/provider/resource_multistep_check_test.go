@@ -521,8 +521,28 @@ func TestAccMultistepCheckUnsetSweepCollections(t *testing.T) {
 				),
 			),
 		},
-		// Removing private_locations resets it to its empty default. The
-		// check needs a public location again to remain valid.
+		// An explicitly empty private_locations is stored as an empty set.
+		// The check needs a public location again to remain valid.
+		{
+			Config: privateLocation + `
+				resource "checkly_multistep_check" "test" {
+					name              = "multistep-check-unset-sweep-collections"
+					activated         = false
+					frequency         = 720
+					locations         = ["us-east-1"]
+					private_locations = []
+					script            = "console.log('test')"
+				}
+			`,
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue(
+					"checkly_multistep_check.test",
+					tfjsonpath.New("private_locations"),
+					knownvalue.SetExact([]knownvalue.Check{}),
+				),
+			},
+		},
+		// Leaving private_locations out stores null.
 		{
 			Config: privateLocation + `
 				resource "checkly_multistep_check" "test" {
@@ -536,15 +556,17 @@ func TestAccMultistepCheckUnsetSweepCollections(t *testing.T) {
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_multistep_check.test",
-					"private_locations.#",
-					"0",
-				),
-				resource.TestCheckResourceAttr(
-					"checkly_multistep_check.test",
 					"locations.#",
 					"1",
 				),
 			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue(
+					"checkly_multistep_check.test",
+					tfjsonpath.New("private_locations"),
+					knownvalue.Null(),
+				),
+			},
 		},
 	})
 }

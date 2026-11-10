@@ -4,15 +4,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -79,7 +76,7 @@ func (r *CheckGroupResource) Schema(ctx context.Context, req resource.SchemaRequ
 			"from state. See the v2 upgrade guide for the steps.",
 		DeprecationMessage: "Use the `checkly_check_group_v2` resource instead. An existing group can be switched " +
 			"over without recreating it; see the v2 upgrade guide.",
-		Attributes: map[string]schema.Attribute{
+		Attributes: withCommonCheckAttributes(map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
 				Description: "The ID of the check group.",
@@ -94,43 +91,6 @@ func (r *CheckGroupResource) Schema(ctx context.Context, req resource.SchemaRequ
 			"concurrency": schema.Int64Attribute{
 				Required:    true,
 				Description: "Determines how many checks are run concurrently when triggering a check group from CI/CD or through the API.",
-			},
-			"activated": schema.BoolAttribute{
-				Required:    true,
-				Description: "Determines if the checks in the group are running or not.",
-			},
-			"muted": schema.BoolAttribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     booldefault.StaticBool(false),
-				Description: "Determines if any notifications will be sent out when a check in this group fails and/or recovers.",
-			},
-			"run_parallel": schema.BoolAttribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     booldefault.StaticBool(false),
-				Description: "Determines if the checks in the group should run in all selected locations in parallel or round-robin.",
-			},
-			"locations": schema.SetAttribute{
-				ElementType: types.StringType,
-				Optional:    true,
-				Computed:    true,
-				Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})),
-				Description: "An array of one or more data center locations where to run the checks.",
-			},
-			"private_locations": schema.SetAttribute{
-				ElementType: types.StringType,
-				Optional:    true,
-				Computed:    true,
-				Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})),
-				Description: "An array of one or more private locations slugs.",
-			},
-			"tags": schema.SetAttribute{
-				ElementType: types.StringType,
-				Optional:    true,
-				Computed:    true,
-				Default:     setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})),
-				Description: "Tags for organizing and filtering checks.",
 			},
 			"setup_snippet_id": schema.Int64Attribute{
 				Optional:    true,
@@ -156,13 +116,8 @@ func (r *CheckGroupResource) Schema(ctx context.Context, req resource.SchemaRequ
 				Default:     stringdefault.StaticString(""),
 				Description: "A valid piece of Node.js code to run in the teardown phase of an API check in this group.",
 			},
-			"runtime_id": schema.StringAttribute{
-				Optional:    true,
-				Description: "The id of the runtime to use for this group.",
-			},
-			alertSettingsAttributeName:          makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{}),
-			useGlobalAlertSettingsAttributeName: makeUseGlobalAlertSettingsAttributeSchema("check group"),
-			apiCheckDefaultsAttributeName:       makeAPICheckDefaultsAttributeSchema(),
+			alertSettingsAttributeName:    makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{}),
+			apiCheckDefaultsAttributeName: makeAPICheckDefaultsAttributeSchema(),
 			retryStrategyAttributeName: makeRetryStrategyAttributeSchema(RetryStrategyAttributeSchemaOptions{
 				SupportsOnlyOnNetworkError: true,
 				DoubleCheck:                true,
@@ -172,7 +127,7 @@ func (r *CheckGroupResource) Schema(ctx context.Context, req resource.SchemaRequ
 			environmentVariableAttributeName: makeEnvironmentVariableSchema(EnvironmentVariableAttributeSchemaOptions{
 				Description: "Insert environment variables into the runtime environment. Only relevant for browser checks. Use global environment variables whenever possible.",
 			}),
-		},
+		}, CommonCheckAttributeSchemaOptions{Subject: subjectCheckGroup, RunParallel: true, Locations: true, RuntimeID: true}),
 	}
 }
 
@@ -432,15 +387,9 @@ func checkGroupToModel(ctx context.Context, group *checkly.GroupV2, model *Check
 	model.Activated = types.BoolValue(group.Activated)
 	model.Muted = types.BoolValue(group.Muted)
 	model.RunParallel = types.BoolValue(valueOrZero(group.RunParallel))
-	model.Locations = setFromStrings(ctx, group.Locations, diags)
-
-	if group.PrivateLocations != nil {
-		model.PrivateLocations = setFromStrings(ctx, *group.PrivateLocations, diags)
-	} else {
-		model.PrivateLocations = setFromStrings(ctx, nil, diags)
-	}
-
-	model.Tags = setFromStrings(ctx, group.Tags, diags)
+	model.Locations = stringSetFromAPINullIfUnset(ctx, group.Locations, model.Locations, diags)
+	model.PrivateLocations = stringSetFromAPINullIfUnset(ctx, valueOrZero(group.PrivateLocations), model.PrivateLocations, diags)
+	model.Tags = stringSetFromAPINullIfUnset(ctx, group.Tags, model.Tags, diags)
 	model.EnvironmentVariables = environmentVariablesToList(ctx, group.EnvironmentVariables, model.EnvironmentVariables, diags)
 	model.SetupSnippetID = types.Int64Value(valueOrZero(group.SetupSnippetID))
 	model.TeardownSnippetID = types.Int64Value(valueOrZero(group.TearDownSnippetID))

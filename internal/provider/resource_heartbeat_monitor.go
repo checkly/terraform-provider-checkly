@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -80,7 +79,7 @@ func (r *HeartbeatMonitorResource) Schema(ctx context.Context, req resource.Sche
 	resp.Schema = schema.Schema{
 		Version:     sdkv2SchemaVersion + 1,
 		Description: "Heartbeats allows you to monitor your cron jobs and set up alerting, so you get a notification when things break or slow down.",
-		Attributes: map[string]schema.Attribute{
+		Attributes: withCommonCheckAttributes(map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
 				Description: "The ID of the monitor.",
@@ -98,26 +97,10 @@ func (r *HeartbeatMonitorResource) Schema(ctx context.Context, req resource.Sche
 				Default:     stringdefault.StaticString(""),
 				Description: "A description of the monitor.",
 			},
-			"activated": schema.BoolAttribute{
-				Required:    true,
-				Description: "Determines if the check is running or not. Possible values `true`, and `false`.",
-			},
-			"muted": schema.BoolAttribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     booldefault.StaticBool(false),
-				Description: "Determines if any notifications will be sent out when a check fails/degrades/recovers.",
-			},
-			"tags": schema.SetAttribute{
-				Optional:    true,
-				ElementType: types.StringType,
-				Description: "A list of tags for organizing and filtering checks.",
-			},
 			triggerIncidentAttributeName: makeTriggerIncidentSchema(),
 			alertSettingsAttributeName: makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{
 				Monitor: true,
 			}),
-			useGlobalAlertSettingsAttributeName: makeUseGlobalAlertSettingsAttributeSchema("monitor"),
 			"heartbeat": schema.SingleNestedAttribute{
 				Required:    true,
 				Description: "The heartbeat schedule and grace period.",
@@ -161,7 +144,7 @@ func (r *HeartbeatMonitorResource) Schema(ctx context.Context, req resource.Sche
 			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{
 				Monitor: true,
 			}),
-		},
+		}, CommonCheckAttributeSchemaOptions{Subject: subjectMonitor, NoDegradedState: true}),
 	}
 }
 

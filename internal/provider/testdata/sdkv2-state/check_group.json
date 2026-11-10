@@ -1,0 +1,49 @@
+{
+    "activated": true,
+    "alert_channel_subscription": [],
+    "alert_settings": [
+        {
+            "escalation_type": "RUN_BASED",
+            "parallel_run_failure_threshold": [
+                {
+                    "enabled": false,
+                    "percentage": 10
+                }
+            ],
+            "reminders": [
+                {
+                    "amount": 0,
+                    "interval": 5
+                }
+            ],
+            "run_based_escalation": [
+                {
+                    "failed_run_threshold": 1
+                }
+            ],
+            "ssl_certificates": [],
+            "time_based_escalation": []
+        }
+    ],
+    "api_check_defaults": [],
+    "concurrency": 3,
+    "double_check": null,
+    "environment_variable": [],
+    "environment_variables": null,
+    "id": "123",
+    "local_setup_script": "",
+    "local_teardown_script": "",
+    "locations": [
+        "eu-central-1"
+    ],
+    "muted": false,
+    "name": "g",
+    "private_locations": [],
+    "retry_strategy": [],
+    "run_parallel": false,
+    "runtime_id": "",
+    "setup_snippet_id": 0,
+    "tags": [],
+    "teardown_snippet_id": 0,
+    "use_global_alert_settings": true
+}

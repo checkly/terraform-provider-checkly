@@ -7,6 +7,9 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 )
 
 func TestAccApiCheckResourceBasic(t *testing.T) {
@@ -959,8 +962,30 @@ func TestAccApiCheckUnsetSweepCollections(t *testing.T) {
 				),
 			),
 		},
-		// Removing private_locations resets it to its empty default. The
-		// check needs a public location again to remain valid.
+		// An explicitly empty private_locations is stored as an empty set.
+		// The check needs a public location again to remain valid.
+		{
+			Config: privateLocation + `
+				resource "checkly_api_check" "test" {
+					name              = "api-check-unset-sweep-collections"
+					activated         = false
+					frequency         = 60
+					locations         = ["eu-central-1"]
+					private_locations = []
+					request = {
+						url = "https://api.checklyhq.com/public-stats"
+					}
+				}
+			`,
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue(
+					"checkly_api_check.test",
+					tfjsonpath.New("private_locations"),
+					knownvalue.SetExact([]knownvalue.Check{}),
+				),
+			},
+		},
+		// Leaving private_locations out stores null.
 		{
 			Config: privateLocation + `
 				resource "checkly_api_check" "test" {
@@ -976,15 +1001,17 @@ func TestAccApiCheckUnsetSweepCollections(t *testing.T) {
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr(
 					"checkly_api_check.test",
-					"private_locations.#",
-					"0",
-				),
-				resource.TestCheckResourceAttr(
-					"checkly_api_check.test",
 					"locations.#",
 					"1",
 				),
 			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue(
+					"checkly_api_check.test",
+					tfjsonpath.New("private_locations"),
+					knownvalue.Null(),
+				),
+			},
 		},
 	})
 }
