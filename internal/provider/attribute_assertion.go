@@ -72,27 +72,12 @@ func objectWithSetDefaults(name string, withDefaults func(context.Context, types
 // target attribute is only defaulted when defaultTarget is set, since it is
 // not optional+computed in every schema.
 func assertionsWithDefaults(ctx context.Context, set types.Set, defaultTarget bool, diags *diag.Diagnostics) types.Set {
-	if set.IsNull() || set.IsUnknown() {
-		return set
-	}
-
-	var models []assertionModel
-	diags.Append(set.ElementsAs(ctx, &models, false)...)
-	if diags.HasError() {
-		return set
-	}
-
-	for i, model := range models {
-		models[i].Property = stringOrDefault(model.Property, "")
+	return setElementsWithDefaults(ctx, set, func(m *assertionModel) {
+		m.Property = stringOrDefault(m.Property, "")
 		if defaultTarget {
-			models[i].Target = stringOrDefault(model.Target, "")
+			m.Target = stringOrDefault(m.Target, "")
 		}
-	}
-
-	result, d := types.SetValueFrom(ctx, types.ObjectType{AttrTypes: assertionAttrTypes}, models)
-	diags.Append(d...)
-
-	return result
+	}, diags)
 }
 
 // assertionsFromSet converts an assertion set value to its API

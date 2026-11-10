@@ -448,50 +448,20 @@ func maintenanceWindowComponentConfigsToSet(ctx context.Context, configs []check
 // are nested in set elements: affect_all_components defaults to false and a
 // component's status to UNDER_MAINTENANCE, as in the API.
 func maintenanceWindowComponentConfigsWithDefaults(ctx context.Context, set types.Set, diags *diag.Diagnostics) types.Set {
-	if set.IsNull() || set.IsUnknown() {
-		return set
-	}
-
-	var models []MaintenanceWindowComponentConfigModel
-	diags.Append(set.ElementsAs(ctx, &models, false)...)
-	if diags.HasError() {
-		return set
-	}
-
-	for i, model := range models {
-		if model.AffectAllComponents.IsNull() || model.AffectAllComponents.IsUnknown() {
-			models[i].AffectAllComponents = types.BoolValue(false)
+	return setElementsWithDefaults(ctx, set, func(m *MaintenanceWindowComponentConfigModel) {
+		if m.AffectAllComponents.IsNull() || m.AffectAllComponents.IsUnknown() {
+			m.AffectAllComponents = types.BoolValue(false)
 		}
-		models[i].Components = maintenanceWindowComponentsWithDefaults(ctx, model.Components, diags)
-	}
-
-	result, d := types.SetValueFrom(ctx, types.ObjectType{AttrTypes: maintenanceWindowComponentConfigAttrTypes}, models)
-	diags.Append(d...)
-
-	return result
+		m.Components = maintenanceWindowComponentsWithDefaults(ctx, m.Components, diags)
+	}, diags)
 }
 
 // maintenanceWindowComponentsWithDefaults applies the default status to the
 // elements of a component_configs.components set.
 func maintenanceWindowComponentsWithDefaults(ctx context.Context, set types.Set, diags *diag.Diagnostics) types.Set {
-	if set.IsNull() || set.IsUnknown() {
-		return set
-	}
-
-	var models []MaintenanceWindowComponentImpactModel
-	diags.Append(set.ElementsAs(ctx, &models, false)...)
-	if diags.HasError() {
-		return set
-	}
-
-	for i, model := range models {
-		models[i].Status = stringOrDefault(model.Status, string(checkly.StatusPageComponentStatusV3UnderMaintenance))
-	}
-
-	result, d := types.SetValueFrom(ctx, types.ObjectType{AttrTypes: maintenanceWindowComponentImpactAttrTypes}, models)
-	diags.Append(d...)
-
-	return result
+	return setElementsWithDefaults(ctx, set, func(m *MaintenanceWindowComponentImpactModel) {
+		m.Status = stringOrDefault(m.Status, string(checkly.StatusPageComponentStatusV3UnderMaintenance))
+	}, diags)
 }
 
 // validateMaintenanceWindowComponentConfigs rejects component_configs that

@@ -623,24 +623,9 @@ func grpcMonitorRequestWithDefaults(ctx context.Context, obj types.Object, diags
 // with default values substituted for null and unknown optional+computed
 // attributes.
 func grpcMonitorMetadataWithDefaults(ctx context.Context, set types.Set, diags *diag.Diagnostics) types.Set {
-	if set.IsNull() || set.IsUnknown() {
-		return set
-	}
-
-	var models []GRPCMonitorMetadataModel
-	diags.Append(set.ElementsAs(ctx, &models, false)...)
-	if diags.HasError() {
-		return set
-	}
-
-	for i, model := range models {
-		models[i].Value = stringOrDefault(model.Value, "")
-	}
-
-	result, d := types.SetValueFrom(ctx, types.ObjectType{AttrTypes: grpcMonitorMetadataAttrTypes}, models)
-	diags.Append(d...)
-
-	return result
+	return setElementsWithDefaults(ctx, set, func(m *GRPCMonitorMetadataModel) {
+		m.Value = stringOrDefault(m.Value, "")
+	}, diags)
 }
 
 func (r *GRPCMonitorResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
