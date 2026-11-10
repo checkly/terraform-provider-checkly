@@ -3,8 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"maps"
-	"slices"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
@@ -675,8 +673,8 @@ func alertChannelFromModel(ctx context.Context, model *AlertChannelResourceModel
 			URL:             m.URL.ValueString(),
 			WebhookSecret:   m.WebhookSecret.ValueString(),
 			WebhookType:     m.WebhookType.ValueString(),
-			Headers:         alertChannelKeyValuesFromMap(ctx, m.Headers, diags),
-			QueryParameters: alertChannelKeyValuesFromMap(ctx, m.QueryParameters, diags),
+			Headers:         keyValuesFromStringMap(ctx, m.Headers, diags),
+			QueryParameters: keyValuesFromStringMap(ctx, m.QueryParameters, diags),
 		}
 	}
 
@@ -855,29 +853,4 @@ func alertChannelPriorObject(ctx context.Context, prior types.Object, target any
 
 	// A prior value that fails to decode is no worse than none at all.
 	_ = prior.As(ctx, target, basetypes.ObjectAsOptions{})
-}
-
-// alertChannelKeyValuesFromMap converts a map of strings to the API's
-// key-value pair representation, in deterministic key order.
-func alertChannelKeyValuesFromMap(ctx context.Context, m types.Map, diags *diag.Diagnostics) []checkly.KeyValue {
-	kvs := []checkly.KeyValue{}
-
-	if m.IsNull() || m.IsUnknown() {
-		return kvs
-	}
-
-	var values map[string]string
-	diags.Append(m.ElementsAs(ctx, &values, false)...)
-	if diags.HasError() {
-		return kvs
-	}
-
-	for _, key := range slices.Sorted(maps.Keys(values)) {
-		kvs = append(kvs, checkly.KeyValue{
-			Key:   key,
-			Value: values[key],
-		})
-	}
-
-	return kvs
 }

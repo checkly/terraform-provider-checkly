@@ -2,6 +2,8 @@ package provider
 
 import (
 	"context"
+	"maps"
+	"slices"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -105,6 +107,34 @@ func setNullIfUnset(ctx context.Context, set types.Set, prior types.Set) types.S
 	return set
 }
 
+// keyValuesFromStringMap converts a map of strings to the API's key-value
+// pair representation, sorted by key so that requests are deterministic.
+// Null and unknown maps convert to an empty, non-nil slice, which the API
+// stores as no entries; payloads that leave out empty fields treat it like
+// nil.
+func keyValuesFromStringMap(ctx context.Context, m types.Map, diags *diag.Diagnostics) []checkly.KeyValue {
+	kvs := []checkly.KeyValue{}
+
+	if m.IsNull() || m.IsUnknown() {
+		return kvs
+	}
+
+	var values map[string]string
+	diags.Append(m.ElementsAs(ctx, &values, false)...)
+	if diags.HasError() {
+		return kvs
+	}
+
+	for _, key := range slices.Sorted(maps.Keys(values)) {
+		kvs = append(kvs, checkly.KeyValue{
+			Key:   key,
+			Value: values[key],
+		})
+	}
+
+	return kvs
+}
+
 // stringMapFromAPINullIfUnset converts the API's key-value pair
 // representation to a map of strings. No pairs convert to null when prior is
 // null or unknown, by the same rule as setNullIfUnset.
@@ -132,6 +162,17 @@ func priorAttribute[T attr.Value](prior types.Object, name string, null T) T {
 		if value, ok := prior.Attributes()[name].(T); ok {
 			return value
 		}
+	}
+
+	return null
+}
+
+// knownPriorAttribute is priorAttribute, except that an unknown attribute
+// value also resolves to null. It suits values carried over from prior into
+// state, which cannot hold unknown values.
+func knownPriorAttribute[T attr.Value](prior types.Object, name string, null T) T {
+	if value := priorAttribute(prior, name, null); !value.IsUnknown() {
+		return value
 	}
 
 	return null

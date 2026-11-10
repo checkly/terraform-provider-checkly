@@ -2,11 +2,14 @@ package provider
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/checkly/checkly-go-sdk/v2"
 )
 
 func TestValueContainsUnknown(t *testing.T) {
@@ -67,6 +70,60 @@ func TestStringSetFromAPI(t *testing.T) {
 			}
 			if diags.HasError() {
 				t.Fatal(diags)
+			}
+		})
+	}
+}
+
+func TestKeyValuesFromStringMap(t *testing.T) {
+	ctx := context.Background()
+
+	cases := map[string]struct {
+		m    types.Map
+		want []checkly.KeyValue
+	}{
+		"null":    {types.MapNull(types.StringType), []checkly.KeyValue{}},
+		"unknown": {types.MapUnknown(types.StringType), []checkly.KeyValue{}},
+		"sorted by key": {
+			types.MapValueMust(types.StringType, map[string]attr.Value{"b": types.StringValue("2"), "a": types.StringValue("1")}),
+			[]checkly.KeyValue{{Key: "a", Value: "1"}, {Key: "b", Value: "2"}},
+		},
+	}
+
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			var diags diag.Diagnostics
+			got := keyValuesFromStringMap(ctx, c.m, &diags)
+			if diags.HasError() {
+				t.Fatal(diags)
+			}
+			// The API stores an empty slice as no entries, so it must not
+			// become nil.
+			if got == nil || !reflect.DeepEqual(got, c.want) {
+				t.Errorf("keyValuesFromStringMap = %#v, want %#v", got, c.want)
+			}
+		})
+	}
+}
+
+func TestKnownPriorAttribute(t *testing.T) {
+	attrTypes := map[string]attr.Type{"b": types.BoolType}
+	null := types.BoolNull()
+
+	cases := map[string]struct {
+		prior types.Object
+		want  types.Bool
+	}{
+		"null prior":    {types.ObjectNull(attrTypes), null},
+		"unknown prior": {types.ObjectUnknown(attrTypes), null},
+		"unknown value": {types.ObjectValueMust(attrTypes, map[string]attr.Value{"b": types.BoolUnknown()}), null},
+		"known value":   {types.ObjectValueMust(attrTypes, map[string]attr.Value{"b": types.BoolValue(true)}), types.BoolValue(true)},
+	}
+
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			if got := knownPriorAttribute(c.prior, "b", null); !got.Equal(c.want) {
+				t.Errorf("knownPriorAttribute = %s, want %s", got, c.want)
 			}
 		})
 	}

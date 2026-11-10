@@ -198,8 +198,8 @@ func apiCheckRequestFromObject(ctx context.Context, obj types.Object, diags *dia
 		SkipSSL:         model.SkipSSL.ValueBool(),
 		Body:            model.Body.ValueString(),
 		BodyType:        checkly.BodyType(model.BodyType.ValueString()),
-		Headers:         apiCheckKeyValuesFromMap(ctx, model.Headers, diags),
-		QueryParameters: apiCheckKeyValuesFromMap(ctx, model.QueryParameters, diags),
+		Headers:         keyValuesFromStringMap(ctx, model.Headers, diags),
+		QueryParameters: keyValuesFromStringMap(ctx, model.QueryParameters, diags),
 		Assertions:      assertionsFromSet(ctx, model.Assertions, diags),
 		BasicAuth:       apiCheckBasicAuthFromObject(ctx, model.BasicAuth, diags),
 		IPFamily:        checkly.IPFamily(model.IPFamily.ValueString()),
@@ -240,32 +240,6 @@ func apiCheckRequestToObject(ctx context.Context, r checkly.Request, prior types
 	diags.Append(d...)
 
 	return obj
-}
-
-// apiCheckKeyValuesFromMap converts a map of strings to the API's key-value
-// pair representation. Null and unknown maps convert to an empty (non-nil)
-// slice, which the API stores as "no entries".
-func apiCheckKeyValuesFromMap(ctx context.Context, m types.Map, diags *diag.Diagnostics) []checkly.KeyValue {
-	kvs := []checkly.KeyValue{}
-
-	if m.IsNull() || m.IsUnknown() {
-		return kvs
-	}
-
-	var values map[string]string
-	diags.Append(m.ElementsAs(ctx, &values, false)...)
-	if diags.HasError() {
-		return kvs
-	}
-
-	for key, value := range values {
-		kvs = append(kvs, checkly.KeyValue{
-			Key:   key,
-			Value: value,
-		})
-	}
-
-	return kvs
 }
 
 // apiCheckBasicAuthFromObject converts the request.basic_auth attribute

@@ -731,11 +731,7 @@ func playwrightCheckSuiteToModel(
 	model.Locations = stringSetFromAPINullIfUnset(ctx, check.Locations, model.Locations, diags)
 	model.Tags = stringSetFromAPINullIfUnset(ctx, check.Tags, model.Tags, diags)
 
-	var privateLocations []string
-	if check.PrivateLocations != nil {
-		privateLocations = *check.PrivateLocations
-	}
-	model.PrivateLocations = stringSetFromAPINullIfUnset(ctx, privateLocations, model.PrivateLocations, diags)
+	model.PrivateLocations = stringSetFromAPINullIfUnset(ctx, valueOrZero(check.PrivateLocations), model.PrivateLocations, diags)
 
 	model.EnvironmentVariables = environmentVariablesToList(ctx, check.EnvironmentVariables, model.EnvironmentVariables, diags)
 
