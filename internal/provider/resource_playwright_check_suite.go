@@ -634,16 +634,9 @@ func playwrightCheckSuiteFinalizeState(
 	}
 	model.AlertSettings = alertSettingsToObject(ctx, *alertSettings, model.AlertSettings, diags)
 
-	if !playwrightAttrValueFullyKnown(ctx, model.Runtime) {
+	if valueContainsUnknown(ctx, model.Runtime) {
 		model.Runtime = playwrightCheckSuiteRuntimeFromAPI(ctx, check, model.Runtime, diags)
 	}
-}
-
-// playwrightAttrValueFullyKnown reports whether the value contains no
-// unknown values at any level of nesting.
-func playwrightAttrValueFullyKnown(ctx context.Context, value attr.Value) bool {
-	tv, err := value.ToTerraformValue(ctx)
-	return err == nil && tv.IsFullyKnown()
 }
 
 // playwrightCheckSuiteToModel updates the model to match the API
@@ -875,7 +868,7 @@ func (m playwrightCheckSuiteRuntimePlanModifier) PlanModifyObject(ctx context.Co
 	// When the configuration contains values that are not yet known, the
 	// runtime cannot be resolved during plan; it is resolved from the API
 	// response after apply instead.
-	if !playwrightAttrValueFullyKnown(ctx, req.ConfigValue) {
+	if valueContainsUnknown(ctx, req.ConfigValue) {
 		return
 	}
 
