@@ -203,10 +203,7 @@ func (r *MaintenanceWindowResource) Create(ctx context.Context, req resource.Cre
 
 	result, err := r.client.CreateMaintenanceWindow(apiCtx, mw)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Create Maintenance Window",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Create Maintenance Window", err)
 		return
 	}
 
@@ -241,10 +238,7 @@ func (r *MaintenanceWindowResource) Read(ctx context.Context, req resource.ReadR
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Read Maintenance Window",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Read Maintenance Window", err)
 		return
 	}
 
@@ -281,10 +275,7 @@ func (r *MaintenanceWindowResource) Update(ctx context.Context, req resource.Upd
 
 	_, err = r.client.UpdateMaintenanceWindow(apiCtx, id, mw)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Update Maintenance Window",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Update Maintenance Window", err)
 		return
 	}
 
@@ -316,10 +307,7 @@ func (r *MaintenanceWindowResource) Delete(ctx context.Context, req resource.Del
 		if isNotFoundError(err) {
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Delete Maintenance Window",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Delete Maintenance Window", err)
 		return
 	}
 }

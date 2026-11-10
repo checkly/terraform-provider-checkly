@@ -139,10 +139,7 @@ func (r *MultistepCheckResource) Create(ctx context.Context, req resource.Create
 
 	result, err := r.client.CreateMultiStepCheck(apiCtx, check)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Create Multi-step Check",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Create Multi-step Check", err)
 		return
 	}
 
@@ -168,10 +165,7 @@ func (r *MultistepCheckResource) Read(ctx context.Context, req resource.ReadRequ
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Read Multi-step Check",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Read Multi-step Check", err)
 		return
 	}
 
@@ -203,10 +197,7 @@ func (r *MultistepCheckResource) Update(ctx context.Context, req resource.Update
 
 	result, err := r.client.UpdateMultiStepCheck(apiCtx, check.ID, check)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Update Multi-step Check",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Update Multi-step Check", err)
 		return
 	}
 
@@ -231,10 +222,7 @@ func (r *MultistepCheckResource) Delete(ctx context.Context, req resource.Delete
 		if isNotFoundError(err) {
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Delete Multi-step Check",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Delete Multi-step Check", err)
 		return
 	}
 }

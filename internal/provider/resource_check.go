@@ -375,10 +375,7 @@ func (r *CheckResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Create Check",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Create Check", err)
 		return
 	}
 
@@ -404,10 +401,7 @@ func (r *CheckResource) Read(ctx context.Context, req resource.ReadRequest, resp
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Read Check",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Read Check", err)
 		return
 	}
 
@@ -445,10 +439,7 @@ func (r *CheckResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Update Check",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Update Check", err)
 		return
 	}
 
@@ -473,10 +464,7 @@ func (r *CheckResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 		if isNotFoundError(err) {
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Delete Check",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Delete Check", err)
 		return
 	}
 }

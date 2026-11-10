@@ -214,10 +214,7 @@ func (r *StatusPageV3AutomationRuleResource) Create(ctx context.Context, req res
 
 	result, err := r.client.CreateStatusPageAutomationRuleV3(apiCtx, plan.StatusPageID.ValueString(), rule)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Create Status Page V3 Automation Rule",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Create Status Page V3 Automation Rule", err)
 		return
 	}
 
@@ -226,10 +223,7 @@ func (r *StatusPageV3AutomationRuleResource) Create(ctx context.Context, req res
 	if _, err := r.readInto(ctx, &plan, &resp.Diagnostics); err != nil {
 		// Keep the created rule in state so that it is not orphaned.
 		resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
-		resp.Diagnostics.AddError(
-			"Unable to Read Status Page V3 Automation Rule",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Read Status Page V3 Automation Rule", err)
 		return
 	}
 	if resp.Diagnostics.HasError() {
@@ -255,10 +249,7 @@ func (r *StatusPageV3AutomationRuleResource) Read(ctx context.Context, req resou
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Read Status Page V3 Automation Rule",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Read Status Page V3 Automation Rule", err)
 		return
 	}
 	if resp.Diagnostics.HasError() {
@@ -290,18 +281,12 @@ func (r *StatusPageV3AutomationRuleResource) Update(ctx context.Context, req res
 
 	_, err = r.client.UpdateStatusPageAutomationRuleV3(apiCtx, plan.StatusPageID.ValueString(), rule.ID, rule)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Update Status Page V3 Automation Rule",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Update Status Page V3 Automation Rule", err)
 		return
 	}
 
 	if _, err := r.readInto(ctx, &plan, &resp.Diagnostics); err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Read Status Page V3 Automation Rule",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Read Status Page V3 Automation Rule", err)
 		return
 	}
 	if resp.Diagnostics.HasError() {
@@ -328,10 +313,7 @@ func (r *StatusPageV3AutomationRuleResource) Delete(ctx context.Context, req res
 		if isNotFoundError(err) {
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Delete Status Page V3 Automation Rule",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Delete Status Page V3 Automation Rule", err)
 		return
 	}
 }

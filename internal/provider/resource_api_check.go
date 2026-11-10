@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -197,10 +196,7 @@ func (r *APICheckResource) Create(ctx context.Context, req resource.CreateReques
 
 	result, err := r.client.CreateAPICheck(apiCtx, check)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Create API Check",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Create API Check", err)
 		return
 	}
 
@@ -226,10 +222,7 @@ func (r *APICheckResource) Read(ctx context.Context, req resource.ReadRequest, r
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Read API Check",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Read API Check", err)
 		return
 	}
 
@@ -256,10 +249,7 @@ func (r *APICheckResource) Update(ctx context.Context, req resource.UpdateReques
 
 	result, err := r.client.UpdateAPICheck(apiCtx, check.ID, check)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Update API Check",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Update API Check", err)
 		return
 	}
 
@@ -284,10 +274,7 @@ func (r *APICheckResource) Delete(ctx context.Context, req resource.DeleteReques
 		if isNotFoundError(err) {
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Delete API Check",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Delete API Check", err)
 		return
 	}
 }

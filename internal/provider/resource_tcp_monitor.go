@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -259,10 +258,7 @@ func (r *TCPMonitorResource) Create(ctx context.Context, req resource.CreateRequ
 
 	result, err := r.client.CreateTCPMonitor(apiCtx, monitor)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Create TCP Monitor",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Create TCP Monitor", err)
 		return
 	}
 
@@ -292,10 +288,7 @@ func (r *TCPMonitorResource) Read(ctx context.Context, req resource.ReadRequest,
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Read TCP Monitor",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Read TCP Monitor", err)
 		return
 	}
 
@@ -325,10 +318,7 @@ func (r *TCPMonitorResource) Update(ctx context.Context, req resource.UpdateRequ
 
 	result, err := r.client.UpdateTCPMonitor(apiCtx, plan.ID.ValueString(), monitor)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Update TCP Monitor",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Update TCP Monitor", err)
 		return
 	}
 
@@ -356,10 +346,7 @@ func (r *TCPMonitorResource) Delete(ctx context.Context, req resource.DeleteRequ
 		if isNotFoundError(err) {
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Delete TCP Monitor",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Delete TCP Monitor", err)
 		return
 	}
 }

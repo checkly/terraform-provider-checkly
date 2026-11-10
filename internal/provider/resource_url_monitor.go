@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -265,10 +264,7 @@ func (r *URLMonitorResource) Create(ctx context.Context, req resource.CreateRequ
 
 	result, err := r.client.CreateURLMonitor(apiCtx, monitor)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Create URL Monitor",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Create URL Monitor", err)
 		return
 	}
 
@@ -297,10 +293,7 @@ func (r *URLMonitorResource) Read(ctx context.Context, req resource.ReadRequest,
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Read URL Monitor",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Read URL Monitor", err)
 		return
 	}
 
@@ -330,10 +323,7 @@ func (r *URLMonitorResource) Update(ctx context.Context, req resource.UpdateRequ
 
 	result, err := r.client.UpdateURLMonitor(apiCtx, monitor.ID, monitor)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Update URL Monitor",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Update URL Monitor", err)
 		return
 	}
 
@@ -361,10 +351,7 @@ func (r *URLMonitorResource) Delete(ctx context.Context, req resource.DeleteRequ
 		if isNotFoundError(err) {
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Delete URL Monitor",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Delete URL Monitor", err)
 		return
 	}
 }

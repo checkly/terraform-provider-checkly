@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -260,10 +259,7 @@ func (r *ICMPMonitorResource) Create(ctx context.Context, req resource.CreateReq
 
 	result, err := r.client.CreateICMPMonitor(apiCtx, monitor)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Create ICMP Monitor",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Create ICMP Monitor", err)
 		return
 	}
 
@@ -292,10 +288,7 @@ func (r *ICMPMonitorResource) Read(ctx context.Context, req resource.ReadRequest
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Read ICMP Monitor",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Read ICMP Monitor", err)
 		return
 	}
 
@@ -325,10 +318,7 @@ func (r *ICMPMonitorResource) Update(ctx context.Context, req resource.UpdateReq
 
 	result, err := r.client.UpdateICMPMonitor(apiCtx, monitor.ID, monitor)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Update ICMP Monitor",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Update ICMP Monitor", err)
 		return
 	}
 
@@ -356,10 +346,7 @@ func (r *ICMPMonitorResource) Delete(ctx context.Context, req resource.DeleteReq
 		if isNotFoundError(err) {
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Delete ICMP Monitor",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Delete ICMP Monitor", err)
 		return
 	}
 }

@@ -500,10 +500,7 @@ func (r *SSLMonitorResource) Create(ctx context.Context, req resource.CreateRequ
 
 	result, err := r.client.CreateSSLMonitor(apiCtx, monitor)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Create SSL Monitor",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Create SSL Monitor", err)
 		return
 	}
 
@@ -533,10 +530,7 @@ func (r *SSLMonitorResource) Read(ctx context.Context, req resource.ReadRequest,
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Read SSL Monitor",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Read SSL Monitor", err)
 		return
 	}
 
@@ -566,10 +560,7 @@ func (r *SSLMonitorResource) Update(ctx context.Context, req resource.UpdateRequ
 
 	result, err := r.client.UpdateSSLMonitor(apiCtx, plan.ID.ValueString(), monitor)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Update SSL Monitor",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Update SSL Monitor", err)
 		return
 	}
 
@@ -597,10 +588,7 @@ func (r *SSLMonitorResource) Delete(ctx context.Context, req resource.DeleteRequ
 		if isNotFoundError(err) {
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Delete SSL Monitor",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Delete SSL Monitor", err)
 		return
 	}
 }

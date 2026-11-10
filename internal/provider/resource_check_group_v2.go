@@ -390,10 +390,7 @@ func (r *CheckGroupV2Resource) Create(ctx context.Context, req resource.CreateRe
 
 	result, err := r.client.CreateGroupV2(apiCtx, group)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Create Check Group (v2)",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Create Check Group (v2)", err)
 		return
 	}
 
@@ -406,10 +403,7 @@ func (r *CheckGroupV2Resource) Create(ctx context.Context, req resource.CreateRe
 		// instead of losing track of it.
 		checkGroupV2ToModel(ctx, result, &plan, &resp.Diagnostics)
 		resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
-		resp.Diagnostics.AddError(
-			"Unable to Read Check Group (v2) After Creation",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Read Check Group (v2) After Creation", err)
 		return
 	}
 
@@ -447,10 +441,7 @@ func (r *CheckGroupV2Resource) Read(ctx context.Context, req resource.ReadReques
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Read Check Group (v2)",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Read Check Group (v2)", err)
 		return
 	}
 
@@ -480,10 +471,7 @@ func (r *CheckGroupV2Resource) Update(ctx context.Context, req resource.UpdateRe
 
 	_, err := r.client.UpdateGroupV2(apiCtx, group.ID, group)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Update Check Group (v2)",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Update Check Group (v2)", err)
 		return
 	}
 
@@ -491,10 +479,7 @@ func (r *CheckGroupV2Resource) Update(ctx context.Context, req resource.UpdateRe
 	// which the update response is not guaranteed to be.
 	updated, err := r.client.GetGroupV2(apiCtx, group.ID)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Read Check Group (v2) After Update",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Read Check Group (v2) After Update", err)
 		return
 	}
 
@@ -531,10 +516,7 @@ func (r *CheckGroupV2Resource) Delete(ctx context.Context, req resource.DeleteRe
 		if isNotFoundError(err) {
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Delete Check Group (v2)",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Delete Check Group (v2)", err)
 		return
 	}
 }

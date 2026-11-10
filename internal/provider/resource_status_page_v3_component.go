@@ -250,10 +250,7 @@ func (r *StatusPageV3ComponentResource) Create(ctx context.Context, req resource
 
 	result, err := r.client.CreateStatusPageComponentV3(apiCtx, plan.StatusPageID.ValueString(), component)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Create Status Page V3 Component",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Create Status Page V3 Component", err)
 		return
 	}
 
@@ -262,10 +259,7 @@ func (r *StatusPageV3ComponentResource) Create(ctx context.Context, req resource
 	if _, err := r.readInto(ctx, &plan); err != nil {
 		// Keep the created component in state so that it is not orphaned.
 		resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
-		resp.Diagnostics.AddError(
-			"Unable to Read Status Page V3 Component",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Read Status Page V3 Component", err)
 		return
 	}
 
@@ -288,10 +282,7 @@ func (r *StatusPageV3ComponentResource) Read(ctx context.Context, req resource.R
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Read Status Page V3 Component",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Read Status Page V3 Component", err)
 		return
 	}
 
@@ -317,18 +308,12 @@ func (r *StatusPageV3ComponentResource) Update(ctx context.Context, req resource
 
 	_, err = r.client.UpdateStatusPageComponentV3(apiCtx, plan.StatusPageID.ValueString(), component.ID, component)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Update Status Page V3 Component",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Update Status Page V3 Component", err)
 		return
 	}
 
 	if _, err := r.readInto(ctx, &plan); err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Read Status Page V3 Component",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Read Status Page V3 Component", err)
 		return
 	}
 
@@ -352,10 +337,7 @@ func (r *StatusPageV3ComponentResource) Delete(ctx context.Context, req resource
 		if isNotFoundError(err) {
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Delete Status Page V3 Component",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Delete Status Page V3 Component", err)
 		return
 	}
 }

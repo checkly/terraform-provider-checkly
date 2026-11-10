@@ -371,10 +371,7 @@ func (r *PlaywrightCheckSuiteResource) Create(ctx context.Context, req resource.
 
 	newCheck, err := r.client.CreatePlaywrightCheck(apiCtx, *check)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Create Playwright Check Suite",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Create Playwright Check Suite", err)
 		return
 	}
 
@@ -405,10 +402,7 @@ func (r *PlaywrightCheckSuiteResource) Read(ctx context.Context, req resource.Re
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Read Playwright Check Suite",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Read Playwright Check Suite", err)
 		return
 	}
 
@@ -438,10 +432,7 @@ func (r *PlaywrightCheckSuiteResource) Update(ctx context.Context, req resource.
 
 	updatedCheck, err := r.client.UpdatePlaywrightCheck(apiCtx, plan.ID.ValueString(), *check)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Update Playwright Check Suite",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Update Playwright Check Suite", err)
 		return
 	}
 
@@ -469,10 +460,7 @@ func (r *PlaywrightCheckSuiteResource) Delete(ctx context.Context, req resource.
 		if isNotFoundError(err) {
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Delete Playwright Check Suite",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Delete Playwright Check Suite", err)
 		return
 	}
 }

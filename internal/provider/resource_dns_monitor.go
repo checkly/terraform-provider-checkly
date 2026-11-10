@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -293,10 +292,7 @@ func (r *DNSMonitorResource) Create(ctx context.Context, req resource.CreateRequ
 
 	result, err := r.client.CreateDNSMonitor(apiCtx, monitor)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Create DNS Monitor",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Create DNS Monitor", err)
 		return
 	}
 
@@ -325,10 +321,7 @@ func (r *DNSMonitorResource) Read(ctx context.Context, req resource.ReadRequest,
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Read DNS Monitor",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Read DNS Monitor", err)
 		return
 	}
 
@@ -358,10 +351,7 @@ func (r *DNSMonitorResource) Update(ctx context.Context, req resource.UpdateRequ
 
 	result, err := r.client.UpdateDNSMonitor(apiCtx, monitor.ID, monitor)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Update DNS Monitor",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Update DNS Monitor", err)
 		return
 	}
 
@@ -389,10 +379,7 @@ func (r *DNSMonitorResource) Delete(ctx context.Context, req resource.DeleteRequ
 		if isNotFoundError(err) {
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Delete DNS Monitor",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Delete DNS Monitor", err)
 		return
 	}
 }

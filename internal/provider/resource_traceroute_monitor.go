@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -325,10 +324,7 @@ func (r *TracerouteMonitorResource) Create(ctx context.Context, req resource.Cre
 
 	result, err := r.client.CreateTracerouteMonitor(apiCtx, monitor)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Create Traceroute Monitor",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Create Traceroute Monitor", err)
 		return
 	}
 
@@ -358,10 +354,7 @@ func (r *TracerouteMonitorResource) Read(ctx context.Context, req resource.ReadR
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Read Traceroute Monitor",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Read Traceroute Monitor", err)
 		return
 	}
 
@@ -391,10 +384,7 @@ func (r *TracerouteMonitorResource) Update(ctx context.Context, req resource.Upd
 
 	result, err := r.client.UpdateTracerouteMonitor(apiCtx, plan.ID.ValueString(), monitor)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Update Traceroute Monitor",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Update Traceroute Monitor", err)
 		return
 	}
 
@@ -422,10 +412,7 @@ func (r *TracerouteMonitorResource) Delete(ctx context.Context, req resource.Del
 		if isNotFoundError(err) {
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Delete Traceroute Monitor",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Delete Traceroute Monitor", err)
 		return
 	}
 }
