@@ -53,7 +53,9 @@ func (r *StatusPageServiceResource) Schema(ctx context.Context, req resource.Sch
 			"The `checkly_status_page_service` resource type is deprecated together with `checkly_status_page` and " +
 			"will be removed in a future version of the provider. A maintenance window that affects the service " +
 			"links to v3 components through `status_page_visibility.component_configs` on " +
-			"`checkly_maintenance_window`.",
+			"`checkly_maintenance_window`. " +
+			"See [Status pages](https://registry.terraform.io/providers/checkly/checkly/latest/docs/guides/upgrading-to-v2#status-pages) " +
+			"in the v2 upgrade guide.",
 		DeprecationMessage: "Use `checkly_status_page_v3_component` resources on a `checkly_status_page_v3` page " +
 			"instead; see the v2 upgrade guide.",
 		Attributes: map[string]schema.Attribute{

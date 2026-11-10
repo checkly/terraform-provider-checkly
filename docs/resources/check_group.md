@@ -4,14 +4,14 @@ page_title: "checkly_check_group Resource - terraform-provider-checkly"
 subcategory: ""
 description: |-
   Check groups allow you to group together a set of related checks, which can also share default settings for various attributes.
-  The checkly_check_group resource type is deprecated in favor of checkly_check_group_v2, which does not impose implicit defaults on its checks, and will be removed in a future version of the provider. Both resource types manage the same check groups, so an existing group can be switched over with a moved block to a checkly_check_group_v2 resource. See the v2 upgrade guide for how its configuration translates.
+  The checkly_check_group resource type is deprecated in favor of checkly_check_group_v2, which does not impose implicit defaults on its checks, and will be removed in a future version of the provider. Both resource types manage the same check groups, so an existing group can be switched over with a moved block to a checkly_check_group_v2 resource. See Check groups https://registry.terraform.io/providers/checkly/checkly/latest/docs/guides/upgrading-to-v2#check-groups in the v2 upgrade guide for how its configuration translates.
 ---
 
 # checkly_check_group (Resource)
 
 Check groups allow you to group together a set of related checks, which can also share default settings for various attributes.
 
-The `checkly_check_group` resource type is deprecated in favor of `checkly_check_group_v2`, which does not impose implicit defaults on its checks, and will be removed in a future version of the provider. Both resource types manage the same check groups, so an existing group can be switched over with a `moved` block to a `checkly_check_group_v2` resource. See the v2 upgrade guide for how its configuration translates.
+The `checkly_check_group` resource type is deprecated in favor of `checkly_check_group_v2`, which does not impose implicit defaults on its checks, and will be removed in a future version of the provider. Both resource types manage the same check groups, so an existing group can be switched over with a `moved` block to a `checkly_check_group_v2` resource. See [Check groups](https://registry.terraform.io/providers/checkly/checkly/latest/docs/guides/upgrading-to-v2#check-groups) in the v2 upgrade guide for how its configuration translates.
 
 ## Example Usage
 
@@ -137,6 +137,22 @@ resource "checkly_check_group" "test_group1" {
       activated  = true
     },
   ]
+}
+```
+
+## Moving to `checkly_check_group_v2`
+
+Terraform 1.8 or later can switch a group to `checkly_check_group_v2` with a `moved` block, without recreating it or its checks. Its attributes have to be translated; see [Check groups](https://registry.terraform.io/providers/checkly/checkly/latest/docs/guides/upgrading-to-v2#check-groups) in the v2 upgrade guide.
+
+```terraform
+resource "checkly_check_group_v2" "example" {
+  # The attributes don't carry over as they are: translate them as shown in
+  # the "Check groups" section of the v2 upgrade guide.
+}
+
+moved {
+  from = checkly_check_group.example
+  to   = checkly_check_group_v2.example
 }
 ```
 

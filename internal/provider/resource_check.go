@@ -92,8 +92,9 @@ func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 			"The `checkly_check` resource type is deprecated in favor of `checkly_api_check`, `checkly_browser_check` " +
 			"and `checkly_multistep_check`, which only expose the attributes of their check type, and will be removed " +
 			"in a future version of the provider. An existing check can be switched over to its per-type resource " +
-			"with a `moved` block, without recreating it. Before moving a check, see the \"Deprecated resource types\" " +
-			"section of the v2 upgrade guide for what to change: `checkly_api_check` has lower default " +
+			"with a `moved` block, without recreating it. Before moving a check, see " +
+			"[Deprecated resource types](https://registry.terraform.io/providers/checkly/checkly/latest/docs/guides/upgrading-to-v2#deprecated-resource-types) " +
+			"in the v2 upgrade guide for what to change: `checkly_api_check` has lower default " +
 			"`degraded_response_time` and `max_response_time` values, and the per-type resources have no `double_check`.",
 		DeprecationMessage: "The `checkly_check` resource is deprecated in favor of dedicated resource types for each check type: " +
 			"`checkly_api_check`, `checkly_browser_check`, and `checkly_multistep_check`. " +
