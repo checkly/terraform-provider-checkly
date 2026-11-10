@@ -341,14 +341,9 @@ func intsFromInt64Set(ctx context.Context, set types.Set, diags *diag.Diagnostic
 	return ints
 }
 
-// int64SetFromInts converts integers from the API to a set, resolving the
-// empty value against the prior data: when the API has none and none were
-// configured, the attribute stays null.
+// int64SetFromInts converts integers from the API to a set, null when empty
+// and unset before (see setNullIfUnset).
 func int64SetFromInts(ctx context.Context, values []int, prior types.Set, diags *diag.Diagnostics) types.Set {
-	if len(values) == 0 && (prior.IsNull() || prior.IsUnknown()) {
-		return types.SetNull(types.Int64Type)
-	}
-
 	int64s := make([]int64, len(values))
 	for i, v := range values {
 		int64s[i] = int64(v)
@@ -357,7 +352,7 @@ func int64SetFromInts(ctx context.Context, values []int, prior types.Set, diags 
 	set, d := types.SetValueFrom(ctx, types.Int64Type, int64s)
 	diags.Append(d...)
 
-	return set
+	return setNullIfUnset(ctx, set, prior)
 }
 
 // maintenanceWindowComponentConfigsFromSet converts the component_configs

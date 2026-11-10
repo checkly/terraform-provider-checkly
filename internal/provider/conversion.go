@@ -85,16 +85,18 @@ func listFromStrings(ctx context.Context, values []string, diags *diag.Diagnosti
 }
 
 // stringListFromAPINullIfUnset converts a string slice from the API to a list
-// of strings. The API reports an unset collection as an empty array, so an
-// empty value converts to null when the prior value (planned or previously
-// stored) is null or unknown. An optional attribute absent from the
-// configuration thus stays null instead of drifting to an empty list.
+// of strings, null when empty and unset before (see listNullIfUnset).
 func stringListFromAPINullIfUnset(ctx context.Context, values []string, prior types.List, diags *diag.Diagnostics) types.List {
-	if len(values) == 0 && (prior.IsNull() || prior.IsUnknown()) {
-		return types.ListNull(types.StringType)
+	return listNullIfUnset(ctx, listFromStrings(ctx, values, diags), prior)
+}
+
+// listNullIfUnset is setNullIfUnset for lists.
+func listNullIfUnset(ctx context.Context, list types.List, prior types.List) types.List {
+	if len(list.Elements()) == 0 && (prior.IsNull() || prior.IsUnknown()) {
+		return types.ListNull(list.ElementType(ctx))
 	}
 
-	return listFromStrings(ctx, values, diags)
+	return list
 }
 
 // setNullIfUnset returns a null set in place of an empty set when the prior
