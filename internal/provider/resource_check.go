@@ -825,7 +825,17 @@ func checkResolveComputedValues(ctx context.Context, check checkly.Check, model 
 	}
 
 	model.ID = types.StringValue(c.ID)
-	model.AlertSettings = alertSettingsToObject(ctx, valueOrZero(c.AlertSettings), model.AlertSettings, diags)
+
+	// When the API reports no alert settings, the planned value is kept;
+	// converting the absence of a value would overwrite planned values with
+	// empty ones. Unknown values cannot be stored in state and resolve to
+	// null.
+	if c.AlertSettings != nil {
+		model.AlertSettings = alertSettingsToObject(ctx, *c.AlertSettings, model.AlertSettings, diags)
+	} else if model.AlertSettings.IsUnknown() {
+		model.AlertSettings = types.ObjectNull(alertSettingsAttrTypes)
+	}
+
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, model.RetryStrategy, diags)
 }
 
@@ -858,7 +868,15 @@ func checkToModel(ctx context.Context, check checkly.Check, model *CheckResource
 	model.RuntimeID = stringValueOrNull(valueOrZero(c.RuntimeID))
 	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, prior.AlertChannelSubscriptions, diags)
 	model.PrivateLocations = stringSetFromAPINullIfUnset(ctx, valueOrZero(c.PrivateLocations), prior.PrivateLocations, diags)
-	model.AlertSettings = alertSettingsToObject(ctx, valueOrZero(c.AlertSettings), prior.AlertSettings, diags)
+	// When the API reports no alert settings, the prior value is kept;
+	// converting the absence of a value would overwrite the stored values
+	// with empty ones. Unknown values cannot be stored in state and resolve
+	// to null.
+	if c.AlertSettings != nil {
+		model.AlertSettings = alertSettingsToObject(ctx, *c.AlertSettings, prior.AlertSettings, diags)
+	} else if model.AlertSettings.IsUnknown() {
+		model.AlertSettings = types.ObjectNull(alertSettingsAttrTypes)
+	}
 	model.UseGlobalAlertSettings = types.BoolValue(c.UseGlobalAlertSettings)
 	// The SDK's check types have no double_check, so the value in the model
 	// stands, and a value that was never set, as on import, is false. A change
