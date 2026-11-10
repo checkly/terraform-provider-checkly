@@ -508,13 +508,7 @@ func playwrightCheckSuiteFromModel(
 	privateLocations := stringsFromSetOrEmpty(ctx, model.PrivateLocations, diags)
 	check.PrivateLocations = &privateLocations
 
-	if !model.Bundle.IsNull() && !model.Bundle.IsUnknown() {
-		var bundle PlaywrightCheckSuiteBundleModel
-		diags.Append(model.Bundle.As(ctx, &bundle, basetypes.ObjectAsOptions{})...)
-		if diags.HasError() {
-			return nil
-		}
-
+	if bundle := objectAs[PlaywrightCheckSuiteBundleModel](ctx, model.Bundle, diags); bundle != nil {
 		if !bundle.ID.IsNull() && !bundle.ID.IsUnknown() {
 			bundlePath, err := base64.StdEncoding.DecodeString(bundle.ID.ValueString())
 			if err != nil {
@@ -542,44 +536,28 @@ func playwrightCheckSuiteFromModel(
 		}
 	}
 
-	if !model.Runtime.IsNull() && !model.Runtime.IsUnknown() {
-		var runtime PlaywrightCheckSuiteRuntimeModel
-		diags.Append(model.Runtime.As(ctx, &runtime, basetypes.ObjectAsOptions{})...)
-		if diags.HasError() {
-			return nil
-		}
-
+	if runtime := objectAs[PlaywrightCheckSuiteRuntimeModel](ctx, model.Runtime, diags); runtime != nil {
 		if !runtime.WorkingDir.IsNull() && !runtime.WorkingDir.IsUnknown() {
 			if workingDir := runtime.WorkingDir.ValueString(); workingDir != "" {
 				check.WorkingDir = &workingDir
 			}
 		}
 
-		if !runtime.Steps.IsNull() && !runtime.Steps.IsUnknown() {
-			var steps PlaywrightCheckSuiteRuntimeStepsModel
-			diags.Append(runtime.Steps.As(ctx, &steps, basetypes.ObjectAsOptions{})...)
-
-			if !steps.Install.IsNull() && !steps.Install.IsUnknown() {
-				var install PlaywrightCheckSuiteRuntimeCommandModel
-				diags.Append(steps.Install.As(ctx, &install, basetypes.ObjectAsOptions{})...)
+		if steps := objectAs[PlaywrightCheckSuiteRuntimeStepsModel](ctx, runtime.Steps, diags); steps != nil {
+			if install := objectAs[PlaywrightCheckSuiteRuntimeCommandModel](ctx, steps.Install, diags); install != nil {
 				if command := install.Command.ValueString(); command != "" {
 					check.InstallCommand = &command
 				}
 			}
 
-			if !steps.Test.IsNull() && !steps.Test.IsUnknown() {
-				var test PlaywrightCheckSuiteRuntimeCommandModel
-				diags.Append(steps.Test.As(ctx, &test, basetypes.ObjectAsOptions{})...)
+			if test := objectAs[PlaywrightCheckSuiteRuntimeCommandModel](ctx, steps.Test, diags); test != nil {
 				if command := test.Command.ValueString(); command != "" {
 					check.TestCommand = &command
 				}
 			}
 		}
 
-		if !runtime.Playwright.IsNull() && !runtime.Playwright.IsUnknown() {
-			var playwright PlaywrightCheckSuiteRuntimePlaywrightModel
-			diags.Append(runtime.Playwright.As(ctx, &playwright, basetypes.ObjectAsOptions{})...)
-
+		if playwright := objectAs[PlaywrightCheckSuiteRuntimePlaywrightModel](ctx, runtime.Playwright, diags); playwright != nil {
 			if !playwright.Version.IsNull() && !playwright.Version.IsUnknown() {
 				version := playwright.Version.ValueString()
 				check.PlaywrightVersion = &version
@@ -598,10 +576,7 @@ func playwrightCheckSuiteFromModel(
 			}
 		}
 
-		if !runtime.Engine.IsNull() && !runtime.Engine.IsUnknown() {
-			var engine PlaywrightCheckSuiteRuntimeEngineModel
-			diags.Append(runtime.Engine.As(ctx, &engine, basetypes.ObjectAsOptions{})...)
-
+		if engine := objectAs[PlaywrightCheckSuiteRuntimeEngineModel](ctx, runtime.Engine, diags); engine != nil {
 			name := engine.Name.ValueString()
 			version := engine.Version.ValueString()
 			check.Engine = (*checkly.PlaywrightEngine)(&name)
@@ -801,19 +776,13 @@ func playwrightCheckSuiteRuntimeFromAPI(
 func playwrightCheckSuitePriorInstall(ctx context.Context, priorSteps types.Object, diags *diag.Diagnostics) types.Object {
 	null := types.ObjectNull(playwrightCheckSuiteRuntimeCommandAttrTypes)
 
-	if priorSteps.IsNull() || priorSteps.IsUnknown() {
+	steps := objectAs[PlaywrightCheckSuiteRuntimeStepsModel](ctx, priorSteps, diags)
+	if steps == nil {
 		return null
 	}
 
-	var steps PlaywrightCheckSuiteRuntimeStepsModel
-	diags.Append(priorSteps.As(ctx, &steps, basetypes.ObjectAsOptions{})...)
-	if diags.HasError() || steps.Install.IsNull() || steps.Install.IsUnknown() {
-		return null
-	}
-
-	var install PlaywrightCheckSuiteRuntimeCommandModel
-	diags.Append(steps.Install.As(ctx, &install, basetypes.ObjectAsOptions{})...)
-	if diags.HasError() || !install.Command.IsNull() {
+	install := objectAs[PlaywrightCheckSuiteRuntimeCommandModel](ctx, steps.Install, diags)
+	if install == nil || !install.Command.IsNull() {
 		return null
 	}
 

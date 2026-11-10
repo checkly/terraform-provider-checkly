@@ -741,10 +741,7 @@ func sslMonitorRequestFromObject(ctx context.Context, obj types.Object, diags *d
 	// an empty (omitted) mode. The certificate ID maps to the top-level
 	// sslClientCertificateId foreign key and is required when the mode is
 	// "explicit".
-	if !model.ClientCertificate.IsNull() && !model.ClientCertificate.IsUnknown() {
-		var cert SSLMonitorClientCertificateModel
-		diags.Append(model.ClientCertificate.As(ctx, &cert, basetypes.ObjectAsOptions{})...)
-
+	if cert := objectAs[SSLMonitorClientCertificateModel](ctx, model.ClientCertificate, diags); cert != nil {
 		if mode := cert.Mode.ValueString(); mode != "" && mode != "account_default" {
 			request.SSLConfig.ClientCertificateMode = checkly.SSLClientCertificateMode(mode)
 		}
