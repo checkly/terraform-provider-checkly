@@ -141,6 +141,13 @@ func (p *ChecklyProvider) Configure(ctx context.Context, req provider.ConfigureR
 		checkly.WithSource(source),
 	)
 	switch {
+	case errors.Is(err, checkly.ErrInvalidAPIKey):
+		resp.Diagnostics.AddAttributeError(
+			path.Root("api_key"),
+			"Invalid Checkly API Key",
+			"The Checkly API key contains a character that HTTP headers do not allow, such as a trailing newline. Check the api_key value in the provider configuration or the CHECKLY_API_KEY environment variable.",
+		)
+		return
 	case errors.Is(err, checkly.ErrMissingAccountID):
 		resp.Diagnostics.AddAttributeError(
 			path.Root("account_id"),
