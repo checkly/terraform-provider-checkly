@@ -135,7 +135,7 @@ resource "checkly_tcp_check" "example-tcp-check-2" {
 
 Required:
 
-- `hostname` (String) The hostname or IP to connect to, of 1 to 2048 UTF-16 code units. Do not include a scheme or a port in this value. Most characters count as one; emoji and other characters outside the Basic Multilingual Plane count as two.
+- `hostname` (String) The hostname or IP to connect to, of 1 to 2048 characters. Do not include a scheme or a port in this value.
 - `port` (Number) The port number to connect to.
 
 Optional:

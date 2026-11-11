@@ -59,14 +59,14 @@ func makeCheckIntentSchema() schema.SingleNestedAttribute {
 		Attributes: map[string]schema.Attribute{
 			"goal": schema.StringAttribute{
 				Required:    true,
-				Description: "The user or system outcome the check protects, of 1 to 2000 UTF-16 code units without leading or trailing whitespace. " + utf16CountingExplanation,
+				Description: "The user or system outcome the check protects, of 1 to 2000 characters without leading or trailing whitespace.",
 				Validators: []validator.String{
 					utf16LengthBetween(1, 2000),
 					trimmedStringValidator{},
 				},
 			},
-			"required_outcomes": makeCheckIntentStatementsSchema("Observable outcomes the check must continue to prove. At most 20 statements of 1 to 1000 UTF-16 code units without leading or trailing whitespace. " + utf16CountingExplanation),
-			"must_preserve":     makeCheckIntentStatementsSchema("Guardrails an automatic repair must not weaken or bypass. At most 20 statements of 1 to 1000 UTF-16 code units without leading or trailing whitespace. " + utf16CountingExplanation),
+			"required_outcomes": makeCheckIntentStatementsSchema("Observable outcomes the check must continue to prove. At most 20 statements of 1 to 1000 characters without leading or trailing whitespace."),
+			"must_preserve":     makeCheckIntentStatementsSchema("Guardrails an automatic repair must not weaken or bypass. At most 20 statements of 1 to 1000 characters without leading or trailing whitespace."),
 		},
 	}
 }

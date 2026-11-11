@@ -112,7 +112,7 @@ func (r *StatusPageV3ComponentResource) Schema(ctx context.Context, req resource
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
-				Description: "The name shown on the status page, of 1 to 255 UTF-16 code units without leading or trailing whitespace. " + utf16CountingExplanation,
+				Description: "The name shown on the status page, of 1 to 255 characters without leading or trailing whitespace.",
 				Validators: []validator.String{
 					utf16LengthBetween(1, 255),
 					trimmedStringValidator{},

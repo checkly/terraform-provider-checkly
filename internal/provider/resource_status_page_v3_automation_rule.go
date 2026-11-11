@@ -102,7 +102,7 @@ func (r *StatusPageV3AutomationRuleResource) Schema(ctx context.Context, req res
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
-				Description: "The name of the rule, of 1 to 255 UTF-16 code units. " + utf16CountingExplanation,
+				Description: "The name of the rule, of 1 to 255 characters.",
 				Validators: []validator.String{
 					utf16LengthBetween(1, 255),
 				},

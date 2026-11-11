@@ -13,10 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-// utf16CountingExplanation tells users how a UTF-16 length limit counts
-// characters, for attribute descriptions and error messages.
-const utf16CountingExplanation = "Most characters count as one; emoji and other characters outside the Basic Multilingual Plane count as two."
-
 // utf16LengthValidator rejects strings whose length in UTF-16 code units is
 // outside [min, max]. The API validates lengths in JavaScript, whose string
 // length counts UTF-16 code units, so a character outside the Basic
@@ -59,7 +55,7 @@ func (v utf16LengthValidator) ValidateString(ctx context.Context, req validator.
 		resp.Diagnostics.AddAttributeError(
 			req.Path,
 			"Invalid Attribute Value Length",
-			fmt.Sprintf("%s must be %d to %d UTF-16 code units long, got: %d. %s", req.Path, v.min, v.max, n, utf16CountingExplanation),
+			fmt.Sprintf("%s must be %d to %d UTF-16 code units long, got: %d. Most characters count as one; emoji and other characters outside the Basic Multilingual Plane count as two.", req.Path, v.min, v.max, n),
 		)
 	}
 }

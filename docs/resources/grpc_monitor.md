@@ -160,7 +160,7 @@ resource "checkly_grpc_monitor" "example-flatbuffers-monitor" {
 
 Required:
 
-- `host` (String) The host to connect to, of 1 to 2048 UTF-16 code units without control characters. Do not include a scheme or a port in this value. Most characters count as one; emoji and other characters outside the Basic Multilingual Plane count as two.
+- `host` (String) The host to connect to, of 1 to 2048 characters. Do not include a scheme or a port in this value.
 - `port` (Number) The port number to connect to. Possible values are between 1 and 65535.
 
 Optional:
@@ -170,10 +170,10 @@ Optional:
 - `encoding` (String) The wire encoding used in `BEHAVIOR` mode. Possible values are `PROTOBUF` and `FLATBUFFERS`. (Default `PROTOBUF`).
 - `grpc_mode` (String) The gRPC monitoring mode. `BEHAVIOR` invokes a unary method (requires `method`); `HEALTH` queries the standard gRPC health-check service (allows `service`). (Default `BEHAVIOR`).
 - `ip_family` (String) The IP family to use when executing the gRPC check. The value can be either `IPv4` or `IPv6`. (Default `IPv4`).
-- `message` (String) The JSON request message sent as the gRPC call payload in `BEHAVIOR` mode, of at most 65536 UTF-16 code units. Most characters count as one; emoji and other characters outside the Basic Multilingual Plane count as two.
+- `message` (String) The JSON request message sent as the gRPC call payload in `BEHAVIOR` mode, of at most 65536 characters.
 - `metadata` (Attributes Set) gRPC metadata (request headers) sent with the call. At most 50 elements. (see [below for nested schema](#nestedatt--request--metadata))
 - `method` (String) The fully-qualified gRPC method to invoke in `BEHAVIOR` mode (e.g. `package.Service/Method`). Required in `BEHAVIOR` mode; forbidden in `HEALTH` mode.
-- `proto_content` (String) The inline `.proto` file source used when `service_definition = "PROTO_FILE"` in `BEHAVIOR` mode, of at most 102400 UTF-16 code units. Forbidden when `encoding = "FLATBUFFERS"`. Most characters count as one; emoji and other characters outside the Basic Multilingual Plane count as two.
+- `proto_content` (String) The inline `.proto` file source used when `service_definition = "PROTO_FILE"` in `BEHAVIOR` mode, of at most 102400 characters. Forbidden when `encoding = "FLATBUFFERS"`.
 - `service` (String) The service name to query in `HEALTH` mode. An empty value queries overall server health. Forbidden in `BEHAVIOR` mode.
 - `service_definition` (String) How the service definition is resolved in `BEHAVIOR` mode: `REFLECTION` uses server reflection; `PROTO_FILE` uses the inline `proto_content`. Forbidden when `encoding = "FLATBUFFERS"`. (Default `REFLECTION`).
 - `skip_ssl` (Boolean) Whether to skip SSL certificate validation when `tls` is enabled. (Default `false`).
@@ -199,11 +199,11 @@ Optional:
 
 Required:
 
-- `key` (String) The gRPC metadata (header) key, of 1 to 256 UTF-16 code units. Most characters count as one; emoji and other characters outside the Basic Multilingual Plane count as two.
+- `key` (String) The gRPC metadata (header) key, of 1 to 256 characters.
 
 Optional:
 
-- `value` (String) The gRPC metadata (header) value, of at most 8192 UTF-16 code units. Most characters count as one; emoji and other characters outside the Basic Multilingual Plane count as two.
+- `value` (String) The gRPC metadata (header) value, of at most 8192 characters.
 
 
 

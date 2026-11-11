@@ -97,7 +97,7 @@ resource "checkly_dns_monitor" "example-dns-monitor-private-location" {
 
 Required:
 
-- `query` (String) The DNS record to query, of 1 to 100 UTF-16 code units. Most characters count as one; emoji and other characters outside the Basic Multilingual Plane count as two.
+- `query` (String) The DNS record to query, of 1 to 100 characters.
 - `record_type` (String) The DNS record type. Possible values are `A`, `AAAA`, `CNAME`, `MX`, `NS`, `TXT` and `SOA`.
 
 Optional:
@@ -125,7 +125,7 @@ Optional:
 
 Optional:
 
-- `host` (String) The name server host, of at most 100 UTF-16 code units. Most characters count as one; emoji and other characters outside the Basic Multilingual Plane count as two.
+- `host` (String) The name server host, of at most 100 characters.
 - `port` (Number) The name server port.
 
 

@@ -163,7 +163,7 @@ func (r *DNSMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 					},
 					"query": schema.StringAttribute{
 						Required:    true,
-						Description: "The DNS record to query, of 1 to 100 UTF-16 code units. " + utf16CountingExplanation,
+						Description: "The DNS record to query, of 1 to 100 characters.",
 						Validators: []validator.String{
 							utf16LengthBetween(1, 100),
 						},
@@ -186,7 +186,7 @@ func (r *DNSMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 						Attributes: map[string]schema.Attribute{
 							"host": schema.StringAttribute{
 								Optional:    true,
-								Description: "The name server host, of at most 100 UTF-16 code units. " + utf16CountingExplanation,
+								Description: "The name server host, of at most 100 characters.",
 								Validators: []validator.String{
 									utf16LengthBetween(0, 100),
 									stringvalidator.AlsoRequires(

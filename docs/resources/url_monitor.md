@@ -74,7 +74,7 @@ resource "checkly_url_monitor" "example-url-monitor" {
 
 Required:
 
-- `url` (String) The URL to monitor. Must be a valid HTTP or HTTPS URL of 1 to 2048 UTF-16 code units. Most characters count as one; emoji and other characters outside the Basic Multilingual Plane count as two.
+- `url` (String) The URL to monitor. Must be a valid HTTP or HTTPS URL of 1 to 2048 characters.
 
 Optional:
 

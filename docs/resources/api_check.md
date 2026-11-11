@@ -228,7 +228,7 @@ moved {
 
 Required:
 
-- `url` (String) The URL to call, of 1 to 2048 UTF-16 code units. Most characters count as one; emoji and other characters outside the Basic Multilingual Plane count as two.
+- `url` (String) The URL to call, of 1 to 2048 characters.
 
 Optional:
 
@@ -327,12 +327,12 @@ Optional:
 
 Required:
 
-- `goal` (String) The user or system outcome the check protects, of 1 to 2000 UTF-16 code units without leading or trailing whitespace. Most characters count as one; emoji and other characters outside the Basic Multilingual Plane count as two.
+- `goal` (String) The user or system outcome the check protects, of 1 to 2000 characters without leading or trailing whitespace.
 
 Optional:
 
-- `must_preserve` (List of String) Guardrails an automatic repair must not weaken or bypass. At most 20 statements of 1 to 1000 UTF-16 code units without leading or trailing whitespace. Most characters count as one; emoji and other characters outside the Basic Multilingual Plane count as two.
-- `required_outcomes` (List of String) Observable outcomes the check must continue to prove. At most 20 statements of 1 to 1000 UTF-16 code units without leading or trailing whitespace. Most characters count as one; emoji and other characters outside the Basic Multilingual Plane count as two.
+- `must_preserve` (List of String) Guardrails an automatic repair must not weaken or bypass. At most 20 statements of 1 to 1000 characters without leading or trailing whitespace.
+- `required_outcomes` (List of String) Observable outcomes the check must continue to prove. At most 20 statements of 1 to 1000 characters without leading or trailing whitespace.
 
 
 <a id="nestedatt--retry_strategy"></a>

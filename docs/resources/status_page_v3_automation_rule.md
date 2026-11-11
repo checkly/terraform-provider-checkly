@@ -49,7 +49,7 @@ resource "checkly_status_page_v3_automation_rule" "api_outage" {
 
 - `first_update` (String) Body of the status update that opens the incident.
 - `last_update` (String) Body of the status update that resolves the incident.
-- `name` (String) The name of the rule, of 1 to 255 UTF-16 code units. Most characters count as one; emoji and other characters outside the Basic Multilingual Plane count as two.
+- `name` (String) The name of the rule, of 1 to 255 characters.
 - `status_page_id` (String) The ID of the v3 status page the rule belongs to.
 - `tags` (Set of String) A failing check matches this rule when it, or its group, carries ANY of these tags. At least one tag is required.
 

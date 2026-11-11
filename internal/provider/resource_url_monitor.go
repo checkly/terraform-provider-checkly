@@ -148,7 +148,7 @@ func (r *URLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 				Attributes: map[string]schema.Attribute{
 					"url": schema.StringAttribute{
 						Required:    true,
-						Description: "The URL to monitor. Must be a valid HTTP or HTTPS URL of 1 to 2048 UTF-16 code units. " + utf16CountingExplanation,
+						Description: "The URL to monitor. Must be a valid HTTP or HTTPS URL of 1 to 2048 characters.",
 						Validators: []validator.String{
 							utf16LengthBetween(1, 2048),
 						},

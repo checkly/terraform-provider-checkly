@@ -301,7 +301,7 @@ func (r *SSLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 				Attributes: map[string]schema.Attribute{
 					"hostname": schema.StringAttribute{
 						Required:    true,
-						Description: "The hostname to connect to and validate the TLS certificate of, of 1 to 2048 UTF-16 code units without control characters. Do not include a scheme or a port in this value. " + utf16CountingExplanation,
+						Description: "The hostname to connect to and validate the TLS certificate of, of 1 to 2048 characters. Do not include a scheme or a port in this value.",
 						Validators: []validator.String{
 							utf16LengthBetween(1, 2048),
 							noControlCharacters(),
@@ -320,7 +320,7 @@ func (r *SSLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 						Optional:    true,
 						Computed:    true,
 						Default:     stringdefault.StaticString(""),
-						Description: "An optional SNI server name to send in the TLS handshake, of at most 2048 UTF-16 code units without control characters. Defaults to `hostname` when unset. " + utf16CountingExplanation,
+						Description: "An optional SNI server name to send in the TLS handshake, of at most 2048 characters. Defaults to `hostname` when unset.",
 						Validators: []validator.String{
 							utf16LengthBetween(0, 2048),
 							noControlCharacters(),
