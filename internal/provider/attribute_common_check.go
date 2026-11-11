@@ -3,9 +3,10 @@ package provider
 import (
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -224,23 +225,33 @@ func tagsAttributeSchema(subject CheckSubject) schema.SetAttribute {
 	}
 }
 
+// groupIDAttributeSchema returns an attribute that is null when the check or
+// monitor is not in a group. The API also accepts and reports 0 for no group;
+// the configuration rejects 0 so that no group has a single representation,
+// and reads map 0 to null.
 func groupIDAttributeSchema(subject CheckSubject) schema.Int64Attribute {
 	return schema.Int64Attribute{
-		Optional:    true,
-		Computed:    true,
-		Default:     int64default.StaticInt64(0),
-		Description: fmt.Sprintf("The ID of the check group the %s is part of. (Default `0`, no group).", subject),
+		Optional: true,
+		Validators: []validator.Int64{
+			int64validator.AtLeast(1),
+		},
+		Description: fmt.Sprintf("The ID of the check group the %[1]s is part of (at least `1`). When unset, "+
+			"the %[1]s is not part of a group.", subject),
 	}
 }
 
+// groupOrderAttributeSchema returns an attribute that is null when the check
+// or monitor has no position. Positions start at 0, which the web app gives
+// the first check it adds to a group.
 func groupOrderAttributeSchema(subject CheckSubject) schema.Int64Attribute {
 	return schema.Int64Attribute{
 		Optional: true,
-		Computed: true,
-		Default:  int64default.StaticInt64(0),
-		Description: fmt.Sprintf("The position of the %s in its check group, which sets the order in which the "+
-			"checks and monitors of the group run when the group is triggered from the API or CI/CD. "+
-			"(Default `0`).", subject),
+		Validators: []validator.Int64{
+			int64validator.AtLeast(0),
+		},
+		Description: fmt.Sprintf("The position of the %s in its check group (at least `0`), which sets the "+
+			"order in which the checks and monitors of the group run when the group is triggered from the API "+
+			"or CI/CD. When unset, the %s has no position in the group.", subject, subject),
 	}
 }
 

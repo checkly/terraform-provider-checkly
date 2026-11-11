@@ -393,7 +393,7 @@ func icmpMonitorFromModel(ctx context.Context, model *ICMPMonitorResourceModel, 
 		UseGlobalAlertSettings:      model.UseGlobalAlertSettings.ValueBool(),
 		Request:                     icmpMonitorRequestFromObject(ctx, model.Request, diags),
 		GroupID:                     model.GroupID.ValueInt64(),
-		GroupOrder:                  int(model.GroupOrder.ValueInt64()),
+		GroupOrder:                  groupOrderToAPI(model.GroupOrder),
 		AlertChannelSubscriptions:   alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscriptions, diags),
 		RetryStrategy:               retryStrategyFromObject(ctx, model.RetryStrategy, diags),
 		TriggerIncident:             triggerIncidentFromObject(ctx, model.TriggerIncident, diags),
@@ -436,8 +436,8 @@ func icmpMonitorToModel(ctx context.Context, c *checkly.ICMPMonitor, model *ICMP
 
 	model.UseGlobalAlertSettings = types.BoolValue(c.UseGlobalAlertSettings)
 	model.Request = icmpMonitorRequestToObject(ctx, c.Request, model.Request, diags)
-	model.GroupID = types.Int64Value(c.GroupID)
-	model.GroupOrder = types.Int64Value(int64(c.GroupOrder))
+	model.GroupID = int64ValueOrNull(c.GroupID)
+	model.GroupOrder = groupOrderFromAPI(c.GroupOrder, model.GroupOrder)
 	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, model.AlertChannelSubscriptions, diags)
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, model.RetryStrategy, diags)
 	model.TriggerIncident = triggerIncidentToObject(ctx, c.TriggerIncident, diags)

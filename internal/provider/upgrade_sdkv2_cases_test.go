@@ -333,6 +333,75 @@ resource "checkly_check" "test" {
 }
 `),
 
+	// Group membership and snippet references carry over unchanged; v2
+	// stores none of them as null instead of 0, which the cases that leave
+	// them out cover.
+	"check_group_membership_and_snippets": newSDKv2UpgradeCase(`
+resource "checkly_snippet" "test" {
+  name   = "tf-upgrade-{{id}}-membership-snippet"
+  script = "console.log('setup')"
+}
+
+resource "checkly_check_group" "test" {
+  name                      = "tf-upgrade-{{id}}-membership-group"
+  activated                 = true
+  concurrency               = 1
+  locations                 = ["eu-central-1"]
+  use_global_alert_settings = true
+  setup_snippet_id          = checkly_snippet.test.id
+  teardown_snippet_id       = checkly_snippet.test.id
+}
+
+resource "checkly_check" "test" {
+  name                      = "tf-upgrade-{{id}}-membership-check"
+  type                      = "API"
+  frequency                 = 60
+  activated                 = true
+  locations                 = ["eu-central-1"]
+  use_global_alert_settings = true
+  group_id                  = checkly_check_group.test.id
+  group_order               = 1
+  setup_snippet_id          = checkly_snippet.test.id
+  teardown_snippet_id       = checkly_snippet.test.id
+
+  request {
+    url = "https://api.checklyhq.com/public-stats"
+  }
+}
+`, `
+resource "checkly_snippet" "test" {
+  name   = "tf-upgrade-{{id}}-membership-snippet"
+  script = "console.log('setup')"
+}
+
+resource "checkly_check_group" "test" {
+  name                      = "tf-upgrade-{{id}}-membership-group"
+  activated                 = true
+  concurrency               = 1
+  locations                 = ["eu-central-1"]
+  use_global_alert_settings = true
+  setup_snippet_id          = checkly_snippet.test.id
+  teardown_snippet_id       = checkly_snippet.test.id
+}
+
+resource "checkly_check" "test" {
+  name                      = "tf-upgrade-{{id}}-membership-check"
+  type                      = "API"
+  frequency                 = 60
+  activated                 = true
+  locations                 = ["eu-central-1"]
+  use_global_alert_settings = true
+  group_id                  = checkly_check_group.test.id
+  group_order               = 1
+  setup_snippet_id          = checkly_snippet.test.id
+  teardown_snippet_id       = checkly_snippet.test.id
+
+  request = {
+    url = "https://api.checklyhq.com/public-stats"
+  }
+}
+`),
+
 	// v1.x stored the explicitly empty private_locations as []. The upgrade
 	// stores it as null, like an unset one, so the first plan sets it to []
 	// again, which changes nothing in the API.

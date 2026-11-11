@@ -1129,8 +1129,8 @@ func TestAccCheckGroupUnsetSweepSnippets(t *testing.T) {
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr("checkly_check_group.test", "setup_snippet_id", "0"),
-				resource.TestCheckResourceAttr("checkly_check_group.test", "teardown_snippet_id", "0"),
+				resource.TestCheckNoResourceAttr("checkly_check_group.test", "setup_snippet_id"),
+				resource.TestCheckNoResourceAttr("checkly_check_group.test", "teardown_snippet_id"),
 			),
 		},
 	})

@@ -398,7 +398,7 @@ func urlMonitorFromModel(ctx context.Context, model *URLMonitorResourceModel, di
 		UseGlobalAlertSettings:    model.UseGlobalAlertSettings.ValueBool(),
 		Request:                   urlMonitorRequestFromObject(ctx, model.Request, diags),
 		GroupID:                   model.GroupID.ValueInt64(),
-		GroupOrder:                int(model.GroupOrder.ValueInt64()),
+		GroupOrder:                groupOrderToAPI(model.GroupOrder),
 		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscriptions, diags),
 		PrivateLocations:          &privateLocations,
 		RetryStrategy:             retryStrategyFromObject(ctx, model.RetryStrategy, diags),
@@ -437,8 +437,8 @@ func urlMonitorToModel(ctx context.Context, c *checkly.URLMonitor, model *URLMon
 
 	model.UseGlobalAlertSettings = types.BoolValue(c.UseGlobalAlertSettings)
 	model.Request = urlMonitorRequestToObject(ctx, c.Request, model.Request, diags)
-	model.GroupID = types.Int64Value(c.GroupID)
-	model.GroupOrder = types.Int64Value(int64(c.GroupOrder))
+	model.GroupID = int64ValueOrNull(c.GroupID)
+	model.GroupOrder = groupOrderFromAPI(c.GroupOrder, model.GroupOrder)
 
 	var privateLocations []string
 	if c.PrivateLocations != nil {

@@ -657,7 +657,7 @@ func TestAccMultistepCheckUnsetSweepGroupAndAlerts(t *testing.T) {
 				),
 			),
 		},
-		// Removing group_order alone must reset it to 0 remotely while the
+		// Removing group_order alone must clear the position remotely while the
 		// check stays in the group.
 		{
 			Config: multistepCheckUnsetSweepDeps + `
@@ -697,10 +697,9 @@ func TestAccMultistepCheckUnsetSweepGroupAndAlerts(t *testing.T) {
 					"checkly_check_group.sweep",
 					"id",
 				),
-				resource.TestCheckResourceAttr(
+				resource.TestCheckNoResourceAttr(
 					"checkly_multistep_check.test",
 					"group_order",
-					"0",
 				),
 			),
 		},
@@ -718,15 +717,13 @@ func TestAccMultistepCheckUnsetSweepGroupAndAlerts(t *testing.T) {
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
+				resource.TestCheckNoResourceAttr(
 					"checkly_multistep_check.test",
 					"group_id",
-					"0",
 				),
-				resource.TestCheckResourceAttr(
+				resource.TestCheckNoResourceAttr(
 					"checkly_multistep_check.test",
 					"group_order",
-					"0",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_multistep_check.test",

@@ -449,7 +449,7 @@ func tracerouteMonitorFromModel(ctx context.Context, model *TracerouteMonitorRes
 		PrivateLocations:          &privateLocations,
 		UseGlobalAlertSettings:    model.UseGlobalAlertSettings.ValueBool(),
 		GroupID:                   model.GroupID.ValueInt64(),
-		GroupOrder:                int(model.GroupOrder.ValueInt64()),
+		GroupOrder:                groupOrderToAPI(model.GroupOrder),
 		Request:                   tracerouteMonitorRequestFromObject(ctx, model.Request, diags),
 		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscriptions, diags),
 		RetryStrategy:             retryStrategyFromObject(ctx, model.RetryStrategy, diags),
@@ -516,8 +516,8 @@ func tracerouteMonitorToModel(ctx context.Context, c *checkly.TracerouteMonitor,
 	model.AlertSettings = alertSettingsFromAPI(ctx, c.AlertSettings, model.AlertSettings, diags)
 
 	model.UseGlobalAlertSettings = types.BoolValue(c.UseGlobalAlertSettings)
-	model.GroupID = types.Int64Value(c.GroupID)
-	model.GroupOrder = types.Int64Value(int64(c.GroupOrder))
+	model.GroupID = int64ValueOrNull(c.GroupID)
+	model.GroupOrder = groupOrderFromAPI(c.GroupOrder, model.GroupOrder)
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, model.RetryStrategy, diags)
 	model.Request = tracerouteMonitorRequestToObject(ctx, c.Request, model.Request, diags)
 	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, model.AlertChannelSubscriptions, diags)

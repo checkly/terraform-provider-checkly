@@ -780,7 +780,7 @@ func grpcMonitorFromModel(ctx context.Context, model *GRPCMonitorResourceModel, 
 		Tags:                      stringsFromSet(ctx, model.Tags, diags),
 		UseGlobalAlertSettings:    model.UseGlobalAlertSettings.ValueBool(),
 		GroupID:                   model.GroupID.ValueInt64(),
-		GroupOrder:                int(model.GroupOrder.ValueInt64()),
+		GroupOrder:                groupOrderToAPI(model.GroupOrder),
 		PrivateLocations:          &privateLocations,
 		Request:                   grpcMonitorRequestFromObject(ctx, model.Request, diags),
 		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscriptions, diags),
@@ -848,8 +848,8 @@ func grpcMonitorToModel(ctx context.Context, c *checkly.GRPCMonitor, model *GRPC
 	model.AlertSettings = alertSettingsFromAPI(ctx, c.AlertSettings, model.AlertSettings, diags)
 
 	model.UseGlobalAlertSettings = types.BoolValue(c.UseGlobalAlertSettings)
-	model.GroupID = types.Int64Value(c.GroupID)
-	model.GroupOrder = types.Int64Value(int64(c.GroupOrder))
+	model.GroupID = int64ValueOrNull(c.GroupID)
+	model.GroupOrder = groupOrderFromAPI(c.GroupOrder, model.GroupOrder)
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, model.RetryStrategy, diags)
 	model.Request = grpcMonitorRequestToObject(ctx, c.Request, model.Request, diags)
 	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, model.AlertChannelSubscriptions, diags)

@@ -486,7 +486,7 @@ func playwrightCheckSuiteFromModel(
 		Tags:                      stringsFromSet(ctx, model.Tags, diags),
 		UseGlobalAlertSettings:    model.UseGlobalAlertSettings.ValueBool(),
 		GroupID:                   model.GroupID.ValueInt64(),
-		GroupOrder:                int(model.GroupOrder.ValueInt64()),
+		GroupOrder:                groupOrderToAPI(model.GroupOrder),
 		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscriptions, diags),
 		TriggerIncident:           triggerIncidentFromObject(ctx, model.TriggerIncident, diags),
 		Intent:                    checkIntentFromObject(ctx, model.Intent, diags),
@@ -670,8 +670,8 @@ func playwrightCheckSuiteToModel(
 	model.Muted = types.BoolValue(check.Muted)
 	model.RunParallel = types.BoolValue(check.RunParallel)
 	model.UseGlobalAlertSettings = types.BoolValue(check.UseGlobalAlertSettings)
-	model.GroupID = types.Int64Value(check.GroupID)
-	model.GroupOrder = types.Int64Value(int64(check.GroupOrder))
+	model.GroupID = int64ValueOrNull(check.GroupID)
+	model.GroupOrder = groupOrderFromAPI(check.GroupOrder, model.GroupOrder)
 
 	model.Locations = stringSetFromAPINullIfUnset(ctx, check.Locations, model.Locations, diags)
 	model.Tags = stringSetFromAPINullIfUnset(ctx, check.Tags, model.Tags, diags)

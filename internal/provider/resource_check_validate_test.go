@@ -84,15 +84,16 @@ func TestCheckValidateConfigIgnoredAttributes(t *testing.T) {
 	NewCheckResource().Schema(ctx, resource.SchemaRequest{}, &schemaResp)
 	objectType := schemaResp.Schema.Type().TerraformType(ctx).(tftypes.Object)
 
-	// Default values, which warn like any other value.
+	// Default values, or a valid value for the snippet IDs, which have no
+	// default. Each warns like any other value.
 	values := map[string]tftypes.Value{
 		"script":                 tftypes.NewValue(tftypes.String, ""),
 		"request":                objectWith(objectType.AttributeTypes["request"].(tftypes.Object), nil),
 		"frequency_offset":       tftypes.NewValue(tftypes.Number, big.NewFloat(0)),
 		"degraded_response_time": tftypes.NewValue(tftypes.Number, big.NewFloat(15000)),
 		"max_response_time":      tftypes.NewValue(tftypes.Number, big.NewFloat(30000)),
-		"setup_snippet_id":       tftypes.NewValue(tftypes.Number, big.NewFloat(0)),
-		"teardown_snippet_id":    tftypes.NewValue(tftypes.Number, big.NewFloat(0)),
+		"setup_snippet_id":       tftypes.NewValue(tftypes.Number, big.NewFloat(1)),
+		"teardown_snippet_id":    tftypes.NewValue(tftypes.Number, big.NewFloat(1)),
 		"local_setup_script":     tftypes.NewValue(tftypes.String, ""),
 		"local_teardown_script":  tftypes.NewValue(tftypes.String, ""),
 		"ssl_check_domain":       tftypes.NewValue(tftypes.String, ""),

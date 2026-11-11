@@ -247,6 +247,9 @@ func TestUpgradeSDKv2State(t *testing.T) {
 		requireStateNull(t, state, path.Root("tags"))
 		requireStateNull(t, state, path.Root("private_locations"))
 		requireStateValue(t, state, path.Root("locations"), types.SetValueMust(types.StringType, []attr.Value{types.StringValue("eu-central-1")}))
+		// SDK v2 stored no snippet as 0.
+		requireStateNull(t, state, path.Root("setup_snippet_id"))
+		requireStateNull(t, state, path.Root("teardown_snippet_id"))
 
 		raw := sdkv2FixtureWith(t, "check_group", func(obj map[string]any) {
 			obj["locations"] = []any{}
@@ -318,10 +321,38 @@ func TestUpgradeSDKv2State(t *testing.T) {
 
 	// State refreshed by SDK v2 holds empty values where the framework
 	// stores null.
+	// SDK v2 refreshed no group, position or snippet of a checkly_check to 0,
+	// which upgrades to null, also when the state is moved to
+	// checkly_api_check.
+	t.Run("check after refresh", func(t *testing.T) {
+		raw := sdkv2FixtureWith(t, "check", func(obj map[string]any) {
+			for _, name := range []string{groupIDAttributeName, groupOrderAttributeName, "setup_snippet_id", "teardown_snippet_id"} {
+				obj[name] = 0
+			}
+		})
+		resp := moveState(t, NewAPICheckResource(), resource.MoveStateRequest{
+			SourceProviderAddress: "registry.terraform.io/checkly/checkly",
+			SourceTypeName:        "checkly_check",
+			SourceSchemaVersion:   sdkv2SchemaVersion,
+			SourceRawState:        &tfprotov6.RawState{JSON: []byte(raw)},
+		})
+		if resp.Diagnostics.HasError() {
+			t.Fatal(resp.Diagnostics)
+		}
+		for _, state := range []tfsdk.State{upgradeSDKv2Raw(t, NewCheckResource(), raw), resp.TargetState} {
+			for _, name := range []string{groupIDAttributeName, groupOrderAttributeName, "setup_snippet_id", "teardown_snippet_id"} {
+				requireStateNull(t, state, path.Root(name))
+			}
+		}
+	})
+
 	t.Run("url_monitor after refresh", func(t *testing.T) {
 		state := upgradeSDKv2Fixture(t, NewURLMonitorResource(), "url_monitor_read")
 		// description is computed, so its empty value is kept.
 		requireStateValue(t, state, path.Root("description"), types.StringValue(""))
+		// SDK v2 stored no group and no position as 0.
+		requireStateNull(t, state, path.Root(groupIDAttributeName))
+		requireStateNull(t, state, path.Root(groupOrderAttributeName))
 		requireStateNull(t, state, path.Root("tags"))
 		requireStateNull(t, state, path.Root("private_locations"))
 		requireStateNull(t, state, path.Root("retry_strategy").AtName("only_on"))
@@ -414,6 +445,8 @@ func TestUpgradeSDKv2State(t *testing.T) {
 
 	t.Run("ssl_monitor after refresh", func(t *testing.T) {
 		state := upgradeSDKv2Fixture(t, NewSSLMonitorResource(), "ssl_monitor_read")
+		requireStateNull(t, state, path.Root(groupIDAttributeName))
+		requireStateNull(t, state, path.Root(groupOrderAttributeName))
 		requireStateNull(t, state, path.Root("request").AtName("client_certificate").AtName("client_certificate_id"))
 		// An unconfigured security baseline, stored as [] by SDK v2.
 		requireStateNull(t, state, path.Root("request").AtName("security_baseline"))

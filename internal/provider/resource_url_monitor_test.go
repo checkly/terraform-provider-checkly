@@ -1109,10 +1109,9 @@ func TestAccURLMonitorGroupAssignment(t *testing.T) {
 					"checkly_check_group.test1",
 					"id",
 				),
-				resource.TestCheckResourceAttr(
+				resource.TestCheckNoResourceAttr(
 					"checkly_url_monitor.test2",
 					"group_id",
-					"0",
 				),
 			),
 		},
@@ -1206,16 +1205,69 @@ func TestAccURLMonitorGroupAssignment(t *testing.T) {
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
+				resource.TestCheckNoResourceAttr(
 					"checkly_url_monitor.test1",
 					"group_id",
-					"0",
 				),
-				resource.TestCheckResourceAttr(
+				resource.TestCheckNoResourceAttr(
 					"checkly_url_monitor.test2",
 					"group_id",
-					"0",
 				),
+			),
+		},
+		// group_order = 0, the first position, is stored and read back as 0.
+		{
+			Config: `
+				resource "checkly_check_group" "test1" {
+					name        = "test-group-assignment"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+				}
+
+				resource "checkly_url_monitor" "test1" {
+					name        = "test-group-assignment"
+					activated   = true
+					frequency   = 60
+					locations   = ["eu-central-1"]
+					request = {
+						url = "https://checkly.com"
+					}
+					group_id    = checkly_check_group.test1.id
+					group_order = 0
+				}
+			`,
+			Check: resource.TestCheckResourceAttr(
+				"checkly_url_monitor.test1",
+				"group_order",
+				"0",
+			),
+		},
+		// Removing group_order = 0 stores the position as null, and the next
+		// plan is clean.
+		{
+			Config: `
+				resource "checkly_check_group" "test1" {
+					name        = "test-group-assignment"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+				}
+
+				resource "checkly_url_monitor" "test1" {
+					name        = "test-group-assignment"
+					activated   = true
+					frequency   = 60
+					locations   = ["eu-central-1"]
+					request = {
+						url = "https://checkly.com"
+					}
+					group_id    = checkly_check_group.test1.id
+				}
+			`,
+			Check: resource.TestCheckNoResourceAttr(
+				"checkly_url_monitor.test1",
+				"group_order",
 			),
 		},
 	})
@@ -2079,8 +2131,8 @@ func TestAccURLMonitorUnsetSweepGroup(t *testing.T) {
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr("checkly_url_monitor.test", "group_id", "0"),
-				resource.TestCheckResourceAttr("checkly_url_monitor.test", "group_order", "0"),
+				resource.TestCheckNoResourceAttr("checkly_url_monitor.test", "group_id"),
+				resource.TestCheckNoResourceAttr("checkly_url_monitor.test", "group_order"),
 			),
 		},
 	})

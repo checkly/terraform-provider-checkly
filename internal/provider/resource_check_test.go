@@ -1602,10 +1602,9 @@ func TestAccCheckGroupAssignment(t *testing.T) {
 					"checkly_check_group.test1",
 					"id",
 				),
-				resource.TestCheckResourceAttr(
+				resource.TestCheckNoResourceAttr(
 					"checkly_check.test2",
 					"group_id",
-					"0",
 				),
 			),
 		},
@@ -1707,16 +1706,73 @@ func TestAccCheckGroupAssignment(t *testing.T) {
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
+				resource.TestCheckNoResourceAttr(
 					"checkly_check.test1",
 					"group_id",
-					"0",
 				),
-				resource.TestCheckResourceAttr(
+				resource.TestCheckNoResourceAttr(
 					"checkly_check.test2",
 					"group_id",
-					"0",
 				),
+			),
+		},
+		// group_order = 0, the first position, is stored and read back as 0.
+		{
+			Config: `
+				resource "checkly_check_group" "test1" {
+					name        = "test-group-assignment"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+				}
+
+				resource "checkly_check" "test1" {
+					name        = "test-group-assignment"
+					type        = "API"
+					activated   = true
+					frequency   = 60
+					locations   = ["eu-central-1"]
+					request = {
+						method = "GET"
+						url    = "https://welcome.checklyhq.com"
+					}
+					group_id    = checkly_check_group.test1.id
+					group_order = 0
+				}
+			`,
+			Check: resource.TestCheckResourceAttr(
+				"checkly_check.test1",
+				"group_order",
+				"0",
+			),
+		},
+		// Removing group_order = 0 stores the position as null, and the next
+		// plan is clean.
+		{
+			Config: `
+				resource "checkly_check_group" "test1" {
+					name        = "test-group-assignment"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+				}
+
+				resource "checkly_check" "test1" {
+					name        = "test-group-assignment"
+					type        = "API"
+					activated   = true
+					frequency   = 60
+					locations   = ["eu-central-1"]
+					request = {
+						method = "GET"
+						url    = "https://welcome.checklyhq.com"
+					}
+					group_id    = checkly_check_group.test1.id
+				}
+			`,
+			Check: resource.TestCheckNoResourceAttr(
+				"checkly_check.test1",
+				"group_order",
 			),
 		},
 	})
@@ -2483,16 +2539,16 @@ func TestAccCheckUpdateClearsRemovedValues(t *testing.T) {
 			Config: config(`group_id = checkly_check_group.test.id`),
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckNoResourceAttr(r, "tags.#"),
-				resource.TestCheckResourceAttr(r, "setup_snippet_id", "0"),
-				resource.TestCheckResourceAttr(r, "teardown_snippet_id", "0"),
+				resource.TestCheckNoResourceAttr(r, "setup_snippet_id"),
+				resource.TestCheckNoResourceAttr(r, "teardown_snippet_id"),
 				resource.TestCheckResourceAttr(r, "local_setup_script", ""),
 				resource.TestCheckResourceAttr(r, "local_teardown_script", ""),
-				resource.TestCheckResourceAttr(r, "group_order", "0"),
+				resource.TestCheckNoResourceAttr(r, "group_order"),
 			),
 		},
 		{
 			Config: config(""),
-			Check:  resource.TestCheckResourceAttr(r, "group_id", "0"),
+			Check:  resource.TestCheckNoResourceAttr(r, "group_id"),
 		},
 	})
 }

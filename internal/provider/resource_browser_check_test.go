@@ -797,7 +797,7 @@ func TestAccBrowserCheckUnsetSweepGroupAndAlerts(t *testing.T) {
 				),
 			),
 		},
-		// Removing group_order alone must reset it to 0 remotely while the
+		// Removing group_order alone must clear the position remotely while the
 		// check stays in the group.
 		{
 			Config: browserCheckUnsetSweepDeps + `
@@ -837,10 +837,9 @@ func TestAccBrowserCheckUnsetSweepGroupAndAlerts(t *testing.T) {
 					"checkly_check_group.sweep",
 					"id",
 				),
-				resource.TestCheckResourceAttr(
+				resource.TestCheckNoResourceAttr(
 					"checkly_browser_check.test",
 					"group_order",
-					"0",
 				),
 			),
 		},
@@ -858,15 +857,13 @@ func TestAccBrowserCheckUnsetSweepGroupAndAlerts(t *testing.T) {
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
+				resource.TestCheckNoResourceAttr(
 					"checkly_browser_check.test",
 					"group_id",
-					"0",
 				),
-				resource.TestCheckResourceAttr(
+				resource.TestCheckNoResourceAttr(
 					"checkly_browser_check.test",
 					"group_order",
-					"0",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_browser_check.test",

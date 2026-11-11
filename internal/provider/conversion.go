@@ -198,6 +198,49 @@ func stringValueOrNull(value string) types.String {
 	return types.StringValue(value)
 }
 
+// int64ValueOrNull converts a reference or a position from the API, where 0
+// stands for none, to an int64 value, mapping 0 to null.
+func int64ValueOrNull[T ~int | ~int64](value T) types.Int64 {
+	if value == 0 {
+		return types.Int64Null()
+	}
+
+	return types.Int64Value(int64(value))
+}
+
+// groupOrderToAPI converts the group position of a check or monitor to its
+// API representation: nil for no position, which clears a stored one.
+func groupOrderToAPI(value types.Int64) *int {
+	if value.IsNull() || value.IsUnknown() {
+		return nil
+	}
+
+	order := int(value.ValueInt64())
+	return &order
+}
+
+// groupOrderFromAPI converts the group position the API reports for a check
+// or monitor: no position is null and any other position is that number,
+// except that a reported 0 stays null when the prior value is null.
+//
+// Provider versions before v2.0.0 sent position 0 for every API, browser and
+// multi-step check and TCP monitor they created, grouped or not, and their
+// state, which held 0 for an unset position, upgrades to null. Reading those
+// positions faithfully would plan a change from 0 to null for each of these
+// checks after the upgrade although nothing is configured. A configured 0
+// reads back as 0, and a 0 that replaces another prior position shows as a
+// change.
+func groupOrderFromAPI(value *int, prior types.Int64) types.Int64 {
+	if value == nil {
+		return types.Int64Null()
+	}
+	if *value == 0 && prior.IsNull() {
+		return prior
+	}
+
+	return types.Int64Value(int64(*value))
+}
+
 // stringValueOrPriorEmpty converts an optional string from the API like
 // stringValueOrNull, except that an empty string stays empty when the prior
 // value is empty. The API reports "" for an unset field, so an attribute

@@ -200,8 +200,8 @@ moved {
 - `description` (String) A description of the check.
 - `frequency` (Number) Controls how often the check should run. Defined in minutes. The allowed values are `0` (high frequency - use `frequency_offset` to define the actual frequency), `1` (1 minute), `2` (2 minutes), `5` (5 minutes), `10` (10 minutes), `15` (15 minutes), `30` (30 minutes), `60` (1 hour), `120` (2 hours), `180` (3 hours), `360` (6 hours), `720` (12 hours) and `1440` (24 hours). (Default `10`).
 - `frequency_offset` (Number) When `frequency` is `0` (high frequency), `frequency_offset` is required and it alone controls how often the check should run. Defined in seconds. The allowed values are `0` (disabled - use `frequency` to define the actual frequency), `10` (10 seconds), `20` (20 seconds) and `30` (30 seconds).
-- `group_id` (Number) The ID of the check group the check is part of. (Default `0`, no group).
-- `group_order` (Number) The position of the check in its check group, which sets the order in which the checks and monitors of the group run when the group is triggered from the API or CI/CD. (Default `0`).
+- `group_id` (Number) The ID of the check group the check is part of (at least `1`). When unset, the check is not part of a group.
+- `group_order` (Number) The position of the check in its check group (at least `0`), which sets the order in which the checks and monitors of the group run when the group is triggered from the API or CI/CD. When unset, the check has no position in the group.
 - `intent` (Attributes) Guidance for root cause analysis and automatic repair: what this check protects, and which changes keep it meaningful. Automatic repair supports browser and multi-step checks only, and refuses an intent with no statements: a `goal` on its own is accepted here, but repair needs at least one statement in either `required_outcomes` or `must_preserve`. An intent edited in the web app and absent from the configuration is removed by the next apply, every time. To leave it to the web app, add `intent` to `ignore_changes`. (see [below for nested schema](#nestedatt--intent))
 - `local_setup_script` (String) A valid piece of Node.js code to run in the setup phase.
 - `local_teardown_script` (String) A valid piece of Node.js code to run in the teardown phase.
@@ -212,10 +212,10 @@ moved {
 - `retry_strategy` (Attributes) A strategy for retrying failed check/monitor runs. (see [below for nested schema](#nestedatt--retry_strategy))
 - `run_parallel` (Boolean) Determines whether the check runs in all its locations in parallel instead of in one location at a time, round-robin. (Default `false`).
 - `runtime_id` (String) The ID of the runtime to use for the check. When unset, the account's default runtime is used.
-- `setup_snippet_id` (Number) An ID reference to a snippet to use in the setup phase of an API check.
+- `setup_snippet_id` (Number) The ID of the snippet to run in the setup phase of the API check (at least `1`). When unset, no setup snippet runs.
 - `should_fail` (Boolean) Inverts when the check is considered to fail. Use it to validate an error status such as 404. (Default `false`).
 - `tags` (Set of String) Tags for organizing and filtering checks and monitors.
-- `teardown_snippet_id` (Number) An ID reference to a snippet to use in the teardown phase of an API check.
+- `teardown_snippet_id` (Number) The ID of the snippet to run in the teardown phase of the API check (at least `1`). When unset, no teardown snippet runs.
 - `trigger_incident` (Attributes) Create and resolve an incident based on the alert configuration. Useful for status page automation. (see [below for nested schema](#nestedatt--trigger_incident))
 - `use_global_alert_settings` (Boolean) When true, the account level alert settings are used instead of the `alert_settings` of this check. Defaults to `true` when `alert_settings` is not set, and to `false` when it is.
 

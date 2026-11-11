@@ -198,8 +198,8 @@ func TestCheckToModelResolvesAttributesOfOtherTypes(t *testing.T) {
 		if model.DegradedResponseTime != types.Int64Value(15000) || model.MaxResponseTime != types.Int64Value(30000) {
 			t.Errorf("response times = %s, %s, want the defaults", model.DegradedResponseTime, model.MaxResponseTime)
 		}
-		if model.SetupSnippetID != types.Int64Value(0) || model.TeardownSnippetID != types.Int64Value(0) {
-			t.Errorf("snippet IDs = %s, %s, want 0", model.SetupSnippetID, model.TeardownSnippetID)
+		if !model.SetupSnippetID.IsNull() || !model.TeardownSnippetID.IsNull() {
+			t.Errorf("snippet IDs = %s, %s, want null", model.SetupSnippetID, model.TeardownSnippetID)
 		}
 		if model.LocalSetupScript != types.StringValue("") || model.LocalTeardownScript != types.StringValue("") {
 			t.Errorf("local scripts = %s, %s, want empty", model.LocalSetupScript, model.LocalTeardownScript)
