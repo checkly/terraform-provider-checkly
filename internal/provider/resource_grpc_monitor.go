@@ -21,6 +21,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 
 	"github.com/checkly/checkly-go-sdk/v2"
 )
@@ -281,6 +283,7 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 						Description: "The inline `.proto` file source (at most 102400 characters) used when `service_definition = \"PROTO_FILE\"` in `BEHAVIOR` mode. Forbidden when `encoding = \"FLATBUFFERS\"`.",
 						Validators: []validator.String{
 							utf16LengthBetween(0, 102400),
+							noNULCharacterValidator{},
 						},
 					},
 					"bfbs_content": schema.StringAttribute{
@@ -305,6 +308,7 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 						Description: "The JSON request message (at most 65536 characters) sent as the gRPC call payload in `BEHAVIOR` mode.",
 						Validators: []validator.String{
 							utf16LengthBetween(0, 65536),
+							noNULCharacterValidator{},
 						},
 					},
 					"metadata": schema.SetNestedAttribute{
@@ -312,6 +316,7 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 						Description: "gRPC metadata (request headers) sent with the call. At most 50 elements.",
 						Validators: []validator.Set{
 							setvalidator.SizeAtMost(50),
+							grpcMetadataUniqueKeysValidator{},
 						},
 						NestedObject: schema.NestedAttributeObject{
 							// Attributes nested in this set attribute must
@@ -330,6 +335,7 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 									Description: "The gRPC metadata (header) key (1 to 256 characters).",
 									Validators: []validator.String{
 										utf16LengthBetween(1, 256),
+										noNULCharacterValidator{},
 									},
 								},
 								"value": schema.StringAttribute{
@@ -338,6 +344,7 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 									Description: "The gRPC metadata (header) value (at most 8192 characters). The value is not sensitive and shows in plan output. To keep a credential out of plan output, take it from a variable declared with `sensitive = true` or wrap it in `sensitive(...)`.",
 									Validators: []validator.String{
 										utf16LengthBetween(0, 8192),
+										noNULCharacterValidator{},
 									},
 								},
 							},
@@ -486,6 +493,60 @@ func configuredPresence(v types.String) bool {
 // maxGRPCSchemaContentLength mirrors the API's limit on the encoded length of
 // bfbs_content.
 const maxGRPCSchemaContentLength = 100 * 1024
+
+var _ validator.Set = grpcMetadataUniqueKeysValidator{}
+
+// grpcMetadataUniqueKeysValidator rejects request.metadata elements whose
+// keys are equal ignoring case, as the API does: gRPC metadata keys are
+// case-insensitive. The set itself only removes identical elements, so it
+// keeps two elements with the same key and different values, or keys that
+// differ in case. The API compares keys lowercased by JavaScript's
+// toLowerCase, which cases.Lower(language.Und) matches and strings.ToLower
+// does not, for example for U+0130 and a final sigma. Elements and keys that
+// are not known yet are skipped. The error names the keys but never the
+// values, which may be secret.
+type grpcMetadataUniqueKeysValidator struct{}
+
+func (v grpcMetadataUniqueKeysValidator) Description(ctx context.Context) string {
+	return "metadata keys must be unique ignoring case"
+}
+
+func (v grpcMetadataUniqueKeysValidator) MarkdownDescription(ctx context.Context) string {
+	return v.Description(ctx)
+}
+
+func (v grpcMetadataUniqueKeysValidator) ValidateSet(ctx context.Context, req validator.SetRequest, resp *validator.SetResponse) {
+	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
+		return
+	}
+
+	// A Caser is stateful, so each call gets its own.
+	lower := cases.Lower(language.Und)
+	seen := make(map[string]string)
+	for _, element := range req.ConfigValue.Elements() {
+		object, ok := element.(types.Object)
+		if !ok || object.IsNull() || object.IsUnknown() {
+			continue
+		}
+		key, ok := object.Attributes()["key"].(types.String)
+		if !ok || key.IsNull() || key.IsUnknown() {
+			continue
+		}
+
+		lowered := lower.String(key.ValueString())
+		first, duplicate := seen[lowered]
+		if !duplicate {
+			seen[lowered] = key.ValueString()
+			continue
+		}
+
+		detail := fmt.Sprintf("%s has the keys %q and %q, which differ only in case. gRPC metadata keys are case-insensitive, and the API requires each key to be unique ignoring case.", req.Path, first, key.ValueString())
+		if first == key.ValueString() {
+			detail = fmt.Sprintf("%s has more than one element with the key %q. The API requires each metadata key to be unique, ignoring case.", req.Path, first)
+		}
+		resp.Diagnostics.AddAttributeError(req.Path, "Duplicate gRPC Metadata Key", detail)
+	}
+}
 
 var _ validator.String = grpcMonitorBfbsContentValidator{}
 

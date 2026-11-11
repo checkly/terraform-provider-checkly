@@ -113,6 +113,38 @@ func noControlCharacters() validator.String {
 	return stringvalidator.RegexMatches(noControlCharactersRegex, "must not contain control characters")
 }
 
+// noNULCharacterValidator rejects strings that contain U+0000 (NUL), which
+// the API rejects in some free-text fields where other control characters,
+// such as tabs and newlines, are valid. The error doesn't repeat the value,
+// which can be long, such as the source of a .proto file, or secret, such as
+// a metadata value. Nor does it name the path: the path of an attribute in a
+// set element includes the whole element, values included.
+type noNULCharacterValidator struct{}
+
+var _ validator.String = noNULCharacterValidator{}
+
+func (v noNULCharacterValidator) Description(ctx context.Context) string {
+	return "value must not contain NUL characters (U+0000)"
+}
+
+func (v noNULCharacterValidator) MarkdownDescription(ctx context.Context) string {
+	return v.Description(ctx)
+}
+
+func (v noNULCharacterValidator) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
+		return
+	}
+
+	if strings.ContainsRune(req.ConfigValue.ValueString(), 0) {
+		resp.Diagnostics.AddAttributeError(
+			req.Path,
+			"Invalid Attribute Value",
+			"The value must not contain a NUL character (U+0000), which the API rejects.",
+		)
+	}
+}
+
 // The API's private location slug rule: 1 to 30 letters, digits and dashes,
 // not starting with the ID of a public location, such as "eu-central-1". Go
 // regular expressions have no lookahead, so the rule is two expressions,
