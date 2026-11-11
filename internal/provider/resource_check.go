@@ -862,7 +862,7 @@ func checkToModel(ctx context.Context, check checkly.Check, model *CheckResource
 	// made outside Terraform shows up through retry_strategy.
 	model.DoubleCheck = types.BoolValue(prior.DoubleCheck.ValueBool())
 	model.GroupID = int64ValueOrNull(c.GroupID)
-	model.GroupOrder = int64ValueOrNull(c.GroupOrder)
+	model.GroupOrder = groupOrderFromAPI(c.GroupOrder, model.GroupOrder)
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, prior.RetryStrategy, diags)
 	model.TriggerIncident = triggerIncidentToObject(ctx, c.TriggerIncident, diags)
 	model.Intent = checkIntentToObject(ctx, c.Intent, prior.Intent, diags)

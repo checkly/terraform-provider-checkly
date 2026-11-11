@@ -1716,6 +1716,66 @@ func TestAccCheckGroupAssignment(t *testing.T) {
 				),
 			),
 		},
+		// group_order = 0, the first position, applies and plans clean
+		// although an API check sends it as 0 and the API reports it as 0.
+		{
+			Config: `
+				resource "checkly_check_group" "test1" {
+					name        = "test-group-assignment"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+				}
+
+				resource "checkly_check" "test1" {
+					name        = "test-group-assignment"
+					type        = "API"
+					activated   = true
+					frequency   = 60
+					locations   = ["eu-central-1"]
+					request = {
+						method = "GET"
+						url    = "https://welcome.checklyhq.com"
+					}
+					group_id    = checkly_check_group.test1.id
+					group_order = 0
+				}
+			`,
+			Check: resource.TestCheckResourceAttr(
+				"checkly_check.test1",
+				"group_order",
+				"0",
+			),
+		},
+		// Removing group_order = 0 stores the position as null, and the next
+		// plan is clean.
+		{
+			Config: `
+				resource "checkly_check_group" "test1" {
+					name        = "test-group-assignment"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+				}
+
+				resource "checkly_check" "test1" {
+					name        = "test-group-assignment"
+					type        = "API"
+					activated   = true
+					frequency   = 60
+					locations   = ["eu-central-1"]
+					request = {
+						method = "GET"
+						url    = "https://welcome.checklyhq.com"
+					}
+					group_id    = checkly_check_group.test1.id
+				}
+			`,
+			Check: resource.TestCheckNoResourceAttr(
+				"checkly_check.test1",
+				"group_order",
+			),
+		},
 	})
 }
 

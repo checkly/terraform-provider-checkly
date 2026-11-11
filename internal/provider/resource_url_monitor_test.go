@@ -1215,6 +1215,62 @@ func TestAccURLMonitorGroupAssignment(t *testing.T) {
 				),
 			),
 		},
+		// group_order = 0, the first position, applies and plans clean
+		// although a URL monitor sends it as null and the API reports null.
+		{
+			Config: `
+				resource "checkly_check_group" "test1" {
+					name        = "test-group-assignment"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+				}
+
+				resource "checkly_url_monitor" "test1" {
+					name        = "test-group-assignment"
+					activated   = true
+					frequency   = 60
+					locations   = ["eu-central-1"]
+					request = {
+						url = "https://checkly.com"
+					}
+					group_id    = checkly_check_group.test1.id
+					group_order = 0
+				}
+			`,
+			Check: resource.TestCheckResourceAttr(
+				"checkly_url_monitor.test1",
+				"group_order",
+				"0",
+			),
+		},
+		// Removing group_order = 0 stores the position as null, and the next
+		// plan is clean.
+		{
+			Config: `
+				resource "checkly_check_group" "test1" {
+					name        = "test-group-assignment"
+					activated   = true
+					concurrency = 1
+					locations   = ["eu-central-1"]
+				}
+
+				resource "checkly_url_monitor" "test1" {
+					name        = "test-group-assignment"
+					activated   = true
+					frequency   = 60
+					locations   = ["eu-central-1"]
+					request = {
+						url = "https://checkly.com"
+					}
+					group_id    = checkly_check_group.test1.id
+				}
+			`,
+			Check: resource.TestCheckNoResourceAttr(
+				"checkly_url_monitor.test1",
+				"group_order",
+			),
+		},
 	})
 }
 

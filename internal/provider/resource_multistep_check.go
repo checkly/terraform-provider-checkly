@@ -418,7 +418,7 @@ func multistepCheckToModel(ctx context.Context, c *checkly.MultiStepCheck, model
 
 	model.UseGlobalAlertSettings = types.BoolValue(c.UseGlobalAlertSettings)
 	model.GroupID = int64ValueOrNull(c.GroupID)
-	model.GroupOrder = int64ValueOrNull(c.GroupOrder)
+	model.GroupOrder = groupOrderFromAPI(c.GroupOrder, model.GroupOrder)
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, prior.RetryStrategy, diags)
 	model.TriggerIncident = triggerIncidentToObject(ctx, c.TriggerIncident, diags)
 	model.Intent = checkIntentToObject(ctx, c.Intent, prior.Intent, diags)

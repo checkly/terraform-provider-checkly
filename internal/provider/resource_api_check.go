@@ -441,7 +441,7 @@ func apiCheckToModel(ctx context.Context, c *checkly.APICheck, model *APICheckRe
 	model.UseGlobalAlertSettings = types.BoolValue(c.UseGlobalAlertSettings)
 	model.Request = apiCheckRequestToObject(ctx, c.Request, prior.Request, diags)
 	model.GroupID = int64ValueOrNull(c.GroupID)
-	model.GroupOrder = int64ValueOrNull(c.GroupOrder)
+	model.GroupOrder = groupOrderFromAPI(c.GroupOrder, model.GroupOrder)
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, prior.RetryStrategy, diags)
 	model.TriggerIncident = triggerIncidentToObject(ctx, c.TriggerIncident, diags)
 	model.Intent = checkIntentToObject(ctx, c.Intent, prior.Intent, diags)

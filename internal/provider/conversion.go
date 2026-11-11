@@ -208,6 +208,22 @@ func int64ValueOrNull[T ~int | ~int64](value T) types.Int64 {
 	return types.Int64Value(int64(value))
 }
 
+// groupOrderFromAPI converts the group position the API reports for a check
+// or monitor. The API treats a null position like 0: groups run their checks
+// sorted by position with null counted as 0, and the web app numbers the
+// checks it adds to a group from 0. The SDK decodes null as 0 as well, so a
+// reported 0 keeps a prior null or 0, which avoids a difference between a
+// configured 0 and the null some endpoints store for it, and between an
+// unset position and the 0 others store. Any other prior gives way to null
+// for a reported 0, and a reported position other than 0 is stored as is.
+func groupOrderFromAPI(value int, prior types.Int64) types.Int64 {
+	if value == 0 && !prior.IsUnknown() && (prior.IsNull() || prior.ValueInt64() == 0) {
+		return prior
+	}
+
+	return int64ValueOrNull(value)
+}
+
 // stringValueOrPriorEmpty converts an optional string from the API like
 // stringValueOrNull, except that an empty string stays empty when the prior
 // value is empty. The API reports "" for an unset field, so an attribute

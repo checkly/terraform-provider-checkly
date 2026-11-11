@@ -696,7 +696,7 @@ func sslMonitorToModel(ctx context.Context, c *checkly.SSLMonitor, model *SSLMon
 
 	model.UseGlobalAlertSettings = types.BoolValue(c.UseGlobalAlertSettings)
 	model.GroupID = int64ValueOrNull(c.GroupID)
-	model.GroupOrder = int64ValueOrNull(c.GroupOrder)
+	model.GroupOrder = groupOrderFromAPI(c.GroupOrder, model.GroupOrder)
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, model.RetryStrategy, diags)
 	model.Request = sslMonitorRequestToObject(ctx, c.Request, model.Request, diags)
 	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, model.AlertChannelSubscriptions, diags)

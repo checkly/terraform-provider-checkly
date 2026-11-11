@@ -671,7 +671,7 @@ func playwrightCheckSuiteToModel(
 	model.RunParallel = types.BoolValue(check.RunParallel)
 	model.UseGlobalAlertSettings = types.BoolValue(check.UseGlobalAlertSettings)
 	model.GroupID = int64ValueOrNull(check.GroupID)
-	model.GroupOrder = int64ValueOrNull(check.GroupOrder)
+	model.GroupOrder = groupOrderFromAPI(check.GroupOrder, model.GroupOrder)
 
 	model.Locations = stringSetFromAPINullIfUnset(ctx, check.Locations, model.Locations, diags)
 	model.Tags = stringSetFromAPINullIfUnset(ctx, check.Tags, model.Tags, diags)

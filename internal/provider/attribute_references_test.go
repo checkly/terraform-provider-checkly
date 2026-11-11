@@ -13,10 +13,10 @@ import (
 	"github.com/checkly/checkly-go-sdk/v2"
 )
 
-// TestReferenceAttributesRejectZero verifies that the group and snippet
-// references and the group position, which are null when unset, reject 0 and
-// negative values at plan time.
-func TestReferenceAttributesRejectZero(t *testing.T) {
+// TestReferenceAttributeMinimums verifies that the group and snippet
+// references, which are null when unset, reject 0 and negative values at plan
+// time, and that the group position accepts 0 but rejects negative values.
+func TestReferenceAttributeMinimums(t *testing.T) {
 	groupMembers := []struct {
 		resource resource.Resource
 		typeName string
@@ -39,25 +39,26 @@ func TestReferenceAttributesRejectZero(t *testing.T) {
 		resource resource.Resource
 		typeName string
 		attr     string
+		min      int64
 	}
 	var targets []target
 	for _, m := range groupMembers {
 		targets = append(targets,
-			target{m.resource, m.typeName, groupIDAttributeName},
-			target{m.resource, m.typeName, groupOrderAttributeName},
+			target{m.resource, m.typeName, groupIDAttributeName, 1},
+			target{m.resource, m.typeName, groupOrderAttributeName, 0},
 		)
 	}
 	for _, name := range []string{"setup_snippet_id", "teardown_snippet_id"} {
 		targets = append(targets,
-			target{NewAPICheckResource(), "checkly_api_check", name},
-			target{NewCheckResource(), "checkly_check", name},
-			target{NewCheckGroupResource(), "checkly_check_group", name},
+			target{NewAPICheckResource(), "checkly_api_check", name, 1},
+			target{NewCheckResource(), "checkly_check", name, 1},
+			target{NewCheckGroupResource(), "checkly_check_group", name, 1},
 		)
 	}
 
 	for _, c := range targets {
 		t.Run(c.typeName+"/"+c.attr, func(t *testing.T) {
-			for value, wantErrors := range map[int64]int{-1: 1, 0: 1, 1: 0} {
+			for value, wantErrors := range map[int64]int{c.min - 1: 1, c.min: 0, c.min + 1: 0} {
 				errors := validateResourceConfig(t, c.resource, c.typeName, c.attr, func(objectType tftypes.Object) tftypes.Value {
 					return objectWith(objectType, map[string]tftypes.Value{
 						c.attr: tftypes.NewValue(tftypes.Number, big.NewFloat(float64(value))),

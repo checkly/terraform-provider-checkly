@@ -27,6 +27,33 @@ func TestInt64ValueOrNull(t *testing.T) {
 	}
 }
 
+func TestGroupOrderFromAPI(t *testing.T) {
+	null := types.Int64Null()
+	zero := types.Int64Value(0)
+	five := types.Int64Value(5)
+
+	// The SDK decodes a null position as 0, so the API reports either as 0.
+	cases := []struct {
+		prior types.Int64
+		value int
+		want  types.Int64
+	}{
+		{null, 0, null},
+		{zero, 0, zero},
+		{five, 0, null},
+		{types.Int64Unknown(), 0, null},
+		{null, 5, five},
+		{zero, 5, five},
+		{five, 5, five},
+		{null, 3, types.Int64Value(3)},
+	}
+	for _, c := range cases {
+		if got := groupOrderFromAPI(c.value, c.prior); !got.Equal(c.want) {
+			t.Errorf("groupOrderFromAPI(%d, %s) = %s, want %s", c.value, c.prior, got, c.want)
+		}
+	}
+}
+
 func TestValueContainsUnknown(t *testing.T) {
 	ctx := context.Background()
 

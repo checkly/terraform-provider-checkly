@@ -225,10 +225,10 @@ func tagsAttributeSchema(subject CheckSubject) schema.SetAttribute {
 	}
 }
 
-// groupIDAttributeSchema and groupOrderAttributeSchema return attributes that
-// are null when the check or monitor is not in a group or has no position.
-// The API also accepts and reports 0 for none; the configuration rejects 0 so
-// that none has a single representation, and reads map 0 to null.
+// groupIDAttributeSchema returns an attribute that is null when the check or
+// monitor is not in a group. The API also accepts and reports 0 for no group;
+// the configuration rejects 0 so that no group has a single representation,
+// and reads map 0 to null.
 func groupIDAttributeSchema(subject CheckSubject) schema.Int64Attribute {
 	return schema.Int64Attribute{
 		Optional: true,
@@ -240,16 +240,19 @@ func groupIDAttributeSchema(subject CheckSubject) schema.Int64Attribute {
 	}
 }
 
+// groupOrderAttributeSchema returns an attribute that is null when the check
+// or monitor has no position. Positions start at 0, which the web app gives
+// the first check it adds to a group; groupOrderFromAPI reads a null and a 0
+// position as equal.
 func groupOrderAttributeSchema(subject CheckSubject) schema.Int64Attribute {
 	return schema.Int64Attribute{
 		Optional: true,
 		Validators: []validator.Int64{
-			int64validator.AtLeast(1),
+			int64validator.AtLeast(0),
 		},
-		// The group runners sort by position, treating an unset one as 0.
-		Description: fmt.Sprintf("The position of the %s in its check group (at least `1`), which sets the "+
+		Description: fmt.Sprintf("The position of the %s in its check group (at least `0`), which sets the "+
 			"order in which the checks and monitors of the group run when the group is triggered from the API "+
-			"or CI/CD.", subject),
+			"or CI/CD. When unset, the %s has no position in the group.", subject, subject),
 	}
 }
 

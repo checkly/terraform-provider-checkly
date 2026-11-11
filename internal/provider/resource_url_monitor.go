@@ -438,7 +438,7 @@ func urlMonitorToModel(ctx context.Context, c *checkly.URLMonitor, model *URLMon
 	model.UseGlobalAlertSettings = types.BoolValue(c.UseGlobalAlertSettings)
 	model.Request = urlMonitorRequestToObject(ctx, c.Request, model.Request, diags)
 	model.GroupID = int64ValueOrNull(c.GroupID)
-	model.GroupOrder = int64ValueOrNull(c.GroupOrder)
+	model.GroupOrder = groupOrderFromAPI(c.GroupOrder, model.GroupOrder)
 
 	var privateLocations []string
 	if c.PrivateLocations != nil {
