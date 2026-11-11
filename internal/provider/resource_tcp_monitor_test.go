@@ -1,12 +1,14 @@
 package provider
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
 func TestAccTCPMonitorRequiredFields(t *testing.T) {
@@ -1007,6 +1009,69 @@ func TestAccTCPMonitorFrequencyValidation(t *testing.T) {
 					"frequency_offset",
 					"0",
 				),
+			),
+		},
+	})
+}
+
+// TestAccTCPMonitorFrequencyOffsetChangedOutsideTerraform asserts that a
+// refresh clears frequency_offset when the frequency of a high frequency
+// monitor is changed to a regular one outside Terraform, so the plan shows the
+// configured offset coming back along with the frequency.
+func TestAccTCPMonitorFrequencyOffsetChangedOutsideTerraform(t *testing.T) {
+	const name = "checkly_tcp_monitor.test"
+	const config = `
+		resource "checkly_tcp_monitor" "test" {
+		  name             = "tcp-frequency-offset-outside-terraform"
+		  activated        = false
+		  frequency        = 0
+		  frequency_offset = 10
+		  locations        = ["eu-central-1"]
+		  request = {
+			port     = 443
+			hostname = "checkly.com"
+		  }
+		}
+	`
+
+	var id string
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: config,
+			Check: resource.ComposeAggregateTestCheckFunc(
+				resource.TestCheckResourceAttr(name, "frequency_offset", "10"),
+				func(s *terraform.State) error {
+					id = s.RootModule().Resources[name].Primary.ID
+					return nil
+				},
+			),
+		},
+		{
+			PreConfig: func() {
+				ctx := context.Background()
+				client := testAccClient()
+				monitor, err := client.GetTCPMonitor(ctx, id)
+				if err != nil {
+					t.Fatal(err)
+				}
+				monitor.Frequency = 5
+				monitor.FrequencyOffset = 0
+				if _, err := client.UpdateTCPMonitor(ctx, id, *monitor); err != nil {
+					t.Fatal(err)
+				}
+			},
+			RefreshState:       true,
+			ExpectNonEmptyPlan: true,
+			Check: resource.ComposeAggregateTestCheckFunc(
+				resource.TestCheckResourceAttr(name, "frequency", "5"),
+				resource.TestCheckNoResourceAttr(name, "frequency_offset"),
+			),
+		},
+		{
+			Config: config,
+			Check: resource.ComposeAggregateTestCheckFunc(
+				resource.TestCheckResourceAttr(name, "frequency", "0"),
+				resource.TestCheckResourceAttr(name, "frequency_offset", "10"),
 			),
 		},
 	})

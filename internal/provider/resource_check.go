@@ -881,12 +881,7 @@ func checkToModel(ctx context.Context, check checkly.Check, model *CheckResource
 	switch typed := check.(type) {
 	case *checkly.APICheck:
 		model.Type = types.StringValue(string(checkly.CheckTypeAPI))
-		// The API only tracks a frequency offset for high frequency scheduling
-		// (frequency 0). Otherwise the prior value is preserved: it is either
-		// null or 0, both of which mean the offset is disabled.
-		if typed.Frequency == 0 {
-			model.FrequencyOffset = types.Int64Value(int64(typed.FrequencyOffset))
-		}
+		model.FrequencyOffset = frequencyOffsetFromAPI(typed.Frequency, typed.FrequencyOffset, prior.FrequencyOffset)
 		model.Script = stringOrDefault(prior.Script, "")
 		model.DegradedResponseTime = types.Int64Value(int64(typed.DegradedResponseTime))
 		model.MaxResponseTime = types.Int64Value(int64(typed.MaxResponseTime))
