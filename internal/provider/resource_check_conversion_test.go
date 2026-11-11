@@ -307,3 +307,98 @@ func TestCheckToModelRejectsOtherTypes(t *testing.T) {
 		t.Errorf("detail = %q, want the type and its resource type", detail)
 	}
 }
+
+// storedAlertSettings returns a known alert_settings value that differs from
+// the one an empty API representation converts to.
+func storedAlertSettings(t *testing.T) types.Object {
+	t.Helper()
+
+	var diags diag.Diagnostics
+	stored := alertSettingsToObject(context.Background(), checkly.AlertSettings{
+		EscalationType:     checkly.EscalationTypeRunBased,
+		RunBasedEscalation: checkly.RunBasedEscalation{FailedRunThreshold: 3},
+	}, types.ObjectNull(alertSettingsAttrTypes), &diags)
+	if diags.HasError() {
+		t.Fatal(diags)
+	}
+	return stored
+}
+
+// An API representation without alert settings leaves the planned or stored
+// value alone instead of replacing it with empty settings.
+func TestCheckAlertSettingsMissingFromTheResponse(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("resolve: an unknown plan resolves to null", func(t *testing.T) {
+		var diags diag.Diagnostics
+		model := emptyCheckModel()
+		model.AlertSettings = types.ObjectUnknown(alertSettingsAttrTypes)
+		checkResolveComputedValues(ctx, &checkly.APICheck{ID: "abc"}, &model, &diags)
+		if diags.HasError() {
+			t.Fatal(diags)
+		}
+		if !model.AlertSettings.IsNull() {
+			t.Errorf("alert_settings = %s, want null", model.AlertSettings)
+		}
+	})
+
+	t.Run("resolve: a known plan is kept", func(t *testing.T) {
+		var diags diag.Diagnostics
+		model := emptyCheckModel()
+		model.AlertSettings = storedAlertSettings(t)
+		checkResolveComputedValues(ctx, &checkly.APICheck{ID: "abc"}, &model, &diags)
+		if diags.HasError() {
+			t.Fatal(diags)
+		}
+		if !model.AlertSettings.Equal(storedAlertSettings(t)) {
+			t.Errorf("alert_settings = %s, want the planned value", model.AlertSettings)
+		}
+	})
+
+	t.Run("resolve: settings in the response are converted", func(t *testing.T) {
+		var diags diag.Diagnostics
+		settings := checkly.AlertSettings{
+			EscalationType:      checkly.EscalationTypeTimeBased,
+			TimeBasedEscalation: checkly.TimeBasedEscalation{MinutesFailingThreshold: 10},
+		}
+		model := emptyCheckModel()
+		model.AlertSettings = types.ObjectUnknown(alertSettingsAttrTypes)
+		checkResolveComputedValues(ctx, &checkly.APICheck{ID: "abc", AlertSettings: &settings}, &model, &diags)
+		if diags.HasError() {
+			t.Fatal(diags)
+		}
+		want := alertSettingsToObject(ctx, settings, types.ObjectUnknown(alertSettingsAttrTypes), &diags)
+		if diags.HasError() {
+			t.Fatal(diags)
+		}
+		if !model.AlertSettings.Equal(want) {
+			t.Errorf("alert_settings = %s, want %s", model.AlertSettings, want)
+		}
+	})
+
+	t.Run("read: a stored value is kept", func(t *testing.T) {
+		var diags diag.Diagnostics
+		model := emptyCheckModel()
+		model.AlertSettings = storedAlertSettings(t)
+		checkToModel(ctx, &checkly.APICheck{ID: "abc"}, &model, &diags)
+		if diags.HasError() {
+			t.Fatal(diags)
+		}
+		if !model.AlertSettings.Equal(storedAlertSettings(t)) {
+			t.Errorf("alert_settings = %s, want the stored value", model.AlertSettings)
+		}
+	})
+
+	t.Run("read: an unknown prior value resolves to null", func(t *testing.T) {
+		var diags diag.Diagnostics
+		model := emptyCheckModel()
+		model.AlertSettings = types.ObjectUnknown(alertSettingsAttrTypes)
+		checkToModel(ctx, &checkly.APICheck{ID: "abc"}, &model, &diags)
+		if diags.HasError() {
+			t.Fatal(diags)
+		}
+		if !model.AlertSettings.IsNull() {
+			t.Errorf("alert_settings = %s, want null", model.AlertSettings)
+		}
+	})
+}

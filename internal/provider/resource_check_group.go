@@ -180,8 +180,12 @@ func (r *CheckGroupResource) Create(ctx context.Context, req resource.CreateRequ
 	}
 
 	// Re-read the group so that the state is based on a full representation,
-	// which the create response is not guaranteed to be.
-	created, err := r.client.GetGroupV2(apiCtx, result.ID)
+	// which the create response is not guaranteed to be. The read gets its
+	// own timeout, so that a slow write doesn't leave it too little time.
+	readCtx, readCancel := contextWithAPITimeout(ctx)
+	defer readCancel()
+
+	created, err := r.client.GetGroupV2(readCtx, result.ID)
 	if err != nil {
 		// The group exists now. Record it from the create response, so
 		// that Terraform tracks it (as tainted, because of the error)
@@ -270,8 +274,12 @@ func (r *CheckGroupResource) Update(ctx context.Context, req resource.UpdateRequ
 	}
 
 	// Re-read the group so that the state is based on a full representation,
-	// which the update response is not guaranteed to be.
-	updated, err := r.client.GetGroupV2(apiCtx, group.ID)
+	// which the update response is not guaranteed to be. The read gets its
+	// own timeout, so that a slow write doesn't leave it too little time.
+	readCtx, readCancel := contextWithAPITimeout(ctx)
+	defer readCancel()
+
+	updated, err := r.client.GetGroupV2(readCtx, group.ID)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Read Check Group After Update",

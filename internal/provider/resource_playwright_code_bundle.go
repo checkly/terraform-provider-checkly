@@ -911,6 +911,7 @@ func (a *PlaywrightCodeBundlePrebuiltArchiveAttribute) Upload(
 	if err != nil {
 		return nil, fmt.Errorf("failed to open archive file %q: %w", a.File, err)
 	}
+	defer file.Close()
 
 	codeBundle, err := client.UploadCodeBundle(ctx, file, stat.Size(), checkly.UploadCodeBundleOptions{
 		ChecksumSha256: checksum,

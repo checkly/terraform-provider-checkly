@@ -31,7 +31,7 @@ var scriptDependencyAttrTypes = map[string]attr.Type{
 func makeScriptDependenciesSchema() schema.ListNestedAttribute {
 	return schema.ListNestedAttribute{
 		Optional:    true,
-		Description: "Script dependency files for editor-style multi-file scripts. Use together with `script_path` to mirror a multi-file layout.",
+		Description: "Script dependency files for editor-style multi-file scripts. Use together with `script_path` to mirror a multi-file layout. The Checkly API does not preserve the configured order, so after an import the first plan can show the dependencies reordered to match the configuration; applying it once settles the order.",
 		NestedObject: schema.NestedAttributeObject{
 			Attributes: map[string]schema.Attribute{
 				"path": schema.StringAttribute{
