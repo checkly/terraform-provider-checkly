@@ -483,7 +483,6 @@ func playwrightCheckSuiteFromModel(
 		Activated:                 model.Activated.ValueBool(),
 		Muted:                     model.Muted.ValueBool(),
 		RunParallel:               model.RunParallel.ValueBool(),
-		Locations:                 stringsFromSet(ctx, model.Locations, diags),
 		Tags:                      stringsFromSet(ctx, model.Tags, diags),
 		UseGlobalAlertSettings:    model.UseGlobalAlertSettings.ValueBool(),
 		GroupID:                   model.GroupID.ValueInt64(),
@@ -502,6 +501,9 @@ func playwrightCheckSuiteFromModel(
 
 	alertSettings := alertSettingsFromObject(ctx, model.AlertSettings, diags)
 	check.AlertSettings = &alertSettings
+
+	// The locations property is serialized even when empty.
+	check.Locations = stringsFromSetOrEmpty(ctx, model.Locations, diags)
 
 	privateLocations := stringsFromSetOrEmpty(ctx, model.PrivateLocations, diags)
 	check.PrivateLocations = &privateLocations
