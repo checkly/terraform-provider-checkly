@@ -110,11 +110,11 @@ func (r *URLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 				Description: "A description of the monitor.",
 			},
 			frequencyAttributeName: makeFrequencyAttributeSchema(FrequencyAttributeSchemaOptions{
-				Monitor:            true,
+				Subject:            subjectMonitor,
 				AllowHighFrequency: true,
 			}),
 			frequencyOffsetAttributeName: makeFrequencyOffsetAttributeSchema(FrequencyOffsetAttributeSchemaOptions{
-				Monitor: true,
+				Subject: subjectMonitor,
 			}),
 			"degraded_response_time": schema.Int64Attribute{
 				Optional:    true,
@@ -136,7 +136,7 @@ func (r *URLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 			},
 			triggerIncidentAttributeName: makeTriggerIncidentSchema(),
 			alertSettingsAttributeName: makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{
-				Monitor: true,
+				Subject: subjectMonitor,
 			}),
 			retryStrategyAttributeName: makeRetryStrategyAttributeSchema(RetryStrategyAttributeSchemaOptions{
 				SupportsOnlyOnNetworkError: true,
@@ -217,7 +217,7 @@ func (r *URLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 				},
 			},
 			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{
-				Monitor: true,
+				Subject: subjectMonitor,
 			}),
 		}, CommonCheckAttributeSchemaOptions{Subject: subjectMonitor, ShouldFail: true, RunParallel: true, Locations: true, GroupMembership: true, ShouldFailNote: shouldFailErrorStatusNote}),
 	}

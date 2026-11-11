@@ -96,8 +96,8 @@ func (r *APICheckResource) Schema(ctx context.Context, req resource.SchemaReques
 				Default:     stringdefault.StaticString(""),
 				Description: "A description of the check.",
 			},
-			frequencyAttributeName:       makeFrequencyAttributeSchema(FrequencyAttributeSchemaOptions{AllowHighFrequency: true}),
-			frequencyOffsetAttributeName: makeFrequencyOffsetAttributeSchema(FrequencyOffsetAttributeSchemaOptions{}),
+			frequencyAttributeName:       makeFrequencyAttributeSchema(FrequencyAttributeSchemaOptions{Subject: subjectCheck, AllowHighFrequency: true}),
+			frequencyOffsetAttributeName: makeFrequencyOffsetAttributeSchema(FrequencyOffsetAttributeSchemaOptions{Subject: subjectCheck}),
 			"degraded_response_time": schema.Int64Attribute{
 				Optional: true,
 				Computed: true,
@@ -135,7 +135,7 @@ func (r *APICheckResource) Schema(ctx context.Context, req resource.SchemaReques
 			triggerIncidentAttributeName:     makeTriggerIncidentSchema(),
 			checkIntentAttributeName:         makeCheckIntentSchema(),
 			aiAutoRepairEnabledAttributeName: makeAIAutoRepairEnabledSchema(),
-			alertSettingsAttributeName:       makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{}),
+			alertSettingsAttributeName:       makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{Subject: subjectCheck}),
 			retryStrategyAttributeName: makeRetryStrategyAttributeSchema(RetryStrategyAttributeSchemaOptions{
 				SupportsOnlyOnNetworkError: true,
 			}),
@@ -143,7 +143,7 @@ func (r *APICheckResource) Schema(ctx context.Context, req resource.SchemaReques
 				Description: "The parameters of the HTTP request.",
 				Required:    true,
 			}),
-			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{}),
+			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{Subject: subjectCheck}),
 		}, CommonCheckAttributeSchemaOptions{Subject: subjectCheck, ShouldFail: true, RunParallel: true, Locations: true, GroupMembership: true, RuntimeID: true, ShouldFailNote: shouldFailErrorStatusNote}),
 	}
 }

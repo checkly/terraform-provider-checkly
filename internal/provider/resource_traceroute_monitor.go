@@ -122,11 +122,11 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 				Description: "A description of the monitor.",
 			},
 			frequencyAttributeName: makeFrequencyAttributeSchema(FrequencyAttributeSchemaOptions{
-				Monitor:            true,
+				Subject:            subjectMonitor,
 				AllowHighFrequency: true,
 			}),
 			frequencyOffsetAttributeName: makeFrequencyOffsetAttributeSchema(FrequencyOffsetAttributeSchemaOptions{
-				Monitor: true,
+				Subject: subjectMonitor,
 			}),
 			"degraded_response_time": schema.Int64Attribute{
 				Optional:    true,
@@ -148,7 +148,7 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 			},
 			triggerIncidentAttributeName: makeTriggerIncidentSchema(),
 			alertSettingsAttributeName: makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{
-				Monitor: true,
+				Subject: subjectMonitor,
 			}),
 			retryStrategyAttributeName: makeRetryStrategyAttributeSchema(RetryStrategyAttributeSchemaOptions{
 				SupportsOnlyOnNetworkError: false,
@@ -278,7 +278,7 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 				},
 			},
 			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{
-				Monitor: true,
+				Subject: subjectMonitor,
 			}),
 		}, CommonCheckAttributeSchemaOptions{Subject: subjectMonitor, ShouldFail: true, RunParallel: true, Locations: true, GroupMembership: true, RuntimeID: true, PrivateLocationsNote: "A private location runs traceroute monitors with agent v8.4.0 or later and the `NET_RAW` capability."}),
 	}

@@ -44,12 +44,16 @@ func walkDescriptions(t *testing.T, where string, block *tfprotov6.SchemaBlock) 
 }
 
 // walkAttributeDescriptions fails when the attribute at path, or any
-// attribute nested in it, has no description beyond constraint markers.
+// attribute nested in it, has no description beyond constraint markers, or
+// has a description with a gap that missingWord matches.
 func walkAttributeDescriptions(t *testing.T, path string, a *tfprotov6.SchemaAttribute) {
 	t.Helper()
 
 	if !hasDescription(a.Description) {
 		t.Errorf("%s: attribute has no description: %q", path, a.Description)
+	}
+	if gap := missingWord.FindString(a.Description); gap != "" {
+		t.Errorf("%s: description has a gap (%q), as left by an empty interpolated word: %q", path, gap, a.Description)
 	}
 
 	if a.NestedType == nil {
@@ -64,11 +68,13 @@ func walkAttributeDescriptions(t *testing.T, path string, a *tfprotov6.SchemaAtt
 // TestEveryAttributeHasDescription keeps the generated documentation
 // complete: every attribute and block of the provider, resource and data
 // source schemas, at any depth, has a description that says more than its
-// default, range or possible values.
+// default, range or possible values, and no description has the gap that an
+// empty interpolated word leaves.
 func TestEveryAttributeHasDescription(t *testing.T) {
 	ctx := context.Background()
 
-	server := providerserver.NewProtocol6(New("test")())()
+	p := New("test")()
+	server := providerserver.NewProtocol6(p)()
 
 	resp, err := server.GetProviderSchema(ctx, &tfprotov6.GetProviderSchemaRequest{})
 	if err != nil {
@@ -88,6 +94,11 @@ func TestEveryAttributeHasDescription(t *testing.T) {
 	if len(resp.ResourceSchemas) == 0 || len(resp.DataSourceSchemas) == 0 {
 		t.Fatalf("GetProviderSchema returned %d resource and %d data source schemas; want both", len(resp.ResourceSchemas), len(resp.DataSourceSchemas))
 	}
+	// The protocol schemas are built from the provider's Resources list;
+	// matching the count makes sure every registered resource is checked.
+	if want := len(p.Resources(ctx)); len(resp.ResourceSchemas) != want {
+		t.Fatalf("GetProviderSchema returned %d resource schemas, want %d", len(resp.ResourceSchemas), want)
+	}
 	for name, s := range resp.ResourceSchemas {
 		walkDescriptions(t, name, s.Block)
 	}
@@ -95,3 +106,8 @@ func TestEveryAttributeHasDescription(t *testing.T) {
 		walkDescriptions(t, name, s.Block)
 	}
 }
+
+// missingWord matches the gaps that an empty interpolated word leaves in a
+// sentence: a doubled space ("how often the  should run") or a space before
+// punctuation ("the policy for the .").
+var missingWord = regexp.MustCompile(`  | [.,;:)]`)

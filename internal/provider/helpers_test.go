@@ -6,8 +6,13 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/checkly/checkly-go-sdk/v2"
 )
@@ -95,6 +100,109 @@ func TestParseAPIRequestTimeout(t *testing.T) {
 			}
 			if got != c.want {
 				t.Errorf("parseAPIRequestTimeout() = %v, want %v", got, c.want)
+			}
+		})
+	}
+}
+
+func TestSetElementsWithDefaults(t *testing.T) {
+	ctx := context.Background()
+	attrTypes := map[string]attr.Type{
+		"key":   types.StringType,
+		"value": types.StringType,
+		"note":  types.StringType,
+	}
+	elemType := types.ObjectType{AttrTypes: attrTypes}
+	element := func(key string, value, note types.String) attr.Value {
+		return types.ObjectValueMust(attrTypes, map[string]attr.Value{
+			"key":   types.StringValue(key),
+			"value": value,
+			"note":  note,
+		})
+	}
+	set := func(elements ...attr.Value) types.Set {
+		return types.SetValueMust(elemType, elements)
+	}
+	type model struct {
+		Key   types.String `tfsdk:"key"`
+		Value types.String `tfsdk:"value"`
+		Note  types.String `tfsdk:"note"`
+	}
+	// withDefaults defaults value, transforms key and leaves note alone, so
+	// it shows that untouched attributes keep their null or unknown values.
+	withDefaults := func(m *model) {
+		m.Value = stringOrDefault(m.Value, "")
+		m.Key = types.StringValue(strings.ToUpper(m.Key.ValueString()))
+	}
+
+	cases := map[string]struct {
+		in        types.Set
+		priorErr  bool
+		want      types.Set
+		wantError string
+	}{
+		"null set": {
+			in:   types.SetNull(elemType),
+			want: types.SetNull(elemType),
+		},
+		"unknown set": {
+			in:   types.SetUnknown(elemType),
+			want: types.SetUnknown(elemType),
+		},
+		"empty set": {
+			in:   set(),
+			want: set(),
+		},
+		"defaults and transforms": {
+			in: set(
+				element("a", types.StringNull(), types.StringNull()),
+				element("b", types.StringUnknown(), types.StringUnknown()),
+				element("c", types.StringValue("kept"), types.StringValue("kept")),
+			),
+			want: set(
+				element("A", types.StringValue(""), types.StringNull()),
+				element("B", types.StringValue(""), types.StringUnknown()),
+				element("C", types.StringValue("kept"), types.StringValue("kept")),
+			),
+		},
+		"null element": {
+			in:        set(types.ObjectNull(attrTypes)),
+			want:      set(types.ObjectNull(attrTypes)),
+			wantError: "Value Conversion Error",
+		},
+		"unknown element": {
+			in:        set(element("a", types.StringNull(), types.StringNull()), types.ObjectUnknown(attrTypes)),
+			want:      set(element("a", types.StringNull(), types.StringNull()), types.ObjectUnknown(attrTypes)),
+			wantError: "Value Conversion Error",
+		},
+		"earlier error": {
+			in:        set(element("a", types.StringNull(), types.StringNull())),
+			priorErr:  true,
+			want:      set(element("a", types.StringNull(), types.StringNull())),
+			wantError: "Earlier Error",
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			var diags diag.Diagnostics
+			if tc.priorErr {
+				diags.AddError("Earlier Error", "")
+			}
+
+			got := setElementsWithDefaults(ctx, tc.in, withDefaults, &diags)
+			if !got.Equal(tc.want) {
+				t.Errorf("got %s, want %s", got, tc.want)
+			}
+
+			if tc.wantError == "" {
+				if diags.HasError() {
+					t.Errorf("unexpected errors: %v", diags)
+				}
+				return
+			}
+			if diags.ErrorsCount() != 1 || diags.Errors()[0].Summary() != tc.wantError {
+				t.Errorf("errors = %v, want one %q", diags, tc.wantError)
 			}
 		})
 	}

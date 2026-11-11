@@ -227,6 +227,37 @@ func planNestedDefaults[T attr.Value](ctx context.Context, req resource.ModifyPl
 	resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, p, planned)...)
 }
 
+// setElementsWithDefaults applies defaults to the elements of a set value,
+// for plan modification of optional+computed attributes nested in set
+// elements, where schema defaults cannot be used. Each element is decoded
+// into its model type T, passed to withDefaults to substitute default values
+// for null and unknown attributes or to transform nested values in place, and
+// encoded back into a set of the original element type.
+//
+// Null and unknown sets are returned unchanged. So is the set when an element
+// cannot be decoded, for example because it is null or unknown, which is
+// reported as an error, or when diags already holds an error.
+func setElementsWithDefaults[T any](ctx context.Context, set types.Set, withDefaults func(*T), diags *diag.Diagnostics) types.Set {
+	if set.IsNull() || set.IsUnknown() {
+		return set
+	}
+
+	var models []T
+	diags.Append(set.ElementsAs(ctx, &models, false)...)
+	if diags.HasError() {
+		return set
+	}
+
+	for i := range models {
+		withDefaults(&models[i])
+	}
+
+	updated, d := types.SetValueFrom(ctx, set.ElementType(ctx), models)
+	diags.Append(d...)
+
+	return updated
+}
+
 // objectAs decodes an object value into its model type T. It returns nil when
 // the value is null or unknown, or when diags holds an error after decoding.
 func objectAs[T any](ctx context.Context, obj types.Object, diags *diag.Diagnostics) *T {

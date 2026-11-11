@@ -341,14 +341,9 @@ func intsFromInt64Set(ctx context.Context, set types.Set, diags *diag.Diagnostic
 	return ints
 }
 
-// int64SetFromInts converts integers from the API to a set, resolving the
-// empty value against the prior data: when the API has none and none were
-// configured, the attribute stays null.
+// int64SetFromInts converts integers from the API to a set, null when empty
+// and unset before (see setNullIfUnset).
 func int64SetFromInts(ctx context.Context, values []int, prior types.Set, diags *diag.Diagnostics) types.Set {
-	if len(values) == 0 && (prior.IsNull() || prior.IsUnknown()) {
-		return types.SetNull(types.Int64Type)
-	}
-
 	int64s := make([]int64, len(values))
 	for i, v := range values {
 		int64s[i] = int64(v)
@@ -357,7 +352,7 @@ func int64SetFromInts(ctx context.Context, values []int, prior types.Set, diags 
 	set, d := types.SetValueFrom(ctx, types.Int64Type, int64s)
 	diags.Append(d...)
 
-	return set
+	return setNullIfUnset(ctx, set, prior)
 }
 
 // maintenanceWindowComponentConfigsFromSet converts the component_configs
@@ -448,50 +443,20 @@ func maintenanceWindowComponentConfigsToSet(ctx context.Context, configs []check
 // are nested in set elements: affect_all_components defaults to false and a
 // component's status to UNDER_MAINTENANCE, as in the API.
 func maintenanceWindowComponentConfigsWithDefaults(ctx context.Context, set types.Set, diags *diag.Diagnostics) types.Set {
-	if set.IsNull() || set.IsUnknown() {
-		return set
-	}
-
-	var models []MaintenanceWindowComponentConfigModel
-	diags.Append(set.ElementsAs(ctx, &models, false)...)
-	if diags.HasError() {
-		return set
-	}
-
-	for i, model := range models {
-		if model.AffectAllComponents.IsNull() || model.AffectAllComponents.IsUnknown() {
-			models[i].AffectAllComponents = types.BoolValue(false)
+	return setElementsWithDefaults(ctx, set, func(m *MaintenanceWindowComponentConfigModel) {
+		if m.AffectAllComponents.IsNull() || m.AffectAllComponents.IsUnknown() {
+			m.AffectAllComponents = types.BoolValue(false)
 		}
-		models[i].Components = maintenanceWindowComponentsWithDefaults(ctx, model.Components, diags)
-	}
-
-	result, d := types.SetValueFrom(ctx, types.ObjectType{AttrTypes: maintenanceWindowComponentConfigAttrTypes}, models)
-	diags.Append(d...)
-
-	return result
+		m.Components = maintenanceWindowComponentsWithDefaults(ctx, m.Components, diags)
+	}, diags)
 }
 
 // maintenanceWindowComponentsWithDefaults applies the default status to the
 // elements of a component_configs.components set.
 func maintenanceWindowComponentsWithDefaults(ctx context.Context, set types.Set, diags *diag.Diagnostics) types.Set {
-	if set.IsNull() || set.IsUnknown() {
-		return set
-	}
-
-	var models []MaintenanceWindowComponentImpactModel
-	diags.Append(set.ElementsAs(ctx, &models, false)...)
-	if diags.HasError() {
-		return set
-	}
-
-	for i, model := range models {
-		models[i].Status = stringOrDefault(model.Status, string(checkly.StatusPageComponentStatusV3UnderMaintenance))
-	}
-
-	result, d := types.SetValueFrom(ctx, types.ObjectType{AttrTypes: maintenanceWindowComponentImpactAttrTypes}, models)
-	diags.Append(d...)
-
-	return result
+	return setElementsWithDefaults(ctx, set, func(m *MaintenanceWindowComponentImpactModel) {
+		m.Status = stringOrDefault(m.Status, string(checkly.StatusPageComponentStatusV3UnderMaintenance))
+	}, diags)
 }
 
 // validateMaintenanceWindowComponentConfigs rejects component_configs that

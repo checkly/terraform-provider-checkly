@@ -129,9 +129,11 @@ func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 				},
 			},
 			frequencyAttributeName: makeFrequencyAttributeSchema(FrequencyAttributeSchemaOptions{
+				Subject:            subjectCheck,
 				AllowHighFrequency: true,
 			}),
 			frequencyOffsetAttributeName: makeFrequencyOffsetAttributeSchema(FrequencyOffsetAttributeSchemaOptions{
+				Subject:    subjectCheck,
 				Disclaimer: "Only relevant when `type` is `API`.",
 			}),
 			"script": schema.StringAttribute{
@@ -179,7 +181,7 @@ func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 				Description: "A valid piece of Node.js code to run in the teardown phase of an API check.",
 			},
 			triggerIncidentAttributeName: makeTriggerIncidentSchema(),
-			alertSettingsAttributeName:   makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{}),
+			alertSettingsAttributeName:   makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{Subject: subjectCheck}),
 			retryStrategyAttributeName: makeRetryStrategyAttributeSchema(RetryStrategyAttributeSchemaOptions{
 				SupportsOnlyOnNetworkError: true,
 				DoubleCheck:                true,
@@ -190,7 +192,7 @@ func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 			"request": apiCheckRequestAttributeSchema(apiCheckRequestAttributeSchemaOptions{
 				Description: "An API check might have one request config. Only relevant when `type` is `API`.",
 			}),
-			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{}),
+			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{Subject: subjectCheck}),
 			environmentVariableAttributeName: makeEnvironmentVariableSchema(EnvironmentVariableAttributeSchemaOptions{
 				Description: "Insert environment variables into the runtime environment. Only relevant for browser checks. Use global environment variables whenever possible.",
 			}),

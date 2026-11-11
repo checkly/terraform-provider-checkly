@@ -264,11 +264,11 @@ func (r *SSLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 				Description: "A description of the monitor.",
 			},
 			frequencyAttributeName: makeFrequencyAttributeSchema(FrequencyAttributeSchemaOptions{
-				Monitor:            true,
+				Subject:            subjectMonitor,
 				AllowHighFrequency: true,
 			}),
 			frequencyOffsetAttributeName: makeFrequencyOffsetAttributeSchema(FrequencyOffsetAttributeSchemaOptions{
-				Monitor: true,
+				Subject: subjectMonitor,
 			}),
 			"degraded_response_time": schema.Int64Attribute{
 				Optional:    true,
@@ -290,7 +290,7 @@ func (r *SSLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 			},
 			triggerIncidentAttributeName: makeTriggerIncidentSchema(),
 			alertSettingsAttributeName: makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{
-				Monitor: true,
+				Subject: subjectMonitor,
 			}),
 			retryStrategyAttributeName: makeRetryStrategyAttributeSchema(RetryStrategyAttributeSchemaOptions{
 				SupportsOnlyOnNetworkError: false,
@@ -457,7 +457,7 @@ func (r *SSLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 				},
 			},
 			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{
-				Monitor: true,
+				Subject: subjectMonitor,
 			}),
 		}, CommonCheckAttributeSchemaOptions{Subject: subjectMonitor, ShouldFail: true, RunParallel: true, Locations: true, GroupMembership: true, RuntimeID: true}),
 	}
@@ -741,10 +741,7 @@ func sslMonitorRequestFromObject(ctx context.Context, obj types.Object, diags *d
 	// an empty (omitted) mode. The certificate ID maps to the top-level
 	// sslClientCertificateId foreign key and is required when the mode is
 	// "explicit".
-	if !model.ClientCertificate.IsNull() && !model.ClientCertificate.IsUnknown() {
-		var cert SSLMonitorClientCertificateModel
-		diags.Append(model.ClientCertificate.As(ctx, &cert, basetypes.ObjectAsOptions{})...)
-
+	if cert := objectAs[SSLMonitorClientCertificateModel](ctx, model.ClientCertificate, diags); cert != nil {
 		if mode := cert.Mode.ValueString(); mode != "" && mode != "account_default" {
 			request.SSLConfig.ClientCertificateMode = checkly.SSLClientCertificateMode(mode)
 		}

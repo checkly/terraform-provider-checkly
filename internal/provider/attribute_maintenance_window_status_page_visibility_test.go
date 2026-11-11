@@ -388,3 +388,34 @@ func TestValidateMaintenanceWindowComponentConfigs(t *testing.T) {
 		t.Errorf("unexpected error with unknown status_page_ids: %v", diags)
 	}
 }
+
+func TestInt64SetFromInts(t *testing.T) {
+	ctx := context.Background()
+	null := types.SetNull(types.Int64Type)
+	empty := types.SetValueMust(types.Int64Type, []attr.Value{})
+	values := types.SetValueMust(types.Int64Type, []attr.Value{types.Int64Value(15), types.Int64Value(60)})
+
+	cases := map[string]struct {
+		values []int
+		prior  types.Set
+		want   types.Set
+	}{
+		"empty with a null prior stays null":       {nil, null, null},
+		"empty with an unknown prior becomes null": {[]int{}, types.SetUnknown(types.Int64Type), null},
+		"empty with an empty prior stays empty":    {[]int{}, empty, empty},
+		"values replace a null prior":              {[]int{15, 60}, null, values},
+		"empty replaces a prior with values":       {nil, values, empty},
+	}
+
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			var diags diag.Diagnostics
+			if got := int64SetFromInts(ctx, c.values, c.prior, &diags); !got.Equal(c.want) {
+				t.Errorf("int64SetFromInts = %s, want %s", got, c.want)
+			}
+			if diags.HasError() {
+				t.Fatal(diags)
+			}
+		})
+	}
+}

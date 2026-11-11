@@ -109,19 +109,7 @@ func checkGroupV2DisabledEnforcementObject(attrTypes map[string]attr.Type) types
 			continue
 		}
 
-		switch t := attrType.(type) {
-		case types.ObjectType:
-			attrValues[name] = types.ObjectNull(t.AttrTypes)
-		case types.SetType:
-			attrValues[name] = types.SetNull(t.ElemType)
-		default:
-			switch attrType {
-			case types.BoolType:
-				attrValues[name] = types.BoolNull()
-			default:
-				panic(fmt.Sprintf("unsupported enforcement attribute type %T", attrType))
-			}
-		}
+		attrValues[name] = nullValueOf(attrType)
 	}
 
 	return types.ObjectValueMust(attrTypes, attrValues)
@@ -195,9 +183,9 @@ func (r *CheckGroupV2Resource) Schema(ctx context.Context, req resource.SchemaRe
 						Required:    true,
 						Description: "Determines whether the enforced alert settings should be active.",
 					},
-					alertSettingsAttributeName:            makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{Group: true}),
+					alertSettingsAttributeName:            makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{Subject: subjectCheckGroup}),
 					useGlobalAlertSettingsAttributeName:   makeCheckGroupV2UseGlobalAlertSettingsAttributeSchema(),
-					alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{Group: true}),
+					alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{Subject: subjectCheckGroup}),
 				},
 			},
 			"enforce_locations": schema.SingleNestedAttribute{
@@ -763,23 +751,7 @@ func checkGroupV2ObjectWithUnknownsNulled(ctx context.Context, obj types.Object)
 			continue
 		}
 
-		switch t := attrTypes[name].(type) {
-		case types.ObjectType:
-			attrValues[name] = types.ObjectNull(t.AttrTypes)
-		case types.SetType:
-			attrValues[name] = types.SetNull(t.ElemType)
-		default:
-			switch attrTypes[name] {
-			case types.BoolType:
-				attrValues[name] = types.BoolNull()
-			case types.StringType:
-				attrValues[name] = types.StringNull()
-			case types.Int64Type:
-				attrValues[name] = types.Int64Null()
-			default:
-				panic(fmt.Sprintf("unsupported attribute type %T", attrTypes[name]))
-			}
-		}
+		attrValues[name] = nullValueOf(attrTypes[name])
 	}
 
 	return types.ObjectValueMust(attrTypes, attrValues)

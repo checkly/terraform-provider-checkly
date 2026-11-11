@@ -29,21 +29,16 @@ var alertChannelSubscriptionAttrTypes = map[string]attr.Type{
 // AlertChannelSubscriptionAttributeSchemaOptions customizes the
 // alert_channel_subscriptions attribute schema for a specific resource.
 type AlertChannelSubscriptionAttributeSchemaOptions struct {
-	// Monitor adapts descriptions to talk about monitors instead of checks.
-	Monitor bool
-	// Group adapts descriptions to a check group, whose subscriptions alert
-	// on the checks and monitors in it. It takes precedence over Monitor.
-	Group bool
+	// Subject names what the resource manages. For subjectCheckGroup the
+	// descriptions talk about the checks and monitors in the group.
+	Subject CheckSubject
 }
 
 // makeAlertChannelSubscriptionSchema returns the schema for the
 // alert_channel_subscriptions attribute. It is optional without a default, so
 // leaving it out stores null; see alertChannelSubscriptionsToSet.
 func makeAlertChannelSubscriptionSchema(options AlertChannelSubscriptionAttributeSchemaOptions) schema.SetNestedAttribute {
-	name := "check"
-	if options.Monitor {
-		name = "monitor"
-	}
+	name := string(options.Subject)
 
 	description := fmt.Sprintf("A set of channel IDs and whether "+
 		"they're activated or not. If you don't set at least one alert "+
@@ -51,7 +46,7 @@ func makeAlertChannelSubscriptionSchema(options AlertChannelSubscriptionAttribut
 		"you even if it starts failing.",
 		name,
 	)
-	if options.Group {
+	if options.Subject == subjectCheckGroup {
 		description = "A set of channel IDs and whether they're activated or not. If you don't set at least " +
 			"one alert channel subscription for your group, we won't be able to alert you even if a check or " +
 			"monitor in the group starts failing."

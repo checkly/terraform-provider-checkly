@@ -89,26 +89,21 @@ var alertSettingsAttrTypes = map[string]attr.Type{
 // AlertSettingsAttributeSchemaOptions customizes the alert_settings
 // attribute schema for a specific resource.
 type AlertSettingsAttributeSchemaOptions struct {
-	// Monitor adapts descriptions to talk about monitors instead of checks.
-	Monitor bool
-	// Group adapts descriptions to a check group, whose alert settings apply
-	// to the checks and monitors in it. It takes precedence over Monitor.
-	Group bool
+	// Subject names what the resource manages. For subjectCheckGroup the
+	// descriptions talk about the checks and monitors in the group.
+	Subject CheckSubject
 }
 
 // makeAlertSettingsAttributeSchema returns the schema for the alert_settings
 // attribute. The attribute is optional+computed: when it is absent from the
 // configuration, its value is filled in from the Checkly API.
 func makeAlertSettingsAttributeSchema(options AlertSettingsAttributeSchemaOptions) schema.SingleNestedAttribute {
-	name := "check"
-	if options.Monitor {
-		name = "monitor"
-	}
+	name := string(options.Subject)
 	description := fmt.Sprintf("Determines the alert escalation policy for the %s.", name)
 	failedRunThreshold := fmt.Sprintf("Send an alert notification after the given number of consecutive %s runs have failed.", name)
 	minutesFailingThreshold := fmt.Sprintf("Send an alert notification after the %s has been failing for the given amount of time (in minutes).", name)
 	parallelRunFailureThreshold := fmt.Sprintf("Whether parallel run failure threshold is enabled. Only applies if the %s is scheduled for multiple locations in parallel.", name)
-	if options.Group {
+	if options.Subject == subjectCheckGroup {
 		description = "Determines the alert escalation policy for the checks and monitors in the group."
 		failedRunThreshold = "Send an alert notification after the given number of consecutive runs of a check or monitor in the group have failed."
 		minutesFailingThreshold = "Send an alert notification after a check or monitor in the group has been failing for the given amount of time (in minutes)."
