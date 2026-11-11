@@ -419,6 +419,34 @@ func TestAccApiCheckResourceDescriptionRemoval(t *testing.T) {
 	})
 }
 
+// An empty runtime_id, such as a variable defaulting to "", leaves the
+// runtime unset. The API then reports no runtime, and the configured empty
+// string must survive a refresh instead of planning an update.
+func TestAccApiCheckResourceEmptyRuntimeID(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_api_check" "test" {
+					name       = "api-check-resource-empty-runtime-id"
+					activated  = false
+					frequency  = 60
+					locations  = ["eu-central-1"]
+					runtime_id = ""
+					request = {
+						url = "https://welcome.checklyhq.com"
+					}
+				}
+			`,
+			Check: resource.TestCheckResourceAttr("checkly_api_check.test", "runtime_id", ""),
+			ConfigPlanChecks: resource.ConfigPlanChecks{
+				PostApplyPostRefresh: []plancheck.PlanCheck{
+					plancheck.ExpectEmptyPlan(),
+				},
+			},
+		},
+	})
+}
+
 func TestAccApiCheckResourceRetryStrategies(t *testing.T) {
 	accTestCase(t, []resource.TestStep{
 		{

@@ -408,11 +408,7 @@ func multistepCheckToModel(ctx context.Context, c *checkly.MultiStepCheck, model
 	model.EnvironmentVariables = environmentVariablesToList(ctx, c.EnvironmentVariables, prior.EnvironmentVariables, diags)
 	model.Tags = stringSetFromAPINullIfUnset(ctx, c.Tags, prior.Tags, diags)
 
-	if c.RuntimeID != nil && *c.RuntimeID != "" {
-		model.RuntimeID = types.StringValue(*c.RuntimeID)
-	} else {
-		model.RuntimeID = types.StringNull()
-	}
+	model.RuntimeID = stringValueOrPriorEmpty(valueOrZero(c.RuntimeID), prior.RuntimeID)
 
 	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, prior.AlertChannelSubscriptions, diags)
 

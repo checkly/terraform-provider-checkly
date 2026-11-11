@@ -386,11 +386,7 @@ func browserCheckToModel(ctx context.Context, c *checkly.BrowserCheck, model *Br
 		model.SSLCheckDomain = types.StringNull()
 	}
 
-	if c.RuntimeID != nil && *c.RuntimeID != "" {
-		model.RuntimeID = types.StringValue(*c.RuntimeID)
-	} else {
-		model.RuntimeID = types.StringNull()
-	}
+	model.RuntimeID = stringValueOrPriorEmpty(valueOrZero(c.RuntimeID), prior.RuntimeID)
 
 	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, prior.AlertChannelSubscriptions, diags)
 
