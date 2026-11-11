@@ -28,7 +28,7 @@ Existing state is upgraded automatically: you do not need to import or recreate 
    ```
 1. Run `terraform plan` with the latest v1.x release and apply any pending changes, so that you start from a clean plan.
 1. If you use `checkly_trigger_check` or `checkly_trigger_group`, take them out of your configuration and state, as described in [Removed resource types](#removed-resource-types).
-1. Back up your state, for example with `terraform state pull > backup.tfstate`. Once v2 has refreshed the state, v1.x can no longer read it; to go back to v1.x, restore the backup. The backup also holds a value you need to move a check group to `checkly_check_group_v2`; see [Check groups](#check-groups).
+1. Back up your state, for example with `terraform state pull > backup.tfstate`. Once v2 has refreshed the state, v1.x can no longer read it; to go back to v1.x, restore the backup.
 1. Update the version constraint, for example `version = "~> 2.0"`, and run `terraform init -upgrade`.
 1. Update your configuration as described in [Configuration changes](#configuration-changes). `terraform validate` points at every line that needs to change, except misspelled names inside objects written as `{ ... }`, which Terraform ignores (see [Single nested objects are attributes](#single-nested-objects-are-attributes)).
 1. Run `terraform plan`. It should report no changes, except for the cases listed under [Expected one-time changes](#expected-one-time-changes). A change to a value inside a converted object, such as a setting going back to its default, usually means that a name in that object is misspelled.
@@ -367,8 +367,7 @@ resource "checkly_check_group_v2" "example" {
   }
 
   enforce_alert_settings = {
-    enabled                   = true
-    use_global_alert_settings = false # the value stored for the v1 group, see below
+    enabled = true
     alert_settings = {
       escalation_type = "RUN_BASED"
       run_based_escalation = {
@@ -404,7 +403,7 @@ The attributes translate as follows. The left column uses the v2 names of `check
 | `name`, `activated`, `muted`, `concurrency`, `tags`, `api_check_defaults`, `environment_variables` | The same attributes. Leave out a collection that is empty instead of writing `tags = []` or `environment_variables = []`: the moved group stores it as null. |
 | `locations`, `private_locations` | `enforce_locations = { enabled = true, locations = [...], private_locations = [...] }`. Leave `enforce_locations` out if the group has neither. |
 | `run_parallel` | `enforce_scheduling_strategy = { enabled = true, run_parallel = ... }`, with `run_parallel = false` if the v1 group does not set it. |
-| `use_global_alert_settings`, `alert_settings`, `alert_channel_subscriptions` | `enforce_alert_settings = { enabled = true, use_global_alert_settings = ..., alert_settings = { ... }, alert_channel_subscriptions = [...] }`. |
+| `use_global_alert_settings`, `alert_settings`, `alert_channel_subscriptions` | `enforce_alert_settings = { enabled = true, alert_settings = { ... }, alert_channel_subscriptions = [...] }`, with `use_global_alert_settings = ...` if the v1 group sets it. |
 | `retry_strategy` | `enforce_retry_strategy = { enabled = true, retry_strategy = { ... } }`, with `retry_strategy = { type = "NO_RETRIES" }` if the v1 group does not set one. A group whose stored retry strategy is `FALLBACK`, set outside Terraform, lets each check use its own and moves without the enforcement: leave `enforce_retry_strategy` out. |
 | `double_check = true` | The retry strategy shown under [Deprecated attributes](#deprecated-attributes), as `enforce_retry_strategy.retry_strategy`. `double_check` itself has no equivalent and needs no conversion before the move. |
 | `setup_snippet_id` or `local_setup_script` | `setup_script = { snippet_id = ... }` or `setup_script = { inline_script = ... }`. |
@@ -413,14 +412,12 @@ The attributes translate as follows. The left column uses the v2 names of `check
 
 Some values need attention:
 
-- `use_global_alert_settings`: copy the value stored for the group into `enforce_alert_settings.use_global_alert_settings`. The move keeps the stored value, while `checkly_check_group_v2` defaults to `false` and does not derive it from `alert_settings`. Where to read it:
-  - If you move the group in the same plan as the upgrade, the stored value is the one v1.x wrote. Read it from the backup of step 4 of the [Recommended procedure](#recommended-procedure), for example with `jq '.resources[] | select(.type == "checkly_check_group") | {module, name, instances: [.instances[] | {index_key, use_global_alert_settings: .attributes.use_global_alert_settings}]}' backup.tfstate`, which lists the value of every `checkly_check_group` whatever provider version is installed, or run `terraform state show checkly_check_group.example` before step 5. A group that v1.x managed without `use_global_alert_settings` usually stores `false`, even without `alert_settings`.
-  - If v2 has already applied the `checkly_check_group`, read it from the current state with `terraform state show checkly_check_group.example`. For a group whose configuration does not set `use_global_alert_settings`, it is then the derived value: `true` without `alert_settings` and `false` with them (see [Expected one-time changes](#expected-one-time-changes)).
-- `alert_settings`: a v1 group created without `alert_settings` still has alert settings, because the provider sent the API's defaults. They move with the group, so `enforce_alert_settings` can leave `alert_settings` out; the plan then keeps the stored settings.
+- `use_global_alert_settings`: leave `enforce_alert_settings.use_global_alert_settings` out unless the v1 group sets it. While the enforcement is enabled, it is then derived as for `checkly_check_group`: `true` if `enforce_alert_settings` does not set `alert_settings`, and `false` if it does. The move keeps the value stored for the group, so the plan shows an update of `use_global_alert_settings` where the stored value differs from the derived one, for example on a group that v1.x stored with `false` and that has no `alert_settings` (see [Expected one-time changes](#expected-one-time-changes)). To keep the stored value instead, set it explicitly.
+- `alert_settings`: a v1 group created without `alert_settings` still has alert settings, because the provider sent the API's defaults. They move with the group, so `enforce_alert_settings` can leave `alert_settings` out and the plan keeps the stored settings. They don't apply, though: without `alert_settings` in the configuration, `use_global_alert_settings` is derived as `true`, so the group's checks follow the account level alert settings. To apply the stored settings, set `use_global_alert_settings = false`.
 - A group with both a snippet and a local script for the same phase: see [Expected one-time changes](#expected-one-time-changes).
 - Point references such as `group_id` at `checkly_check_group_v2.example.id`. The ID does not change, so the checks plan no update.
 
-Run `terraform plan`. The move should plan no changes; if it plans an update, adjust the configuration until it does not, unless you mean to change the group. Once the group has moved, removing an `enforce_*` attribute lets its checks use their own setting, which the plan shows as an update of the group.
+Run `terraform plan`. The move should plan no changes, except for the update of `use_global_alert_settings` described above, which a group that v1.x stored with `false` and that sets neither `use_global_alert_settings` nor `alert_settings` plans as `false -> true` (see [Expected one-time changes](#expected-one-time-changes)). If it plans any other update, adjust the configuration until it does not, unless you mean to change the group. Once the group has moved, removing an `enforce_*` attribute lets its checks use their own setting, which the plan shows as an update of the group.
 
 ### Status pages
 
@@ -472,8 +469,9 @@ resource "checkly_maintenance_window" "example" {
 - `use_global_alert_settings` no longer has a fixed default. When it is not set, it is `true` if `alert_settings` is not set either, and `false` if it is, as in the Checkly CLI. v1.x defaulted it to `false` on most resources and to `true` on a few, so the first plan can show an in-place update of `use_global_alert_settings` in one of two directions:
   - `checkly_check`, `checkly_api_check`, `checkly_browser_check`, `checkly_multistep_check`, `checkly_check_group`, `checkly_tcp_monitor`, `checkly_tcp_check`, `checkly_grpc_monitor`, `checkly_ssl_monitor`, `checkly_traceroute_monitor`, `checkly_heartbeat_monitor` and `checkly_heartbeat` that set neither attribute plan `false -> true`. From then on their alerts follow the account level alert settings instead of their own alert settings, which were the API defaults. To keep the old behavior, set `use_global_alert_settings = false`.
   - `checkly_url_monitor`, `checkly_dns_monitor`, `checkly_icmp_monitor` and `checkly_playwright_check_suite` that set `alert_settings` but not `use_global_alert_settings` plan `true -> false`. From then on their configured `alert_settings` take effect; with v1.x the account level alert settings applied instead. To keep the old behavior, set `use_global_alert_settings = true` and remove `alert_settings`.
+  - `checkly_check_group_v2` derives `enforce_alert_settings.use_global_alert_settings` from `enforce_alert_settings.alert_settings` in the same way while `enforce_alert_settings.enabled` is `true`. A group with `enabled = true` that sets neither of the two plans `false -> true`. From then on its checks follow the account level alert settings instead of the fallback alert settings that the group enforced. To keep the old behavior, set `use_global_alert_settings = false` in `enforce_alert_settings`. A disabled enforcement keeps its stored value, which the API ignores, and plans no change.
 
   Setting `alert_settings` together with `use_global_alert_settings = true` gives a warning at plan time: the account level alert settings then apply, and `alert_settings` has no effect.
 
-  A `checkly_check_group` moved to `checkly_check_group_v2` keeps its stored value instead, which its v2 configuration has to state; see [Check groups](#check-groups).
+  A `checkly_check_group` moved to `checkly_check_group_v2` keeps its stored value and plans the same update as `checkly_check_group_v2` where that value differs from the derived one; see [Check groups](#check-groups).
 - `checkly_check_group` moved to `checkly_check_group_v2` with both a snippet and a local script for the same phase, such as `setup_snippet_id` and `local_setup_script`: `checkly_check_group_v2` takes one of them, so the first plan updates the group and clears the one your configuration leaves out. Keep the one you want the group's checks to run. If you are unsure which one runs today, look at the recent results of the group's API checks before you apply.

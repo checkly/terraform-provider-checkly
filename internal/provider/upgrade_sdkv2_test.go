@@ -12,6 +12,7 @@ import (
 	tfjson "github.com/hashicorp/terraform-json"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
@@ -38,6 +39,10 @@ type sdkv2UpgradeCase struct {
 	// plan: one "attribute: before -> after" line per changed attribute,
 	// sorted by attribute name.
 	expectDiff string
+
+	// stateChecks run against the state that this provider stores, after
+	// every step that applies the current configuration.
+	stateChecks []statecheck.StateCheck
 }
 
 // withUpdate returns the case expecting a one-time in-place update of address
@@ -45,6 +50,13 @@ type sdkv2UpgradeCase struct {
 func (c sdkv2UpgradeCase) withUpdate(address, diff string) sdkv2UpgradeCase {
 	c.expectUpdate = address
 	c.expectDiff = diff
+	return c
+}
+
+// withStateChecks returns the case with checks of the state that this
+// provider stores, for values that expectDiff does not pin down.
+func (c sdkv2UpgradeCase) withStateChecks(checks ...statecheck.StateCheck) sdkv2UpgradeCase {
+	c.stateChecks = checks
 	return c
 }
 
@@ -76,6 +88,9 @@ func TestAccUpgradeFromSDKv2(t *testing.T) {
 			}
 			if c.expectUpdate != "" {
 				steps = append(steps, upgradeStep(c.config, "", ""))
+			}
+			for i := 1; i < len(steps); i++ {
+				steps[i].ConfigStateChecks = c.stateChecks
 			}
 
 			accTest(t, resource.TestCase{

@@ -7,13 +7,19 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-go/tftypes"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 )
@@ -625,6 +631,98 @@ func TestAccCheckGroupV2EnforceAlertSettingsSwap(t *testing.T) {
 				),
 			),
 		},
+	})
+}
+
+// checkGroupV2UseGlobalAlertSettingsStep returns a step that configures a
+// group with enforcement as its enforce_alert_settings, or without the
+// attribute if enforcement is empty, and expects the plan to take action
+// with enforce_alert_settings.use_global_alert_settings planned and stored
+// as want. The implicit empty-plan check after the step verifies that the
+// API and Read keep the planned value.
+func checkGroupV2UseGlobalAlertSettingsStep(name, enforcement string, action plancheck.ResourceActionType, want knownvalue.Check) resource.TestStep {
+	value := tfjsonpath.New("enforce_alert_settings").AtMapKey(useGlobalAlertSettingsAttributeName)
+	if enforcement != "" {
+		enforcement = "enforce_alert_settings = {\n" + enforcement + "\n}"
+	}
+	return resource.TestStep{
+		Config: fmt.Sprintf(`
+			resource "checkly_check_group_v2" "test" {
+				name = %q
+				%s
+			}
+		`, name, enforcement),
+		ConfigPlanChecks: resource.ConfigPlanChecks{
+			PreApply: []plancheck.PlanCheck{
+				plancheck.ExpectResourceAction(checkGroupV2Resource, action),
+				plancheck.ExpectKnownValue(checkGroupV2Resource, value, want),
+			},
+		},
+		ConfigStateChecks: []statecheck.StateCheck{
+			statecheck.ExpectKnownValue(checkGroupV2Resource, value, want),
+		},
+	}
+}
+
+const checkGroupV2UseGlobalAlertSettingsAlertSettings = `
+	alert_settings = {
+		escalation_type = "RUN_BASED"
+		run_based_escalation = {
+			failed_run_threshold = 2
+		}
+	}
+`
+
+// TestAccCheckGroupV2EnforceAlertSettingsUseGlobalDerived walks an enabled
+// alert settings enforcement through every way use_global_alert_settings is
+// derived: from no alert_settings, to configured alert_settings, back to
+// none, and finally to an explicit true alongside alert_settings, which wins
+// over the derived value. Removing alert_settings keeps the stored alert
+// settings, so the last step configures the stored ones again and, with
+// use_global_alert_settings still true, plans no change at all.
+func TestAccCheckGroupV2EnforceAlertSettingsUseGlobalDerived(t *testing.T) {
+	name := fmt.Sprintf("group-v2-use-global-derived-%d", acctest.RandInt())
+	step := func(enforcement string, action plancheck.ResourceActionType, want bool) resource.TestStep {
+		return checkGroupV2UseGlobalAlertSettingsStep(name, "enabled = true\n"+enforcement, action, knownvalue.Bool(want))
+	}
+
+	accTestCase(t, []resource.TestStep{
+		step("", plancheck.ResourceActionCreate, true),
+		step(checkGroupV2UseGlobalAlertSettingsAlertSettings, plancheck.ResourceActionUpdate, false),
+		step("", plancheck.ResourceActionUpdate, true),
+		step(checkGroupV2UseGlobalAlertSettingsAlertSettings+"use_global_alert_settings = true", plancheck.ResourceActionNoop, true),
+	})
+}
+
+// TestAccCheckGroupV2EnforceAlertSettingsUseGlobalDisabled covers
+// use_global_alert_settings of an omitted or disabled alert settings
+// enforcement, which the API ignores. It stays null for a group that never
+// enforced alert settings, becomes null when an enforcement is disabled or
+// removed, keeps a stored value while the enforcement stays disabled, and is
+// derived again once the enforcement is enabled.
+func TestAccCheckGroupV2EnforceAlertSettingsUseGlobalDisabled(t *testing.T) {
+	name := fmt.Sprintf("group-v2-use-global-disabled-%d", acctest.RandInt())
+	step := func(enforcement string, action plancheck.ResourceActionType, want knownvalue.Check) resource.TestStep {
+		return checkGroupV2UseGlobalAlertSettingsStep(name, enforcement, action, want)
+	}
+
+	accTestCase(t, []resource.TestStep{
+		// Omitted, then disabled: nothing to derive.
+		step("", plancheck.ResourceActionCreate, knownvalue.Null()),
+		step("enabled = false", plancheck.ResourceActionNoop, knownvalue.Null()),
+		// Disabled to enabled derives the value.
+		step("enabled = true", plancheck.ResourceActionUpdate, knownvalue.Bool(true)),
+		// Enabled to disabled drops it.
+		step("enabled = false", plancheck.ResourceActionUpdate, knownvalue.Null()),
+		// A disabled enforcement keeps a stored value, also when the
+		// enforcement is then removed.
+		step("enabled = true\n"+checkGroupV2UseGlobalAlertSettingsAlertSettings, plancheck.ResourceActionUpdate, knownvalue.Bool(false)),
+		step("enabled = false\nuse_global_alert_settings = false", plancheck.ResourceActionUpdate, knownvalue.Bool(false)),
+		step("enabled = false", plancheck.ResourceActionNoop, knownvalue.Bool(false)),
+		step("", plancheck.ResourceActionNoop, knownvalue.Bool(false)),
+		// Enabled to removed drops it.
+		step("enabled = true", plancheck.ResourceActionUpdate, knownvalue.Bool(true)),
+		step("", plancheck.ResourceActionUpdate, knownvalue.Null()),
 	})
 }
 
@@ -1915,4 +2013,362 @@ func TestAccCheckGroupV2UnsetSweepAPICheckDefaults(t *testing.T) {
 			},
 		},
 	})
+}
+
+// checkGroupV2UseGlobalAlertSettingsTestObjectType is a minimal resource
+// object type with an enforce_alert_settings object that holds the members
+// the checkly_check_group_v2 plan modifier and warning read.
+var checkGroupV2UseGlobalAlertSettingsTestObjectType = tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+	"enforce_alert_settings": tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+		"enabled":                           tftypes.Bool,
+		useGlobalAlertSettingsAttributeName: tftypes.Bool,
+		alertSettingsAttributeName:          useGlobalAlertSettingsTestObjectType.AttributeTypes[alertSettingsAttributeName],
+	}},
+}}
+
+var checkGroupV2UseGlobalAlertSettingsTestSchema = schema.Schema{
+	Attributes: map[string]schema.Attribute{
+		"enforce_alert_settings": schema.SingleNestedAttribute{
+			Optional: true,
+			Computed: true,
+			Attributes: map[string]schema.Attribute{
+				"enabled":                           schema.BoolAttribute{Required: true},
+				useGlobalAlertSettingsAttributeName: schema.BoolAttribute{Optional: true, Computed: true},
+				alertSettingsAttributeName:          useGlobalAlertSettingsTestSchema.Attributes[alertSettingsAttributeName],
+			},
+		},
+	},
+}
+
+var checkGroupV2UseGlobalAlertSettingsTestPath = path.Root("enforce_alert_settings").AtName(useGlobalAlertSettingsAttributeName)
+
+// checkGroupV2UseGlobalAlertSettingsTestConfig returns a configuration with
+// the given enforce_alert_settings members, or with enforcement, if it is
+// non-nil, as the whole enforce_alert_settings value.
+func checkGroupV2UseGlobalAlertSettingsTestConfig(enforcement *tftypes.Value, enabled, useGlobal, alertSettings tftypes.Value) tfsdk.Config {
+	var value tftypes.Value
+	if enforcement != nil {
+		value = *enforcement
+	} else {
+		value = tftypes.NewValue(checkGroupV2UseGlobalAlertSettingsTestObjectType.AttributeTypes["enforce_alert_settings"], map[string]tftypes.Value{
+			"enabled":                           enabled,
+			useGlobalAlertSettingsAttributeName: useGlobal,
+			alertSettingsAttributeName:          alertSettings,
+		})
+	}
+	return tfsdk.Config{
+		Schema: checkGroupV2UseGlobalAlertSettingsTestSchema,
+		Raw: tftypes.NewValue(checkGroupV2UseGlobalAlertSettingsTestObjectType, map[string]tftypes.Value{
+			"enforce_alert_settings": value,
+		}),
+	}
+}
+
+func TestCheckGroupV2UseGlobalAlertSettingsPlanModifier(t *testing.T) {
+	ctx := context.Background()
+
+	enforcementType := checkGroupV2UseGlobalAlertSettingsTestObjectType.AttributeTypes["enforce_alert_settings"]
+	enforcementNull := tftypes.NewValue(enforcementType, nil)
+	enforcementUnknown := tftypes.NewValue(enforcementType, tftypes.UnknownValue)
+	unset := tftypes.NewValue(tftypes.Bool, nil)
+	enabled := tftypes.NewValue(tftypes.Bool, true)
+	disabled := tftypes.NewValue(tftypes.Bool, false)
+
+	cases := map[string]struct {
+		// enforcement, if set, replaces the whole enforce_alert_settings
+		// configuration.
+		enforcement   *tftypes.Value
+		enabled       tftypes.Value
+		useGlobal     tftypes.Value
+		alertSettings tftypes.Value
+		// planned is the value before this modifier runs: what the
+		// enforcement default and plan modifiers produced, or unknown.
+		planned types.Bool
+		destroy bool
+		want    types.Bool
+	}{
+		"enabled without alert_settings plans true": {
+			enabled:       enabled,
+			useGlobal:     unset,
+			alertSettings: alertSettingsNull,
+			planned:       types.BoolUnknown(),
+			want:          types.BoolValue(true),
+		},
+		"enabled with alert_settings plans false": {
+			enabled:       enabled,
+			useGlobal:     unset,
+			alertSettings: alertSettingsSet,
+			planned:       types.BoolValue(true),
+			want:          types.BoolValue(false),
+		},
+		"enabled with unknown alert_settings plans unknown": {
+			enabled:       enabled,
+			useGlobal:     unset,
+			alertSettings: alertSettingsUnknown,
+			planned:       types.BoolValue(false),
+			want:          types.BoolUnknown(),
+		},
+		"enabled with configured false keeps it": {
+			enabled:       enabled,
+			useGlobal:     tftypes.NewValue(tftypes.Bool, false),
+			alertSettings: alertSettingsNull,
+			planned:       types.BoolValue(false),
+			want:          types.BoolValue(false),
+		},
+		"enabled with configured true keeps it": {
+			enabled:       enabled,
+			useGlobal:     tftypes.NewValue(tftypes.Bool, true),
+			alertSettings: alertSettingsSet,
+			planned:       types.BoolValue(true),
+			want:          types.BoolValue(true),
+		},
+		"unknown enabled plans unknown": {
+			enabled:       tftypes.NewValue(tftypes.Bool, tftypes.UnknownValue),
+			useGlobal:     unset,
+			alertSettings: alertSettingsNull,
+			planned:       types.BoolValue(false),
+			want:          types.BoolUnknown(),
+		},
+		"unknown enforcement plans unknown": {
+			enforcement: &enforcementUnknown,
+			planned:     types.BoolUnknown(),
+			want:        types.BoolUnknown(),
+		},
+		"omitted enforcement keeps the default null": {
+			enforcement: &enforcementNull,
+			planned:     types.BoolNull(),
+			want:        types.BoolNull(),
+		},
+		"omitted enforcement keeps a stored false": {
+			enforcement: &enforcementNull,
+			planned:     types.BoolValue(false),
+			want:        types.BoolValue(false),
+		},
+		"disabled enforcement keeps a stored false": {
+			enabled:       disabled,
+			useGlobal:     unset,
+			alertSettings: alertSettingsNull,
+			planned:       types.BoolValue(false),
+			want:          types.BoolValue(false),
+		},
+		"disabled enforcement keeps a stored null": {
+			enabled:       disabled,
+			useGlobal:     unset,
+			alertSettings: alertSettingsNull,
+			planned:       types.BoolNull(),
+			want:          types.BoolNull(),
+		},
+		"disabled enforcement plans null for unknown": {
+			enabled:       disabled,
+			useGlobal:     unset,
+			alertSettings: alertSettingsSet,
+			planned:       types.BoolUnknown(),
+			want:          types.BoolNull(),
+		},
+		"destroy is left alone": {
+			enabled:       enabled,
+			useGlobal:     unset,
+			alertSettings: alertSettingsNull,
+			planned:       types.BoolNull(),
+			destroy:       true,
+			want:          types.BoolNull(),
+		},
+	}
+
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			config := checkGroupV2UseGlobalAlertSettingsTestConfig(c.enforcement, c.enabled, c.useGlobal, c.alertSettings)
+
+			// GetAttribute of a member of a null or unknown object returns
+			// null, as the framework passes it to nested plan modifiers.
+			configValue := types.BoolNull()
+			if c.enforcement == nil {
+				if diags := config.GetAttribute(ctx, checkGroupV2UseGlobalAlertSettingsTestPath, &configValue); diags.HasError() {
+					t.Fatal(diags)
+				}
+			}
+
+			plan := tfsdk.Plan{Schema: config.Schema, Raw: config.Raw}
+			if c.destroy {
+				plan.Raw = tftypes.NewValue(checkGroupV2UseGlobalAlertSettingsTestObjectType, nil)
+			}
+
+			resp := planmodifier.BoolResponse{PlanValue: c.planned}
+			checkGroupV2UseGlobalAlertSettingsPlanModifier{}.PlanModifyBool(ctx, planmodifier.BoolRequest{
+				Path:        checkGroupV2UseGlobalAlertSettingsTestPath,
+				Config:      config,
+				ConfigValue: configValue,
+				Plan:        plan,
+				PlanValue:   c.planned,
+			}, &resp)
+			if resp.Diagnostics.HasError() {
+				t.Fatal(resp.Diagnostics)
+			}
+			if !resp.PlanValue.Equal(c.want) {
+				t.Errorf("planned %s, want %s", resp.PlanValue, c.want)
+			}
+		})
+	}
+}
+
+func TestCheckGroupV2UseGlobalAlertSettingsValidator(t *testing.T) {
+	ctx := context.Background()
+
+	configuredTrue := tftypes.NewValue(tftypes.Bool, true)
+
+	enforcementType := checkGroupV2UseGlobalAlertSettingsTestObjectType.AttributeTypes["enforce_alert_settings"]
+	enforcementNull := tftypes.NewValue(enforcementType, nil)
+	enforcementUnknown := tftypes.NewValue(enforcementType, tftypes.UnknownValue)
+
+	cases := map[string]struct {
+		// enforcement, if set, replaces the whole enforce_alert_settings
+		// configuration.
+		enforcement   *tftypes.Value
+		enabled       tftypes.Value
+		useGlobal     tftypes.Value
+		alertSettings tftypes.Value
+		wantWarning   bool
+	}{
+		"omitted enforcement": {
+			enforcement: &enforcementNull,
+		},
+		"unknown enforcement": {
+			enforcement: &enforcementUnknown,
+		},
+		"enabled, true with alert_settings": {
+			enabled:       tftypes.NewValue(tftypes.Bool, true),
+			useGlobal:     configuredTrue,
+			alertSettings: alertSettingsSet,
+			wantWarning:   true,
+		},
+		"enabled, true without alert_settings": {
+			enabled:       tftypes.NewValue(tftypes.Bool, true),
+			useGlobal:     configuredTrue,
+			alertSettings: alertSettingsNull,
+		},
+		"enabled, false with alert_settings": {
+			enabled:       tftypes.NewValue(tftypes.Bool, true),
+			useGlobal:     tftypes.NewValue(tftypes.Bool, false),
+			alertSettings: alertSettingsSet,
+		},
+		"disabled, true with alert_settings": {
+			enabled:       tftypes.NewValue(tftypes.Bool, false),
+			useGlobal:     configuredTrue,
+			alertSettings: alertSettingsSet,
+		},
+		"unknown enabled, true with alert_settings": {
+			enabled:       tftypes.NewValue(tftypes.Bool, tftypes.UnknownValue),
+			useGlobal:     configuredTrue,
+			alertSettings: alertSettingsSet,
+		},
+	}
+
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			config := checkGroupV2UseGlobalAlertSettingsTestConfig(c.enforcement, c.enabled, c.useGlobal, c.alertSettings)
+
+			// The framework validates a member of a null or unknown object
+			// with a null value.
+			configValue := types.BoolNull()
+			if c.enforcement == nil {
+				if diags := config.GetAttribute(ctx, checkGroupV2UseGlobalAlertSettingsTestPath, &configValue); diags.HasError() {
+					t.Fatal(diags)
+				}
+			}
+
+			var resp validator.BoolResponse
+			checkGroupV2UseGlobalAlertSettingsValidator{}.ValidateBool(ctx, validator.BoolRequest{
+				Config:      config,
+				ConfigValue: configValue,
+				Path:        checkGroupV2UseGlobalAlertSettingsTestPath,
+			}, &resp)
+			if resp.Diagnostics.HasError() {
+				t.Fatal(resp.Diagnostics)
+			}
+			if got := resp.Diagnostics.WarningsCount() > 0; got != c.wantWarning {
+				t.Errorf("warning reported = %v, want %v: %v", got, c.wantWarning, resp.Diagnostics)
+			}
+		})
+	}
+}
+
+func TestCheckGroupV2UseGlobalAlertSettingsInRequest(t *testing.T) {
+	ctx := context.Background()
+
+	setAlertSettings := types.ObjectValueMust(alertSettingsAttrTypes, func() map[string]attr.Value {
+		values := make(map[string]attr.Value, len(alertSettingsAttrTypes))
+		for name, attrType := range alertSettingsAttrTypes {
+			switch t := attrType.(type) {
+			case types.ObjectType:
+				values[name] = types.ObjectNull(t.AttrTypes)
+			default:
+				values[name] = types.StringValue("RUN_BASED")
+			}
+		}
+		return values
+	}())
+
+	cases := map[string]struct {
+		useGlobal     types.Bool
+		alertSettings types.Object
+		want          *bool
+	}{
+		"known true is sent": {
+			useGlobal:     types.BoolValue(true),
+			alertSettings: setAlertSettings,
+			want:          new(true),
+		},
+		"known false is sent": {
+			useGlobal:     types.BoolValue(false),
+			alertSettings: types.ObjectNull(alertSettingsAttrTypes),
+			want:          new(false),
+		},
+		"null is not sent": {
+			useGlobal:     types.BoolNull(),
+			alertSettings: types.ObjectNull(alertSettingsAttrTypes),
+		},
+		"unknown without alert_settings resolves to true": {
+			useGlobal:     types.BoolUnknown(),
+			alertSettings: types.ObjectNull(alertSettingsAttrTypes),
+			want:          new(true),
+		},
+		"unknown with computed alert_settings resolves to true": {
+			useGlobal:     types.BoolUnknown(),
+			alertSettings: types.ObjectUnknown(alertSettingsAttrTypes),
+			want:          new(true),
+		},
+		"unknown with alert_settings resolves to false": {
+			useGlobal:     types.BoolUnknown(),
+			alertSettings: setAlertSettings,
+			want:          new(false),
+		},
+	}
+
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			model := CheckGroupV2ResourceModel{
+				Name: types.StringValue("test"),
+				EnforceAlertSettings: types.ObjectValueMust(checkGroupV2EnforceAlertSettingsAttrTypes, map[string]attr.Value{
+					"enabled":                             types.BoolValue(true),
+					alertSettingsAttributeName:            c.alertSettings,
+					useGlobalAlertSettingsAttributeName:   c.useGlobal,
+					alertChannelSubscriptionAttributeName: types.SetNull(checkGroupV2AlertChannelSubscriptionSetType.ElemType),
+				}),
+			}
+
+			var diags diag.Diagnostics
+			group := checkGroupV2FromModel(ctx, &model, &diags)
+			if diags.HasError() {
+				t.Fatal(diags)
+			}
+
+			got := group.UseGlobalAlertSettings
+			switch {
+			case c.want == nil && got != nil:
+				t.Errorf("UseGlobalAlertSettings = %v, want nil", *got)
+			case c.want != nil && (got == nil || *got != *c.want):
+				t.Errorf("UseGlobalAlertSettings = %v, want %v", got, *c.want)
+			}
+		})
+	}
 }

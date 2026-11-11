@@ -163,8 +163,12 @@ func makeAlertSettingsAttributeSchema(options AlertSettingsAttributeSchemaOption
 				Optional:    true,
 				Computed:    true,
 				Description: "Defines how often to send reminder notifications after the initial alert.",
+				// A stored null, which a check group without alert settings
+				// holds, must not be planned again once alert_settings is
+				// configured: the API then returns the object, so it stays
+				// unknown until Read fills it in.
 				PlanModifiers: []planmodifier.Object{
-					objectplanmodifier.UseStateForUnknown(),
+					objectplanmodifier.UseNonNullStateForUnknown(),
 				},
 				Attributes: map[string]schema.Attribute{
 					"amount": schema.Int64Attribute{
@@ -191,8 +195,12 @@ func makeAlertSettingsAttributeSchema(options AlertSettingsAttributeSchemaOption
 				Optional:    true,
 				Computed:    true,
 				Description: "Configuration for parallel run failure threshold.",
+				// A stored null, which a check group without alert settings
+				// holds, must not be planned again once alert_settings is
+				// configured: the API then returns the object, so it stays
+				// unknown until Read fills it in.
 				PlanModifiers: []planmodifier.Object{
-					objectplanmodifier.UseStateForUnknown(),
+					objectplanmodifier.UseNonNullStateForUnknown(),
 				},
 				Attributes: map[string]schema.Attribute{
 					"enabled": schema.BoolAttribute{

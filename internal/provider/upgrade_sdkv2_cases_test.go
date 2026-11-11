@@ -7,6 +7,9 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 )
 
 // upgradeRunID makes names, slugs and URLs unique per test run, since many of
@@ -1096,6 +1099,63 @@ resource "checkly_check_group_v2" "test" {
   tags = []
 }
 `).withUpdate("checkly_check_group_v2.test", "tags: null -> []"),
+
+	// v1.x defaulted enforce_alert_settings.use_global_alert_settings to
+	// false. v2 derives it from alert_settings while the enforcement is
+	// enabled, so a group without either plans false -> true once. The diff
+	// is not compared, because it shows the whole enforce_alert_settings
+	// object, including the alert settings the API fills in; the state check
+	// pins the derived value instead.
+	"check_group_v2_enforced_without_alert_settings": newSDKv2UpgradeCase(`
+resource "checkly_check_group_v2" "test" {
+  name = "tf-upgrade-{{id}}-group-v2-enforced-alerts"
+
+  enforce_alert_settings {
+    enabled = true
+  }
+}
+`, `
+resource "checkly_check_group_v2" "test" {
+  name = "tf-upgrade-{{id}}-group-v2-enforced-alerts"
+
+  enforce_alert_settings = {
+    enabled = true
+  }
+}
+`).withUpdate("checkly_check_group_v2.test", "").withStateChecks(
+		statecheck.ExpectKnownValue(
+			"checkly_check_group_v2.test",
+			tfjsonpath.New("enforce_alert_settings").AtMapKey("use_global_alert_settings"),
+			knownvalue.Bool(true),
+		),
+	),
+
+	// v1.x stored false for use_global_alert_settings of a disabled
+	// enforcement too. v2 does not derive it there, so the stored value
+	// stays and the plan is empty.
+	"check_group_v2_disabled_alert_settings": newSDKv2UpgradeCase(`
+resource "checkly_check_group_v2" "test" {
+  name = "tf-upgrade-{{id}}-group-v2-disabled-alerts"
+
+  enforce_alert_settings {
+    enabled = false
+  }
+}
+`, `
+resource "checkly_check_group_v2" "test" {
+  name = "tf-upgrade-{{id}}-group-v2-disabled-alerts"
+
+  enforce_alert_settings = {
+    enabled = false
+  }
+}
+`).withStateChecks(
+		statecheck.ExpectKnownValue(
+			"checkly_check_group_v2.test",
+			tfjsonpath.New("enforce_alert_settings").AtMapKey("use_global_alert_settings"),
+			knownvalue.Bool(false),
+		),
+	),
 
 	"check_group_v2": newSDKv2UpgradeCase(upgradeEmailChannelSDKv2+`
 resource "checkly_private_location" "test" {
@@ -3351,6 +3411,56 @@ moved {
   to   = checkly_check_group_v2.test
 }
 `),
+
+	// v1.x stored the unset use_global_alert_settings of a group without
+	// alert_settings as false. The move keeps that value, and the v2
+	// configuration, which leaves the attribute out, derives true from the
+	// enabled enforcement without alert_settings, so the first plan updates
+	// it once.
+	"moved_check_group_derived_use_global_to_check_group_v2": newSDKv2UpgradeCase(`
+resource "checkly_check_group" "test" {
+  name        = "tf-upgrade-{{id}}-moved-group-derived"
+  activated   = true
+  concurrency = 1
+  locations   = ["eu-central-1"]
+}
+`, `
+resource "checkly_check_group_v2" "test" {
+  name = "tf-upgrade-{{id}}-moved-group-derived"
+
+  enforce_locations = {
+    enabled   = true
+    locations = ["eu-central-1"]
+  }
+
+  enforce_alert_settings = {
+    enabled = true
+  }
+
+  enforce_retry_strategy = {
+    enabled = true
+    retry_strategy = {
+      type = "NO_RETRIES"
+    }
+  }
+
+  enforce_scheduling_strategy = {
+    enabled      = true
+    run_parallel = false
+  }
+}
+
+moved {
+  from = checkly_check_group.test
+  to   = checkly_check_group_v2.test
+}
+`).withUpdate("checkly_check_group_v2.test", "").withStateChecks(
+		statecheck.ExpectKnownValue(
+			"checkly_check_group_v2.test",
+			tfjsonpath.New("enforce_alert_settings").AtMapKey("use_global_alert_settings"),
+			knownvalue.Bool(true),
+		),
+	),
 
 	// The API reads double_check back as the retry strategy it stands for,
 	// which the v2 configuration enforces. v1.x stored the unset

@@ -209,7 +209,9 @@ resource "checkly_check_group_v2" "use-global-alerts" {
   name = "Use Global Alert Settings"
 
   enforce_alert_settings = {
-    enabled                   = true
+    enabled = true
+    # The provider derives true anyway when the enforcement sets no
+    # alert_settings; this example only states it explicitly.
     use_global_alert_settings = true
   }
 }
@@ -373,7 +375,7 @@ Optional:
 
 - `alert_channel_subscriptions` (Attributes Set) A set of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your group, we won't be able to alert you even if a check in the group starts failing. (see [below for nested schema](#nestedatt--enforce_alert_settings--alert_channel_subscriptions))
 - `alert_settings` (Attributes) Determines the alert escalation policy for the check. (see [below for nested schema](#nestedatt--enforce_alert_settings--alert_settings))
-- `use_global_alert_settings` (Boolean) Whether to use account level alert settings instead of the group's alert settings.Default (`false`).
+- `use_global_alert_settings` (Boolean) When true, the account level alert settings are used instead of the `alert_settings` of this check group. Defaults to `true` when `alert_settings` is not set, and to `false` when it is. The value is derived only while `enabled` is `true`. While the enforcement stays disabled, the stored value is kept and has no effect; disabling an enabled enforcement resets it to null.
 
 <a id="nestedatt--enforce_alert_settings--alert_channel_subscriptions"></a>
 ### Nested Schema for `enforce_alert_settings.alert_channel_subscriptions`

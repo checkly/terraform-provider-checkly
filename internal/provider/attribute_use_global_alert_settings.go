@@ -59,8 +59,23 @@ func (m useGlobalAlertSettingsPlanModifier) PlanModifyBool(ctx context.Context, 
 		return
 	}
 
+	planDerivedUseGlobalAlertSettings(ctx, req, resp)
+}
+
+// alertSettingsSiblingPath returns the path of the alert_settings attribute
+// next to the use_global_alert_settings attribute at p: the root
+// alert_settings for a root attribute, and the alert_settings of the same
+// object for a nested one.
+func alertSettingsSiblingPath(p path.Path) path.Path {
+	return p.ParentPath().AtName(alertSettingsAttributeName)
+}
+
+// planDerivedUseGlobalAlertSettings plans use_global_alert_settings as true
+// when the alert_settings next to it is not configured, as false when it is,
+// and as unknown when that is known only at apply time.
+func planDerivedUseGlobalAlertSettings(ctx context.Context, req planmodifier.BoolRequest, resp *planmodifier.BoolResponse) {
 	var alertSettings types.Object
-	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(alertSettingsAttributeName), &alertSettings)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, alertSettingsSiblingPath(req.Path), &alertSettings)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -97,7 +112,7 @@ func (v useGlobalAlertSettingsValidator) ValidateBool(ctx context.Context, req v
 	}
 
 	var alertSettings types.Object
-	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(alertSettingsAttributeName), &alertSettings)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, alertSettingsSiblingPath(req.Path), &alertSettings)...)
 	if resp.Diagnostics.HasError() || alertSettings.IsNull() || alertSettings.IsUnknown() {
 		return
 	}
