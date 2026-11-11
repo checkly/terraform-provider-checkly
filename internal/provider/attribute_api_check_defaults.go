@@ -64,12 +64,12 @@ func makeAPICheckDefaultsAttributeSchema() schema.SingleNestedAttribute {
 			"headers": schema.MapAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
-				Description: "Default headers for API checks in this group.",
+				Description: "Default headers for API checks in this group. The values are not sensitive and show in plan output. To keep a credential in a header out of plan output, take it from a variable declared with `sensitive = true` or wrap it in `sensitive(...)`.",
 			},
 			"query_parameters": schema.MapAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
-				Description: "Default query parameters for API checks in this group.",
+				Description: "Default query parameters for API checks in this group. The values are not sensitive and show in plan output. To keep a credential in a parameter out of plan output, take it from a variable declared with `sensitive = true` or wrap it in `sensitive(...)`.",
 			},
 			"assertions": schema.SetNestedAttribute{
 				Optional:    true,

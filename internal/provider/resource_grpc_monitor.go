@@ -335,7 +335,7 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 								"value": schema.StringAttribute{
 									Optional:    true,
 									Computed:    true,
-									Description: "The gRPC metadata (header) value (at most 8192 characters).",
+									Description: "The gRPC metadata (header) value (at most 8192 characters). The value is not sensitive and shows in plan output. To keep a credential out of plan output, take it from a variable declared with `sensitive = true` or wrap it in `sensitive(...)`.",
 									Validators: []validator.String{
 										utf16LengthBetween(0, 8192),
 									},

@@ -56,7 +56,10 @@ func TestResourceSchemasAreValid(t *testing.T) {
 }
 
 // Credentials must be marked Sensitive so Terraform redacts them in plan
-// output. Attributes of nested objects and blocks are given as dotted paths.
+// output. Header and query parameter values must not be: they show in plan
+// output like any other configuration, and users who put a credential in one
+// redact it with a sensitive variable or sensitive(). Attributes of nested
+// objects and blocks are given as dotted paths.
 func TestSensitiveAttributes(t *testing.T) {
 	ctx := context.Background()
 
@@ -77,8 +80,6 @@ func TestSensitiveAttributes(t *testing.T) {
 			"slack.url",
 			"webhook.url",
 			"webhook.webhook_secret",
-			"webhook.headers",
-			"webhook.query_parameters",
 			"opsgenie.api_key",
 			"pagerduty.service_key",
 		},
@@ -93,20 +94,37 @@ func TestSensitiveAttributes(t *testing.T) {
 		"checkly_heartbeat":              {"heartbeat.ping_token"},
 	}
 
-	for resourceName, attrPaths := range cases {
-		s, ok := schemas[resourceName]
-		if !ok {
-			t.Errorf("resource %s not found", resourceName)
-			continue
-		}
-		for _, attrPath := range attrPaths {
-			attr, ok := schemaAttributeAtPath(s, strings.Split(attrPath, "."))
+	notSensitive := map[string][]string{
+		"checkly_alert_channel":  {"webhook.headers", "webhook.query_parameters"},
+		"checkly_api_check":      {"request.headers", "request.query_parameters"},
+		"checkly_check":          {"request.headers", "request.query_parameters"},
+		"checkly_check_group":    {"api_check_defaults.headers", "api_check_defaults.query_parameters"},
+		"checkly_check_group_v2": {"api_check_defaults.headers", "api_check_defaults.query_parameters"},
+		"checkly_grpc_monitor":   {"request.metadata.value"},
+	}
+
+	for _, tc := range []struct {
+		attrPaths map[string][]string
+		sensitive bool
+	}{
+		{cases, true},
+		{notSensitive, false},
+	} {
+		for resourceName, attrPaths := range tc.attrPaths {
+			s, ok := schemas[resourceName]
 			if !ok {
-				t.Errorf("%s: attribute %s not found", resourceName, attrPath)
+				t.Errorf("resource %s not found", resourceName)
 				continue
 			}
-			if !attr.IsSensitive() {
-				t.Errorf("%s: attribute %s is not Sensitive", resourceName, attrPath)
+			for _, attrPath := range attrPaths {
+				attr, ok := schemaAttributeAtPath(s, strings.Split(attrPath, "."))
+				if !ok {
+					t.Errorf("%s: attribute %s not found", resourceName, attrPath)
+					continue
+				}
+				if attr.IsSensitive() != tc.sensitive {
+					t.Errorf("%s: attribute %s has Sensitive = %t, want %t", resourceName, attrPath, attr.IsSensitive(), tc.sensitive)
+				}
 			}
 		}
 	}
