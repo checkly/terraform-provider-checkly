@@ -2,7 +2,6 @@
 resource "checkly_ssl_monitor" "example-ssl-monitor" {
   name                      = "Example SSL monitor"
   activated                 = true
-  should_fail               = false
   frequency                 = 60
   use_global_alert_settings = true
 
@@ -22,7 +21,6 @@ resource "checkly_ssl_monitor" "example-ssl-monitor" {
 resource "checkly_ssl_monitor" "example-ssl-monitor-2" {
   name                   = "Example SSL monitor 2"
   activated              = true
-  should_fail            = false
   frequency              = 60
   degraded_response_time = 3000
   max_response_time      = 10000

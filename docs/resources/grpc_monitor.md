@@ -17,7 +17,6 @@ gRPC monitors allow you to monitor gRPC services, either via a health check (HEA
 resource "checkly_grpc_monitor" "example-grpc-monitor" {
   name                      = "Example gRPC monitor"
   activated                 = true
-  should_fail               = false
   frequency                 = 1
   use_global_alert_settings = true
 
@@ -36,10 +35,9 @@ resource "checkly_grpc_monitor" "example-grpc-monitor" {
 # A more complex example invoking a unary method (BEHAVIOR mode) with
 # metadata, assertions and an alert/retry policy
 resource "checkly_grpc_monitor" "example-grpc-monitor-2" {
-  name        = "Example gRPC monitor 2"
-  activated   = true
-  should_fail = false
-  frequency   = 5
+  name      = "Example gRPC monitor 2"
+  activated = true
+  frequency = 5
 
   locations = [
     "us-west-1",
@@ -101,11 +99,10 @@ resource "checkly_grpc_monitor" "example-grpc-monitor-2" {
 # A FlatBuffers unary monitor. Generate the binary schema first with:
 # flatc -b --schema --bfbs-builtins schema.fbs
 resource "checkly_grpc_monitor" "example-flatbuffers-monitor" {
-  name        = "Example FlatBuffers gRPC monitor"
-  activated   = true
-  should_fail = false
-  frequency   = 5
-  locations   = ["us-west-1"]
+  name      = "Example FlatBuffers gRPC monitor"
+  activated = true
+  frequency = 5
+  locations = ["us-west-1"]
 
   request = {
     host         = "grpc.example.com"
@@ -146,7 +143,6 @@ resource "checkly_grpc_monitor" "example-flatbuffers-monitor" {
 - `retry_strategy` (Attributes) A strategy for retrying failed check/monitor runs. (see [below for nested schema](#nestedatt--retry_strategy))
 - `run_parallel` (Boolean) Determines whether the monitor runs in all its locations in parallel instead of in one location at a time, round-robin. (Default `false`).
 - `runtime_id` (String) The ID of the runtime to use for the monitor.
-- `should_fail` (Boolean) Inverts when the monitor is considered to fail. (Default `false`).
 - `tags` (Set of String) Tags for organizing and filtering checks and monitors.
 - `trigger_incident` (Attributes) Create and resolve an incident based on the alert configuration. Useful for status page automation. (see [below for nested schema](#nestedatt--trigger_incident))
 - `use_global_alert_settings` (Boolean) When true, the account level alert settings are used instead of the `alert_settings` of this monitor. Defaults to `true` when `alert_settings` is not set, and to `false` when it is.

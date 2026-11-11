@@ -99,7 +99,6 @@ resource "checkly_check" "browser_check_1" {
   name                      = "Example check"
   type                      = "BROWSER"
   activated                 = true
-  should_fail               = false
   frequency                 = 10
   use_global_alert_settings = true
   locations = [
@@ -159,7 +158,6 @@ resource "checkly_check" "example_check" {
 #   name                      = "Example check"
 #   type                      = "BROWSER"
 #   activated                 = true
-#   should_fail               = false
 #   frequency                 = 10
 #   use_global_alert_settings = true
 #   locations = [

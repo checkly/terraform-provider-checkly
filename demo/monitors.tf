@@ -1,10 +1,9 @@
 # gRPC monitor — invoke a unary method in BEHAVIOR mode
 resource "checkly_grpc_monitor" "grpc-monitor-1" {
-  name        = "gRPC monitor 1"
-  activated   = true
-  muted       = true
-  frequency   = 5
-  should_fail = false
+  name      = "gRPC monitor 1"
+  activated = true
+  muted     = true
+  frequency = 5
   locations = [
     "eu-central-1",
     "us-east-2",
@@ -32,11 +31,10 @@ resource "checkly_grpc_monitor" "grpc-monitor-1" {
 
 # Traceroute monitor — trace the network path to a host
 resource "checkly_traceroute_monitor" "traceroute-monitor-1" {
-  name        = "Traceroute monitor 1"
-  activated   = true
-  muted       = true
-  frequency   = 5
-  should_fail = false
+  name      = "Traceroute monitor 1"
+  activated = true
+  muted     = true
+  frequency = 5
   locations = [
     "eu-central-1",
     "us-east-2",
@@ -60,11 +58,10 @@ resource "checkly_traceroute_monitor" "traceroute-monitor-1" {
 
 # SSL monitor — watch a certificate's validity and expiry
 resource "checkly_ssl_monitor" "ssl-monitor-1" {
-  name        = "SSL monitor 1"
-  activated   = true
-  muted       = true
-  frequency   = 60
-  should_fail = false
+  name      = "SSL monitor 1"
+  activated = true
+  muted     = true
+  frequency = 60
   locations = [
     "eu-central-1",
     "us-east-2",

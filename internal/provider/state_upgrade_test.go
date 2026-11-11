@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -840,6 +841,44 @@ func TestMoveSDKv2State(t *testing.T) {
 				c.check(t, resp.TargetState)
 			}
 		})
+	}
+}
+
+// checkly_browser_check and checkly_multistep_check have no should_fail, so
+// a move from a checkly_check that has it set to true warns that the check
+// keeps it in Checkly until its next update.
+func TestMoveCheckWarnsAboutShouldFail(t *testing.T) {
+	targets := map[string]resource.Resource{
+		"check_browser":   NewBrowserCheckResource(),
+		"check_multistep": NewMultistepCheckResource(),
+	}
+
+	for fixture, target := range targets {
+		for _, shouldFail := range []any{true, false, nil} {
+			t.Run(fmt.Sprintf("%s/should_fail=%v", fixture, shouldFail), func(t *testing.T) {
+				raw := sdkv2FixtureWith(t, fixture, func(obj map[string]any) {
+					obj[shouldFailAttributeName] = shouldFail
+				})
+				resp := moveState(t, target, resource.MoveStateRequest{
+					SourceProviderAddress: "registry.terraform.io/checkly/checkly",
+					SourceTypeName:        "checkly_check",
+					SourceSchemaVersion:   sdkv2SchemaVersion,
+					SourceRawState:        &tfprotov6.RawState{JSON: []byte(raw)},
+				})
+				if resp.Diagnostics.HasError() {
+					t.Fatal(resp.Diagnostics)
+				}
+
+				warnings := resp.Diagnostics.Warnings()
+				if shouldFail == true {
+					if len(warnings) != 1 || warnings[0].Summary() != "should_fail Is Not Supported" {
+						t.Errorf("want one should_fail warning: %v", resp.Diagnostics)
+					}
+				} else if len(warnings) != 0 {
+					t.Errorf("want no warnings: %v", warnings)
+				}
+			})
+		}
 	}
 }
 

@@ -137,6 +137,74 @@ func TestCheckUpdateSendsThePlan(t *testing.T) {
 	}
 }
 
+// should_fail only applies to API checks. A browser or multi-step plan that
+// still holds true, such as one with a stored true that ValidateConfig does
+// not see, sends false.
+func TestCheckUpdateSendsShouldFailOnlyForAPIChecks(t *testing.T) {
+	cases := map[string]struct {
+		plannedType string
+		want        bool
+		sent        func(c *checkWriteClient) bool
+	}{
+		"api":        {plannedType: "API", want: true, sent: func(c *checkWriteClient) bool { return c.updatedAPI.ShouldFail }},
+		"browser":    {plannedType: "BROWSER", want: false, sent: func(c *checkWriteClient) bool { return c.updatedBrowser.ShouldFail }},
+		"multi-step": {plannedType: "MULTI_STEP", want: false, sent: func(c *checkWriteClient) bool { return c.updatedMulti.ShouldFail }},
+	}
+
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			client := &checkWriteClient{}
+			diags := updateCheck(t, client, map[string]any{"id": "abc", "type": c.plannedType, "script": "code", shouldFailAttributeName: true})
+			if diags.HasError() {
+				t.Fatal(diags)
+			}
+			if got := c.sent(client); got != c.want {
+				t.Errorf("shouldFail = %v, want %v", got, c.want)
+			}
+		})
+	}
+}
+
+// A read of a browser or multi-step check, which covers imports, warns when
+// the check has should_fail set to true in Checkly, which these resources
+// have no attribute for.
+func TestCheckToModelWarnsAboutShouldFail(t *testing.T) {
+	ctx := context.Background()
+
+	mappings := map[string]func(shouldFail bool, diags *diag.Diagnostics){
+		"checkly_browser_check": func(shouldFail bool, diags *diag.Diagnostics) {
+			var model BrowserCheckResourceModel
+			browserCheckToModel(ctx, &checkly.BrowserCheck{ID: "abc", Script: "code", ShouldFail: shouldFail}, &model, diags)
+		},
+		"checkly_multistep_check": func(shouldFail bool, diags *diag.Diagnostics) {
+			var model MultistepCheckResourceModel
+			multistepCheckToModel(ctx, &checkly.MultiStepCheck{ID: "abc", Script: "code", ShouldFail: shouldFail}, &model, diags)
+		},
+	}
+
+	for name, mapping := range mappings {
+		for _, shouldFail := range []bool{true, false} {
+			t.Run(fmt.Sprintf("%s/should_fail=%v", name, shouldFail), func(t *testing.T) {
+				var diags diag.Diagnostics
+				mapping(shouldFail, &diags)
+				if diags.HasError() {
+					t.Fatal(diags)
+				}
+
+				warnings := diags.Warnings()
+				if shouldFail {
+					if len(warnings) != 1 || warnings[0].Summary() != "should_fail Is Not Supported" ||
+						!strings.Contains(warnings[0].Detail(), name) {
+						t.Errorf("want one should_fail warning naming %s: %v", name, diags)
+					}
+				} else if len(warnings) != 0 {
+					t.Errorf("want no warnings: %v", warnings)
+				}
+			})
+		}
+	}
+}
+
 // An empty planned script fails before any request, which the nil client of
 // the resource would turn into a panic. ModifyPlan reports an omitted or null
 // script at plan time already; a script known only at apply time reaches

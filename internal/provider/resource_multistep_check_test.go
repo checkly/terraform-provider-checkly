@@ -317,7 +317,6 @@ func TestAccMultistepCheckUnsetSweepScalars(t *testing.T) {
 					frequency                 = 720
 					activated                 = false
 					muted                     = true
-					should_fail               = true
 					run_parallel              = true
 					use_global_alert_settings = false
 					runtime_id                = "2023.09"
@@ -340,11 +339,6 @@ func TestAccMultistepCheckUnsetSweepScalars(t *testing.T) {
 				resource.TestCheckResourceAttr(
 					"checkly_multistep_check.test",
 					"muted",
-					"true",
-				),
-				resource.TestCheckResourceAttr(
-					"checkly_multistep_check.test",
-					"should_fail",
 					"true",
 				),
 				resource.TestCheckResourceAttr(
@@ -392,11 +386,6 @@ func TestAccMultistepCheckUnsetSweepScalars(t *testing.T) {
 				resource.TestCheckResourceAttr(
 					"checkly_multistep_check.test",
 					"muted",
-					"false",
-				),
-				resource.TestCheckResourceAttr(
-					"checkly_multistep_check.test",
-					"should_fail",
 					"false",
 				),
 				resource.TestCheckResourceAttr(
@@ -748,7 +737,6 @@ const multistepCheckResource_basic = `
 	resource "checkly_multistep_check" "test" {
 		name                      = "Multistep Check Resource"
 		activated                 = true
-		should_fail               = false
 		frequency                 = 720
 		use_global_alert_settings = true
 		locations                 = [ "us-east-1", "eu-central-1" ]

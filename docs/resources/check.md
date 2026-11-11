@@ -117,7 +117,6 @@ resource "checkly_check" "browser_check_1" {
   name                      = "Example check"
   type                      = "BROWSER"
   activated                 = true
-  should_fail               = false
   frequency                 = 10
   use_global_alert_settings = true
   locations = [
@@ -177,7 +176,6 @@ resource "checkly_check" "example_check" {
 #   name                      = "Example check"
 #   type                      = "BROWSER"
 #   activated                 = true
-#   should_fail               = false
 #   frequency                 = 10
 #   use_global_alert_settings = true
 #   locations = [
@@ -263,7 +261,7 @@ moved {
 - `runtime_id` (String) The ID of the runtime to use for the check. When unset, the account's default runtime is used.
 - `script` (String) A valid piece of Node.js JavaScript code describing a browser interaction with the Puppeteer/Playwright framework or a reference to an external JavaScript file. Required when `type` is `BROWSER` or `MULTI_STEP`; has no effect when it is `API`. Updating a browser or multi-step check clears the script path and dependencies that the Checkly CLI sets for multi-file scripts.
 - `setup_snippet_id` (Number) The ID of the snippet to run in the setup phase of the API check (at least `1`). When unset, no setup snippet runs. Only relevant when `type` is `API`.
-- `should_fail` (Boolean) Inverts when the check is considered to fail. Use it to validate an error status such as 404. (Default `false`).
+- `should_fail` (Boolean) Inverts when the check is considered to fail. Only supported when `type` is `API`. Use it to validate an error status such as 404. (Default `false`).
 - `ssl_check_domain` (String) A valid fully qualified domain name (FQDN) to check its SSL certificate. Only relevant when `type` is `BROWSER`.
 - `tags` (Set of String) Tags for organizing and filtering checks and monitors.
 - `teardown_snippet_id` (Number) The ID of the snippet to run in the teardown phase of the API check (at least `1`). When unset, no teardown snippet runs. Only relevant when `type` is `API`.

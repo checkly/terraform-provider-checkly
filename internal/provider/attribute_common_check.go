@@ -34,9 +34,12 @@ const (
 )
 
 // shouldFailErrorStatusNote is the should_fail note of the resources that
-// assert the status code of an HTTP response: API checks (including
-// checkly_check, whose API type does) and URL monitors.
+// assert the status code of an HTTP response: API checks and URL monitors.
 const shouldFailErrorStatusNote = "Use it to validate an error status such as 404."
+
+// checkShouldFailNote is the should_fail note of checkly_check, which rejects
+// should_fail on its browser and multi-step types.
+const checkShouldFailNote = "Only supported when `type` is `API`. " + shouldFailErrorStatusNote
 
 // CommonCheckAttributeSchemaOptions selects and adapts the attributes that
 // checks, monitors and check groups share. The zero value (apart from

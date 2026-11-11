@@ -64,6 +64,7 @@ need changes. Follow the [upgrade guide](docs/guides/upgrading-to-v2.md).
 - **Breaking:** `checkly_trigger_check` and `checkly_trigger_group`. Use the Checkly CLI (`checkly trigger`) or `POST /v1/check-sessions/trigger`.
 - **Breaking:** `environment_variables` as a map on `checkly_check` and `checkly_check_group`; write each entry as an element of the `environment_variables` list.
 - **Breaking:** attributes the API ignored: `ssl_check` on `checkly_check`, `alert_settings.ssl_certificates` on every resource that had it, and `retry_strategy.only_on` on the monitors that had no conditions to set.
+- **Breaking:** `should_fail` on `checkly_grpc_monitor`, `checkly_ssl_monitor` and `checkly_traceroute_monitor`, which ignored it, and on browser and multi-step `checkly_check`, where setting it fails the plan. Matching the Checkly CLI, only API checks, URL monitors and TCP monitors have it, so `checkly_browser_check` and `checkly_multistep_check` don't either. Browser and multi-step checks that had it set to `true` are set to `false` by their next update; until then the per-type resources warn about it.
 - **Breaking:** the `CHECKLY_DEBUG_LOG` request dump. Use an HTTPS proxy through `HTTPS_PROXY` to inspect requests.
 
 ### Fixed

@@ -502,7 +502,6 @@ func TestAccGRPCMonitorUnsetAllAttributes(t *testing.T) {
 			Config: config(`
 				description               = "description"
 				muted                     = true
-				should_fail               = true
 				run_parallel              = true
 				degraded_response_time    = 3000
 				max_response_time         = 8000
@@ -565,7 +564,6 @@ func TestAccGRPCMonitorUnsetAllAttributes(t *testing.T) {
 				resource.TestCheckResourceAttr(name, "degraded_response_time", "10000"),
 				resource.TestCheckResourceAttr(name, "max_response_time", "20000"),
 				resource.TestCheckResourceAttr(name, "muted", "false"),
-				resource.TestCheckResourceAttr(name, "should_fail", "false"),
 				resource.TestCheckResourceAttr(name, "run_parallel", "false"),
 				resource.TestCheckNoResourceAttr(name, "group_id"),
 				resource.TestCheckResourceAttr(name, "use_global_alert_settings", "true"),
