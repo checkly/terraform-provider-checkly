@@ -128,8 +128,8 @@ moved {
 - `description` (String) A description of the monitor.
 - `frequency` (Number) Controls how often the monitor should run. Defined in minutes. The allowed values are `0` (high frequency - use `frequency_offset` to define the actual frequency), `1` (1 minute), `2` (2 minutes), `5` (5 minutes), `10` (10 minutes), `15` (15 minutes), `30` (30 minutes), `60` (1 hour), `120` (2 hours), `180` (3 hours), `360` (6 hours), `720` (12 hours) and `1440` (24 hours). (Default `10`).
 - `frequency_offset` (Number) When `frequency` is `0` (high frequency), `frequency_offset` is required and it alone controls how often the monitor should run. Defined in seconds. The allowed values are `0` (disabled - use `frequency` to define the actual frequency), `10` (10 seconds), `20` (20 seconds) and `30` (30 seconds).
-- `group_id` (Number) The ID of the check group the monitor is part of. (Default `0`, no group).
-- `group_order` (Number) The position of the monitor in its check group, which sets the order in which the checks and monitors of the group run when the group is triggered from the API or CI/CD. (Default `0`).
+- `group_id` (Number) The ID of the check group the monitor is part of (at least `1`). When unset, the monitor is not part of a group.
+- `group_order` (Number) The position of the monitor in its check group (at least `1`), which sets the order in which the checks and monitors of the group run when the group is triggered from the API or CI/CD.
 - `locations` (Set of String) The data center locations to run the monitor from, such as `us-east-1`. The monitor needs at least one location in `locations` or `private_locations`, unless it is part of a check group.
 - `max_response_time` (Number) The response time in milliseconds where the monitor should be considered failing. Possible values are between `0` and `5000`. (Default `5000`).
 - `muted` (Boolean) Determines whether notifications are sent when the monitor fails, degrades or recovers. (Default `false`).

@@ -1109,10 +1109,9 @@ func TestAccURLMonitorGroupAssignment(t *testing.T) {
 					"checkly_check_group.test1",
 					"id",
 				),
-				resource.TestCheckResourceAttr(
+				resource.TestCheckNoResourceAttr(
 					"checkly_url_monitor.test2",
 					"group_id",
-					"0",
 				),
 			),
 		},
@@ -1206,15 +1205,13 @@ func TestAccURLMonitorGroupAssignment(t *testing.T) {
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
+				resource.TestCheckNoResourceAttr(
 					"checkly_url_monitor.test1",
 					"group_id",
-					"0",
 				),
-				resource.TestCheckResourceAttr(
+				resource.TestCheckNoResourceAttr(
 					"checkly_url_monitor.test2",
 					"group_id",
-					"0",
 				),
 			),
 		},
@@ -2079,8 +2076,8 @@ func TestAccURLMonitorUnsetSweepGroup(t *testing.T) {
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr("checkly_url_monitor.test", "group_id", "0"),
-				resource.TestCheckResourceAttr("checkly_url_monitor.test", "group_order", "0"),
+				resource.TestCheckNoResourceAttr("checkly_url_monitor.test", "group_id"),
+				resource.TestCheckNoResourceAttr("checkly_url_monitor.test", "group_order"),
 			),
 		},
 	})

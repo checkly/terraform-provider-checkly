@@ -164,18 +164,8 @@ func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 				Optional:    true,
 				Description: "A valid fully qualified domain name (FQDN) to check its SSL certificate. Only relevant when `type` is `BROWSER`.",
 			},
-			"setup_snippet_id": schema.Int64Attribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     int64default.StaticInt64(0),
-				Description: "An ID reference to a snippet to use in the setup phase of an API check.",
-			},
-			"teardown_snippet_id": schema.Int64Attribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     int64default.StaticInt64(0),
-				Description: "An ID reference to a snippet to use in the teardown phase of an API check.",
-			},
+			"setup_snippet_id":    snippetIDAttributeSchema("The ID of the snippet to run in the setup phase of the API check (at least `1`). When unset, no setup snippet runs. Only relevant when `type` is `API`."),
+			"teardown_snippet_id": snippetIDAttributeSchema("The ID of the snippet to run in the teardown phase of the API check (at least `1`). When unset, no teardown snippet runs. Only relevant when `type` is `API`."),
 			"local_setup_script": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
@@ -871,8 +861,8 @@ func checkToModel(ctx context.Context, check checkly.Check, model *CheckResource
 	// stands, and a value that was never set, as on import, is false. A change
 	// made outside Terraform shows up through retry_strategy.
 	model.DoubleCheck = types.BoolValue(prior.DoubleCheck.ValueBool())
-	model.GroupID = types.Int64Value(c.GroupID)
-	model.GroupOrder = types.Int64Value(int64(c.GroupOrder))
+	model.GroupID = int64ValueOrNull(c.GroupID)
+	model.GroupOrder = int64ValueOrNull(c.GroupOrder)
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, prior.RetryStrategy, diags)
 	model.TriggerIncident = triggerIncidentToObject(ctx, c.TriggerIncident, diags)
 	model.Intent = checkIntentToObject(ctx, c.Intent, prior.Intent, diags)
@@ -889,8 +879,8 @@ func checkToModel(ctx context.Context, check checkly.Check, model *CheckResource
 		// configured ones show as a change in every plan; ValidateConfig warns
 		// about them.
 		model.EnvironmentVariables = environmentVariablesToList(ctx, nil, prior.EnvironmentVariables, diags)
-		model.SetupSnippetID = types.Int64Value(typed.SetupSnippetID)
-		model.TeardownSnippetID = types.Int64Value(typed.TearDownSnippetID)
+		model.SetupSnippetID = int64ValueOrNull(typed.SetupSnippetID)
+		model.TeardownSnippetID = int64ValueOrNull(typed.TearDownSnippetID)
 		model.LocalSetupScript = types.StringValue(valueOrZero(typed.LocalSetupScript))
 		model.LocalTeardownScript = types.StringValue(valueOrZero(typed.LocalTearDownScript))
 		model.Request = apiCheckRequestToObject(ctx, typed.Request, prior.Request, diags)
@@ -913,12 +903,11 @@ func checkToModel(ctx context.Context, check checkly.Check, model *CheckResource
 
 // checkKeepAPICheckAttributes resolves the attributes that browser and
 // multi-step checks don't have to their schema defaults when the model has no
-// value for them. The request attribute has no default, and stays as it is.
+// value for them. The attributes without a default (request and the snippet
+// IDs) stay as they are.
 func checkKeepAPICheckAttributes(model *CheckResourceModel) {
 	model.DegradedResponseTime = int64OrDefault(model.DegradedResponseTime, 15000)
 	model.MaxResponseTime = int64OrDefault(model.MaxResponseTime, 30000)
-	model.SetupSnippetID = int64OrDefault(model.SetupSnippetID, 0)
-	model.TeardownSnippetID = int64OrDefault(model.TeardownSnippetID, 0)
 	model.LocalSetupScript = stringOrDefault(model.LocalSetupScript, "")
 	model.LocalTeardownScript = stringOrDefault(model.LocalTeardownScript, "")
 }

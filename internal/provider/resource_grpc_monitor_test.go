@@ -567,7 +567,7 @@ func TestAccGRPCMonitorUnsetAllAttributes(t *testing.T) {
 				resource.TestCheckResourceAttr(name, "muted", "false"),
 				resource.TestCheckResourceAttr(name, "should_fail", "false"),
 				resource.TestCheckResourceAttr(name, "run_parallel", "false"),
-				resource.TestCheckResourceAttr(name, "group_id", "0"),
+				resource.TestCheckNoResourceAttr(name, "group_id"),
 				resource.TestCheckResourceAttr(name, "use_global_alert_settings", "true"),
 				resource.TestCheckResourceAttr(name, "alert_channel_subscriptions.#", "0"),
 				resource.TestCheckResourceAttr(name, "retry_strategy.type", "NO_RETRIES"),

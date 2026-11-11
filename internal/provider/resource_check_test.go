@@ -1602,10 +1602,9 @@ func TestAccCheckGroupAssignment(t *testing.T) {
 					"checkly_check_group.test1",
 					"id",
 				),
-				resource.TestCheckResourceAttr(
+				resource.TestCheckNoResourceAttr(
 					"checkly_check.test2",
 					"group_id",
-					"0",
 				),
 			),
 		},
@@ -1707,15 +1706,13 @@ func TestAccCheckGroupAssignment(t *testing.T) {
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
+				resource.TestCheckNoResourceAttr(
 					"checkly_check.test1",
 					"group_id",
-					"0",
 				),
-				resource.TestCheckResourceAttr(
+				resource.TestCheckNoResourceAttr(
 					"checkly_check.test2",
 					"group_id",
-					"0",
 				),
 			),
 		},
@@ -2483,16 +2480,16 @@ func TestAccCheckUpdateClearsRemovedValues(t *testing.T) {
 			Config: config(`group_id = checkly_check_group.test.id`),
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckNoResourceAttr(r, "tags.#"),
-				resource.TestCheckResourceAttr(r, "setup_snippet_id", "0"),
-				resource.TestCheckResourceAttr(r, "teardown_snippet_id", "0"),
+				resource.TestCheckNoResourceAttr(r, "setup_snippet_id"),
+				resource.TestCheckNoResourceAttr(r, "teardown_snippet_id"),
 				resource.TestCheckResourceAttr(r, "local_setup_script", ""),
 				resource.TestCheckResourceAttr(r, "local_teardown_script", ""),
-				resource.TestCheckResourceAttr(r, "group_order", "0"),
+				resource.TestCheckNoResourceAttr(r, "group_order"),
 			),
 		},
 		{
 			Config: config(""),
-			Check:  resource.TestCheckResourceAttr(r, "group_id", "0"),
+			Check:  resource.TestCheckNoResourceAttr(r, "group_id"),
 		},
 	})
 }

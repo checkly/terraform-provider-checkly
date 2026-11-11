@@ -733,10 +733,9 @@ func TestAccTCPMonitorGroupAssignment(t *testing.T) {
 					"checkly_check_group.test1",
 					"id",
 				),
-				resource.TestCheckResourceAttr(
+				resource.TestCheckNoResourceAttr(
 					"checkly_tcp_monitor.test2",
 					"group_id",
-					"0",
 				),
 			),
 		},
@@ -834,15 +833,13 @@ func TestAccTCPMonitorGroupAssignment(t *testing.T) {
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
+				resource.TestCheckNoResourceAttr(
 					"checkly_tcp_monitor.test1",
 					"group_id",
-					"0",
 				),
-				resource.TestCheckResourceAttr(
+				resource.TestCheckNoResourceAttr(
 					"checkly_tcp_monitor.test2",
 					"group_id",
-					"0",
 				),
 			),
 		},
@@ -1618,8 +1615,8 @@ func TestAccTCPMonitorUnsetSweepGroupOrder(t *testing.T) {
 				"2",
 			),
 		},
-		// Removing group_order while staying in the group must reset it to
-		// the default 0.
+		// Removing group_order while staying in the group must clear the
+		// position.
 		{
 			Config: `
 				resource "checkly_check_group" "test" {
@@ -1641,10 +1638,9 @@ func TestAccTCPMonitorUnsetSweepGroupOrder(t *testing.T) {
 					}
 				}
 			`,
-			Check: resource.TestCheckResourceAttr(
+			Check: resource.TestCheckNoResourceAttr(
 				"checkly_tcp_monitor.test",
 				"group_order",
-				"0",
 			),
 		},
 	})

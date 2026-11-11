@@ -95,8 +95,8 @@ func TestCommonCheckAttributeSchemas(t *testing.T) {
 		// use_global_alert_settings is derived by a plan modifier instead
 		// of a static default.
 		useGlobalAlertSettingsAttributeName: {optional: true, computed: true},
-		groupIDAttributeName:                optionalDefault(types.Int64Value(0)),
-		groupOrderAttributeName:             optionalDefault(types.Int64Value(0)),
+		groupIDAttributeName:                optional,
+		groupOrderAttributeName:             optional,
 		runtimeIDAttributeName:              optional,
 	}
 

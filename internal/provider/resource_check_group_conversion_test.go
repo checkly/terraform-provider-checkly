@@ -35,8 +35,8 @@ func TestCheckGroupReadThenUpdateWithoutOptionalSettings(t *testing.T) {
 	if model.UseGlobalAlertSettings != types.BoolValue(false) {
 		t.Errorf("use_global_alert_settings = %s, want false", model.UseGlobalAlertSettings)
 	}
-	if model.SetupSnippetID != types.Int64Value(0) || model.TeardownSnippetID != types.Int64Value(0) {
-		t.Errorf("snippet IDs = %s, %s, want 0", model.SetupSnippetID, model.TeardownSnippetID)
+	if !model.SetupSnippetID.IsNull() || !model.TeardownSnippetID.IsNull() {
+		t.Errorf("snippet IDs = %s, %s, want null", model.SetupSnippetID, model.TeardownSnippetID)
 	}
 	if model.LocalSetupScript != types.StringValue("") || model.LocalTeardownScript != types.StringValue("") {
 		t.Errorf("local scripts = %s, %s, want empty", model.LocalSetupScript, model.LocalTeardownScript)
@@ -279,8 +279,8 @@ func checkGroupModelForMove() CheckGroupResourceModel {
 		PrivateLocations:          stringSet,
 		Tags:                      stringSet,
 		EnvironmentVariables:      types.ListNull(types.ObjectType{AttrTypes: environmentVariableAttrTypes}),
-		SetupSnippetID:            types.Int64Value(0),
-		TeardownSnippetID:         types.Int64Value(0),
+		SetupSnippetID:            types.Int64Null(),
+		TeardownSnippetID:         types.Int64Null(),
 		LocalSetupScript:          types.StringValue(""),
 		LocalTeardownScript:       types.StringValue(""),
 		RuntimeID:                 types.StringNull(),
@@ -462,6 +462,20 @@ func TestCheckGroupV2ModelFromCheckGroupModel(t *testing.T) {
 				requireValue(t, "default_runtime", target.DefaultRuntime, types.ObjectValueMust(checkGroupV2DefaultRuntimeAttrTypes, map[string]attr.Value{
 					"runtime_id": types.StringValue("2025.04"),
 				}))
+			},
+		},
+		"snippet IDs of 0 stored by earlier versions": {
+			edit: func(source *CheckGroupResourceModel) {
+				source.SetupSnippetID = types.Int64Value(0)
+				source.TeardownSnippetID = types.Int64Value(0)
+				source.LocalSetupScript = types.StringValue("setup")
+			},
+			check: func(t *testing.T, target CheckGroupV2ResourceModel) {
+				requireValue(t, "setup_script", target.SetupScript, types.ObjectValueMust(checkGroupV2ScriptAttrTypes, map[string]attr.Value{
+					"snippet_id":    types.Int64Null(),
+					"inline_script": types.StringValue("setup"),
+				}))
+				requireValue(t, "teardown_script", target.TeardownScript, types.ObjectNull(checkGroupV2ScriptAttrTypes))
 			},
 		},
 		"an empty runtime ID": {

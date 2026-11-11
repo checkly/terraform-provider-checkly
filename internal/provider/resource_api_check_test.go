@@ -248,15 +248,13 @@ func TestAccApiCheckResourceSnippetsAndScripts(t *testing.T) {
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
+				resource.TestCheckNoResourceAttr(
 					"checkly_api_check.test",
 					"setup_snippet_id",
-					"0",
 				),
-				resource.TestCheckResourceAttr(
+				resource.TestCheckNoResourceAttr(
 					"checkly_api_check.test",
 					"teardown_snippet_id",
-					"0",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_api_check.test",
@@ -1111,7 +1109,7 @@ func TestAccApiCheckUnsetSweepGroupAndAlerts(t *testing.T) {
 				),
 			),
 		},
-		// Removing group_order alone must reset it to 0 remotely while the
+		// Removing group_order alone must clear the position remotely while the
 		// check stays in the group.
 		{
 			Config: apiCheckUnsetSweepDeps + `
@@ -1149,10 +1147,9 @@ func TestAccApiCheckUnsetSweepGroupAndAlerts(t *testing.T) {
 					"checkly_check_group.sweep",
 					"id",
 				),
-				resource.TestCheckResourceAttr(
+				resource.TestCheckNoResourceAttr(
 					"checkly_api_check.test",
 					"group_order",
-					"0",
 				),
 			),
 		},
@@ -1171,15 +1168,13 @@ func TestAccApiCheckUnsetSweepGroupAndAlerts(t *testing.T) {
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
+				resource.TestCheckNoResourceAttr(
 					"checkly_api_check.test",
 					"group_id",
-					"0",
 				),
-				resource.TestCheckResourceAttr(
+				resource.TestCheckNoResourceAttr(
 					"checkly_api_check.test",
 					"group_order",
-					"0",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_api_check.test",

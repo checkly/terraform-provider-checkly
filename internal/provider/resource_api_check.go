@@ -118,18 +118,8 @@ func (r *APICheckResource) Schema(ctx context.Context, req resource.SchemaReques
 				},
 				Description: "The response time in milliseconds where the check should be considered failing. Possible values are between `0` and `30000`. (Default `20000`).",
 			},
-			"setup_snippet_id": schema.Int64Attribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     int64default.StaticInt64(0),
-				Description: "An ID reference to a snippet to use in the setup phase of an API check.",
-			},
-			"teardown_snippet_id": schema.Int64Attribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     int64default.StaticInt64(0),
-				Description: "An ID reference to a snippet to use in the teardown phase of an API check.",
-			},
+			"setup_snippet_id":    snippetIDAttributeSchema("The ID of the snippet to run in the setup phase of the API check (at least `1`). When unset, no setup snippet runs."),
+			"teardown_snippet_id": snippetIDAttributeSchema("The ID of the snippet to run in the teardown phase of the API check (at least `1`). When unset, no teardown snippet runs."),
 			"local_setup_script": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
@@ -432,8 +422,8 @@ func apiCheckToModel(ctx context.Context, c *checkly.APICheck, model *APICheckRe
 	model.DegradedResponseTime = types.Int64Value(int64(c.DegradedResponseTime))
 	model.MaxResponseTime = types.Int64Value(int64(c.MaxResponseTime))
 	model.Tags = stringSetFromAPINullIfUnset(ctx, c.Tags, prior.Tags, diags)
-	model.SetupSnippetID = types.Int64Value(c.SetupSnippetID)
-	model.TeardownSnippetID = types.Int64Value(c.TearDownSnippetID)
+	model.SetupSnippetID = int64ValueOrNull(c.SetupSnippetID)
+	model.TeardownSnippetID = int64ValueOrNull(c.TearDownSnippetID)
 	if c.LocalSetupScript != nil {
 		model.LocalSetupScript = types.StringValue(*c.LocalSetupScript)
 	} else {
@@ -450,10 +440,23 @@ func apiCheckToModel(ctx context.Context, c *checkly.APICheck, model *APICheckRe
 	model.AlertSettings = alertSettingsFromAPI(ctx, c.AlertSettings, prior.AlertSettings, diags)
 	model.UseGlobalAlertSettings = types.BoolValue(c.UseGlobalAlertSettings)
 	model.Request = apiCheckRequestToObject(ctx, c.Request, prior.Request, diags)
-	model.GroupID = types.Int64Value(c.GroupID)
-	model.GroupOrder = types.Int64Value(int64(c.GroupOrder))
+	model.GroupID = int64ValueOrNull(c.GroupID)
+	model.GroupOrder = int64ValueOrNull(c.GroupOrder)
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, prior.RetryStrategy, diags)
 	model.TriggerIncident = triggerIncidentToObject(ctx, c.TriggerIncident, diags)
 	model.Intent = checkIntentToObject(ctx, c.Intent, prior.Intent, diags)
 	model.AIAutoRepairEnabled = types.BoolPointerValue(c.AIAutoRepairEnabled)
+}
+
+// snippetIDAttributeSchema returns the schema of a setup or teardown snippet
+// reference. It is null when there is no snippet; the API's 0 for none is
+// rejected in the configuration.
+func snippetIDAttributeSchema(description string) schema.Int64Attribute {
+	return schema.Int64Attribute{
+		Optional: true,
+		Validators: []validator.Int64{
+			int64validator.AtLeast(1),
+		},
+		Description: description,
+	}
 }

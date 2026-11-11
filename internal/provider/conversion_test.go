@@ -12,6 +12,21 @@ import (
 	"github.com/checkly/checkly-go-sdk/v2"
 )
 
+func TestInt64ValueOrNull(t *testing.T) {
+	if got := int64ValueOrNull(int64(0)); !got.IsNull() {
+		t.Errorf("int64ValueOrNull(int64(0)) = %s, want null", got)
+	}
+	if got := int64ValueOrNull(0); !got.IsNull() {
+		t.Errorf("int64ValueOrNull(0) = %s, want null", got)
+	}
+	if got := int64ValueOrNull(int64(5)); !got.Equal(types.Int64Value(5)) {
+		t.Errorf("int64ValueOrNull(int64(5)) = %s, want 5", got)
+	}
+	if got := int64ValueOrNull(3); !got.Equal(types.Int64Value(3)) {
+		t.Errorf("int64ValueOrNull(3) = %s, want 3", got)
+	}
+}
+
 func TestValueContainsUnknown(t *testing.T) {
 	ctx := context.Background()
 

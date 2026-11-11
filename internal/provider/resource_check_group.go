@@ -8,7 +8,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -93,18 +92,8 @@ func (r *CheckGroupResource) Schema(ctx context.Context, req resource.SchemaRequ
 				Required:    true,
 				Description: "Determines how many checks are run concurrently when triggering a check group from CI/CD or through the API.",
 			},
-			"setup_snippet_id": schema.Int64Attribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     int64default.StaticInt64(0),
-				Description: "An ID reference to a snippet to use in the setup phase of an API check.",
-			},
-			"teardown_snippet_id": schema.Int64Attribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     int64default.StaticInt64(0),
-				Description: "An ID reference to a snippet to use in the teardown phase of an API check.",
-			},
+			"setup_snippet_id":    snippetIDAttributeSchema("The ID of the snippet to run in the setup phase of the group's API checks (at least `1`). When unset, no setup snippet runs."),
+			"teardown_snippet_id": snippetIDAttributeSchema("The ID of the snippet to run in the teardown phase of the group's API checks (at least `1`). When unset, no teardown snippet runs."),
 			"local_setup_script": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
@@ -382,8 +371,8 @@ func checkGroupToModel(ctx context.Context, group *checkly.GroupV2, model *Check
 	model.PrivateLocations = stringSetFromAPINullIfUnset(ctx, valueOrZero(group.PrivateLocations), model.PrivateLocations, diags)
 	model.Tags = stringSetFromAPINullIfUnset(ctx, group.Tags, model.Tags, diags)
 	model.EnvironmentVariables = environmentVariablesToList(ctx, group.EnvironmentVariables, model.EnvironmentVariables, diags)
-	model.SetupSnippetID = types.Int64Value(valueOrZero(group.SetupSnippetID))
-	model.TeardownSnippetID = types.Int64Value(valueOrZero(group.TearDownSnippetID))
+	model.SetupSnippetID = int64ValueOrNull(valueOrZero(group.SetupSnippetID))
+	model.TeardownSnippetID = int64ValueOrNull(valueOrZero(group.TearDownSnippetID))
 	model.LocalSetupScript = types.StringValue(valueOrZero(group.LocalSetupScript))
 	model.LocalTeardownScript = types.StringValue(valueOrZero(group.LocalTearDownScript))
 

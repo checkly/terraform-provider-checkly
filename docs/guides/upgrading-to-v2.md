@@ -202,6 +202,20 @@ As with [single nested objects](#single-nested-objects-are-attributes), a misspe
 
 An optional collection without a default, such as `tags`, `locations`, `private_locations` or `request.assertions`, is null when your configuration leaves it out. v1.x stored an empty list, set or map instead. The API treats both the same, but expressions that read such an attribute from a resource get null, so `length()` or `concat()` over it fails. Write `x == null ? [] : x` for a list or set and `x == null ? {} : x` for a map, for example `length(checkly_check_group.example.tags == null ? [] : checkly_check_group.example.tags)`, or set the attribute in your configuration. Passing the attribute on to another resource, as in `locations = checkly_check_group.example.locations`, keeps working, since null is valid there too.
 
+### No group or snippet is null
+
+`group_id` and `group_order` on checks and monitors, and `setup_snippet_id` and `teardown_snippet_id` on `checkly_check`, `checkly_api_check` and `checkly_check_group`, are null when the check is not in a group or has no snippet. v1.x stored `0`. Setting one of them to `0` is now an error at plan time; remove the attribute instead, or write `null` where an expression chooses between a value and none:
+
+```terraform
+# v1.x
+group_id = var.grouped ? checkly_check_group.example.id : 0
+
+# v2
+group_id = var.grouped ? checkly_check_group.example.id : null
+```
+
+An expression that compares one of these attributes with `0` must compare it with `null` instead. Positions in `group_order` start at `1`. A check without `group_order` runs before the checks that have one, as a check with `group_order = 0` did in v1.x.
+
 ### Removed attributes
 
 These attributes were deprecated in v1.x. Remove them from your configuration:
@@ -448,7 +462,7 @@ resource "checkly_maintenance_window" "example" {
 
 ## Expected one-time changes
 
-- v1.x stored an unset optional attribute as an empty value (`""`, `0`, `[]` or `{}`). v2 stores null instead for an unset collection and for an unset optional attribute without a documented default, such as `runtime_id`, `frequency_offset` or a maintenance window's `repeat_interval`; an attribute with a documented default, such as a check's `description` or `group_id`, keeps storing that default. If your configuration sets an attribute that v2 stores as null to an empty value explicitly, for example `tags = []`, `headers = {}` or `repeat_interval = 0`, the first plan shows an in-place update to that empty value. The same goes for the first plan after an import, which also stores null for an empty value. Removing the attribute from the configuration has the same effect and avoids the update. Expressions over an unset collection are affected too; see [Unset collections are null](#unset-collections-are-null).
+- v1.x stored an unset optional attribute as an empty value (`""`, `0`, `[]` or `{}`). v2 stores null instead for an unset collection and for an unset optional attribute without a documented default, such as `runtime_id`, `frequency_offset` or a maintenance window's `repeat_interval`; an attribute with a documented default, such as a check's `description` or `activated`, keeps storing that default. `group_id`, `group_order`, `setup_snippet_id` and `teardown_snippet_id` are stored as null when unset, and setting one of them to `0` fails the plan; see [No group or snippet is null](#no-group-or-snippet-is-null). If your configuration sets an attribute that v2 stores as null to an empty value explicitly, for example `tags = []`, `headers = {}` or `repeat_interval = 0`, the first plan shows an in-place update to that empty value. The same goes for the first plan after an import, which also stores null for an empty value. Removing the attribute from the configuration has the same effect and avoids the update. Expressions over an unset collection are affected too; see [Unset collections are null](#unset-collections-are-null).
 - v1.x could not clear these attributes: leaving one out kept the stored value, and every plan showed the same change. v2 clears them, so a value set in the web app and absent from your configuration is erased by the first apply. To keep such a value, add it to your configuration.
   - `checkly_status_page`: `custom_domain`, `logo`, `redirect_to` and `favicon`.
   - `checkly_dashboard`: `custom_domain`, `logo`, `link`, `description` and `favicon`.

@@ -198,6 +198,16 @@ func stringValueOrNull(value string) types.String {
 	return types.StringValue(value)
 }
 
+// int64ValueOrNull converts a reference or a position from the API, where 0
+// stands for none, to an int64 value, mapping 0 to null.
+func int64ValueOrNull[T ~int | ~int64](value T) types.Int64 {
+	if value == 0 {
+		return types.Int64Null()
+	}
+
+	return types.Int64Value(int64(value))
+}
+
 // stringValueOrPriorEmpty converts an optional string from the API like
 // stringValueOrNull, except that an empty string stays empty when the prior
 // value is empty. The API reports "" for an unset field, so an attribute
