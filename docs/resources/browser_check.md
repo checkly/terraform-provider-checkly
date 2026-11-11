@@ -272,7 +272,7 @@ Optional:
 Required:
 
 - `content` (String) The content of the dependency file.
-- `path` (String) The path of the dependency file.
+- `path` (String) The path of the dependency file (1 to 1000 characters).
 
 
 <a id="nestedatt--environment_variables"></a>
@@ -294,12 +294,12 @@ Optional:
 
 Required:
 
-- `goal` (String) The user or system outcome the check protects, of 1 to 2000 UTF-16 code units without leading or trailing whitespace. Most characters count as one; emoji and other characters outside the Basic Multilingual Plane count as two.
+- `goal` (String) The user or system outcome the check protects (1 to 2000 characters, without leading or trailing whitespace).
 
 Optional:
 
-- `must_preserve` (List of String) Guardrails an automatic repair must not weaken or bypass. At most 20 statements of 1 to 1000 UTF-16 code units without leading or trailing whitespace. Most characters count as one; emoji and other characters outside the Basic Multilingual Plane count as two.
-- `required_outcomes` (List of String) Observable outcomes the check must continue to prove. At most 20 statements of 1 to 1000 UTF-16 code units without leading or trailing whitespace. Most characters count as one; emoji and other characters outside the Basic Multilingual Plane count as two.
+- `must_preserve` (List of String) Guardrails an automatic repair must not weaken or bypass. At most 20 statements (1 to 1000 characters each, without leading or trailing whitespace).
+- `required_outcomes` (List of String) Observable outcomes the check must continue to prove. At most 20 statements (1 to 1000 characters each, without leading or trailing whitespace).
 
 
 <a id="nestedatt--retry_strategy"></a>

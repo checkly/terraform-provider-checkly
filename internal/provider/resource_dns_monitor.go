@@ -163,7 +163,10 @@ func (r *DNSMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 					},
 					"query": schema.StringAttribute{
 						Required:    true,
-						Description: "The DNS record to query.",
+						Description: "The DNS record to query (1 to 100 characters).",
+						Validators: []validator.String{
+							utf16LengthBetween(1, 100),
+						},
 					},
 					"protocol": schema.StringAttribute{
 						Optional:    true,
@@ -183,8 +186,9 @@ func (r *DNSMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 						Attributes: map[string]schema.Attribute{
 							"host": schema.StringAttribute{
 								Optional:    true,
-								Description: "The name server host.",
+								Description: "The name server host (at most 100 characters).",
 								Validators: []validator.String{
+									utf16LengthBetween(0, 100),
 									stringvalidator.AlsoRequires(
 										path.MatchRelative().AtParent().AtName("port"),
 									),

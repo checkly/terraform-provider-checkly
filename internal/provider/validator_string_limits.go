@@ -13,10 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-// utf16CountingExplanation tells users how a UTF-16 length limit counts
-// characters, for attribute descriptions and error messages.
-const utf16CountingExplanation = "Most characters count as one; emoji and other characters outside the Basic Multilingual Plane count as two."
-
 // utf16LengthValidator rejects strings whose length in UTF-16 code units is
 // outside [min, max]. The API validates lengths in JavaScript, whose string
 // length counts UTF-16 code units, so a character outside the Basic
@@ -59,7 +55,7 @@ func (v utf16LengthValidator) ValidateString(ctx context.Context, req validator.
 		resp.Diagnostics.AddAttributeError(
 			req.Path,
 			"Invalid Attribute Value Length",
-			fmt.Sprintf("%s must be %d to %d UTF-16 code units long, got: %d. %s", req.Path, v.min, v.max, n, utf16CountingExplanation),
+			fmt.Sprintf("%s must be %d to %d UTF-16 code units long, got: %d. Most characters count as one; emoji and other characters outside the Basic Multilingual Plane count as two.", req.Path, v.min, v.max, n),
 		)
 	}
 }
@@ -104,6 +100,17 @@ func (v trimmedStringValidator) ValidateString(ctx context.Context, req validato
 			fmt.Sprintf("%s must not have leading or trailing whitespace, which the API removes. Use trimspace() to remove it, for example on a heredoc.", req.Path),
 		)
 	}
+}
+
+// noControlCharactersRegex is the API's rule for host names sent to a
+// network probe: no C0 control characters (U+0000 to U+001F) and no DEL
+// (U+007F). C1 control characters, such as U+0085, are accepted.
+var noControlCharactersRegex = regexp.MustCompile(`^[^\x00-\x1f\x7f]*$`)
+
+// noControlCharacters returns a validator that rejects strings with
+// characters that noControlCharactersRegex excludes.
+func noControlCharacters() validator.String {
+	return stringvalidator.RegexMatches(noControlCharactersRegex, "must not contain control characters")
 }
 
 // The API's private location slug rule: 1 to 30 letters, digits and dashes,

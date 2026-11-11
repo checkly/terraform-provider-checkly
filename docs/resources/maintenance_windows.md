@@ -83,12 +83,12 @@ resource "checkly_maintenance_windows" "maintenance-2" {
 ### Required
 
 - `ends_at` (String) The end date of the maintenance window.
-- `name` (String) The maintenance window name, of 1 to 200 UTF-16 code units. Most characters count as one; emoji and other characters outside the Basic Multilingual Plane count as two.
+- `name` (String) The maintenance window name (1 to 200 characters).
 - `starts_at` (String) The start date of the maintenance window.
 
 ### Optional
 
-- `description` (String) A description of the maintenance window, of at most 2000 UTF-16 code units. When the window is visible on status pages, the description is shown there too. Most characters count as one; emoji and other characters outside the Basic Multilingual Plane count as two.
+- `description` (String) A description of the maintenance window (at most 2000 characters). When the window is visible on status pages, the description is shown there too.
 - `pause_all_checks` (Boolean) Pause every check in the account during the maintenance window, regardless of `tags`. Defaults to `false`.
 - `repeat_ends_at` (String) The date on which the maintenance window should stop repeating, interpreted as a calendar date in `timezone`.
 - `repeat_interval` (Number) The repeat interval of the maintenance window from the first occurrence.

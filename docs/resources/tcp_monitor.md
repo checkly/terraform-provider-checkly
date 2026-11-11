@@ -129,7 +129,7 @@ resource "checkly_tcp_monitor" "example-tcp-monitor-2" {
 
 Required:
 
-- `hostname` (String) The hostname or IP to connect to. Do not include a scheme or a port in this value.
+- `hostname` (String) The hostname or IP to connect to (1 to 2048 characters). Do not include a scheme or a port in this value.
 - `port` (Number) The port number to connect to.
 
 Optional:

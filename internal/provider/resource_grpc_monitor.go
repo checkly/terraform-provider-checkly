@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -186,7 +187,11 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 				Attributes: map[string]schema.Attribute{
 					"host": schema.StringAttribute{
 						Required:    true,
-						Description: "The host to connect to. Do not include a scheme or a port in this value.",
+						Description: "The host to connect to (1 to 2048 characters). Do not include a scheme or a port in this value.",
+						Validators: []validator.String{
+							utf16LengthBetween(1, 2048),
+							noControlCharacters(),
+						},
 					},
 					"port": schema.Int64Attribute{
 						Required:    true,
@@ -273,7 +278,10 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 						Optional:    true,
 						Computed:    true,
 						Default:     stringdefault.StaticString(""),
-						Description: "The inline `.proto` file source used when `service_definition = \"PROTO_FILE\"` in `BEHAVIOR` mode. Forbidden when `encoding = \"FLATBUFFERS\"`.",
+						Description: "The inline `.proto` file source (at most 102400 characters) used when `service_definition = \"PROTO_FILE\"` in `BEHAVIOR` mode. Forbidden when `encoding = \"FLATBUFFERS\"`.",
+						Validators: []validator.String{
+							utf16LengthBetween(0, 102400),
+						},
 					},
 					"bfbs_content": schema.StringAttribute{
 						Optional:    true,
@@ -294,11 +302,17 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 						Optional:    true,
 						Computed:    true,
 						Default:     stringdefault.StaticString(""),
-						Description: "The JSON request message sent as the gRPC call payload in `BEHAVIOR` mode.",
+						Description: "The JSON request message (at most 65536 characters) sent as the gRPC call payload in `BEHAVIOR` mode.",
+						Validators: []validator.String{
+							utf16LengthBetween(0, 65536),
+						},
 					},
 					"metadata": schema.SetNestedAttribute{
 						Optional:    true,
-						Description: "gRPC metadata (request headers) sent with the call.",
+						Description: "gRPC metadata (request headers) sent with the call. At most 50 elements.",
+						Validators: []validator.Set{
+							setvalidator.SizeAtMost(50),
+						},
 						NestedObject: schema.NestedAttributeObject{
 							// Attributes nested in this set attribute must
 							// not use schema defaults. The framework looks
@@ -313,12 +327,18 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 							Attributes: map[string]schema.Attribute{
 								"key": schema.StringAttribute{
 									Required:    true,
-									Description: "The gRPC metadata (header) key.",
+									Description: "The gRPC metadata (header) key (1 to 256 characters).",
+									Validators: []validator.String{
+										utf16LengthBetween(1, 256),
+									},
 								},
 								"value": schema.StringAttribute{
 									Optional:    true,
 									Computed:    true,
-									Description: "The gRPC metadata (header) value.",
+									Description: "The gRPC metadata (header) value (at most 8192 characters).",
+									Validators: []validator.String{
+										utf16LengthBetween(0, 8192),
+									},
 								},
 							},
 						},

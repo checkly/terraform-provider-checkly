@@ -102,7 +102,10 @@ func (r *StatusPageV3AutomationRuleResource) Schema(ctx context.Context, req res
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
-				Description: "The name of the rule.",
+				Description: "The name of the rule (1 to 255 characters).",
+				Validators: []validator.String{
+					utf16LengthBetween(1, 255),
+				},
 			},
 			"enabled": schema.BoolAttribute{
 				Optional:    true,

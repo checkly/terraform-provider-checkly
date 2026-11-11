@@ -6,6 +6,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/checkly/checkly-go-sdk/v2"
@@ -36,7 +37,10 @@ func makeScriptDependenciesSchema() schema.ListNestedAttribute {
 			Attributes: map[string]schema.Attribute{
 				"path": schema.StringAttribute{
 					Required:    true,
-					Description: "The path of the dependency file.",
+					Description: "The path of the dependency file (1 to 1000 characters).",
+					Validators: []validator.String{
+						utf16LengthBetween(1, 1000),
+					},
 				},
 				"content": schema.StringAttribute{
 					Required:    true,
