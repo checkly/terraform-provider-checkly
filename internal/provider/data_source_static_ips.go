@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"fmt"
 	"slices"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -97,10 +96,7 @@ func (d *StaticIPsDataSource) Read(ctx context.Context, req datasource.ReadReque
 
 	staticIPs, err := d.client.GetStaticIPs(apiCtx)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Read Static IPs",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Read Static IPs", err)
 		return
 	}
 

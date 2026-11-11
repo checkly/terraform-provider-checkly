@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/checkly/checkly-go-sdk/v2"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -87,5 +88,47 @@ func TestAlertSettingsFromObjectEscalationDefaults(t *testing.T) {
 	}
 	if got := timeBased.TimeBasedEscalation.MinutesFailingThreshold; got != 5 {
 		t.Errorf("minutes failing threshold = %d, want 5", got)
+	}
+}
+
+func TestAlertSettingsFromAPI(t *testing.T) {
+	ctx := context.Background()
+
+	apiSettings := &checkly.AlertSettings{
+		EscalationType:     checkly.EscalationTypeRunBased,
+		RunBasedEscalation: checkly.RunBasedEscalation{FailedRunThreshold: 2},
+	}
+
+	var diags diag.Diagnostics
+	known := alertSettingsToObject(ctx, *apiSettings, types.ObjectNull(alertSettingsAttrTypes), &diags)
+	if diags.HasError() {
+		t.Fatal(diags)
+	}
+
+	cases := map[string]struct {
+		as    *checkly.AlertSettings
+		prior types.Object
+		want  types.Object
+	}{
+		"reported, prior null":      {apiSettings, types.ObjectNull(alertSettingsAttrTypes), known},
+		"reported, prior unknown":   {apiSettings, types.ObjectUnknown(alertSettingsAttrTypes), known},
+		"not reported, prior known": {nil, known, known},
+		"not reported, prior null":  {nil, types.ObjectNull(alertSettingsAttrTypes), types.ObjectNull(alertSettingsAttrTypes)},
+		"not reported, prior unknown": {
+			nil, types.ObjectUnknown(alertSettingsAttrTypes), types.ObjectNull(alertSettingsAttrTypes),
+		},
+	}
+
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			var diags diag.Diagnostics
+			got := alertSettingsFromAPI(ctx, c.as, c.prior, &diags)
+			if diags.HasError() {
+				t.Fatal(diags)
+			}
+			if !got.Equal(c.want) {
+				t.Errorf("got %v, want %v", got, c.want)
+			}
+		})
 	}
 }

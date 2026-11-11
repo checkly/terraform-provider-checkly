@@ -7,9 +7,11 @@ import (
 )
 
 var (
-	_ resource.Resource                = (*HeartbeatResource)(nil)
-	_ resource.ResourceWithConfigure   = (*HeartbeatResource)(nil)
-	_ resource.ResourceWithImportState = (*HeartbeatResource)(nil)
+	_ resource.Resource                 = (*HeartbeatResource)(nil)
+	_ resource.ResourceWithConfigure    = (*HeartbeatResource)(nil)
+	_ resource.ResourceWithUpgradeState = (*HeartbeatResource)(nil)
+	_ resource.ResourceWithImportState  = (*HeartbeatResource)(nil)
+	_ resource.ResourceWithMoveState    = (*HeartbeatResource)(nil)
 )
 
 // NewHeartbeatResource returns a new checkly_heartbeat resource, a deprecated
@@ -32,17 +34,5 @@ func (r *HeartbeatResource) Metadata(ctx context.Context, req resource.MetadataR
 func (r *HeartbeatResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	r.HeartbeatMonitorResource.Schema(ctx, req, resp)
 
-	resp.Schema.Description = "" +
-		"The `checkly_heartbeat` resource has been renamed to `checkly_heartbeat_monitor` to better reflect its " +
-		"position in the Checkly product lineup. The `checkly_heartbeat` resource type is deprecated and will be " +
-		"removed in a future version of the provider." +
-		"\n\n" +
-		"The schemas of both resource types are identical, and existing `checkly_heartbeat` resources can be " +
-		"migrated to `checkly_heartbeat_monitor` using a `moved` block." +
-		"\n\n" +
-		"We recommend using the `checkly_heartbeat_monitor` resource type for any new resources."
-
-	resp.Schema.DeprecationMessage = "" +
-		"Use the `checkly_heartbeat_monitor` resource instead. The schemas are identical, and existing resources " +
-		"can be migrated using a `moved` block."
+	deprecateAliasSchema(resp, "checkly_heartbeat", "checkly_heartbeat_monitor", " to better reflect its position in the Checkly product lineup")
 }

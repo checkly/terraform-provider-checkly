@@ -480,10 +480,7 @@ func (r *AlertChannelResource) Create(ctx context.Context, req resource.CreateRe
 
 	result, err := r.client.CreateAlertChannel(apiCtx, ac)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Create Alert Channel",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Create Alert Channel", err)
 		return
 	}
 
@@ -521,10 +518,7 @@ func (r *AlertChannelResource) Read(ctx context.Context, req resource.ReadReques
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Read Alert Channel",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Read Alert Channel", err)
 		return
 	}
 
@@ -564,10 +558,7 @@ func (r *AlertChannelResource) Update(ctx context.Context, req resource.UpdateRe
 
 	_, err = r.client.UpdateAlertChannel(apiCtx, id, ac)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Update Alert Channel",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Update Alert Channel", err)
 		return
 	}
 
@@ -599,10 +590,7 @@ func (r *AlertChannelResource) Delete(ctx context.Context, req resource.DeleteRe
 		if isNotFoundError(err) {
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Delete Alert Channel",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Delete Alert Channel", err)
 		return
 	}
 }

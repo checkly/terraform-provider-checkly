@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -139,10 +138,7 @@ func (r *BrowserCheckResource) Create(ctx context.Context, req resource.CreateRe
 
 	result, err := r.client.CreateBrowserCheck(apiCtx, check)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Create Browser Check",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Create Browser Check", err)
 		return
 	}
 
@@ -168,10 +164,7 @@ func (r *BrowserCheckResource) Read(ctx context.Context, req resource.ReadReques
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Read Browser Check",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Read Browser Check", err)
 		return
 	}
 
@@ -198,10 +191,7 @@ func (r *BrowserCheckResource) Update(ctx context.Context, req resource.UpdateRe
 
 	result, err := r.client.UpdateBrowserCheck(apiCtx, check.ID, check)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Update Browser Check",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Update Browser Check", err)
 		return
 	}
 
@@ -226,10 +216,7 @@ func (r *BrowserCheckResource) Delete(ctx context.Context, req resource.DeleteRe
 		if isNotFoundError(err) {
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Delete Browser Check",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Delete Browser Check", err)
 		return
 	}
 }
@@ -344,11 +331,7 @@ func browserCheckFromModel(ctx context.Context, model *BrowserCheckResourceModel
 func browserCheckResolveComputedValues(ctx context.Context, c *checkly.BrowserCheck, model *BrowserCheckResourceModel, diags *diag.Diagnostics) {
 	model.ID = types.StringValue(c.ID)
 
-	if c.AlertSettings != nil {
-		model.AlertSettings = alertSettingsToObject(ctx, *c.AlertSettings, model.AlertSettings, diags)
-	} else if model.AlertSettings.IsUnknown() {
-		model.AlertSettings = types.ObjectNull(alertSettingsAttrTypes)
-	}
+	model.AlertSettings = alertSettingsFromAPI(ctx, c.AlertSettings, model.AlertSettings, diags)
 
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, model.RetryStrategy, diags)
 }
@@ -413,11 +396,7 @@ func browserCheckToModel(ctx context.Context, c *checkly.BrowserCheck, model *Br
 
 	model.PrivateLocations = stringSetFromAPINullIfUnset(ctx, valueOrZero(c.PrivateLocations), prior.PrivateLocations, diags)
 
-	if c.AlertSettings != nil {
-		model.AlertSettings = alertSettingsToObject(ctx, *c.AlertSettings, prior.AlertSettings, diags)
-	} else if model.AlertSettings.IsUnknown() {
-		model.AlertSettings = types.ObjectNull(alertSettingsAttrTypes)
-	}
+	model.AlertSettings = alertSettingsFromAPI(ctx, c.AlertSettings, prior.AlertSettings, diags)
 
 	model.UseGlobalAlertSettings = types.BoolValue(c.UseGlobalAlertSettings)
 	model.GroupID = types.Int64Value(c.GroupID)

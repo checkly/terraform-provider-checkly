@@ -361,6 +361,23 @@ func alertSettingsToObject(ctx context.Context, as checkly.AlertSettings, prior 
 	return obj
 }
 
+// alertSettingsFromAPI resolves the alert_settings attribute from an API
+// response. When the API reports alert settings they are converted with
+// alertSettingsToObject. When it reports none, prior (the planned or
+// previously stored value) is kept, because converting the absence of a
+// value would overwrite it with empty values; an unknown prior cannot be
+// stored in state and resolves to null.
+func alertSettingsFromAPI(ctx context.Context, as *checkly.AlertSettings, prior types.Object, diags *diag.Diagnostics) types.Object {
+	if as != nil {
+		return alertSettingsToObject(ctx, *as, prior, diags)
+	}
+	if prior.IsUnknown() {
+		return types.ObjectNull(alertSettingsAttrTypes)
+	}
+
+	return prior
+}
+
 // planUnconfiguredAlertSettingsAsUnknown plans every sub-object that the
 // configuration leaves out of alert_settings as unknown, when the stored
 // alert_settings has an empty escalation_type. A group without alert settings

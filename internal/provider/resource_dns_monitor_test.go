@@ -70,12 +70,12 @@ func TestAccDNSMonitorBasic(t *testing.T) {
 					"activated",
 					"true",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemAttr(
 					"checkly_dns_monitor.test",
 					"locations.*",
 					"eu-central-1",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemAttr(
 					"checkly_dns_monitor.test",
 					"locations.*",
 					"us-east-1",
@@ -238,9 +238,9 @@ func TestAccDNSMonitorFull(t *testing.T) {
 					"max_response_time",
 					"500",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_dns_monitor.test",
-					`"locations.#"`,
+					"locations.#",
 					"3",
 				),
 				resource.TestCheckResourceAttr(

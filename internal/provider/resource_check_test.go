@@ -199,12 +199,12 @@ func TestAccBrowserCheckBasic(t *testing.T) {
 					"locations.#",
 					"2",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemAttr(
 					"checkly_check.test",
 					"locations.*",
 					"us-east-1",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemAttr(
 					"checkly_check.test",
 					"locations.*",
 					"eu-central-1",
@@ -214,12 +214,12 @@ func TestAccBrowserCheckBasic(t *testing.T) {
 					"tags.#",
 					"2",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemAttr(
 					"checkly_check.test",
 					"tags.*",
 					"browser",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemAttr(
 					"checkly_check.test",
 					"tags.*",
 					"e2e",
@@ -296,12 +296,12 @@ func TestAccApiCheckBasic(t *testing.T) {
 					"activated",
 					"true",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemAttr(
 					"checkly_check.test",
 					"locations.*",
 					"eu-central-1",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemAttr(
 					"checkly_check.test",
 					"locations.*",
 					"us-east-1",
@@ -399,12 +399,12 @@ func TestAccMultiStepCheckBasic(t *testing.T) {
 					"locations.#",
 					"2",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemAttr(
 					"checkly_check.test",
 					"locations.*",
 					"us-east-1",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemAttr(
 					"checkly_check.test",
 					"locations.*",
 					"eu-central-1",
@@ -414,12 +414,12 @@ func TestAccMultiStepCheckBasic(t *testing.T) {
 					"tags.#",
 					"2",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemAttr(
 					"checkly_check.test",
 					"tags.*",
 					"api",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemAttr(
 					"checkly_check.test",
 					"tags.*",
 					"multi-step",
@@ -448,9 +448,9 @@ func TestAccApiCheckFull(t *testing.T) {
 					"max_response_time",
 					"30000",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_check.test",
-					`"locations.#"`,
+					"locations.#",
 					"3",
 				),
 				resource.TestCheckResourceAttr(

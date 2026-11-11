@@ -92,10 +92,7 @@ func (r *SnippetResource) Create(ctx context.Context, req resource.CreateRequest
 		Script: plan.Script.ValueString(),
 	})
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Create Snippet",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Create Snippet", err)
 		return
 	}
 
@@ -130,10 +127,7 @@ func (r *SnippetResource) Read(ctx context.Context, req resource.ReadRequest, re
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Read Snippet",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Read Snippet", err)
 		return
 	}
 
@@ -167,10 +161,7 @@ func (r *SnippetResource) Update(ctx context.Context, req resource.UpdateRequest
 		Script: plan.Script.ValueString(),
 	})
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Update Snippet",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Update Snippet", err)
 		return
 	}
 
@@ -204,10 +195,7 @@ func (r *SnippetResource) Delete(ctx context.Context, req resource.DeleteRequest
 		if isNotFoundError(err) {
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Delete Snippet",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Delete Snippet", err)
 		return
 	}
 }

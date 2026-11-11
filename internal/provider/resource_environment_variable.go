@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -114,10 +113,7 @@ func (r *EnvironmentVariableResource) Create(ctx context.Context, req resource.C
 
 	_, err := r.client.CreateEnvironmentVariable(apiCtx, environmentVariableFromModel(&plan))
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Create Environment Variable",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Create Environment Variable", err)
 		return
 	}
 
@@ -143,10 +139,7 @@ func (r *EnvironmentVariableResource) Read(ctx context.Context, req resource.Rea
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Read Environment Variable",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Read Environment Variable", err)
 		return
 	}
 
@@ -168,10 +161,7 @@ func (r *EnvironmentVariableResource) Update(ctx context.Context, req resource.U
 
 	_, err := r.client.UpdateEnvironmentVariable(apiCtx, plan.ID.ValueString(), environmentVariableFromModel(&plan))
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Update Environment Variable",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Update Environment Variable", err)
 		return
 	}
 
@@ -194,10 +184,7 @@ func (r *EnvironmentVariableResource) Delete(ctx context.Context, req resource.D
 		if isNotFoundError(err) {
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Delete Environment Variable",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Delete Environment Variable", err)
 		return
 	}
 }

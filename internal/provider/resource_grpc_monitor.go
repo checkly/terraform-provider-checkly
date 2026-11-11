@@ -600,10 +600,7 @@ func (r *GRPCMonitorResource) Create(ctx context.Context, req resource.CreateReq
 
 	result, err := r.client.CreateGRPCMonitor(apiCtx, monitor)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Create gRPC Monitor",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Create gRPC Monitor", err)
 		return
 	}
 
@@ -633,10 +630,7 @@ func (r *GRPCMonitorResource) Read(ctx context.Context, req resource.ReadRequest
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Read gRPC Monitor",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Read gRPC Monitor", err)
 		return
 	}
 
@@ -666,10 +660,7 @@ func (r *GRPCMonitorResource) Update(ctx context.Context, req resource.UpdateReq
 
 	result, err := r.client.UpdateGRPCMonitor(apiCtx, plan.ID.ValueString(), monitor)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Update gRPC Monitor",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Update gRPC Monitor", err)
 		return
 	}
 
@@ -697,10 +688,7 @@ func (r *GRPCMonitorResource) Delete(ctx context.Context, req resource.DeleteReq
 		if isNotFoundError(err) {
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Delete gRPC Monitor",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Delete gRPC Monitor", err)
 		return
 	}
 }
@@ -803,11 +791,7 @@ func grpcMonitorToModel(ctx context.Context, c *checkly.GRPCMonitor, model *GRPC
 	}
 	model.PrivateLocations = stringSetFromAPINullIfUnset(ctx, privateLocations, model.PrivateLocations, diags)
 
-	if c.AlertSettings != nil {
-		model.AlertSettings = alertSettingsToObject(ctx, *c.AlertSettings, model.AlertSettings, diags)
-	} else if model.AlertSettings.IsUnknown() {
-		model.AlertSettings = types.ObjectNull(alertSettingsAttrTypes)
-	}
+	model.AlertSettings = alertSettingsFromAPI(ctx, c.AlertSettings, model.AlertSettings, diags)
 
 	model.UseGlobalAlertSettings = types.BoolValue(c.UseGlobalAlertSettings)
 	model.GroupID = types.Int64Value(c.GroupID)

@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -176,10 +175,7 @@ func (r *HeartbeatMonitorResource) Create(ctx context.Context, req resource.Crea
 
 	result, err := r.client.CreateHeartbeatMonitor(apiCtx, monitor)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Create Heartbeat Monitor",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Create Heartbeat Monitor", err)
 		return
 	}
 
@@ -209,10 +205,7 @@ func (r *HeartbeatMonitorResource) Read(ctx context.Context, req resource.ReadRe
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Read Heartbeat Monitor",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Read Heartbeat Monitor", err)
 		return
 	}
 
@@ -242,10 +235,7 @@ func (r *HeartbeatMonitorResource) Update(ctx context.Context, req resource.Upda
 
 	result, err := r.client.UpdateHeartbeatMonitor(apiCtx, plan.ID.ValueString(), monitor)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Update Heartbeat Monitor",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Update Heartbeat Monitor", err)
 		return
 	}
 
@@ -273,10 +263,7 @@ func (r *HeartbeatMonitorResource) Delete(ctx context.Context, req resource.Dele
 		if isNotFoundError(err) {
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Delete Heartbeat Monitor",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Delete Heartbeat Monitor", err)
 		return
 	}
 }

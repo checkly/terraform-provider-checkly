@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -268,10 +267,7 @@ func (r *URLMonitorResource) Create(ctx context.Context, req resource.CreateRequ
 
 	result, err := r.client.CreateURLMonitor(apiCtx, monitor)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Create URL Monitor",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Create URL Monitor", err)
 		return
 	}
 
@@ -300,10 +296,7 @@ func (r *URLMonitorResource) Read(ctx context.Context, req resource.ReadRequest,
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Read URL Monitor",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Read URL Monitor", err)
 		return
 	}
 
@@ -333,10 +326,7 @@ func (r *URLMonitorResource) Update(ctx context.Context, req resource.UpdateRequ
 
 	result, err := r.client.UpdateURLMonitor(apiCtx, monitor.ID, monitor)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Update URL Monitor",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Update URL Monitor", err)
 		return
 	}
 
@@ -364,10 +354,7 @@ func (r *URLMonitorResource) Delete(ctx context.Context, req resource.DeleteRequ
 		if isNotFoundError(err) {
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Delete URL Monitor",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Delete URL Monitor", err)
 		return
 	}
 }
@@ -435,16 +422,7 @@ func urlMonitorToModel(ctx context.Context, c *checkly.URLMonitor, model *URLMon
 	}
 
 	model.Frequency = types.Int64Value(int64(c.Frequency))
-
-	// The API only tracks an offset for high frequency scheduling
-	// (frequency 0). For regular frequencies a configured value of 0
-	// (equivalent to unset) is preserved; any other value is cleared.
-	if c.Frequency == 0 {
-		model.FrequencyOffset = types.Int64Value(int64(c.FrequencyOffset))
-	} else if model.FrequencyOffset.IsUnknown() ||
-		(!model.FrequencyOffset.IsNull() && model.FrequencyOffset.ValueInt64() != 0) {
-		model.FrequencyOffset = types.Int64Null()
-	}
+	model.FrequencyOffset = frequencyOffsetFromAPI(c.Frequency, c.FrequencyOffset, model.FrequencyOffset)
 
 	model.Activated = types.BoolValue(c.Activated)
 	model.Muted = types.BoolValue(c.Muted)
@@ -455,11 +433,7 @@ func urlMonitorToModel(ctx context.Context, c *checkly.URLMonitor, model *URLMon
 	model.MaxResponseTime = types.Int64Value(int64(c.MaxResponseTime))
 	model.Tags = stringSetFromAPINullIfUnset(ctx, c.Tags, model.Tags, diags)
 
-	if c.AlertSettings != nil {
-		model.AlertSettings = alertSettingsToObject(ctx, *c.AlertSettings, model.AlertSettings, diags)
-	} else if model.AlertSettings.IsUnknown() {
-		model.AlertSettings = types.ObjectNull(alertSettingsAttrTypes)
-	}
+	model.AlertSettings = alertSettingsFromAPI(ctx, c.AlertSettings, model.AlertSettings, diags)
 
 	model.UseGlobalAlertSettings = types.BoolValue(c.UseGlobalAlertSettings)
 	model.Request = urlMonitorRequestToObject(ctx, c.Request, model.Request, diags)

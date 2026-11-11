@@ -43,12 +43,12 @@ func TestAccTCPMonitorBasic(t *testing.T) {
 					"activated",
 					"true",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemAttr(
 					"checkly_tcp_monitor.test",
 					"locations.*",
 					"eu-central-1",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemAttr(
 					"checkly_tcp_monitor.test",
 					"locations.*",
 					"us-east-1",
@@ -114,9 +114,9 @@ func TestAccTCPMonitorFull(t *testing.T) {
 					"max_response_time",
 					"5000",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_tcp_monitor.test",
-					`"locations.#"`,
+					"locations.#",
 					"3",
 				),
 				resource.TestCheckResourceAttr(

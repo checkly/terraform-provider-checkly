@@ -42,12 +42,12 @@ func TestAccMultistepCheckResourceBasic(t *testing.T) {
 					"locations.#",
 					"2",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemAttr(
 					"checkly_multistep_check.test",
 					"locations.*",
 					"us-east-1",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemAttr(
 					"checkly_multistep_check.test",
 					"locations.*",
 					"eu-central-1",
@@ -57,12 +57,12 @@ func TestAccMultistepCheckResourceBasic(t *testing.T) {
 					"tags.#",
 					"2",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemAttr(
 					"checkly_multistep_check.test",
 					"tags.*",
 					"api",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemAttr(
 					"checkly_multistep_check.test",
 					"tags.*",
 					"multi-step",

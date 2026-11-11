@@ -104,12 +104,12 @@ func TestAccCheckGroupBasic(t *testing.T) {
 					"locations.#",
 					"2",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemAttr(
 					"checkly_check_group.test",
 					"locations.*",
 					"us-east-1",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemAttr(
 					"checkly_check_group.test",
 					"locations.*",
 					"eu-central-1",
@@ -174,12 +174,12 @@ func TestAccCheckGroupFull(t *testing.T) {
 					"locations.#",
 					"2",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemAttr(
 					"checkly_check_group.test",
 					"locations.*",
 					"us-east-1",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemAttr(
 					"checkly_check_group.test",
 					"locations.*",
 					"eu-central-1",
@@ -209,25 +209,14 @@ func TestAccCheckGroupFull(t *testing.T) {
 					"api_check_defaults.assertions.#",
 					"1",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemNestedAttrs(
 					"checkly_check_group.test",
-					"api_check_defaults.assertions.*.comparison",
-					"EQUALS",
-				),
-				testCheckResourceAttrExpr(
-					"checkly_check_group.test",
-					"api_check_defaults.assertions.*.property",
-					"",
-				),
-				testCheckResourceAttrExpr(
-					"checkly_check_group.test",
-					"api_check_defaults.assertions.*.source",
-					"STATUS_CODE",
-				),
-				testCheckResourceAttrExpr(
-					"checkly_check_group.test",
-					"api_check_defaults.assertions.*.target",
-					"200",
+					"api_check_defaults.assertions.*",
+					map[string]string{
+						"source":     "STATUS_CODE",
+						"comparison": "EQUALS",
+						"target":     "200",
+					},
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_check_group.test",
@@ -1172,7 +1161,7 @@ func TestAccCheckGroupUnsetSweepPrivateLocations(t *testing.T) {
 			`, slug),
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr("checkly_check_group.test", "private_locations.#", "1"),
-				testCheckResourceAttrExpr("checkly_check_group.test", "private_locations.*", slug),
+				resource.TestCheckTypeSetElemAttr("checkly_check_group.test", "private_locations.*", slug),
 			),
 		},
 		// Step 2: remove the private location assignment.

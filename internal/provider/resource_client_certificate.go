@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"fmt"
 	"regexp"
 	"strings"
 
@@ -193,10 +192,7 @@ func (r *ClientCertificateResource) Create(ctx context.Context, req resource.Cre
 
 	result, err := r.client.CreateClientCertificate(apiCtx, clientCertificateFromModel(&plan))
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Create Client Certificate",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Create Client Certificate", err)
 		return
 	}
 
@@ -222,10 +218,7 @@ func (r *ClientCertificateResource) Read(ctx context.Context, req resource.ReadR
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Read Client Certificate",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Read Client Certificate", err)
 		return
 	}
 
@@ -278,10 +271,7 @@ func (r *ClientCertificateResource) Delete(ctx context.Context, req resource.Del
 		if isNotFoundError(err) {
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Delete Client Certificate",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Delete Client Certificate", err)
 		return
 	}
 }

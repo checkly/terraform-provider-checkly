@@ -77,12 +77,12 @@ func TestAccBrowserCheckResourceBasic(t *testing.T) {
 					"locations.#",
 					"2",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemAttr(
 					"checkly_browser_check.test",
 					"locations.*",
 					"us-east-1",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemAttr(
 					"checkly_browser_check.test",
 					"locations.*",
 					"eu-central-1",
@@ -92,12 +92,12 @@ func TestAccBrowserCheckResourceBasic(t *testing.T) {
 					"tags.#",
 					"2",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemAttr(
 					"checkly_browser_check.test",
 					"tags.*",
 					"browser",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemAttr(
 					"checkly_browser_check.test",
 					"tags.*",
 					"e2e",

@@ -43,12 +43,12 @@ func TestAccApiCheckResourceBasic(t *testing.T) {
 					"max_response_time",
 					"18000",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemAttr(
 					"checkly_api_check.test",
 					"locations.*",
 					"eu-central-1",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemAttr(
 					"checkly_api_check.test",
 					"locations.*",
 					"us-east-1",
@@ -288,9 +288,9 @@ func TestAccApiCheckResourceFull(t *testing.T) {
 					"max_response_time",
 					"30000",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_api_check.test",
-					`"locations.#"`,
+					"locations.#",
 					"3",
 				),
 				resource.TestCheckResourceAttr(

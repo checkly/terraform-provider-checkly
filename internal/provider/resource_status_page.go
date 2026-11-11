@@ -209,10 +209,7 @@ func (r *StatusPageResource) Create(ctx context.Context, req resource.CreateRequ
 
 	result, err := r.client.CreateStatusPage(apiCtx, statusPage)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Create Status Page",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Create Status Page", err)
 		return
 	}
 
@@ -241,10 +238,7 @@ func (r *StatusPageResource) Read(ctx context.Context, req resource.ReadRequest,
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Read Status Page",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Read Status Page", err)
 		return
 	}
 
@@ -274,10 +268,7 @@ func (r *StatusPageResource) Update(ctx context.Context, req resource.UpdateRequ
 
 	result, err := r.client.UpdateStatusPage(apiCtx, statusPage.ID, statusPage)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Update Status Page",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Update Status Page", err)
 		return
 	}
 
@@ -305,10 +296,7 @@ func (r *StatusPageResource) Delete(ctx context.Context, req resource.DeleteRequ
 		if isNotFoundError(err) {
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Delete Status Page",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Delete Status Page", err)
 		return
 	}
 }

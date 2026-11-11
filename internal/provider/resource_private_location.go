@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -117,10 +116,7 @@ func (r *PrivateLocationResource) Create(ctx context.Context, req resource.Creat
 
 	result, err := r.client.CreatePrivateLocation(apiCtx, privateLocationFromModel(&plan))
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Create Private Location",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Create Private Location", err)
 		return
 	}
 
@@ -159,10 +155,7 @@ func (r *PrivateLocationResource) Read(ctx context.Context, req resource.ReadReq
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Read Private Location",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Read Private Location", err)
 		return
 	}
 
@@ -184,10 +177,7 @@ func (r *PrivateLocationResource) Update(ctx context.Context, req resource.Updat
 
 	_, err := r.client.UpdatePrivateLocation(apiCtx, plan.ID.ValueString(), privateLocationFromModel(&plan))
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Update Private Location",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Update Private Location", err)
 		return
 	}
 
@@ -210,10 +200,7 @@ func (r *PrivateLocationResource) Delete(ctx context.Context, req resource.Delet
 		if isNotFoundError(err) {
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Delete Private Location",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Delete Private Location", err)
 		return
 	}
 }

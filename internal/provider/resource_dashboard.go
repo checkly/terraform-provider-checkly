@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -266,10 +265,7 @@ func (r *DashboardResource) Create(ctx context.Context, req resource.CreateReque
 
 	result, err := r.client.CreateDashboard(apiCtx, dashboard)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Create Dashboard",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Create Dashboard", err)
 		return
 	}
 
@@ -300,10 +296,7 @@ func (r *DashboardResource) Read(ctx context.Context, req resource.ReadRequest, 
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Read Dashboard",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Read Dashboard", err)
 		return
 	}
 
@@ -332,10 +325,7 @@ func (r *DashboardResource) Update(ctx context.Context, req resource.UpdateReque
 
 	result, err := r.client.UpdateDashboard(apiCtx, plan.ID.ValueString(), dashboard)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Update Dashboard",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Update Dashboard", err)
 		return
 	}
 
@@ -368,10 +358,7 @@ func (r *DashboardResource) Delete(ctx context.Context, req resource.DeleteReque
 		if isNotFoundError(err) {
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Delete Dashboard",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Delete Dashboard", err)
 		return
 	}
 }

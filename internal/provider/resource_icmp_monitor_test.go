@@ -69,12 +69,12 @@ func TestAccICMPMonitorBasic(t *testing.T) {
 					"activated",
 					"true",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemAttr(
 					"checkly_icmp_monitor.test",
 					"locations.*",
 					"eu-central-1",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemAttr(
 					"checkly_icmp_monitor.test",
 					"locations.*",
 					"us-east-1",
@@ -227,9 +227,9 @@ func TestAccICMPMonitorFull(t *testing.T) {
 					"max_packet_loss_threshold",
 					"60",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_icmp_monitor.test",
-					`"locations.#"`,
+					"locations.#",
 					"3",
 				),
 				resource.TestCheckResourceAttr(

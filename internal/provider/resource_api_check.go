@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -197,10 +196,7 @@ func (r *APICheckResource) Create(ctx context.Context, req resource.CreateReques
 
 	result, err := r.client.CreateAPICheck(apiCtx, check)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Create API Check",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Create API Check", err)
 		return
 	}
 
@@ -226,10 +222,7 @@ func (r *APICheckResource) Read(ctx context.Context, req resource.ReadRequest, r
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Read API Check",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Read API Check", err)
 		return
 	}
 
@@ -256,10 +249,7 @@ func (r *APICheckResource) Update(ctx context.Context, req resource.UpdateReques
 
 	result, err := r.client.UpdateAPICheck(apiCtx, check.ID, check)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Update API Check",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Update API Check", err)
 		return
 	}
 
@@ -284,10 +274,7 @@ func (r *APICheckResource) Delete(ctx context.Context, req resource.DeleteReques
 		if isNotFoundError(err) {
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Delete API Check",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Delete API Check", err)
 		return
 	}
 }
@@ -417,15 +404,7 @@ func apiCheckFromModel(ctx context.Context, model *APICheckResourceModel, diags 
 func apiCheckResolveComputedValues(ctx context.Context, c *checkly.APICheck, model *APICheckResourceModel, diags *diag.Diagnostics) {
 	model.ID = types.StringValue(c.ID)
 
-	// When the API reports no alert settings, the planned value is kept;
-	// converting the absence of a value would overwrite planned values with
-	// empty ones. Unknown values cannot be stored in state and resolve to
-	// null.
-	if c.AlertSettings != nil {
-		model.AlertSettings = alertSettingsToObject(ctx, *c.AlertSettings, model.AlertSettings, diags)
-	} else if model.AlertSettings.IsUnknown() {
-		model.AlertSettings = types.ObjectNull(alertSettingsAttrTypes)
-	}
+	model.AlertSettings = alertSettingsFromAPI(ctx, c.AlertSettings, model.AlertSettings, diags)
 
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, model.RetryStrategy, diags)
 }
@@ -480,15 +459,7 @@ func apiCheckToModel(ctx context.Context, c *checkly.APICheck, model *APICheckRe
 	}
 	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, prior.AlertChannelSubscriptions, diags)
 	model.PrivateLocations = stringSetFromAPINullIfUnset(ctx, valueOrZero(c.PrivateLocations), prior.PrivateLocations, diags)
-	// When the API reports no alert settings, the prior value is kept;
-	// converting the absence of a value would overwrite the stored values
-	// with empty ones. Unknown values cannot be stored in state and resolve
-	// to null.
-	if c.AlertSettings != nil {
-		model.AlertSettings = alertSettingsToObject(ctx, *c.AlertSettings, prior.AlertSettings, diags)
-	} else if model.AlertSettings.IsUnknown() {
-		model.AlertSettings = types.ObjectNull(alertSettingsAttrTypes)
-	}
+	model.AlertSettings = alertSettingsFromAPI(ctx, c.AlertSettings, prior.AlertSettings, diags)
 	model.UseGlobalAlertSettings = types.BoolValue(c.UseGlobalAlertSettings)
 	model.Request = apiCheckRequestToObject(ctx, c.Request, prior.Request, diags)
 	model.GroupID = types.Int64Value(c.GroupID)

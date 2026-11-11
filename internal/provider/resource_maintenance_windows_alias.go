@@ -7,9 +7,13 @@ import (
 )
 
 var (
-	_ resource.Resource                = (*MaintenanceWindowsResource)(nil)
-	_ resource.ResourceWithConfigure   = (*MaintenanceWindowsResource)(nil)
-	_ resource.ResourceWithImportState = (*MaintenanceWindowsResource)(nil)
+	_ resource.Resource                   = (*MaintenanceWindowsResource)(nil)
+	_ resource.ResourceWithConfigure      = (*MaintenanceWindowsResource)(nil)
+	_ resource.ResourceWithUpgradeState   = (*MaintenanceWindowsResource)(nil)
+	_ resource.ResourceWithImportState    = (*MaintenanceWindowsResource)(nil)
+	_ resource.ResourceWithMoveState      = (*MaintenanceWindowsResource)(nil)
+	_ resource.ResourceWithModifyPlan     = (*MaintenanceWindowsResource)(nil)
+	_ resource.ResourceWithValidateConfig = (*MaintenanceWindowsResource)(nil)
 )
 
 // NewMaintenanceWindowsResource returns a new checkly_maintenance_windows
@@ -33,17 +37,5 @@ func (r *MaintenanceWindowsResource) Metadata(ctx context.Context, req resource.
 func (r *MaintenanceWindowsResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	r.MaintenanceWindowResource.Schema(ctx, req, resp)
 
-	resp.Schema.Description = "" +
-		"The `checkly_maintenance_windows` resource has been renamed to `checkly_maintenance_window`, because " +
-		"each resource manages a single maintenance window. The `checkly_maintenance_windows` resource type is " +
-		"deprecated and will be removed in a future version of the provider." +
-		"\n\n" +
-		"The schemas of both resource types are identical, and existing `checkly_maintenance_windows` resources " +
-		"can be migrated to `checkly_maintenance_window` using a `moved` block." +
-		"\n\n" +
-		"We recommend using the `checkly_maintenance_window` resource type for any new resources."
-
-	resp.Schema.DeprecationMessage = "" +
-		"Use the `checkly_maintenance_window` resource instead. The schemas are identical, and existing resources " +
-		"can be migrated using a `moved` block."
+	deprecateAliasSchema(resp, "checkly_maintenance_windows", "checkly_maintenance_window", ", because each resource manages a single maintenance window")
 }

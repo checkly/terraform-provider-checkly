@@ -36,12 +36,12 @@ func TestAccTCPCheckBasic(t *testing.T) {
 					"activated",
 					"true",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemAttr(
 					"checkly_tcp_check.test",
 					"locations.*",
 					"eu-central-1",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckTypeSetElemAttr(
 					"checkly_tcp_check.test",
 					"locations.*",
 					"us-east-1",
@@ -86,9 +86,9 @@ func TestAccTCPCheckFull(t *testing.T) {
 					"max_response_time",
 					"5000",
 				),
-				testCheckResourceAttrExpr(
+				resource.TestCheckResourceAttr(
 					"checkly_tcp_check.test",
-					`"locations.#"`,
+					"locations.#",
 					"3",
 				),
 				resource.TestCheckResourceAttr(

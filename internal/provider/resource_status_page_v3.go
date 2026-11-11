@@ -339,10 +339,7 @@ func (r *StatusPageV3Resource) Create(ctx context.Context, req resource.CreateRe
 
 	result, err := r.client.CreateStatusPageV3(apiCtx, statusPage)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Create Status Page V3",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Create Status Page V3", err)
 		return
 	}
 
@@ -351,10 +348,7 @@ func (r *StatusPageV3Resource) Create(ctx context.Context, req resource.CreateRe
 	if _, err := r.readInto(ctx, &plan, &resp.Diagnostics); err != nil {
 		// Keep the created page in state so that it is not orphaned.
 		resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
-		resp.Diagnostics.AddError(
-			"Unable to Read Status Page V3",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Read Status Page V3", err)
 		return
 	}
 	if resp.Diagnostics.HasError() {
@@ -379,10 +373,7 @@ func (r *StatusPageV3Resource) Read(ctx context.Context, req resource.ReadReques
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Read Status Page V3",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Read Status Page V3", err)
 		return
 	}
 	if resp.Diagnostics.HasError() {
@@ -410,18 +401,12 @@ func (r *StatusPageV3Resource) Update(ctx context.Context, req resource.UpdateRe
 
 	_, err := r.client.UpdateStatusPageV3(apiCtx, statusPage.ID, statusPage)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Update Status Page V3",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Update Status Page V3", err)
 		return
 	}
 
 	if _, err := r.readInto(ctx, &plan, &resp.Diagnostics); err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Read Status Page V3",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Read Status Page V3", err)
 		return
 	}
 	if resp.Diagnostics.HasError() {
@@ -448,10 +433,7 @@ func (r *StatusPageV3Resource) Delete(ctx context.Context, req resource.DeleteRe
 		if isNotFoundError(err) {
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Delete Status Page V3",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Delete Status Page V3", err)
 		return
 	}
 }

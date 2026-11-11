@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -98,10 +97,7 @@ func (r *StatusPageServiceResource) Create(ctx context.Context, req resource.Cre
 		Name: plan.Name.ValueString(),
 	})
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Create Status Page Service",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Create Status Page Service", err)
 		return
 	}
 
@@ -127,10 +123,7 @@ func (r *StatusPageServiceResource) Read(ctx context.Context, req resource.ReadR
 			resp.State.RemoveResource(ctx)
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Read Status Page Service",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Read Status Page Service", err)
 		return
 	}
 
@@ -155,10 +148,7 @@ func (r *StatusPageServiceResource) Update(ctx context.Context, req resource.Upd
 		Name: plan.Name.ValueString(),
 	})
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Update Status Page Service",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Update Status Page Service", err)
 		return
 	}
 
@@ -183,10 +173,7 @@ func (r *StatusPageServiceResource) Delete(ctx context.Context, req resource.Del
 		if isNotFoundError(err) {
 			return
 		}
-		resp.Diagnostics.AddError(
-			"Unable to Delete Status Page Service",
-			fmt.Sprintf("Checkly API error: %s", err),
-		)
+		addAPIError(&resp.Diagnostics, "Unable to Delete Status Page Service", err)
 		return
 	}
 }
