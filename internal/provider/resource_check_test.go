@@ -1716,8 +1716,7 @@ func TestAccCheckGroupAssignment(t *testing.T) {
 				),
 			),
 		},
-		// group_order = 0, the first position, applies and plans clean
-		// although an API check sends it as 0 and the API reports it as 0.
+		// group_order = 0, the first position, is stored and read back as 0.
 		{
 			Config: `
 				resource "checkly_check_group" "test1" {

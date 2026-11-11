@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -31,25 +32,49 @@ func TestGroupOrderFromAPI(t *testing.T) {
 	null := types.Int64Null()
 	zero := types.Int64Value(0)
 	five := types.Int64Value(5)
+	unknown := types.Int64Unknown()
 
-	// The SDK decodes a null position as 0, so the API reports either as 0.
 	cases := []struct {
 		prior types.Int64
-		value int
+		value *int
 		want  types.Int64
 	}{
-		{null, 0, null},
-		{zero, 0, zero},
-		{five, 0, null},
-		{types.Int64Unknown(), 0, null},
-		{null, 5, five},
-		{zero, 5, five},
-		{five, 5, five},
-		{null, 3, types.Int64Value(3)},
+		{null, nil, null},
+		{zero, nil, null},
+		{five, nil, null},
+		{unknown, nil, null},
+		// A reported 0 stays null when nothing was stored, as after an
+		// upgrade from a provider version that sent 0 for no position.
+		{null, new(0), null},
+		{zero, new(0), zero},
+		{five, new(0), zero},
+		{unknown, new(0), zero},
+		{null, new(5), five},
+		{zero, new(5), five},
+		{five, new(5), five},
+		{unknown, new(5), five},
 	}
 	for _, c := range cases {
 		if got := groupOrderFromAPI(c.value, c.prior); !got.Equal(c.want) {
-			t.Errorf("groupOrderFromAPI(%d, %s) = %s, want %s", c.value, c.prior, got, c.want)
+			value := "nil"
+			if c.value != nil {
+				value = fmt.Sprint(*c.value)
+			}
+			t.Errorf("groupOrderFromAPI(%s, %s) = %s, want %s", value, c.prior, got, c.want)
+		}
+	}
+}
+
+func TestGroupOrderToAPI(t *testing.T) {
+	if got := groupOrderToAPI(types.Int64Null()); got != nil {
+		t.Errorf("groupOrderToAPI(null) = %d, want nil", *got)
+	}
+	if got := groupOrderToAPI(types.Int64Unknown()); got != nil {
+		t.Errorf("groupOrderToAPI(unknown) = %d, want nil", *got)
+	}
+	for _, v := range []int64{0, 5} {
+		if got := groupOrderToAPI(types.Int64Value(v)); got == nil || *got != int(v) {
+			t.Errorf("groupOrderToAPI(%d) = %v, want %d", v, got, v)
 		}
 	}
 }

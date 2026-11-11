@@ -1215,8 +1215,7 @@ func TestAccURLMonitorGroupAssignment(t *testing.T) {
 				),
 			),
 		},
-		// group_order = 0, the first position, applies and plans clean
-		// although a URL monitor sends it as null and the API reports null.
+		// group_order = 0, the first position, is stored and read back as 0.
 		{
 			Config: `
 				resource "checkly_check_group" "test1" {

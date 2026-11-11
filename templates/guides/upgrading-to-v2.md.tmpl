@@ -214,7 +214,7 @@ group_id = var.grouped ? checkly_check_group.example.id : 0
 group_id = var.grouped ? checkly_check_group.example.id : null
 ```
 
-An expression that compares one of these attributes with `0` must compare it with `null` instead. `group_order` may be `0`: positions start at `0`, as in the web app, and a group runs a check without a position as if it were at position `0`. If your configuration sets `group_order = 0`, the first plan after the upgrade shows an in-place update to `0`, as described in [Expected one-time changes](#expected-one-time-changes).
+An expression that compares one of these attributes with `0` must compare it with `null` instead. `group_order` may be `0`: positions start at `0`, as in the web app, and a group runs a check without a position as if it were at position `0`. For the same reason, when `group_order` is not set, a position of `0` given to the check outside Terraform is not shown as a change. If your configuration sets `group_order = 0`, the first plan after the upgrade shows an in-place update to `0`, as described in [Expected one-time changes](#expected-one-time-changes).
 
 ### Removed attributes
 

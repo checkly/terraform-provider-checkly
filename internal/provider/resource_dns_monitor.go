@@ -427,7 +427,7 @@ func dnsMonitorFromModel(ctx context.Context, model *DNSMonitorResourceModel, di
 		UseGlobalAlertSettings:    model.UseGlobalAlertSettings.ValueBool(),
 		Request:                   dnsMonitorRequestFromObject(ctx, model.Request, diags),
 		GroupID:                   model.GroupID.ValueInt64(),
-		GroupOrder:                int(model.GroupOrder.ValueInt64()),
+		GroupOrder:                groupOrderToAPI(model.GroupOrder),
 		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscriptions, diags),
 		RetryStrategy:             retryStrategyFromObject(ctx, model.RetryStrategy, diags),
 		TriggerIncident:           triggerIncidentFromObject(ctx, model.TriggerIncident, diags),

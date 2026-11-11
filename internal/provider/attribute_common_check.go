@@ -242,8 +242,7 @@ func groupIDAttributeSchema(subject CheckSubject) schema.Int64Attribute {
 
 // groupOrderAttributeSchema returns an attribute that is null when the check
 // or monitor has no position. Positions start at 0, which the web app gives
-// the first check it adds to a group; groupOrderFromAPI reads a null and a 0
-// position as equal.
+// the first check it adds to a group.
 func groupOrderAttributeSchema(subject CheckSubject) schema.Int64Attribute {
 	return schema.Int64Attribute{
 		Optional: true,

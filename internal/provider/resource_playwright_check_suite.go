@@ -486,7 +486,7 @@ func playwrightCheckSuiteFromModel(
 		Tags:                      stringsFromSet(ctx, model.Tags, diags),
 		UseGlobalAlertSettings:    model.UseGlobalAlertSettings.ValueBool(),
 		GroupID:                   model.GroupID.ValueInt64(),
-		GroupOrder:                int(model.GroupOrder.ValueInt64()),
+		GroupOrder:                groupOrderToAPI(model.GroupOrder),
 		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscriptions, diags),
 		TriggerIncident:           triggerIncidentFromObject(ctx, model.TriggerIncident, diags),
 		Intent:                    checkIntentFromObject(ctx, model.Intent, diags),

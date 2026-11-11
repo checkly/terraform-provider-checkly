@@ -698,7 +698,7 @@ type commonCheckFields struct {
 	AlertSettings             *checkly.AlertSettings
 	UseGlobalAlertSettings    bool
 	GroupID                   int64
-	GroupOrder                int
+	GroupOrder                *int
 	AlertChannelSubscriptions []checkly.AlertChannelSubscription
 	PrivateLocations          *[]string
 	RuntimeID                 *string

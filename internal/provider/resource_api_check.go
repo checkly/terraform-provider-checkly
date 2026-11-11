@@ -368,7 +368,7 @@ func apiCheckFromModel(ctx context.Context, model *APICheckResourceModel, diags 
 		LocalSetupScript:          localSetupScript,
 		LocalTearDownScript:       localTeardownScript,
 		GroupID:                   model.GroupID.ValueInt64(),
-		GroupOrder:                int(model.GroupOrder.ValueInt64()),
+		GroupOrder:                groupOrderToAPI(model.GroupOrder),
 		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscriptions, diags),
 		PrivateLocations:          &privateLocations,
 		RetryStrategy:             retryStrategyFromObject(ctx, model.RetryStrategy, diags),

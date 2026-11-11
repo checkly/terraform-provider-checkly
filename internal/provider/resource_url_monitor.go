@@ -398,7 +398,7 @@ func urlMonitorFromModel(ctx context.Context, model *URLMonitorResourceModel, di
 		UseGlobalAlertSettings:    model.UseGlobalAlertSettings.ValueBool(),
 		Request:                   urlMonitorRequestFromObject(ctx, model.Request, diags),
 		GroupID:                   model.GroupID.ValueInt64(),
-		GroupOrder:                int(model.GroupOrder.ValueInt64()),
+		GroupOrder:                groupOrderToAPI(model.GroupOrder),
 		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscriptions, diags),
 		PrivateLocations:          &privateLocations,
 		RetryStrategy:             retryStrategyFromObject(ctx, model.RetryStrategy, diags),

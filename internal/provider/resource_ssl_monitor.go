@@ -627,7 +627,7 @@ func sslMonitorFromModel(ctx context.Context, model *SSLMonitorResourceModel, di
 		Tags:                      stringsFromSet(ctx, model.Tags, diags),
 		UseGlobalAlertSettings:    model.UseGlobalAlertSettings.ValueBool(),
 		GroupID:                   model.GroupID.ValueInt64(),
-		GroupOrder:                int(model.GroupOrder.ValueInt64()),
+		GroupOrder:                groupOrderToAPI(model.GroupOrder),
 		PrivateLocations:          &privateLocations,
 		Request:                   sslMonitorRequestFromObject(ctx, model.Request, diags),
 		AlertChannelSubscriptions: alertChannelSubscriptionsFromSet(ctx, model.AlertChannelSubscriptions, diags),

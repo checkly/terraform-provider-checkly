@@ -102,7 +102,7 @@ func TestReadsStoreNullForNoReference(t *testing.T) {
 			apiCheckToModel(ctx, &checkly.APICheck{
 				ID:                "abc",
 				GroupID:           c.value,
-				GroupOrder:        int(c.value),
+				GroupOrder:        new(int(c.value)),
 				SetupSnippetID:    c.value,
 				TearDownSnippetID: c.value,
 			}, &model, &diags)
@@ -123,7 +123,7 @@ func TestReadsStoreNullForNoReference(t *testing.T) {
 			checkToModel(ctx, &checkly.APICheck{
 				ID:                "abc",
 				GroupID:           c.value,
-				GroupOrder:        int(c.value),
+				GroupOrder:        new(int(c.value)),
 				SetupSnippetID:    c.value,
 				TearDownSnippetID: c.value,
 			}, &model, &diags)
@@ -144,7 +144,7 @@ func TestReadsStoreNullForNoReference(t *testing.T) {
 				AlertSettings: types.ObjectNull(alertSettingsAttrTypes),
 				RetryStrategy: types.ObjectNull(retryStrategyAttrTypes(true)),
 			}
-			urlMonitorToModel(ctx, &checkly.URLMonitor{ID: "abc", GroupID: c.value, GroupOrder: int(c.value)}, &model, &diags)
+			urlMonitorToModel(ctx, &checkly.URLMonitor{ID: "abc", GroupID: c.value, GroupOrder: new(int(c.value))}, &model, &diags)
 			if diags.HasError() {
 				t.Fatal(diags)
 			}
