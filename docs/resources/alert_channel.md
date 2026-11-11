@@ -273,9 +273,9 @@ Required:
 
 Optional:
 
-- `headers` (Map of String, Sensitive) HTTP headers to send with the webhook request, as a map of header names to values.
+- `headers` (Map of String) HTTP headers to send with the webhook request, as a map of header names to values. The values are not sensitive and show in plan output. To keep a credential in a header out of plan output, take it from a variable declared with `sensitive = true` or wrap it in `sensitive(...)`.
 - `method` (String) The HTTP method of the webhook request. Possible values are `GET`, `POST`, `PUT`, `HEAD`, `DELETE` and `PATCH`. (Default `POST`).
-- `query_parameters` (Map of String, Sensitive) Query parameters to add to the webhook URL, as a map of parameter names to values.
+- `query_parameters` (Map of String) Query parameters to add to the webhook URL, as a map of parameter names to values. The values are not sensitive and show in plan output. To keep a credential in a parameter out of plan output, take it from a variable declared with `sensitive = true` or wrap it in `sensitive(...)`.
 - `template` (String) The body of the webhook request, which can contain template variables such as `{{ALERT_TITLE}}` and `{{RESULT_LINK}}`. When not set, Checkly sends its default JSON payload.
 - `webhook_secret` (String, Sensitive) A secret to sign webhook requests with. When set, Checkly sends an HMAC-SHA256 signature of the request body, keyed with this secret, in the `x-checkly-signature` header.
 - `webhook_type` (String) Type of the webhook. The allowed values are `WEBHOOK_CORALOGIX`, `WEBHOOK_DISCORD`, `WEBHOOK_FIREHYDRANT`, `WEBHOOK_GITLAB_ALERT`, `WEBHOOK_ILERT`, `WEBHOOK_INCIDENTIO`, `WEBHOOK_MSTEAMS`, `WEBHOOK_ROOTLY`, `WEBHOOK_SPIKESH`, `WEBHOOK_SPLUNK` and `WEBHOOK_TELEGRAM`.

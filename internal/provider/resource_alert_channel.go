@@ -316,15 +316,13 @@ func (r *AlertChannelResource) Schema(ctx context.Context, req resource.SchemaRe
 					},
 					"headers": schema.MapAttribute{
 						Optional:    true,
-						Sensitive:   true,
 						ElementType: types.StringType,
-						Description: "HTTP headers to send with the webhook request, as a map of header names to values.",
+						Description: "HTTP headers to send with the webhook request, as a map of header names to values. The values are not sensitive and show in plan output. To keep a credential in a header out of plan output, take it from a variable declared with `sensitive = true` or wrap it in `sensitive(...)`.",
 					},
 					"query_parameters": schema.MapAttribute{
 						Optional:    true,
-						Sensitive:   true,
 						ElementType: types.StringType,
-						Description: "Query parameters to add to the webhook URL, as a map of parameter names to values.",
+						Description: "Query parameters to add to the webhook URL, as a map of parameter names to values. The values are not sensitive and show in plan output. To keep a credential in a parameter out of plan output, take it from a variable declared with `sensitive = true` or wrap it in `sensitive(...)`.",
 					},
 					"template": schema.StringAttribute{
 						Optional:    true,

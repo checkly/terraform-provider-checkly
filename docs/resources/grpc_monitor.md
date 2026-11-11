@@ -203,7 +203,7 @@ Required:
 
 Optional:
 
-- `value` (String) The gRPC metadata (header) value (at most 8192 characters).
+- `value` (String) The gRPC metadata (header) value (at most 8192 characters). The value is not sensitive and shows in plan output. To keep a credential out of plan output, take it from a variable declared with `sensitive = true` or wrap it in `sensitive(...)`.
 
 
 

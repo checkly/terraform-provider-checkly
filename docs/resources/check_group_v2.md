@@ -329,8 +329,8 @@ Optional:
 
 - `assertions` (Attributes Set) Default assertions for API checks in this group. (see [below for nested schema](#nestedatt--api_check_defaults--assertions))
 - `basic_auth` (Attributes) Default basic auth credentials for API checks in this group. (see [below for nested schema](#nestedatt--api_check_defaults--basic_auth))
-- `headers` (Map of String) Default headers for API checks in this group.
-- `query_parameters` (Map of String) Default query parameters for API checks in this group.
+- `headers` (Map of String) Default headers for API checks in this group. The values are not sensitive and show in plan output. To keep a credential in a header out of plan output, take it from a variable declared with `sensitive = true` or wrap it in `sensitive(...)`.
+- `query_parameters` (Map of String) Default query parameters for API checks in this group. The values are not sensitive and show in plan output. To keep a credential in a parameter out of plan output, take it from a variable declared with `sensitive = true` or wrap it in `sensitive(...)`.
 
 <a id="nestedatt--api_check_defaults--assertions"></a>
 ### Nested Schema for `api_check_defaults.assertions`

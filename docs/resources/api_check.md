@@ -237,10 +237,10 @@ Optional:
 - `body` (String) The body of the request.
 - `body_type` (String) The `Content-Type` header of the request. Possible values `NONE`, `JSON`, `FORM`, `RAW`, and `GRAPHQL`. (Default `NONE`).
 - `follow_redirects` (Boolean) Whether to follow HTTP redirects. (Default `false`).
-- `headers` (Map of String) HTTP headers to send with the request, as a map of header names to values.
+- `headers` (Map of String) HTTP headers to send with the request, as a map of header names to values. The values are not sensitive and show in plan output. To keep a credential in a header out of plan output, take it from a variable declared with `sensitive = true` or wrap it in `sensitive(...)`.
 - `ip_family` (String) IP Family to be used when executing the api check. The value can be either IPv4 or IPv6. (Default `IPv4`).
 - `method` (String) The HTTP method to use for this API check. Possible values are `GET`, `POST`, `PUT`, `HEAD`, `DELETE`, `PATCH`. (Default `GET`).
-- `query_parameters` (Map of String) Query parameters to add to the request URL, as a map of parameter names to values.
+- `query_parameters` (Map of String) Query parameters to add to the request URL, as a map of parameter names to values. The values are not sensitive and show in plan output. To keep a credential in a parameter out of plan output, take it from a variable declared with `sensitive = true` or wrap it in `sensitive(...)`.
 - `skip_ssl` (Boolean) Whether to skip TLS certificate validation of the request. (Default `false`).
 
 <a id="nestedatt--request--assertions"></a>

@@ -102,12 +102,12 @@ func apiCheckRequestAttributeSchema(opts apiCheckRequestAttributeSchemaOptions) 
 			"headers": schema.MapAttribute{
 				Optional:    true,
 				ElementType: types.StringType,
-				Description: "HTTP headers to send with the request, as a map of header names to values.",
+				Description: "HTTP headers to send with the request, as a map of header names to values. The values are not sensitive and show in plan output. To keep a credential in a header out of plan output, take it from a variable declared with `sensitive = true` or wrap it in `sensitive(...)`.",
 			},
 			"query_parameters": schema.MapAttribute{
 				Optional:    true,
 				ElementType: types.StringType,
-				Description: "Query parameters to add to the request URL, as a map of parameter names to values.",
+				Description: "Query parameters to add to the request URL, as a map of parameter names to values. The values are not sensitive and show in plan output. To keep a credential in a parameter out of plan output, take it from a variable declared with `sensitive = true` or wrap it in `sensitive(...)`.",
 			},
 			"body": schema.StringAttribute{
 				Optional:    true,

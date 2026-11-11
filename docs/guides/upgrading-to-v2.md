@@ -241,12 +241,12 @@ These attributes are now sensitive, so Terraform redacts them in plan output:
 
 - `value` of `checkly_environment_variable`, and of `environment_variables` on checks, check groups and Playwright check suites.
 - `password` of `basic_auth` in a check `request` and in `api_check_defaults`.
-- `slack.url`, `webhook.url`, `webhook.webhook_secret`, `webhook.headers`, `webhook.query_parameters`, `opsgenie.api_key` and `pagerduty.service_key` of `checkly_alert_channel`.
+- `slack.url`, `webhook.url`, `webhook.webhook_secret`, `opsgenie.api_key` and `pagerduty.service_key` of `checkly_alert_channel`.
 - `heartbeat.ping_token` of `checkly_heartbeat_monitor` and `checkly_heartbeat`.
 
 An output that exposes one of them, for example a heartbeat ping URL built from `ping_token`, must set `sensitive = true`.
 
-Header and query parameter values of check requests and of `api_check_defaults` are not redacted, as in v1.x. To keep credentials in them out of plan output, take them from a variable declared with `sensitive = true` or wrap them in `sensitive(...)`, which Terraform redacts wherever the value is used, or reference a global environment variable in the check instead of the secret itself.
+Header and query parameter values are not redacted, as in v1.x: those of check requests, of `api_check_defaults`, `request.metadata` of `checkly_grpc_monitor`, and `webhook.headers` and `webhook.query_parameters` of `checkly_alert_channel`. To keep credentials in them out of plan output, take them from a variable declared with `sensitive = true` or wrap them in `sensitive(...)`, which Terraform redacts wherever the value is used. In a check, you can also reference a global environment variable instead of the secret itself.
 
 ### Values the API rejects or changes
 
