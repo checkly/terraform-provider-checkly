@@ -260,12 +260,16 @@ func TestCheckToModelResolvesAttributesOfOtherTypes(t *testing.T) {
 			model := emptyCheckModel()
 			model.SSLCheckDomain = types.StringValue("example.com")
 			model.Request = request
+			model.FrequencyOffset = types.Int64Value(10)
 			checkToModel(ctx, stored, &model, &diags)
 			if diags.HasError() {
 				t.Fatal(diags)
 			}
 			if model.SSLCheckDomain != types.StringValue("example.com") {
 				t.Errorf("%s: ssl_check_domain = %s, want example.com", name, model.SSLCheckDomain)
+			}
+			if model.FrequencyOffset != types.Int64Value(10) {
+				t.Errorf("%s: frequency_offset = %s, want 10", name, model.FrequencyOffset)
 			}
 			if !model.Request.Equal(request) {
 				t.Errorf("%s: request = %s, want the stored one", name, model.Request)

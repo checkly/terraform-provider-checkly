@@ -426,14 +426,7 @@ func tcpMonitorToModel(ctx context.Context, c *checkly.TCPMonitor, model *TCPMon
 
 	model.Frequency = types.Int64Value(int64(c.Frequency))
 
-	// The API only tracks a frequency offset for high frequency scheduling
-	// (frequency 0). Otherwise the prior value (null or a configured 0) is
-	// preserved.
-	if c.Frequency == 0 {
-		model.FrequencyOffset = types.Int64Value(int64(c.FrequencyOffset))
-	} else {
-		model.FrequencyOffset = int64OrNullWhenUnknown(model.FrequencyOffset)
-	}
+	model.FrequencyOffset = frequencyOffsetFromAPI(c.Frequency, c.FrequencyOffset, model.FrequencyOffset)
 
 	model.Activated = types.BoolValue(c.Activated)
 	model.Muted = types.BoolValue(c.Muted)
