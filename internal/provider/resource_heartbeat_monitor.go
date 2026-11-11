@@ -88,7 +88,7 @@ func (r *HeartbeatMonitorResource) Schema(ctx context.Context, req resource.Sche
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
-				Description: "The name of the check.",
+				Description: "The name of the monitor.",
 			},
 			"description": schema.StringAttribute{
 				Optional:    true,

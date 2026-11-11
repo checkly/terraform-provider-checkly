@@ -4,7 +4,7 @@ page_title: "checkly_maintenance_windows Resource - terraform-provider-checkly"
 subcategory: ""
 description: |-
   The checkly_maintenance_windows resource has been renamed to checkly_maintenance_window, because each resource manages a single maintenance window. The checkly_maintenance_windows resource type is deprecated and will be removed in a future version of the provider.
-  The schemas of both resource types are identical, and existing checkly_maintenance_windows resources can be migrated to checkly_maintenance_window using a moved block.
+  The schemas of both resource types are identical, and existing checkly_maintenance_windows resources can be migrated to checkly_maintenance_window using a moved block; see Deprecated resource types https://registry.terraform.io/providers/checkly/checkly/latest/docs/guides/upgrading-to-v2#deprecated-resource-types in the v2 upgrade guide.
   We recommend using the checkly_maintenance_window resource type for any new resources.
 ---
 
@@ -12,7 +12,7 @@ description: |-
 
 The `checkly_maintenance_windows` resource has been renamed to `checkly_maintenance_window`, because each resource manages a single maintenance window. The `checkly_maintenance_windows` resource type is deprecated and will be removed in a future version of the provider.
 
-The schemas of both resource types are identical, and existing `checkly_maintenance_windows` resources can be migrated to `checkly_maintenance_window` using a `moved` block.
+The schemas of both resource types are identical, and existing `checkly_maintenance_windows` resources can be migrated to `checkly_maintenance_window` using a `moved` block; see [Deprecated resource types](https://registry.terraform.io/providers/checkly/checkly/latest/docs/guides/upgrading-to-v2#deprecated-resource-types) in the v2 upgrade guide.
 
 We recommend using the `checkly_maintenance_window` resource type for any new resources.
 
@@ -74,6 +74,22 @@ resource "checkly_maintenance_windows" "maintenance-2" {
     status_page_ids = [checkly_status_page.example.id]
     service_ids     = [checkly_status_page_service.api.id]
   }
+}
+```
+
+## Moving to `checkly_maintenance_window`
+
+Terraform 1.8 or later can switch a `checkly_maintenance_windows` resource to `checkly_maintenance_window` with a `moved` block, without recreating it:
+
+```terraform
+# The attributes stay the same; only the resource type changes.
+resource "checkly_maintenance_window" "example" {
+  # ...
+}
+
+moved {
+  from = checkly_maintenance_windows.example
+  to   = checkly_maintenance_window.example
 }
 ```
 

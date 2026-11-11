@@ -72,8 +72,9 @@ func (r *CheckGroupResource) Schema(ctx context.Context, req resource.SchemaRequ
 			"The `checkly_check_group` resource type is deprecated in favor of `checkly_check_group_v2`, which does " +
 			"not impose implicit defaults on its checks, and will be removed in a future version of the provider. " +
 			"Both resource types manage the same check groups, so an existing group can be switched over with a " +
-			"`moved` block to a `checkly_check_group_v2` resource. See the v2 upgrade guide for how its " +
-			"configuration translates.",
+			"`moved` block to a `checkly_check_group_v2` resource. See " +
+			"[Check groups](https://registry.terraform.io/providers/checkly/checkly/latest/docs/guides/upgrading-to-v2#check-groups) in the v2 upgrade " +
+			"guide for how its configuration translates.",
 		DeprecationMessage: "Use the `checkly_check_group_v2` resource instead. An existing group can be switched " +
 			"over with a `moved` block, without recreating it; see the v2 upgrade guide.",
 		Attributes: withCommonCheckAttributes(map[string]schema.Attribute{
@@ -116,14 +117,14 @@ func (r *CheckGroupResource) Schema(ctx context.Context, req resource.SchemaRequ
 				Default:     stringdefault.StaticString(""),
 				Description: "A valid piece of Node.js code to run in the teardown phase of an API check in this group.",
 			},
-			alertSettingsAttributeName:    makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{}),
+			alertSettingsAttributeName:    makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{Group: true}),
 			apiCheckDefaultsAttributeName: makeAPICheckDefaultsAttributeSchema(),
 			retryStrategyAttributeName: makeRetryStrategyAttributeSchema(RetryStrategyAttributeSchemaOptions{
 				SupportsOnlyOnNetworkError: true,
 				DoubleCheck:                true,
 			}),
 			doubleCheckAttributeName:              doubleCheckAttributeSchema(),
-			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{}),
+			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{Group: true}),
 			environmentVariableAttributeName: makeEnvironmentVariableSchema(EnvironmentVariableAttributeSchemaOptions{
 				Description: "Insert environment variables into the runtime environment. Only relevant for browser checks. Use global environment variables whenever possible.",
 			}),

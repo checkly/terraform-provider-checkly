@@ -4,14 +4,14 @@ page_title: "checkly_status_page Resource - terraform-provider-checkly"
 subcategory: ""
 description: |-
   Checkly status pages allow you to easily communicate the uptime and health of your applications and services to your customers. This resource creates a legacy v2 status page.
-  The checkly_status_page resource type is deprecated in favor of checkly_status_page_v3 and will be removed in a future version of the provider. v3 status pages are separate objects, so an existing page cannot be converted: create a v3 page alongside it instead. A maintenance window shown on the page links to a v3 page through status_page_visibility.component_configs on checkly_maintenance_window.
+  The checkly_status_page resource type is deprecated in favor of checkly_status_page_v3 and will be removed in a future version of the provider. v3 status pages are separate objects, so an existing page cannot be converted: create a v3 page alongside it instead. A maintenance window shown on the page links to a v3 page through status_page_visibility.component_configs on checkly_maintenance_window. See Status pages https://registry.terraform.io/providers/checkly/checkly/latest/docs/guides/upgrading-to-v2#status-pages in the v2 upgrade guide.
 ---
 
 # checkly_status_page (Resource)
 
 Checkly status pages allow you to easily communicate the uptime and health of your applications and services to your customers. This resource creates a legacy v2 status page.
 
-The `checkly_status_page` resource type is deprecated in favor of `checkly_status_page_v3` and will be removed in a future version of the provider. v3 status pages are separate objects, so an existing page cannot be converted: create a v3 page alongside it instead. A maintenance window shown on the page links to a v3 page through `status_page_visibility.component_configs` on `checkly_maintenance_window`.
+The `checkly_status_page` resource type is deprecated in favor of `checkly_status_page_v3` and will be removed in a future version of the provider. v3 status pages are separate objects, so an existing page cannot be converted: create a v3 page alongside it instead. A maintenance window shown on the page links to a v3 page through `status_page_visibility.component_configs` on `checkly_maintenance_window`. See [Status pages](https://registry.terraform.io/providers/checkly/checkly/latest/docs/guides/upgrading-to-v2#status-pages) in the v2 upgrade guide.
 
 ## Example Usage
 

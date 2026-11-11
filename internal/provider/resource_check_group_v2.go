@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -179,28 +178,9 @@ func (r *CheckGroupV2Resource) Schema(ctx context.Context, req resource.SchemaRe
 					"via CI/CD or the API. " +
 					"(Default `1`).",
 			},
-			"activated": schema.BoolAttribute{
-				Optional: true,
-				Computed: true,
-				Default:  booldefault.StaticBool(true),
-				Description: "Determines whether activated checks in the group should run or not. Deactivating the " +
-					"group will prevent all checks in the group from running, regardless of their activated state. " +
-					"(Default `true`).",
-			},
-			"muted": schema.BoolAttribute{
-				Optional: true,
-				Computed: true,
-				Default:  booldefault.StaticBool(false),
-				Description: "Determines if any notifications will be sent out when a check in this group fails " +
-					"and/or recovers. Muting the group will deactivate all notifications for all checks in the " +
-					"group, regardless of their muted state. " +
-					"(Default `false`).",
-			},
-			"tags": schema.SetAttribute{
-				ElementType: types.StringType,
-				Optional:    true,
-				Description: "Additional tags to append to all checks in the group.",
-			},
+			activatedAttributeName: activatedAttributeSchema(CommonCheckAttributeSchemaOptions{Subject: subjectCheckGroup}),
+			mutedAttributeName:     mutedAttributeSchema(CommonCheckAttributeSchemaOptions{Subject: subjectCheckGroup}),
+			tagsAttributeName:      tagsAttributeSchema(subjectCheckGroup),
 			"enforce_alert_settings": schema.SingleNestedAttribute{
 				Optional: true,
 				Computed: true,
@@ -215,26 +195,9 @@ func (r *CheckGroupV2Resource) Schema(ctx context.Context, req resource.SchemaRe
 						Required:    true,
 						Description: "Determines whether the enforced alert settings should be active.",
 					},
-					alertSettingsAttributeName:          makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{}),
-					useGlobalAlertSettingsAttributeName: makeCheckGroupV2UseGlobalAlertSettingsAttributeSchema(),
-					alertChannelSubscriptionAttributeName: schema.SetNestedAttribute{
-						Optional: true,
-						Description: "A set of channel IDs and whether they're activated or not. If you don't " +
-							"set at least one alert channel subscription for your group, we won't be able to alert " +
-							"you even if a check in the group starts failing.",
-						NestedObject: schema.NestedAttributeObject{
-							Attributes: map[string]schema.Attribute{
-								"channel_id": schema.Int64Attribute{
-									Required:    true,
-									Description: "The ID of the alert channel.",
-								},
-								"activated": schema.BoolAttribute{
-									Required:    true,
-									Description: "Whether an alert should be sent to this channel.",
-								},
-							},
-						},
-					},
+					alertSettingsAttributeName:            makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{Group: true}),
+					useGlobalAlertSettingsAttributeName:   makeCheckGroupV2UseGlobalAlertSettingsAttributeSchema(),
+					alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{Group: true}),
 				},
 			},
 			"enforce_locations": schema.SingleNestedAttribute{

@@ -15,7 +15,9 @@ func deprecateAliasSchema(resp *resource.SchemaResponse, alias, target, reason s
 		"The `" + alias + "` resource type is deprecated and will be removed in a future version of the provider." +
 		"\n\n" +
 		"The schemas of both resource types are identical, and existing `" + alias + "` resources can be " +
-		"migrated to `" + target + "` using a `moved` block." +
+		"migrated to `" + target + "` using a `moved` block; see " +
+		"[Deprecated resource types](https://registry.terraform.io/providers/checkly/checkly/latest/docs/guides/upgrading-to-v2#deprecated-resource-types) " +
+		"in the v2 upgrade guide." +
 		"\n\n" +
 		"We recommend using the `" + target + "` resource type for any new resources."
 

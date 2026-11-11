@@ -73,6 +73,7 @@ need changes. Follow the [upgrade guide](docs/guides/upgrading-to-v2.md).
 - Removing `custom_domain`, `logo`, `redirect_to` or `favicon` from a `checkly_status_page`, or `custom_domain`, `logo`, `link`, `description` or `favicon` from a `checkly_dashboard`, clears the value in Checkly, instead of showing the same change in every plan. This also erases a value set in the web app that is not in the configuration; see the upgrade guide.
 - Removing `setup_snippet_id`, `teardown_snippet_id`, `local_setup_script` or `local_teardown_script` from a `checkly_check_group` clears the value in Checkly.
 - `checkly_check_group` can be created without `locations` or `private_locations`, which the API used to reject. Its checks then keep their own locations.
+- The first apply after importing a `checkly_client_certificate` no longer replaces the certificate. The API never returns `private_key` or `passphrase`, so that apply records the configured values in Terraform state only and sends nothing to Checkly. To upload a different key, replace the resource, for example with `terraform apply -replace`.
 
 ## [v1.6.6](https://github.com/checkly/terraform-provider-checkly/releases/tag/v1.6.6) - 2023-06-06
 ### Added

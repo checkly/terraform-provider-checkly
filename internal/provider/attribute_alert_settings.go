@@ -91,6 +91,9 @@ var alertSettingsAttrTypes = map[string]attr.Type{
 type AlertSettingsAttributeSchemaOptions struct {
 	// Monitor adapts descriptions to talk about monitors instead of checks.
 	Monitor bool
+	// Group adapts descriptions to a check group, whose alert settings apply
+	// to the checks and monitors in it. It takes precedence over Monitor.
+	Group bool
 }
 
 // makeAlertSettingsAttributeSchema returns the schema for the alert_settings
@@ -101,11 +104,21 @@ func makeAlertSettingsAttributeSchema(options AlertSettingsAttributeSchemaOption
 	if options.Monitor {
 		name = "monitor"
 	}
+	description := fmt.Sprintf("Determines the alert escalation policy for the %s.", name)
+	failedRunThreshold := fmt.Sprintf("Send an alert notification after the given number of consecutive %s runs have failed.", name)
+	minutesFailingThreshold := fmt.Sprintf("Send an alert notification after the %s has been failing for the given amount of time (in minutes).", name)
+	parallelRunFailureThreshold := fmt.Sprintf("Whether parallel run failure threshold is enabled. Only applies if the %s is scheduled for multiple locations in parallel.", name)
+	if options.Group {
+		description = "Determines the alert escalation policy for the checks and monitors in the group."
+		failedRunThreshold = "Send an alert notification after the given number of consecutive runs of a check or monitor in the group have failed."
+		minutesFailingThreshold = "Send an alert notification after a check or monitor in the group has been failing for the given amount of time (in minutes)."
+		parallelRunFailureThreshold = "Whether parallel run failure threshold is enabled. Only applies to the checks and monitors in the group that are scheduled for multiple locations in parallel."
+	}
 
 	return schema.SingleNestedAttribute{
 		Optional:    true,
 		Computed:    true,
-		Description: fmt.Sprintf("Determines the alert escalation policy for the %s.", name),
+		Description: description,
 		PlanModifiers: []planmodifier.Object{
 			objectplanmodifier.UseStateForUnknown(),
 		},
@@ -132,7 +145,7 @@ func makeAlertSettingsAttributeSchema(options AlertSettingsAttributeSchemaOption
 						Optional:    true,
 						Computed:    true,
 						Default:     int64default.StaticInt64(1),
-						Description: fmt.Sprintf("Send an alert notification after the given number of consecutive %s runs have failed. Possible values are between `1` and `5`. (Default `1`).", name),
+						Description: failedRunThreshold + " Possible values are between `1` and `5`. (Default `1`).",
 						Validators: []validator.Int64{
 							int64validator.Between(1, 5),
 						},
@@ -152,7 +165,7 @@ func makeAlertSettingsAttributeSchema(options AlertSettingsAttributeSchemaOption
 						Optional:    true,
 						Computed:    true,
 						Default:     int64default.StaticInt64(5),
-						Description: fmt.Sprintf("Send an alert notification after the %s has been failing for the given amount of time (in minutes). Possible values are `5`, `10`, `15`, and `30`. (Default `5`).", name),
+						Description: minutesFailingThreshold + " Possible values are `5`, `10`, `15`, and `30`. (Default `5`).",
 						Validators: []validator.Int64{
 							int64validator.OneOf(5, 10, 15, 30),
 						},
@@ -207,7 +220,7 @@ func makeAlertSettingsAttributeSchema(options AlertSettingsAttributeSchemaOption
 						Optional:    true,
 						Computed:    true,
 						Default:     booldefault.StaticBool(false),
-						Description: fmt.Sprintf("Whether parallel run failure threshold is enabled. Only applies if the %s is scheduled for multiple locations in parallel. (Default `false`).", name),
+						Description: parallelRunFailureThreshold + " (Default `false`).",
 					},
 					"percentage": schema.Int64Attribute{
 						Optional:    true,

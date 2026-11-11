@@ -89,7 +89,9 @@ func (r *StatusPageResource) Schema(ctx context.Context, req resource.SchemaRequ
 			"be removed in a future version of the provider. v3 status pages are separate objects, so an " +
 			"existing page cannot be converted: create a v3 page alongside it instead. A maintenance window " +
 			"shown on the page links to a v3 page through `status_page_visibility.component_configs` on " +
-			"`checkly_maintenance_window`.",
+			"`checkly_maintenance_window`. " +
+			"See [Status pages](https://registry.terraform.io/providers/checkly/checkly/latest/docs/guides/upgrading-to-v2#status-pages) " +
+			"in the v2 upgrade guide.",
 		DeprecationMessage: "Use the `checkly_status_page_v3` resource instead. v3 status pages are separate " +
 			"objects, so an existing page cannot be converted; see the v2 upgrade guide.",
 		Attributes: map[string]schema.Attribute{
