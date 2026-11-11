@@ -158,14 +158,17 @@ func schemaAttributeAtPath(s schema.Schema, names []string) (schema.Attribute, b
 }
 
 // Every API key needs a valid account ID, an empty configured one falls back
-// to the environment, and no diagnostic repeats the credentials.
-func TestConfigureValidatesAccountID(t *testing.T) {
+// to the environment, an API key must be a valid header value, and no
+// diagnostic repeats the credentials.
+func TestConfigureValidatesCredentials(t *testing.T) {
 	const (
 		apiKey         = "cu_test-api-key"
 		validAccountID = "00000000-0000-4000-8000-000000000000"
 	)
 
 	cases := map[string]struct {
+		// envAPIKey replaces apiKey in CHECKLY_API_KEY when set.
+		envAPIKey    string
 		envAccountID string
 		accountID    *string
 		apiURL       *string
@@ -182,6 +185,11 @@ func TestConfigureValidatesAccountID(t *testing.T) {
 			accountID: new("cu_0123456789abcdef0123456789abcdef"),
 			want:      "Invalid Checkly Account ID",
 		},
+		"API key with a newline": {
+			envAPIKey: apiKey + "\n",
+			accountID: new(validAccountID),
+			want:      "Invalid Checkly API Key",
+		},
 		"invalid API URL": {
 			accountID: new(validAccountID),
 			apiURL:    new("ftp://example.com"),
@@ -191,7 +199,11 @@ func TestConfigureValidatesAccountID(t *testing.T) {
 
 	for name, c := range cases {
 		t.Run(name, func(t *testing.T) {
-			t.Setenv("CHECKLY_API_KEY", apiKey)
+			envAPIKey := apiKey
+			if c.envAPIKey != "" {
+				envAPIKey = c.envAPIKey
+			}
+			t.Setenv("CHECKLY_API_KEY", envAPIKey)
 			t.Setenv("CHECKLY_ACCOUNT_ID", c.envAccountID)
 			t.Setenv("CHECKLY_API_URL", "")
 
