@@ -17,7 +17,6 @@ SSL monitors check the TLS certificate of a host and alert before it expires or 
 resource "checkly_ssl_monitor" "example-ssl-monitor" {
   name                      = "Example SSL monitor"
   activated                 = true
-  should_fail               = false
   frequency                 = 60
   use_global_alert_settings = true
 
@@ -37,7 +36,6 @@ resource "checkly_ssl_monitor" "example-ssl-monitor" {
 resource "checkly_ssl_monitor" "example-ssl-monitor-2" {
   name                   = "Example SSL monitor 2"
   activated              = true
-  should_fail            = false
   frequency              = 60
   degraded_response_time = 3000
   max_response_time      = 10000
@@ -129,7 +127,6 @@ resource "checkly_ssl_monitor" "example-ssl-monitor-2" {
 - `retry_strategy` (Attributes) A strategy for retrying failed check/monitor runs. (see [below for nested schema](#nestedatt--retry_strategy))
 - `run_parallel` (Boolean) Determines whether the monitor runs in all its locations in parallel instead of in one location at a time, round-robin. (Default `false`).
 - `runtime_id` (String) The ID of the runtime to use for the monitor.
-- `should_fail` (Boolean) Inverts when the monitor is considered to fail. (Default `false`).
 - `tags` (Set of String) Tags for organizing and filtering checks and monitors.
 - `trigger_incident` (Attributes) Create and resolve an incident based on the alert configuration. Useful for status page automation. (see [below for nested schema](#nestedatt--trigger_incident))
 - `use_global_alert_settings` (Boolean) When true, the account level alert settings are used instead of the `alert_settings` of this monitor. Defaults to `true` when `alert_settings` is not set, and to `false` when it is.

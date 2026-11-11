@@ -41,7 +41,6 @@ type MultistepCheckResourceModel struct {
 	Frequency                 types.Int64  `tfsdk:"frequency"`
 	Activated                 types.Bool   `tfsdk:"activated"`
 	Muted                     types.Bool   `tfsdk:"muted"`
-	ShouldFail                types.Bool   `tfsdk:"should_fail"`
 	RunParallel               types.Bool   `tfsdk:"run_parallel"`
 	Locations                 types.Set    `tfsdk:"locations"`
 	Script                    types.String `tfsdk:"script"`
@@ -108,7 +107,7 @@ func (r *MultistepCheckResource) Schema(ctx context.Context, req resource.Schema
 				Description: "Insert environment variables into the runtime environment. Use global environment variables whenever possible.",
 			}),
 			scriptDependenciesAttributeName: makeScriptDependenciesSchema(),
-		}, CommonCheckAttributeSchemaOptions{Subject: subjectCheck, ShouldFail: true, RunParallel: true, Locations: true, GroupMembership: true, RuntimeID: true, RuntimeIDNote: "The runtime must support multi-step checks."}),
+		}, CommonCheckAttributeSchemaOptions{Subject: subjectCheck, RunParallel: true, Locations: true, GroupMembership: true, RuntimeID: true, RuntimeIDNote: "The runtime must support multi-step checks."}),
 	}
 }
 
@@ -251,7 +250,6 @@ func multistepCheckModelFromCheckModel(source *CheckResourceModel) MultistepChec
 		Frequency:                 source.Frequency,
 		Activated:                 source.Activated,
 		Muted:                     source.Muted,
-		ShouldFail:                source.ShouldFail,
 		RunParallel:               source.RunParallel,
 		Locations:                 source.Locations,
 		Script:                    source.Script,
@@ -326,7 +324,6 @@ func multistepCheckFromModel(ctx context.Context, model *MultistepCheckResourceM
 		Frequency:                 int(model.Frequency.ValueInt64()),
 		Activated:                 model.Activated.ValueBool(),
 		Muted:                     model.Muted.ValueBool(),
-		ShouldFail:                model.ShouldFail.ValueBool(),
 		RunParallel:               model.RunParallel.ValueBool(),
 		Locations:                 locations,
 		Script:                    model.Script.ValueString(),
@@ -373,6 +370,12 @@ func multistepCheckResolveComputedValues(ctx context.Context, c *checkly.MultiSt
 // the check. Values already present in the model act as the prior state for
 // the prior-aware conversions.
 func multistepCheckToModel(ctx context.Context, c *checkly.MultiStepCheck, model *MultistepCheckResourceModel, diags *diag.Diagnostics) {
+	// Read calls this, so the warning also reaches imported checks and
+	// checks changed outside Terraform.
+	if c.ShouldFail {
+		addUnsupportedShouldFailWarning(diags, "checkly_multistep_check")
+	}
+
 	prior := *model
 
 	model.ID = types.StringValue(c.ID)
@@ -388,7 +391,6 @@ func multistepCheckToModel(ctx context.Context, c *checkly.MultiStepCheck, model
 	model.Frequency = types.Int64Value(int64(c.Frequency))
 	model.Activated = types.BoolValue(c.Activated)
 	model.Muted = types.BoolValue(c.Muted)
-	model.ShouldFail = types.BoolValue(c.ShouldFail)
 	model.RunParallel = types.BoolValue(c.RunParallel)
 	model.Locations = stringSetFromAPINullIfUnset(ctx, c.Locations, prior.Locations, diags)
 	model.Script = types.StringValue(c.Script)

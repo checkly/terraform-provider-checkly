@@ -196,7 +196,7 @@ func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 			environmentVariableAttributeName: makeEnvironmentVariableSchema(EnvironmentVariableAttributeSchemaOptions{
 				Description: "Insert environment variables into the runtime environment. Only relevant for browser checks. Use global environment variables whenever possible.",
 			}),
-		}, CommonCheckAttributeSchemaOptions{Subject: subjectCheck, ShouldFail: true, RunParallel: true, Locations: true, GroupMembership: true, RuntimeID: true, ShouldFailNote: shouldFailErrorStatusNote}),
+		}, CommonCheckAttributeSchemaOptions{Subject: subjectCheck, ShouldFail: true, RunParallel: true, Locations: true, GroupMembership: true, RuntimeID: true, ShouldFailNote: checkShouldFailNote}),
 	}
 }
 
@@ -210,11 +210,13 @@ func (r *CheckResource) ValidateConfig(ctx context.Context, req resource.Validat
 	var checkType types.String
 	var frequency types.Int64
 	var sslCheckDomain types.String
+	var shouldFail types.Bool
 	var environmentVariables types.List
 
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("type"), &checkType)...)
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(frequencyAttributeName), &frequency)...)
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("ssl_check_domain"), &sslCheckDomain)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(shouldFailAttributeName), &shouldFail)...)
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(environmentVariableAttributeName), &environmentVariables)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -249,6 +251,16 @@ func (r *CheckResource) ValidateConfig(ctx context.Context, req resource.Validat
 		} else {
 			addIgnoredCheckAttributeWarning(&resp.Diagnostics, "ssl_check_domain", checkType.ValueString())
 		}
+	}
+
+	// Inverting the outcome is only supported on API checks, matching the
+	// Checkly CLI, so any value is rejected on the other types, false included.
+	if checkType.ValueString() != string(checkly.CheckTypeAPI) && !shouldFail.IsNull() && !shouldFail.IsUnknown() {
+		resp.Diagnostics.AddAttributeError(
+			path.Root(shouldFailAttributeName),
+			"Unsupported Attribute",
+			"should_fail is only supported on API checks. Remove it from browser and multi-step checks.",
+		)
 	}
 
 	// The API ignores environment variables of API checks, so they would
@@ -507,6 +519,12 @@ func checkStateMovers[T any](ctx context.Context, checkType checkly.CheckType, t
 					return
 				}
 
+				// Only checkly_api_check has should_fail, so the move drops it
+				// from the state of the other types.
+				if checkType != checkly.CheckTypeAPI && source.ShouldFail.ValueBool() {
+					addUnsupportedShouldFailWarning(&resp.Diagnostics, targetTypeName)
+				}
+
 				target := toTarget(&source)
 				resp.Diagnostics.Append(resp.TargetState.Set(ctx, &target)...)
 			},
@@ -527,6 +545,19 @@ func checkResourceTypeForCheckType(checkType checkly.CheckType) string {
 	default:
 		return "the dedicated resource type for its check type"
 	}
+}
+
+// addUnsupportedShouldFailWarning warns that a check managed by a resource
+// type without should_fail has should_fail set to true in Checkly, which the
+// resource can neither show nor change until its next update sends false.
+func addUnsupportedShouldFailWarning(diags *diag.Diagnostics, resourceType string) {
+	diags.AddWarning(
+		"should_fail Is Not Supported",
+		fmt.Sprintf("This check has should_fail set to true in Checkly, which inverts its result: it passes when its script fails "+
+			"and fails when its script passes. %s does not support should_fail, so the plan does not show it. "+
+			"The next apply that updates this check, for any change, sets it to false; change any attribute of "+
+			"the check to reset it now.", resourceType),
+	)
 }
 
 // validateCheckRuntimeSupport validates that the configured runtime supports

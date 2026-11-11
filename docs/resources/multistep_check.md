@@ -128,7 +128,6 @@ moved {
 - `run_parallel` (Boolean) Determines whether the check runs in all its locations in parallel instead of in one location at a time, round-robin. (Default `false`).
 - `runtime_id` (String) The ID of the runtime to use for the check. When unset, the account's default runtime is used. The runtime must support multi-step checks.
 - `script_path` (String) The path of the check's script file when using editor-style multi-file scripts (e.g. `entrypoint.spec.ts`).
-- `should_fail` (Boolean) Inverts when the check is considered to fail. (Default `false`).
 - `tags` (Set of String) Tags for organizing and filtering checks and monitors.
 - `trigger_incident` (Attributes) Create and resolve an incident based on the alert configuration. Useful for status page automation. (see [below for nested schema](#nestedatt--trigger_incident))
 - `use_global_alert_settings` (Boolean) When true, the account level alert settings are used instead of the `alert_settings` of this check. Defaults to `true` when `alert_settings` is not set, and to `false` when it is.

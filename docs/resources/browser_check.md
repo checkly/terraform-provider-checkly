@@ -201,7 +201,6 @@ resource "checkly_browser_check" "example_6" {
 - `run_parallel` (Boolean) Determines whether the check runs in all its locations in parallel instead of in one location at a time, round-robin. (Default `false`).
 - `runtime_id` (String) The ID of the runtime to use for the check. When unset, the account's default runtime is used.
 - `script_path` (String) The path of the check's script file when using editor-style multi-file scripts (e.g. `entrypoint.spec.ts`).
-- `should_fail` (Boolean) Inverts when the check is considered to fail. (Default `false`).
 - `ssl_check_domain` (String) A valid fully qualified domain name (FQDN) to check its SSL certificate.
 - `tags` (Set of String) Tags for organizing and filtering checks and monitors.
 - `trigger_incident` (Attributes) Create and resolve an incident based on the alert configuration. Useful for status page automation. (see [below for nested schema](#nestedatt--trigger_incident))

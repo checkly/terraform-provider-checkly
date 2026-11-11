@@ -227,6 +227,17 @@ These attributes were deprecated in v1.x. Remove them from your configuration:
 
 `environment_variables` on a `checkly_check` with `type = "API"` have no effect either, because API checks do not use environment variables, and they cause a change in every plan. Remove them as well.
 
+### should_fail only on API checks, URL monitors and TCP monitors
+
+As in the Checkly CLI, only API checks, URL monitors and TCP monitors have `should_fail`: `checkly_check` with `type = "API"`, `checkly_api_check`, `checkly_url_monitor`, `checkly_tcp_monitor` and `checkly_tcp_check`. `checkly_browser_check` and `checkly_multistep_check` don't have it.
+
+- `checkly_grpc_monitor`, `checkly_ssl_monitor` and `checkly_traceroute_monitor` no longer have `should_fail`, which they ignored. Delete the line.
+- On a `checkly_check` with `type = "BROWSER"` or `type = "MULTI_STEP"`, setting `should_fail` fails the plan, even to `false`. Delete the line.
+
+A browser or multi-step check with `should_fail = true` passed when its script failed and failed when it passed. Once an update sets `should_fail` to `false`, it reports the outcome of its script as it is.
+
+**Before you move a browser or multi-step `checkly_check` with `should_fail = true` to `checkly_browser_check` or `checkly_multistep_check`, remove `should_fail` from the `checkly_check` and apply, which updates it to `false`. Only then add the `moved` block.** A check moved, imported or refreshed with `should_fail` still `true` in Checkly gives a `should_fail Is Not Supported` warning. See [Expected one-time changes](#expected-one-time-changes).
+
 ### Deprecated attributes
 
 `slack` on `checkly_alert_channel` is deprecated in favor of `slack_app`. It uses the legacy Slack incoming webhook integration, still works in v2, and will be removed in a future major release.
@@ -475,6 +486,7 @@ resource "checkly_maintenance_window" "example" {
   - `checkly_grpc_monitor`: also `request.proto_content` with `service_definition = "REFLECTION"`.
   - Every resource with `alert_settings`: `reminders.amount` and `parallel_run_failure_threshold.enabled`, when the configured object leaves them out.
 - `checkly_check`, `checkly_playwright_check_suite`, and checks moved from `checkly_check` to the per-type resources: an `intent` or `ai_auto_repair_enabled` value set outside Terraform and absent from your configuration is removed by the first apply, which the plan shows. To keep such a value, add it to your configuration, or add the attribute to `ignore_changes` to leave it to the web app.
+- `checkly_check` with `type = "BROWSER"` or `type = "MULTI_STEP"` whose `should_fail` is `true` in Checkly: once `should_fail` is removed from the configuration, the first plan shows an in-place update of `should_fail` to `false`. Apply that update before you move the check to `checkly_browser_check` or `checkly_multistep_check`: those resources have no `should_fail`, so a check moved with `true` keeps it in Checkly until an update for another change sends `false`. A move, import or refresh of such a check warns with `should_fail Is Not Supported`. See [should_fail only on API checks, URL monitors and TCP monitors](#should_fail-only-on-api-checks-url-monitors-and-tcp-monitors).
 - `checkly_dns_monitor`, `checkly_icmp_monitor` and `checkly_traceroute_monitor`: `private_locations` set outside Terraform and absent from your configuration are removed by the first apply, which the plan shows. The same goes for `proxy_url` on `checkly_private_location`. To keep such a value, add it to your configuration, or add the attribute to `ignore_changes` to leave it to the web app.
 - A check or monitor added to a group in the web app, with no `group_id` in its configuration, leaves the group on the first apply, as it did with v1.x.
 - `checkly_maintenance_window` and `checkly_maintenance_windows`: links to v3 status page components set in the web app and absent from your configuration are removed by the first apply, which the plan shows. If the v3 page stays in `status_page_ids` without an entry in `component_configs`, the apply is rejected instead. To keep the links, add them to `component_configs`, or leave them to the web app with `ignore_changes`: `status_page_visibility.component_configs` when your configuration sets `status_page_visibility`, or `status_page_visibility` as a whole otherwise, which leaves all its settings to the web app. An account without the status page maintenance windows entitlement can't remove the links, so every update of such a window is rejected until they are in the configuration or ignored.

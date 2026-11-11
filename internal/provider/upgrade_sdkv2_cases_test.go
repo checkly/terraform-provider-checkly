@@ -582,7 +582,6 @@ resource "checkly_check" "test" {
   type                      = "BROWSER"
   frequency                 = 720
   activated                 = true
-  should_fail               = false
   locations                 = ["eu-central-1", "us-east-1"]
   tags                      = ["tf-upgrade", "browser"]
   use_global_alert_settings = false

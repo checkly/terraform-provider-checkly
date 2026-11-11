@@ -2,7 +2,6 @@
 resource "checkly_grpc_monitor" "example-grpc-monitor" {
   name                      = "Example gRPC monitor"
   activated                 = true
-  should_fail               = false
   frequency                 = 1
   use_global_alert_settings = true
 
@@ -21,10 +20,9 @@ resource "checkly_grpc_monitor" "example-grpc-monitor" {
 # A more complex example invoking a unary method (BEHAVIOR mode) with
 # metadata, assertions and an alert/retry policy
 resource "checkly_grpc_monitor" "example-grpc-monitor-2" {
-  name        = "Example gRPC monitor 2"
-  activated   = true
-  should_fail = false
-  frequency   = 5
+  name      = "Example gRPC monitor 2"
+  activated = true
+  frequency = 5
 
   locations = [
     "us-west-1",
@@ -86,11 +84,10 @@ resource "checkly_grpc_monitor" "example-grpc-monitor-2" {
 # A FlatBuffers unary monitor. Generate the binary schema first with:
 # flatc -b --schema --bfbs-builtins schema.fbs
 resource "checkly_grpc_monitor" "example-flatbuffers-monitor" {
-  name        = "Example FlatBuffers gRPC monitor"
-  activated   = true
-  should_fail = false
-  frequency   = 5
-  locations   = ["us-west-1"]
+  name      = "Example FlatBuffers gRPC monitor"
+  activated = true
+  frequency = 5
+  locations = ["us-west-1"]
 
   request = {
     host         = "grpc.example.com"

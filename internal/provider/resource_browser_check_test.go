@@ -482,7 +482,6 @@ func TestAccBrowserCheckUnsetSweepScalars(t *testing.T) {
 					frequency                 = 720
 					activated                 = false
 					muted                     = true
-					should_fail               = true
 					run_parallel              = true
 					use_global_alert_settings = false
 					ssl_check_domain          = "checklyhq.com"
@@ -506,11 +505,6 @@ func TestAccBrowserCheckUnsetSweepScalars(t *testing.T) {
 				resource.TestCheckResourceAttr(
 					"checkly_browser_check.test",
 					"muted",
-					"true",
-				),
-				resource.TestCheckResourceAttr(
-					"checkly_browser_check.test",
-					"should_fail",
 					"true",
 				),
 				resource.TestCheckResourceAttr(
@@ -563,11 +557,6 @@ func TestAccBrowserCheckUnsetSweepScalars(t *testing.T) {
 				resource.TestCheckResourceAttr(
 					"checkly_browser_check.test",
 					"muted",
-					"false",
-				),
-				resource.TestCheckResourceAttr(
-					"checkly_browser_check.test",
-					"should_fail",
 					"false",
 				),
 				resource.TestCheckResourceAttr(
@@ -889,7 +878,6 @@ const browserCheckResource_basic = `
 		name                      = "Browser Check Resource"
 		description               = "Browser check description"
 		activated                 = true
-		should_fail               = false
 		frequency                 = 720
 		use_global_alert_settings = true
 		locations                 = [ "us-east-1", "eu-central-1" ]
@@ -903,7 +891,6 @@ const browserCheckResource_basic_withoutTags = `
 		name                      = "Browser Check Resource"
 		description               = "Browser check description"
 		activated                 = true
-		should_fail               = false
 		frequency                 = 720
 		use_global_alert_settings = true
 		locations                 = [ "us-east-1", "eu-central-1" ]
@@ -917,7 +904,6 @@ const browserCheckResource_full = `
 		description      = "Browser check description"
 		activated        = true
 		muted            = true
-		should_fail      = false
 		run_parallel     = true
 		frequency        = 720
 		locations        = [ "us-east-1", "eu-central-1" ]

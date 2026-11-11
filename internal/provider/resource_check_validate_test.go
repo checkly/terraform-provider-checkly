@@ -166,6 +166,49 @@ func TestCheckValidateConfigSSLCheckDomainOnAPICheck(t *testing.T) {
 	}
 }
 
+func TestCheckValidateConfigShouldFail(t *testing.T) {
+	cases := map[string]struct {
+		checkType  string
+		shouldFail tftypes.Value
+		wantError  bool
+	}{
+		"browser true":      {checkType: "BROWSER", shouldFail: tftypes.NewValue(tftypes.Bool, true), wantError: true},
+		"browser false":     {checkType: "BROWSER", shouldFail: tftypes.NewValue(tftypes.Bool, false), wantError: true},
+		"multi-step true":   {checkType: "MULTI_STEP", shouldFail: tftypes.NewValue(tftypes.Bool, true), wantError: true},
+		"multi-step false":  {checkType: "MULTI_STEP", shouldFail: tftypes.NewValue(tftypes.Bool, false), wantError: true},
+		"api true":          {checkType: "API", shouldFail: tftypes.NewValue(tftypes.Bool, true)},
+		"browser unset":     {checkType: "BROWSER", shouldFail: tftypes.NewValue(tftypes.Bool, nil)},
+		"browser unknown":   {checkType: "BROWSER", shouldFail: tftypes.NewValue(tftypes.Bool, tftypes.UnknownValue)},
+		"unknown type true": {checkType: "", shouldFail: tftypes.NewValue(tftypes.Bool, true)},
+	}
+
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			checkType := tftypes.NewValue(tftypes.String, c.checkType)
+			if c.checkType == "" {
+				checkType = tftypes.NewValue(tftypes.String, tftypes.UnknownValue)
+			}
+			resp := validateCheckConfig(t, map[string]tftypes.Value{
+				"type":                  checkType,
+				shouldFailAttributeName: c.shouldFail,
+			})
+			if !c.wantError {
+				if len(resp.Diagnostics) > 0 {
+					t.Error(resp.Diagnostics)
+				}
+				return
+			}
+			errors := resp.Diagnostics.Errors()
+			if len(errors) != 1 || errors[0].Summary() != "Unsupported Attribute" {
+				t.Fatalf("want one Unsupported Attribute error: %v", resp.Diagnostics)
+			}
+			if got, ok := errors[0].(interface{ Path() path.Path }); !ok || !got.Path().Equal(path.Root(shouldFailAttributeName)) {
+				t.Errorf("error is not on %q: %v", shouldFailAttributeName, errors[0])
+			}
+		})
+	}
+}
+
 func TestCheckModifyPlanEmptyScript(t *testing.T) {
 	ctx := context.Background()
 

@@ -2,7 +2,6 @@
 resource "checkly_browser_check" "browser-check-1" {
   name                      = "A simple browser check"
   activated                 = true
-  should_fail               = false
   frequency                 = 2
   use_global_alert_settings = true
   locations = [
@@ -27,7 +26,6 @@ EOT
 resource "checkly_browser_check" "browser-check-2" {
   name                      = "Example check"
   activated                 = true
-  should_fail               = false
   frequency                 = 15
   use_global_alert_settings = true
 

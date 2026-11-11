@@ -52,7 +52,6 @@ type SSLMonitorResourceModel struct {
 	FrequencyOffset           types.Int64  `tfsdk:"frequency_offset"`
 	Activated                 types.Bool   `tfsdk:"activated"`
 	Muted                     types.Bool   `tfsdk:"muted"`
-	ShouldFail                types.Bool   `tfsdk:"should_fail"`
 	RunParallel               types.Bool   `tfsdk:"run_parallel"`
 	Locations                 types.Set    `tfsdk:"locations"`
 	DegradedResponseTime      types.Int64  `tfsdk:"degraded_response_time"`
@@ -459,7 +458,7 @@ func (r *SSLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{
 				Subject: subjectMonitor,
 			}),
-		}, CommonCheckAttributeSchemaOptions{Subject: subjectMonitor, ShouldFail: true, RunParallel: true, Locations: true, GroupMembership: true, RuntimeID: true}),
+		}, CommonCheckAttributeSchemaOptions{Subject: subjectMonitor, RunParallel: true, Locations: true, GroupMembership: true, RuntimeID: true}),
 	}
 }
 
@@ -619,7 +618,6 @@ func sslMonitorFromModel(ctx context.Context, model *SSLMonitorResourceModel, di
 		FrequencyOffset:           int(model.FrequencyOffset.ValueInt64()),
 		Activated:                 model.Activated.ValueBool(),
 		Muted:                     model.Muted.ValueBool(),
-		ShouldFail:                model.ShouldFail.ValueBool(),
 		RunParallel:               model.RunParallel.ValueBool(),
 		Locations:                 locations,
 		DegradedResponseTime:      int(model.DegradedResponseTime.ValueInt64()),
@@ -670,7 +668,6 @@ func sslMonitorToModel(ctx context.Context, c *checkly.SSLMonitor, model *SSLMon
 
 	model.Activated = types.BoolValue(c.Activated)
 	model.Muted = types.BoolValue(c.Muted)
-	model.ShouldFail = types.BoolValue(c.ShouldFail)
 	model.RunParallel = types.BoolValue(c.RunParallel)
 	model.Locations = stringSetFromAPINullIfUnset(ctx, c.Locations, model.Locations, diags)
 	model.DegradedResponseTime = types.Int64Value(int64(c.DegradedResponseTime))

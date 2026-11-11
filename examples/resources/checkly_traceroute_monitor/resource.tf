@@ -2,7 +2,6 @@
 resource "checkly_traceroute_monitor" "example-traceroute-monitor" {
   name                      = "Example traceroute monitor"
   activated                 = true
-  should_fail               = false
   frequency                 = 1
   use_global_alert_settings = true
 
@@ -17,10 +16,9 @@ resource "checkly_traceroute_monitor" "example-traceroute-monitor" {
 
 # A more complex example tuning the trace and adding assertions
 resource "checkly_traceroute_monitor" "example-traceroute-monitor-2" {
-  name        = "Example traceroute monitor 2"
-  activated   = true
-  should_fail = false
-  frequency   = 5
+  name      = "Example traceroute monitor 2"
+  activated = true
+  frequency = 5
 
   locations = [
     "us-west-1",
