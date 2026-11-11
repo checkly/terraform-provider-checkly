@@ -124,7 +124,7 @@ resource "checkly_traceroute_monitor" "example-traceroute-monitor-2" {
 
 Required:
 
-- `url` (String) The host to trace the network path to, of 1 to 2048 characters. Do not include a scheme or a port in this value.
+- `url` (String) The host to trace the network path to (1 to 2048 characters). Do not include a scheme or a port in this value.
 
 Optional:
 

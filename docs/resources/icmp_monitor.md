@@ -76,7 +76,7 @@ resource "checkly_icmp_monitor" "example-icmp-monitor" {
 
 Required:
 
-- `hostname` (String) The hostname to ping, of 1 to 2048 characters.
+- `hostname` (String) The hostname to ping (1 to 2048 characters).
 
 Optional:
 

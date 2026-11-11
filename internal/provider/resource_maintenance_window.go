@@ -79,7 +79,7 @@ func (r *MaintenanceWindowResource) Schema(ctx context.Context, req resource.Sch
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
-				Description: "The maintenance window name, of 1 to 200 characters.",
+				Description: "The maintenance window name (1 to 200 characters).",
 				Validators: []validator.String{
 					utf16LengthBetween(1, 200),
 				},
@@ -143,7 +143,7 @@ func (r *MaintenanceWindowResource) Schema(ctx context.Context, req resource.Sch
 			},
 			"description": schema.StringAttribute{
 				Optional:    true,
-				Description: "A description of the maintenance window, of at most 2000 characters. When the window is visible on status pages, the description is shown there too.",
+				Description: "A description of the maintenance window (at most 2000 characters). When the window is visible on status pages, the description is shown there too.",
 				Validators: []validator.String{
 					utf16LengthBetween(0, 2000),
 				},

@@ -146,7 +146,7 @@ func (r *ICMPMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 				Attributes: map[string]schema.Attribute{
 					"hostname": schema.StringAttribute{
 						Required:    true,
-						Description: "The hostname to ping, of 1 to 2048 characters.",
+						Description: "The hostname to ping (1 to 2048 characters).",
 						Validators: []validator.String{
 							utf16LengthBetween(1, 2048),
 						},

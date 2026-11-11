@@ -160,7 +160,7 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 				Attributes: map[string]schema.Attribute{
 					"url": schema.StringAttribute{
 						Required:    true,
-						Description: "The host to trace the network path to, of 1 to 2048 characters. Do not include a scheme or a port in this value.",
+						Description: "The host to trace the network path to (1 to 2048 characters). Do not include a scheme or a port in this value.",
 						Validators: []validator.String{
 							utf16LengthBetween(1, 2048),
 							noControlCharacters(),

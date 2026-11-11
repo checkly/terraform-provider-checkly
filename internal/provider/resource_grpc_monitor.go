@@ -187,7 +187,7 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 				Attributes: map[string]schema.Attribute{
 					"host": schema.StringAttribute{
 						Required:    true,
-						Description: "The host to connect to, of 1 to 2048 characters. Do not include a scheme or a port in this value.",
+						Description: "The host to connect to (1 to 2048 characters). Do not include a scheme or a port in this value.",
 						Validators: []validator.String{
 							utf16LengthBetween(1, 2048),
 							noControlCharacters(),
@@ -278,7 +278,7 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 						Optional:    true,
 						Computed:    true,
 						Default:     stringdefault.StaticString(""),
-						Description: "The inline `.proto` file source used when `service_definition = \"PROTO_FILE\"` in `BEHAVIOR` mode, of at most 102400 characters. Forbidden when `encoding = \"FLATBUFFERS\"`.",
+						Description: "The inline `.proto` file source (at most 102400 characters) used when `service_definition = \"PROTO_FILE\"` in `BEHAVIOR` mode. Forbidden when `encoding = \"FLATBUFFERS\"`.",
 						Validators: []validator.String{
 							utf16LengthBetween(0, 102400),
 						},
@@ -302,7 +302,7 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 						Optional:    true,
 						Computed:    true,
 						Default:     stringdefault.StaticString(""),
-						Description: "The JSON request message sent as the gRPC call payload in `BEHAVIOR` mode, of at most 65536 characters.",
+						Description: "The JSON request message (at most 65536 characters) sent as the gRPC call payload in `BEHAVIOR` mode.",
 						Validators: []validator.String{
 							utf16LengthBetween(0, 65536),
 						},
@@ -327,7 +327,7 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 							Attributes: map[string]schema.Attribute{
 								"key": schema.StringAttribute{
 									Required:    true,
-									Description: "The gRPC metadata (header) key, of 1 to 256 characters.",
+									Description: "The gRPC metadata (header) key (1 to 256 characters).",
 									Validators: []validator.String{
 										utf16LengthBetween(1, 256),
 									},
@@ -335,7 +335,7 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 								"value": schema.StringAttribute{
 									Optional:    true,
 									Computed:    true,
-									Description: "The gRPC metadata (header) value, of at most 8192 characters.",
+									Description: "The gRPC metadata (header) value (at most 8192 characters).",
 									Validators: []validator.String{
 										utf16LengthBetween(0, 8192),
 									},

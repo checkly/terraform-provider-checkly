@@ -79,7 +79,7 @@ func (r *ClientCertificateResource) Schema(ctx context.Context, req resource.Sch
 			},
 			"host": schema.StringAttribute{
 				Required:    true,
-				Description: "The host domain that the certificate should be used for, of at most 255 characters. Wildcards are supported, e.g. `*.acme.com`.",
+				Description: "The host domain that the certificate should be used for (at most 255 characters). Wildcards are supported, e.g. `*.acme.com`.",
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthAtMost(255),
 				},
@@ -135,7 +135,7 @@ func (r *ClientCertificateResource) Schema(ctx context.Context, req resource.Sch
 			"passphrase": schema.StringAttribute{
 				Optional:    true,
 				Sensitive:   true,
-				Description: "Passphrase for the private key, of at most 95 bytes in UTF-8.",
+				Description: "Passphrase for the private key (at most 95 bytes).",
 				Validators: []validator.String{
 					stringvalidator.LengthAtMost(95),
 				},

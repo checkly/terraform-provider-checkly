@@ -232,12 +232,12 @@ Optional:
 
 Required:
 
-- `goal` (String) The user or system outcome the check protects, of 1 to 2000 characters without leading or trailing whitespace.
+- `goal` (String) The user or system outcome the check protects (1 to 2000 characters, without leading or trailing whitespace).
 
 Optional:
 
-- `must_preserve` (List of String) Guardrails an automatic repair must not weaken or bypass. At most 20 statements of 1 to 1000 characters without leading or trailing whitespace.
-- `required_outcomes` (List of String) Observable outcomes the check must continue to prove. At most 20 statements of 1 to 1000 characters without leading or trailing whitespace.
+- `must_preserve` (List of String) Guardrails an automatic repair must not weaken or bypass. At most 20 statements (1 to 1000 characters each, without leading or trailing whitespace).
+- `required_outcomes` (List of String) Observable outcomes the check must continue to prove. At most 20 statements (1 to 1000 characters each, without leading or trailing whitespace).
 
 
 <a id="nestedatt--runtime"></a>

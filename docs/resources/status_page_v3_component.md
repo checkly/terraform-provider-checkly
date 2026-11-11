@@ -41,7 +41,7 @@ resource "checkly_status_page_v3_component" "api" {
 ### Required
 
 - `display_order` (Number) The position among siblings; lower comes first.
-- `name` (String) The name shown on the status page, of 1 to 255 characters without leading or trailing whitespace.
+- `name` (String) The name shown on the status page (1 to 255 characters, without leading or trailing whitespace).
 - `status_page_id` (String) The ID of the v3 status page the component belongs to. A component cannot be moved to another page.
 
 ### Optional

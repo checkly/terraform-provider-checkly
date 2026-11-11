@@ -74,7 +74,7 @@ resource "checkly_url_monitor" "example-url-monitor" {
 
 Required:
 
-- `url` (String) The URL to monitor. Must be a valid HTTP or HTTPS URL of 1 to 2048 characters.
+- `url` (String) The URL to monitor (1 to 2048 characters). Must be a valid HTTP or HTTPS URL.
 
 Optional:
 
