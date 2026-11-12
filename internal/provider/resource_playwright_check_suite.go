@@ -26,6 +26,11 @@ import (
 
 var playwrightCheckSuiteDefaultBrowsers = []string{"chromium", "firefox", "webkit"}
 
+// playwrightCheckSuiteDeviceTypes are the device types the check runners
+// provide: the browsers Playwright downloads, and the branded browsers
+// Playwright selects through its channel option.
+var playwrightCheckSuiteDeviceTypes = []string{"chromium", "firefox", "webkit", "chrome", "msedge"}
+
 var playwrightCheckSuiteDefaultTestCommands = map[string]string{
 	"npm":  "npx playwright test",
 	"pnpm": "pnpm playwright test",
@@ -243,7 +248,13 @@ func (r *PlaywrightCheckSuiteResource) Schema(ctx context.Context, req resource.
 										Description: "The command used to install dependencies prior to " +
 											"running Playwright. The default value is the appropriate " +
 											"install command for your package manager (e.g. " +
-											"`npm install` for `npm`).",
+											"`npm install` for `npm`). Can't be empty: leave it out to " +
+											"use the default command.",
+										// The API stores an empty command as no command, so
+										// an empty one would show as a change in every plan.
+										Validators: []validator.String{
+											stringvalidator.LengthAtLeast(1),
+										},
 									},
 								},
 							},
@@ -257,7 +268,13 @@ func (r *PlaywrightCheckSuiteResource) Schema(ctx context.Context, req resource.
 										Computed: true,
 										Description: "The command used to run Playwright. The default " +
 											"value is the appropriate exec command for your package " +
-											"manager (e.g. `npx playwright test` for `npm`).",
+											"manager (e.g. `npx playwright test` for `npm`). Can't be " +
+											"empty: leave it out to use the default command.",
+										// An empty command is not sent, so the API applies its
+										// default command, which differs from the planned value.
+										Validators: []validator.String{
+											stringvalidator.LengthAtLeast(1),
+										},
 									},
 								},
 							},
@@ -293,8 +310,16 @@ func (r *PlaywrightCheckSuiteResource) Schema(ctx context.Context, req resource.
 								NestedObject: schema.NestedAttributeObject{
 									Attributes: map[string]schema.Attribute{
 										"type": schema.StringAttribute{
-											Required:    true,
-											Description: "The type of the device.",
+											Required: true,
+											Description: "The type of the device. Possible values are `chromium`, `firefox` and `webkit`, " +
+												"which run the browsers Playwright downloads, and `chrome` and `msedge`, " +
+												"which run the branded Google Chrome and Microsoft Edge browsers.",
+											// The runners provide only these browsers. The API
+											// accepts any name, and a check with another one fails
+											// every run when its browsers are installed.
+											Validators: []validator.String{
+												stringvalidator.OneOf(playwrightCheckSuiteDeviceTypes...),
+											},
 										},
 									},
 								},

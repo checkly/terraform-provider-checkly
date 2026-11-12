@@ -204,9 +204,8 @@ resource "checkly_alert_channel" "email" {
 }
 
 resource "checkly_alert_channel" "slack" {
-  slack = {
-    channel = "#alerts"
-    url     = "https://hooks.slack.com/services/TXXXXX/XXXXX/XXXXXXXXXX"
+  slack_app = {
+    slack_channels = ["#alerts"]
   }
 }
 

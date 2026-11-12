@@ -1916,3 +1916,38 @@ func TestPlaywrightCheckSuiteResolveRuntimeDevices(t *testing.T) {
 		}
 	})
 }
+
+func TestAccPlaywrightCheckSuiteRuntimeValidation(t *testing.T) {
+	config := func(runtime string) string {
+		return playwrightCheckSuiteBase + fmt.Sprintf(`
+			resource "checkly_playwright_check_suite" "test" {
+				name      = "PW Check runtime validation"
+				activated = false
+				frequency = 720
+				locations = ["us-east-1"]
+
+				bundle = {
+					id       = checkly_playwright_code_bundle.test.id
+					metadata = checkly_playwright_code_bundle.test.metadata
+				}
+
+				runtime = %s
+			}
+		`, runtime)
+	}
+
+	accTestCase(t, []resource.TestStep{
+		{
+			Config:      config(`{ playwright = { devices = [{ type = "chrome-beta" }] } }`),
+			ExpectError: regexp.MustCompile(`value must be one of`),
+		},
+		{
+			Config:      config(`{ steps = { install = { command = "" } } }`),
+			ExpectError: regexp.MustCompile(`runtime.steps.install.command string length must be at least 1`),
+		},
+		{
+			Config:      config(`{ steps = { test = { command = "" } } }`),
+			ExpectError: regexp.MustCompile(`runtime.steps.test.command string length must be at least 1`),
+		},
+	})
+}

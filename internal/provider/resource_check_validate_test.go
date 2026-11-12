@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"maps"
 	"math/big"
 	"slices"
 	"testing"
@@ -43,14 +44,10 @@ func TestCheckValidateConfigEnvironmentVariables(t *testing.T) {
 
 	for checkType, wantWarning := range map[string]bool{"API": true, "BROWSER": false} {
 		t.Run(checkType, func(t *testing.T) {
-			config := tfsdk.Config{Schema: schemaResp.Schema, Raw: objectWith(objectType, map[string]tftypes.Value{
+			resp := validateCheckConfig(t, map[string]tftypes.Value{
 				"type":                           tftypes.NewValue(tftypes.String, checkType),
 				environmentVariableAttributeName: variables,
-			})}
-
-			var resp resource.ValidateConfigResponse
-			r := NewCheckResource().(resource.ResourceWithValidateConfig)
-			r.ValidateConfig(ctx, resource.ValidateConfigRequest{Config: config}, &resp)
+			})
 			if resp.Diagnostics.HasError() {
 				t.Fatal(resp.Diagnostics)
 			}
@@ -62,7 +59,9 @@ func TestCheckValidateConfigEnvironmentVariables(t *testing.T) {
 }
 
 // validateCheckConfig runs ValidateConfig on a configuration in which only
-// the given attributes are set.
+// the given attributes are set. An API check that the values give no request
+// gets a request with no attributes set, since a missing request is an error
+// of its own; set "request" to null to leave it out.
 func validateCheckConfig(t *testing.T, values map[string]tftypes.Value) resource.ValidateConfigResponse {
 	t.Helper()
 	ctx := context.Background()
@@ -70,6 +69,10 @@ func validateCheckConfig(t *testing.T, values map[string]tftypes.Value) resource
 	var schemaResp resource.SchemaResponse
 	NewCheckResource().Schema(ctx, resource.SchemaRequest{}, &schemaResp)
 	objectType := schemaResp.Schema.Type().TerraformType(ctx).(tftypes.Object)
+	if _, ok := values["request"]; !ok && values["type"].Equal(tftypes.NewValue(tftypes.String, "API")) {
+		values = maps.Clone(values)
+		values["request"] = objectWith(objectType.AttributeTypes["request"].(tftypes.Object), nil)
+	}
 	config := tfsdk.Config{Schema: schemaResp.Schema, Raw: objectWith(objectType, values)}
 
 	var resp resource.ValidateConfigResponse
@@ -252,6 +255,82 @@ func TestCheckModifyPlanEmptyScript(t *testing.T) {
 			}
 			if c.wantError && resp.Diagnostics.Errors()[0].Summary() != "Missing Check Script" {
 				t.Errorf("diagnostics = %v", resp.Diagnostics)
+			}
+		})
+	}
+}
+
+func TestCheckValidateConfigHighFrequency(t *testing.T) {
+	cases := map[string]struct {
+		checkType string
+		frequency tftypes.Value
+		wantError bool
+	}{
+		"api":                {checkType: "API", frequency: tftypes.NewValue(tftypes.Number, big.NewFloat(0))},
+		"browser":            {checkType: "BROWSER", frequency: tftypes.NewValue(tftypes.Number, big.NewFloat(0)), wantError: true},
+		"multi-step":         {checkType: "MULTI_STEP", frequency: tftypes.NewValue(tftypes.Number, big.NewFloat(0)), wantError: true},
+		"multi-step 1":       {checkType: "MULTI_STEP", frequency: tftypes.NewValue(tftypes.Number, big.NewFloat(1))},
+		"multi-step unknown": {checkType: "MULTI_STEP", frequency: tftypes.NewValue(tftypes.Number, tftypes.UnknownValue)},
+	}
+
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			resp := validateCheckConfig(t, map[string]tftypes.Value{
+				"type":                 tftypes.NewValue(tftypes.String, c.checkType),
+				frequencyAttributeName: c.frequency,
+			})
+			errors := resp.Diagnostics.Errors()
+			if !c.wantError {
+				if len(errors) > 0 {
+					t.Error(resp.Diagnostics)
+				}
+				return
+			}
+			if len(errors) != 1 {
+				t.Fatalf("want one error: %v", resp.Diagnostics)
+			}
+			if got, ok := errors[0].(interface{ Path() path.Path }); !ok || !got.Path().Equal(path.Root(frequencyAttributeName)) {
+				t.Errorf("error is not on %q: %v", frequencyAttributeName, errors[0])
+			}
+		})
+	}
+}
+
+func TestCheckValidateConfigMissingRequest(t *testing.T) {
+	ctx := context.Background()
+
+	var schemaResp resource.SchemaResponse
+	NewCheckResource().Schema(ctx, resource.SchemaRequest{}, &schemaResp)
+	requestType := schemaResp.Schema.Type().TerraformType(ctx).(tftypes.Object).AttributeTypes["request"]
+
+	cases := map[string]struct {
+		checkType string
+		request   tftypes.Value
+		wantError bool
+	}{
+		"api without request":      {checkType: "API", request: tftypes.NewValue(requestType, nil), wantError: true},
+		"api with unknown request": {checkType: "API", request: tftypes.NewValue(requestType, tftypes.UnknownValue)},
+		"browser without request":  {checkType: "BROWSER", request: tftypes.NewValue(requestType, nil)},
+	}
+
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			resp := validateCheckConfig(t, map[string]tftypes.Value{
+				"type":    tftypes.NewValue(tftypes.String, c.checkType),
+				"request": c.request,
+			})
+			errors := resp.Diagnostics.Errors()
+			if !c.wantError {
+				if len(errors) > 0 {
+					t.Error(resp.Diagnostics)
+				}
+				return
+			}
+			if len(errors) != 1 || errors[0].Summary() != "Missing Attribute Configuration" {
+				t.Fatalf("want one Missing Attribute Configuration error: %v", resp.Diagnostics)
+			}
+			if got, ok := errors[0].(interface{ Path() path.Path }); !ok || !got.Path().Equal(path.Root("request")) {
+				t.Errorf("error is not on %q: %v", "request", errors[0])
 			}
 		})
 	}

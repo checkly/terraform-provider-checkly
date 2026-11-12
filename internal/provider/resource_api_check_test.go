@@ -1527,3 +1527,84 @@ const apiCheckResource_withEmptyBasicAuth = `
 	}
   }
 `
+
+// TestAccApiCheckResourceEmptyBasicAuthImport verifies that empty basic auth
+// credentials stored by the API import as no basic_auth, so a configuration
+// without basic_auth plans no change after the import.
+func TestAccApiCheckResourceEmptyBasicAuthImport(t *testing.T) {
+	withoutBasicAuth := `
+		resource "checkly_api_check" "test" {
+			name      = "api check resource with empty basic_auth"
+			activated = false
+			frequency = 60
+			locations = ["eu-central-1"]
+			request = {
+				url = "https://api.checklyhq.com/public-stats"
+			}
+		}
+	`
+	withEmptyBasicAuth := `
+		resource "checkly_api_check" "test" {
+			name      = "api check resource with empty basic_auth"
+			activated = false
+			frequency = 60
+			locations = ["eu-central-1"]
+			request = {
+				url = "https://api.checklyhq.com/public-stats"
+				basic_auth = {
+					username = ""
+					password = ""
+				}
+			}
+		}
+	`
+
+	accTestCase(t, []resource.TestStep{
+		{
+			// Configured empty credentials are kept on refresh.
+			Config: withEmptyBasicAuth,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_api_check.test", "request.basic_auth.username", ""),
+				resource.TestCheckResourceAttr("checkly_api_check.test", "request.basic_auth.password", ""),
+			),
+		},
+		{
+			Config:          withoutBasicAuth,
+			ResourceName:    "checkly_api_check.test",
+			ImportState:     true,
+			ImportStateKind: resource.ImportBlockWithID,
+			ImportPlanChecks: resource.ImportPlanChecks{
+				PreApply: []plancheck.PlanCheck{
+					plancheck.ExpectResourceAction("checkly_api_check.test", plancheck.ResourceActionNoop),
+				},
+			},
+		},
+	})
+}
+
+func TestAccApiCheckResourceRequestValidation(t *testing.T) {
+	config := func(attributes string) string {
+		return fmt.Sprintf(`
+			resource "checkly_api_check" "test" {
+				name      = "api-check-resource-request-validation"
+				activated = false
+				locations = ["eu-central-1"]
+				%s
+			}
+		`, attributes)
+	}
+
+	accTestCase(t, []resource.TestStep{
+		{
+			Config:      config(`request = { url = "https://welcome.checklyhq.com", method = "get" }`),
+			ExpectError: regexp.MustCompile(`Attribute request.method value must be one of`),
+		},
+		{
+			Config: config(`
+				request = { url = "https://welcome.checklyhq.com" }
+				retry_strategy = { type = "FIXED", base_backoff_seconds = -1 }
+			`),
+			ExpectError: regexp.MustCompile(`Attribute retry_strategy.base_backoff_seconds value must be at least 0`),
+		},
+	})
+}

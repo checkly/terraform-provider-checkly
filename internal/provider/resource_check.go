@@ -212,12 +212,14 @@ func (r *CheckResource) ValidateConfig(ctx context.Context, req resource.Validat
 	var sslCheckDomain types.String
 	var shouldFail types.Bool
 	var environmentVariables types.List
+	var request types.Object
 
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("type"), &checkType)...)
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(frequencyAttributeName), &frequency)...)
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("ssl_check_domain"), &sslCheckDomain)...)
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(shouldFailAttributeName), &shouldFail)...)
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(environmentVariableAttributeName), &environmentVariables)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("request"), &request)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -228,13 +230,22 @@ func (r *CheckResource) ValidateConfig(ctx context.Context, req resource.Validat
 
 	// High frequency scheduling (frequency 0) is only available for API
 	// checks.
-	if checkType.ValueString() == string(checkly.CheckTypeBrowser) &&
+	if checkType.ValueString() != string(checkly.CheckTypeAPI) &&
 		!frequency.IsNull() && !frequency.IsUnknown() &&
 		frequency.ValueInt64() == 0 {
 		resp.Diagnostics.AddAttributeError(
 			path.Root(frequencyAttributeName),
 			"Invalid Attribute Combination",
-			"property frequency could only be 0 for API checks",
+			fmt.Sprintf(`"frequency" can be 0 (high frequency scheduling) only when "type" is "API"; %s checks run at most every minute. Set "frequency" to 1 or more.`, checkType.ValueString()),
+		)
+	}
+
+	// An API check without a request is rejected by the API.
+	if checkType.ValueString() == string(checkly.CheckTypeAPI) && request.IsNull() {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("request"),
+			"Missing Attribute Configuration",
+			`An API check needs a request: set "request" with at least its "url".`,
 		)
 	}
 
@@ -916,7 +927,7 @@ func checkToModel(ctx context.Context, check checkly.Check, model *CheckResource
 		model.TeardownSnippetID = int64ValueOrNull(typed.TearDownSnippetID)
 		model.LocalSetupScript = types.StringValue(valueOrZero(typed.LocalSetupScript))
 		model.LocalTeardownScript = types.StringValue(valueOrZero(typed.LocalTearDownScript))
-		model.Request = apiCheckRequestToObject(ctx, typed.Request, diags)
+		model.Request = apiCheckRequestToObject(ctx, typed.Request, prior.Request, diags)
 	case *checkly.BrowserCheck:
 		model.Type = types.StringValue(string(checkly.CheckTypeBrowser))
 		model.Script = types.StringValue(typed.Script)

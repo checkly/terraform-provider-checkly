@@ -273,7 +273,7 @@ Optional:
 
 Required:
 
-- `type` (String) The type of the device.
+- `type` (String) The type of the device. Possible values are `chromium`, `firefox` and `webkit`, which run the browsers Playwright downloads, and `chrome` and `msedge`, which run the branded Google Chrome and Microsoft Edge browsers.
 
 
 
@@ -290,7 +290,7 @@ Optional:
 
 Optional:
 
-- `command` (String) The command used to install dependencies prior to running Playwright. The default value is the appropriate install command for your package manager (e.g. `npm install` for `npm`).
+- `command` (String) The command used to install dependencies prior to running Playwright. The default value is the appropriate install command for your package manager (e.g. `npm install` for `npm`). Can't be empty: leave it out to use the default command.
 
 
 <a id="nestedatt--runtime--steps--test"></a>
@@ -298,7 +298,7 @@ Optional:
 
 Optional:
 
-- `command` (String) The command used to run Playwright. The default value is the appropriate exec command for your package manager (e.g. `npx playwright test` for `npm`).
+- `command` (String) The command used to run Playwright. The default value is the appropriate exec command for your package manager (e.g. `npx playwright test` for `npm`). Can't be empty: leave it out to use the default command.
 
 
 
@@ -323,5 +323,9 @@ The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/c
 ```shell
 # Import an existing Playwright check suite using its check ID.
 # You can find the ID in the check's URL in the Checkly dashboard.
+#
+# The code bundle is not imported: the API doesn't return the bundle's
+# metadata, so the first plan after the import shows an in-place update of
+# `bundle`, and the apply sends the bundle from the configuration.
 terraform import checkly_playwright_check_suite.example 3ffee447-5c86-4c56-b95a-2e1b4d1a1234
 ```
