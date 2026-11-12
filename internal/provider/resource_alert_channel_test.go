@@ -15,7 +15,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 
@@ -295,8 +294,8 @@ func TestAccWebhook(t *testing.T) {
 				resource.TestCheckNoResourceAttr("checkly_alert_channel.webhook_ac", "webhook.webhook_type"),
 			),
 			ConfigStateChecks: []statecheck.StateCheck{
-				statecheck.ExpectKnownValue("checkly_alert_channel.webhook_ac", tfjsonpath.New("webhook").AtMapKey("headers"), knownvalue.Null()),
-				statecheck.ExpectKnownValue("checkly_alert_channel.webhook_ac", tfjsonpath.New("webhook").AtMapKey("query_parameters"), knownvalue.Null()),
+				statecheck.ExpectKnownValue("checkly_alert_channel.webhook_ac", tfjsonpath.New("webhook").AtMapKey("headers"), emptyMap),
+				statecheck.ExpectKnownValue("checkly_alert_channel.webhook_ac", tfjsonpath.New("webhook").AtMapKey("query_parameters"), emptyMap),
 			},
 		},
 		// Optional strings configured as "" stay empty instead of refreshing

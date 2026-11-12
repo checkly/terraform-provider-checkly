@@ -41,8 +41,7 @@ type EnvironmentVariableAttributeSchemaOptions struct {
 }
 
 // makeEnvironmentVariableSchema returns the schema for the
-// environment_variables attribute. It is optional without a default, so
-// leaving it out stores null; see environmentVariablesToList.
+// environment_variables attribute. Leaving it out stores an empty list.
 //
 // The validators enforce the API's limits on the number of variables and the
 // length of their values. The API doesn't reject a check or check group
@@ -51,6 +50,8 @@ type EnvironmentVariableAttributeSchemaOptions struct {
 func makeEnvironmentVariableSchema(options EnvironmentVariableAttributeSchemaOptions) schema.ListNestedAttribute {
 	return schema.ListNestedAttribute{
 		Optional:    true,
+		Computed:    true,
+		Default:     emptyListDefault(types.ObjectType{AttrTypes: environmentVariableAttrTypes}),
 		Description: fmt.Sprintf("%s At most %d variables.", options.Description, maxEnvironmentVariables),
 		Validators: []validator.List{
 			listvalidator.SizeAtMost(maxEnvironmentVariables),
@@ -115,19 +116,13 @@ func environmentVariablesFromList(ctx context.Context, list types.List, diags *d
 }
 
 // environmentVariablesToList converts the API representation of environment
-// variables to the environment_variables attribute value. The API reports no
-// variables as an empty array, so no variables convert to null when prior
-// (the planned or previously stored value) is null or unknown, and to an
-// empty list when it is known.
+// variables to the environment_variables attribute value. No variables
+// convert to an empty list.
 //
 // The Checkly API does not return the value of secret environment variables.
 // For those, the value from prior is preserved, matched by key, so that the
 // resulting value stays consistent with the plan.
 func environmentVariablesToList(ctx context.Context, evs []checkly.EnvironmentVariable, prior types.List, diags *diag.Diagnostics) types.List {
-	if len(evs) == 0 && (prior.IsNull() || prior.IsUnknown()) {
-		return types.ListNull(types.ObjectType{AttrTypes: environmentVariableAttrTypes})
-	}
-
 	priorValues := map[string]types.String{}
 
 	if !prior.IsNull() && !prior.IsUnknown() {

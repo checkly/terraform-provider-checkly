@@ -305,9 +305,9 @@ func TestStatusPageV3AutomationRuleDuplicateComponents(t *testing.T) {
 	}
 }
 
-// The API reports no components as an empty array, which converts to null
-// unless the prior value is known.
-func TestStatusPageV3AutomationRuleComponentsNullVersusEmpty(t *testing.T) {
+// The API reports no components as an empty array, which converts to an
+// empty set whatever the prior value.
+func TestStatusPageV3AutomationRuleComponentsEmpty(t *testing.T) {
 	ctx := context.Background()
 	componentType := types.ObjectType{AttrTypes: statusPageV3AutomationRuleComponentAttrTypes}
 	empty := types.SetValueMust(componentType, nil)
@@ -316,8 +316,8 @@ func TestStatusPageV3AutomationRuleComponentsNullVersusEmpty(t *testing.T) {
 		prior types.Set
 		want  types.Set
 	}{
-		"prior null":    {prior: types.SetNull(componentType), want: types.SetNull(componentType)},
-		"prior unknown": {prior: types.SetUnknown(componentType), want: types.SetNull(componentType)},
+		"prior null":    {prior: types.SetNull(componentType), want: empty},
+		"prior unknown": {prior: types.SetUnknown(componentType), want: empty},
 		"prior empty":   {prior: empty, want: empty},
 	} {
 		t.Run(name, func(t *testing.T) {

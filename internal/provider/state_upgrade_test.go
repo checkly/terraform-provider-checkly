@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/defaults"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
@@ -134,6 +135,30 @@ func requireStateNull(t *testing.T, state tfsdk.State, p path.Path) {
 	}
 }
 
+// requireStateEmpty fails unless the collection at p is known and empty.
+func requireStateEmpty(t *testing.T, state tfsdk.State, p path.Path) {
+	t.Helper()
+
+	var got attr.Value
+	if diags := state.GetAttribute(context.Background(), p, &got); diags.HasError() {
+		t.Fatalf("%s: %v", p, diags)
+	}
+	var n int
+	switch v := got.(type) {
+	case types.Set:
+		n = len(v.Elements())
+	case types.List:
+		n = len(v.Elements())
+	case types.Map:
+		n = len(v.Elements())
+	default:
+		t.Fatalf("%s is a %T, want a collection", p, got)
+	}
+	if got.IsNull() || got.IsUnknown() || n != 0 {
+		t.Errorf("%s = %s, want empty", p, got)
+	}
+}
+
 // moveState runs the state mover of target, which has exactly one, on req.
 func moveState(t *testing.T, target resource.Resource, req resource.MoveStateRequest) resource.MoveStateResponse {
 	t.Helper()
@@ -184,10 +209,9 @@ func TestUpgradeSDKv2State(t *testing.T) {
 		requireStateNull(t, state, path.Root("alert_settings"))
 		// SDK v2 stored no subscriptions as an empty alert_channel_subscription
 		// list.
-		requireStateNull(t, state, path.Root(alertChannelSubscriptionAttributeName))
-		// SDK v2 stores no assertions as an empty list, which upgrades to
-		// null.
-		requireStateNull(t, state, path.Root("request").AtName("assertions"))
+		requireStateEmpty(t, state, path.Root(alertChannelSubscriptionAttributeName))
+		// SDK v2 stores no assertions as an empty list, which stays empty.
+		requireStateEmpty(t, state, path.Root("request").AtName("assertions"))
 	})
 
 	t.Run("ssl_monitor", func(t *testing.T) {
@@ -201,7 +225,7 @@ func TestUpgradeSDKv2State(t *testing.T) {
 		requireStateValue(t, state, request.AtName("security_baseline").AtName("enabled"), types.BoolValue(true))
 		requireStateValue(t, state, request.AtName("security_baseline").AtName("min_tls_version").AtName("value"), types.StringValue("TLS1.2"))
 		requireStateNull(t, state, request.AtName("security_baseline").AtName("known_bad_ca"))
-		requireStateNull(t, state, request.AtName("assertions"))
+		requireStateEmpty(t, state, request.AtName("assertions"))
 		requireStateValue(t, state, path.Root("retry_strategy").AtName("type"), types.StringValue("NO_RETRIES"))
 	})
 
@@ -221,16 +245,16 @@ func TestUpgradeSDKv2State(t *testing.T) {
 		requireStateValue(t, state, path.Root("api_check_defaults").AtName("basic_auth").AtName("username"), types.StringValue("u"))
 		// SDK v2 stored the unset headers, query_parameters and assertions of
 		// api_check_defaults as empty collections.
-		requireStateNull(t, state, path.Root("api_check_defaults").AtName("headers"))
-		requireStateNull(t, state, path.Root("api_check_defaults").AtName("query_parameters"))
-		requireStateNull(t, state, path.Root("api_check_defaults").AtName("assertions"))
+		requireStateEmpty(t, state, path.Root("api_check_defaults").AtName("headers"))
+		requireStateEmpty(t, state, path.Root("api_check_defaults").AtName("query_parameters"))
+		requireStateEmpty(t, state, path.Root("api_check_defaults").AtName("assertions"))
 		// SDK v2 stored default_runtime, setup_script and teardown_script as
 		// lists of at most one element, empty when not configured, and stored
 		// an unset snippet_id as 0.
 		requireStateValue(t, state, path.Root("default_runtime").AtName("runtime_id"), types.StringValue("2024.09"))
 		requireStateValue(t, state, path.Root("setup_script").AtName("inline_script"), types.StringValue("console.log('x')"))
 		requireStateNull(t, state, path.Root("setup_script").AtName("snippet_id"))
-		requireStateNull(t, state, path.Root(environmentVariableAttributeName))
+		requireStateEmpty(t, state, path.Root(environmentVariableAttributeName))
 		requireStateNull(t, state, path.Root("teardown_script"))
 	})
 
@@ -239,14 +263,14 @@ func TestUpgradeSDKv2State(t *testing.T) {
 		raw := sdkv2FixtureWith(t, "check_group_v2", func(obj map[string]any) {
 			obj["tags"] = []any{}
 		})
-		requireStateNull(t, upgradeSDKv2Raw(t, NewCheckGroupV2Resource(), raw), path.Root("tags"))
+		requireStateEmpty(t, upgradeSDKv2Raw(t, NewCheckGroupV2Resource(), raw), path.Root("tags"))
 	})
 
 	t.Run("check_group", func(t *testing.T) {
 		// SDK v2 stored unset tags and private_locations as empty sets.
 		state := upgradeSDKv2Fixture(t, NewCheckGroupResource(), "check_group")
-		requireStateNull(t, state, path.Root("tags"))
-		requireStateNull(t, state, path.Root("private_locations"))
+		requireStateEmpty(t, state, path.Root("tags"))
+		requireStateEmpty(t, state, path.Root("private_locations"))
 		requireStateValue(t, state, path.Root("locations"), types.SetValueMust(types.StringType, []attr.Value{types.StringValue("eu-central-1")}))
 		// SDK v2 stored no snippet as 0.
 		requireStateNull(t, state, path.Root("setup_snippet_id"))
@@ -255,7 +279,7 @@ func TestUpgradeSDKv2State(t *testing.T) {
 		raw := sdkv2FixtureWith(t, "check_group", func(obj map[string]any) {
 			obj["locations"] = []any{}
 		})
-		requireStateNull(t, upgradeSDKv2Raw(t, NewCheckGroupResource(), raw), path.Root("locations"))
+		requireStateEmpty(t, upgradeSDKv2Raw(t, NewCheckGroupResource(), raw), path.Root("locations"))
 	})
 
 	t.Run("check_group_v2 with default assertions", func(t *testing.T) {
@@ -281,7 +305,7 @@ func TestUpgradeSDKv2State(t *testing.T) {
 		// SDK v2 stored the subscriptions of enforce_alert_settings under
 		// the singular name, empty when there are none.
 		subscriptions := path.Root("enforce_alert_settings").AtName(alertChannelSubscriptionAttributeName)
-		requireStateNull(t, upgradeSDKv2Fixture(t, NewCheckGroupV2Resource(), "check_group_v2"), subscriptions)
+		requireStateEmpty(t, upgradeSDKv2Fixture(t, NewCheckGroupV2Resource(), "check_group_v2"), subscriptions)
 
 		raw := sdkv2FixtureWith(t, "check_group_v2", func(obj map[string]any) {
 			settings := obj["enforce_alert_settings"].([]any)[0].(map[string]any)
@@ -354,8 +378,8 @@ func TestUpgradeSDKv2State(t *testing.T) {
 		// SDK v2 stored no group and no position as 0.
 		requireStateNull(t, state, path.Root(groupIDAttributeName))
 		requireStateNull(t, state, path.Root(groupOrderAttributeName))
-		requireStateNull(t, state, path.Root("tags"))
-		requireStateNull(t, state, path.Root("private_locations"))
+		requireStateEmpty(t, state, path.Root("tags"))
+		requireStateEmpty(t, state, path.Root("private_locations"))
 		requireStateNull(t, state, path.Root("retry_strategy").AtName("only_on"))
 		requireStateValue(t, state, path.Root("name"), types.StringValue("u"))
 	})
@@ -386,8 +410,8 @@ func TestUpgradeSDKv2State(t *testing.T) {
 		requireStateNull(t, state, path.Root("email"))
 		requireStateNull(t, state, path.Root("slack_app"))
 		requireStateValue(t, state, path.Root("webhook").AtName("name"), types.StringValue("w"))
-		requireStateNull(t, state, path.Root("webhook").AtName("headers"))
-		requireStateNull(t, state, path.Root("webhook").AtName("query_parameters"))
+		requireStateEmpty(t, state, path.Root("webhook").AtName("headers"))
+		requireStateEmpty(t, state, path.Root("webhook").AtName("query_parameters"))
 		requireStateNull(t, state, path.Root("webhook").AtName("template"))
 		requireStateNull(t, state, path.Root("webhook").AtName("webhook_secret"))
 	})
@@ -441,7 +465,7 @@ func TestUpgradeSDKv2State(t *testing.T) {
 				"target_impact": types.StringValue("MAJOR_OUTAGE"),
 			})},
 		))
-		requireStateNull(t, upgrade(`[]`), path.Root("components"))
+		requireStateEmpty(t, upgrade(`[]`), path.Root("components"))
 	})
 
 	t.Run("ssl_monitor after refresh", func(t *testing.T) {
@@ -462,7 +486,9 @@ func TestUpgradeSDKv2State(t *testing.T) {
 		requireStateValue(t, state, visibility.AtName("severity"), types.StringValue("MAJOR"))
 		requireStateValue(t, state, visibility.AtName("auto_end"), types.BoolValue(false))
 		requireStateValue(t, state, visibility.AtName("status_page_ids"), types.SetValueMust(types.StringType, []attr.Value{types.StringValue("page")}))
-		requireStateNull(t, state, visibility.AtName("service_ids"))
+		requireStateEmpty(t, state, visibility.AtName("service_ids"))
+		// component_configs is new since SDK v2, so the state lacks it.
+		requireStateEmpty(t, state, visibility.AtName("component_configs"))
 	})
 
 	t.Run("maintenance_windows after refresh", func(t *testing.T) {
@@ -470,7 +496,7 @@ func TestUpgradeSDKv2State(t *testing.T) {
 		requireStateNull(t, state, path.Root("description"))
 		requireStateNull(t, state, path.Root("repeat_unit"))
 		requireStateNull(t, state, path.Root("repeat_interval"))
-		requireStateNull(t, state, path.Root("silence_alerts_tags"))
+		requireStateEmpty(t, state, path.Root("silence_alerts_tags"))
 		// Not configured, stored as [] by SDK v2.
 		requireStateNull(t, state, path.Root("status_page_visibility"))
 	})
@@ -486,7 +512,7 @@ func TestUpgradeSDKv2State(t *testing.T) {
 		requireStateNull(t, state, path.Root(aiAutoRepairEnabledAttributeName))
 		requireStateValue(t, state, path.Root("retry_strategy").AtName("type"), types.StringValue("FIXED"))
 		requireSDKv2CheckRequest(t, state)
-		requireStateNull(t, state, path.Root(alertChannelSubscriptionAttributeName))
+		requireStateEmpty(t, state, path.Root(alertChannelSubscriptionAttributeName))
 	})
 
 	t.Run("check with empty private_locations", func(t *testing.T) {
@@ -494,7 +520,7 @@ func TestUpgradeSDKv2State(t *testing.T) {
 		raw := sdkv2FixtureWith(t, "check", func(obj map[string]any) {
 			obj["private_locations"] = []any{}
 		})
-		requireStateNull(t, upgradeSDKv2Raw(t, NewCheckResource(), raw), path.Root("private_locations"))
+		requireStateEmpty(t, upgradeSDKv2Raw(t, NewCheckResource(), raw), path.Root("private_locations"))
 	})
 
 	t.Run("check_browser", func(t *testing.T) {
@@ -510,20 +536,20 @@ func TestUpgradeSDKv2State(t *testing.T) {
 		// SDK v2 stored no environment variables as an empty
 		// environment_variable list and a null environment_variables map.
 		state := upgradeSDKv2Fixture(t, NewCheckResource(), "check_multistep")
-		requireStateNull(t, state, path.Root(environmentVariableAttributeName))
+		requireStateEmpty(t, state, path.Root(environmentVariableAttributeName))
 	})
 }
 
 // requireSDKv2CheckRequest asserts the request upgraded from the "check"
 // fixture: the empty headers, query_parameters and assertions SDK v2 stored
-// for the unset optional collections are null, and the one-element
+// for the unset optional collections stay empty, and the one-element
 // basic_auth list is unwrapped into an object.
 func requireSDKv2CheckRequest(t *testing.T, state tfsdk.State) {
 	t.Helper()
 	request := path.Root("request")
-	requireStateNull(t, state, request.AtName("headers"))
-	requireStateNull(t, state, request.AtName("query_parameters"))
-	requireStateNull(t, state, request.AtName("assertions"))
+	requireStateEmpty(t, state, request.AtName("headers"))
+	requireStateEmpty(t, state, request.AtName("query_parameters"))
+	requireStateEmpty(t, state, request.AtName("assertions"))
 	requireStateValue(t, state, request.AtName("basic_auth").AtName("username"), types.StringValue("u"))
 }
 
@@ -551,6 +577,120 @@ func requireNormalizedSDKv2Object(t *testing.T, attrs map[string]schema.Attribut
 		got, _ := json.Marshal(obj)
 		t.Errorf("got %s, want %s", got, want)
 	}
+}
+
+// TestCollectionDefaultsAreEmpty walks every resource schema, at any depth,
+// and fails for a collection attribute whose default is not empty, or that is
+// optional without being computed. The SDK v2 state upgrader fills missing
+// collections with an empty value without evaluating their defaults, and
+// would null an empty optional, non-computed collection (see
+// emptyCollectionDefaultJSON and normalizeSDKv2Object).
+func TestCollectionDefaultsAreEmpty(t *testing.T) {
+	ctx := context.Background()
+
+	var walk func(path string, attrs map[string]schema.Attribute)
+	walk = func(path string, attrs map[string]schema.Attribute) {
+		for name, a := range attrs {
+			p := path + "." + name
+
+			var def attr.Value
+			collection := true
+			switch a := a.(type) {
+			case interface{ ListDefaultValue() defaults.List }:
+				if d := a.ListDefaultValue(); d != nil {
+					var resp defaults.ListResponse
+					d.DefaultList(ctx, defaults.ListRequest{}, &resp)
+					if len(resp.PlanValue.Elements()) != 0 || resp.PlanValue.IsNull() {
+						def = resp.PlanValue
+					}
+				}
+			case interface{ SetDefaultValue() defaults.Set }:
+				if d := a.SetDefaultValue(); d != nil {
+					var resp defaults.SetResponse
+					d.DefaultSet(ctx, defaults.SetRequest{}, &resp)
+					if len(resp.PlanValue.Elements()) != 0 || resp.PlanValue.IsNull() {
+						def = resp.PlanValue
+					}
+				}
+			case interface{ MapDefaultValue() defaults.Map }:
+				if d := a.MapDefaultValue(); d != nil {
+					var resp defaults.MapResponse
+					d.DefaultMap(ctx, defaults.MapRequest{}, &resp)
+					if len(resp.PlanValue.Elements()) != 0 || resp.PlanValue.IsNull() {
+						def = resp.PlanValue
+					}
+				}
+			default:
+				collection = false
+			}
+			if def != nil {
+				t.Errorf("%s: default %s, want an empty collection", p, def)
+			}
+			if collection && a.IsOptional() && !a.IsComputed() {
+				t.Errorf("%s: optional collection is not computed; give it an empty default", p)
+			}
+
+			switch a := a.(type) {
+			case schema.SingleNestedAttribute:
+				walk(p, a.Attributes)
+			case schema.ListNestedAttribute:
+				walk(p+"[]", a.NestedObject.Attributes)
+			case schema.SetNestedAttribute:
+				walk(p+"[]", a.NestedObject.Attributes)
+			case schema.MapNestedAttribute:
+				walk(p+"{}", a.NestedObject.Attributes)
+			}
+		}
+	}
+
+	for _, newResource := range New("test")().Resources(ctx) {
+		r := newResource()
+		var metadata resource.MetadataResponse
+		r.Metadata(ctx, resource.MetadataRequest{ProviderTypeName: "checkly"}, &metadata)
+		var schemaResp resource.SchemaResponse
+		r.Schema(ctx, resource.SchemaRequest{}, &schemaResp)
+		walk(metadata.TypeName, schemaResp.Schema.Attributes)
+	}
+}
+
+// Collections with an empty schema default keep the empty value SDK v2
+// stored for them, and are empty where the state lacks them or holds null,
+// as for a collection added since SDK v2. The schemas are reduced to the
+// attributes involved.
+func TestNormalizeSDKv2EmptyCollectionDefaults(t *testing.T) {
+	attrs := map[string]schema.Attribute{
+		"tags": schema.SetAttribute{
+			ElementType: types.StringType,
+			Optional:    true,
+			Computed:    true,
+			Default:     emptySetDefault(types.StringType),
+		},
+		"headers": schema.MapAttribute{
+			ElementType: types.StringType,
+			Optional:    true,
+			Computed:    true,
+			Default:     emptyMapDefault(types.StringType),
+		},
+		"request": schema.SingleNestedAttribute{
+			Optional: true,
+			Attributes: map[string]schema.Attribute{
+				"assertions": schema.SetNestedAttribute{
+					Optional: true,
+					Computed: true,
+					Default:  emptySetDefault(types.ObjectType{AttrTypes: map[string]attr.Type{"name": types.StringType}}),
+					NestedObject: schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{
+						"name": schema.StringAttribute{Required: true},
+					}},
+				},
+			},
+		},
+		"note": schema.StringAttribute{Optional: true},
+	}
+
+	requireNormalizedSDKv2Object(t, attrs, `{"tags":[],"headers":{},"request":[{"assertion":[]}]}`, `{"tags":[],"headers":{},"request":{"assertions":[]}}`)
+	requireNormalizedSDKv2Object(t, attrs, `{"tags":null,"request":[{}]}`, `{"tags":[],"headers":{},"request":{"assertions":[]}}`)
+	// A missing object stays null rather than gaining empty collections.
+	requireNormalizedSDKv2Object(t, attrs, `{"request":[]}`, `{"tags":[],"headers":{},"request":null}`)
 }
 
 // Collections that SDK v2 stored under a singular name move to their plural
@@ -733,7 +873,7 @@ func TestMoveSDKv2State(t *testing.T) {
 				requireStateValue(t, state, path.Root(environmentVariableAttributeName), environmentVariablesList(t, "K", "v"))
 				// checkly_check has no dependencies, so the moved check has
 				// none either.
-				requireStateNull(t, state, path.Root(scriptDependenciesAttributeName))
+				requireStateEmpty(t, state, path.Root(scriptDependenciesAttributeName))
 			},
 		},
 		"checkly_check to checkly_multistep_check": {
@@ -743,7 +883,7 @@ func TestMoveSDKv2State(t *testing.T) {
 			attr:       path.Root("script"),
 			want:       types.StringValue("console.log(2)"),
 			check: func(t *testing.T, state tfsdk.State) {
-				requireStateNull(t, state, path.Root(scriptDependenciesAttributeName))
+				requireStateEmpty(t, state, path.Root(scriptDependenciesAttributeName))
 			},
 		},
 		"checkly_tcp_check to checkly_tcp_monitor": {
@@ -772,7 +912,7 @@ func TestMoveSDKv2State(t *testing.T) {
 			check: func(t *testing.T, state tfsdk.State) {
 				visibility := path.Root("status_page_visibility")
 				requireStateValue(t, state, visibility.AtName("enabled"), types.BoolValue(true))
-				requireStateNull(t, state, visibility.AtName("service_ids"))
+				requireStateEmpty(t, state, visibility.AtName("service_ids"))
 			},
 		},
 		"checkly_check_group to checkly_check_group_v2": {
@@ -785,7 +925,7 @@ func TestMoveSDKv2State(t *testing.T) {
 				locations := path.Root("enforce_locations")
 				requireStateValue(t, state, locations.AtName("enabled"), types.BoolValue(true))
 				requireStateValue(t, state, locations.AtName("locations"), types.SetValueMust(types.StringType, []attr.Value{types.StringValue("eu-west-1")}))
-				requireStateNull(t, state, locations.AtName("private_locations"))
+				requireStateEmpty(t, state, locations.AtName("private_locations"))
 
 				scheduling := path.Root("enforce_scheduling_strategy")
 				requireStateValue(t, state, scheduling.AtName("enabled"), types.BoolValue(true))
@@ -803,7 +943,7 @@ func TestMoveSDKv2State(t *testing.T) {
 				requireStateNull(t, state, path.Root("setup_script").AtName("snippet_id"))
 				requireStateNull(t, state, path.Root("teardown_script"))
 				requireStateNull(t, state, path.Root("default_runtime"))
-				requireStateNull(t, state, path.Root("tags"))
+				requireStateEmpty(t, state, path.Root("tags"))
 				requireStateValue(t, state, path.Root(apiCheckDefaultsAttributeName).AtName("basic_auth").AtName("username"), types.StringValue("u"))
 			},
 		},

@@ -10,6 +10,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 
 	"github.com/checkly/checkly-go-sdk/v2"
 )
@@ -1541,13 +1543,9 @@ func TestAccDNSMonitorAlertChannelSubscriptions(t *testing.T) {
 					}
 				}
 			`,
-			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
-					"checkly_dns_monitor.test",
-					"alert_channel_subscriptions.#",
-					"0",
-				),
-			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue("checkly_dns_monitor.test", tfjsonpath.New("alert_channel_subscriptions"), emptySet),
+			},
 		},
 	})
 }
@@ -1607,8 +1605,10 @@ func TestAccDNSMonitorUnsetSweepBasics(t *testing.T) {
 				resource.TestCheckResourceAttr("checkly_dns_monitor.test", "use_global_alert_settings", "true"),
 				resource.TestCheckResourceAttr("checkly_dns_monitor.test", "degraded_response_time", "500"),
 				resource.TestCheckResourceAttr("checkly_dns_monitor.test", "max_response_time", "1000"),
-				resource.TestCheckNoResourceAttr("checkly_dns_monitor.test", "tags.#"),
 			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue("checkly_dns_monitor.test", tfjsonpath.New("tags"), emptySet),
+			},
 		},
 	})
 }
@@ -1693,9 +1693,9 @@ func TestAccDNSMonitorUnsetSweepLocations(t *testing.T) {
 					}
 				}
 			`,
-			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckNoResourceAttr("checkly_dns_monitor.test", "locations.#"),
-			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue("checkly_dns_monitor.test", tfjsonpath.New("locations"), emptySet),
+			},
 		},
 	})
 }
@@ -1746,8 +1746,10 @@ func TestAccDNSMonitorUnsetSweepRequest(t *testing.T) {
 			`,
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr("checkly_dns_monitor.test", "request.protocol", "UDP"),
-				resource.TestCheckNoResourceAttr("checkly_dns_monitor.test", "request.assertions"),
 			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue("checkly_dns_monitor.test", tfjsonpath.New("request").AtMapKey("assertions"), emptySet),
+			},
 		},
 	})
 }

@@ -312,6 +312,8 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 					},
 					"metadata": schema.SetNestedAttribute{
 						Optional:    true,
+						Computed:    true,
+						Default:     emptySetDefault(types.ObjectType{AttrTypes: grpcMonitorMetadataAttrTypes}),
 						Description: "gRPC metadata (request headers) sent with the call. At most 50 elements.",
 						Validators: []validator.Set{
 							setvalidator.SizeAtMost(50),
@@ -358,6 +360,8 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 					// generated from this schema.
 					"assertions": schema.SetNestedAttribute{
 						Optional:    true,
+						Computed:    true,
+						Default:     emptySetDefault(types.ObjectType{AttrTypes: assertionAttrTypes}),
 						Description: "A request can have multiple assertions. The allowed comparisons, properties, and target formats depend on the assertion source — see the [Assertion Reference](#assertion-reference) below.",
 						NestedObject: schema.NestedAttributeObject{
 							// Attributes nested in this set attribute must
@@ -807,10 +811,10 @@ func grpcMonitorToModel(ctx context.Context, c *checkly.GRPCMonitor, model *GRPC
 	model.Activated = types.BoolValue(c.Activated)
 	model.Muted = types.BoolValue(c.Muted)
 	model.RunParallel = types.BoolValue(c.RunParallel)
-	model.Locations = stringSetFromAPINullIfUnset(ctx, c.Locations, model.Locations, diags)
+	model.Locations = setFromStrings(ctx, c.Locations, diags)
 	model.DegradedResponseTime = types.Int64Value(int64(c.DegradedResponseTime))
 	model.MaxResponseTime = types.Int64Value(int64(c.MaxResponseTime))
-	model.Tags = stringSetFromAPINullIfUnset(ctx, c.Tags, model.Tags, diags)
+	model.Tags = setFromStrings(ctx, c.Tags, diags)
 
 	// The API does not track a runtime ID for monitors using the default
 	// runtime. A prior empty string is preserved because it converts to the
@@ -825,7 +829,7 @@ func grpcMonitorToModel(ctx context.Context, c *checkly.GRPCMonitor, model *GRPC
 	if c.PrivateLocations != nil {
 		privateLocations = *c.PrivateLocations
 	}
-	model.PrivateLocations = stringSetFromAPINullIfUnset(ctx, privateLocations, model.PrivateLocations, diags)
+	model.PrivateLocations = setFromStrings(ctx, privateLocations, diags)
 
 	model.AlertSettings = alertSettingsFromAPI(ctx, c.AlertSettings, model.AlertSettings, diags)
 
@@ -833,8 +837,8 @@ func grpcMonitorToModel(ctx context.Context, c *checkly.GRPCMonitor, model *GRPC
 	model.GroupID = int64ValueOrNull(c.GroupID)
 	model.GroupOrder = groupOrderFromAPI(c.GroupOrder, model.GroupOrder)
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, model.RetryStrategy, diags)
-	model.Request = grpcMonitorRequestToObject(ctx, c.Request, model.Request, diags)
-	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, model.AlertChannelSubscriptions, diags)
+	model.Request = grpcMonitorRequestToObject(ctx, c.Request, diags)
+	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, diags)
 	model.TriggerIncident = triggerIncidentToObject(ctx, c.TriggerIncident, diags)
 }
 
@@ -888,7 +892,7 @@ func grpcMonitorRequestFromModel(ctx context.Context, model GRPCMonitorRequestMo
 
 // grpcMonitorRequestToObject converts the API representation of a gRPC
 // request to the request attribute value.
-func grpcMonitorRequestToObject(ctx context.Context, r checkly.GRPCRequest, prior types.Object, diags *diag.Diagnostics) types.Object {
+func grpcMonitorRequestToObject(ctx context.Context, r checkly.GRPCRequest, diags *diag.Diagnostics) types.Object {
 	obj, d := types.ObjectValueFrom(ctx, grpcMonitorRequestAttrTypes, GRPCMonitorRequestModel{
 		Host:              types.StringValue(r.URL),
 		Port:              types.Int64Value(int64(grpcPortToInt(r.Port))),
@@ -904,8 +908,8 @@ func grpcMonitorRequestToObject(ctx context.Context, r checkly.GRPCRequest, prio
 		BfbsContent:       types.StringValue(r.GRPCConfig.BfbsContent),
 		Method:            types.StringValue(r.GRPCConfig.Method),
 		Message:           types.StringValue(r.GRPCConfig.Message),
-		Metadata:          grpcMonitorMetadataToSet(ctx, r.GRPCConfig.Metadata, priorAttribute(prior, "metadata", types.SetNull(types.ObjectType{AttrTypes: grpcMonitorMetadataAttrTypes})), diags),
-		Assertions:        assertionsToSet(ctx, r.Assertions, priorAssertions(prior), diags),
+		Metadata:          grpcMonitorMetadataToSet(ctx, r.GRPCConfig.Metadata, diags),
+		Assertions:        assertionsToSet(ctx, r.Assertions, diags),
 	})
 	diags.Append(d...)
 
@@ -953,9 +957,8 @@ func grpcMonitorMetadataFromSet(ctx context.Context, set types.Set, diags *diag.
 }
 
 // grpcMonitorMetadataToSet converts the API representation of gRPC metadata
-// to the request.metadata set value. No metadata converts to null when
-// prior, the planned or previously stored value, is null or unknown.
-func grpcMonitorMetadataToSet(ctx context.Context, metadata []checkly.GRPCMetadata, prior types.Set, diags *diag.Diagnostics) types.Set {
+// to the request.metadata set value. No metadata converts to an empty set.
+func grpcMonitorMetadataToSet(ctx context.Context, metadata []checkly.GRPCMetadata, diags *diag.Diagnostics) types.Set {
 	models := make([]GRPCMonitorMetadataModel, len(metadata))
 	for i, m := range metadata {
 		models[i] = GRPCMonitorMetadataModel{
@@ -967,5 +970,5 @@ func grpcMonitorMetadataToSet(ctx context.Context, metadata []checkly.GRPCMetada
 	set, d := types.SetValueFrom(ctx, types.ObjectType{AttrTypes: grpcMonitorMetadataAttrTypes}, models)
 	diags.Append(d...)
 
-	return setNullIfUnset(ctx, set, prior)
+	return set
 }

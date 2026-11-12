@@ -367,9 +367,9 @@ func checkGroupToModel(ctx context.Context, group *checkly.GroupV2, model *Check
 	model.Activated = types.BoolValue(group.Activated)
 	model.Muted = types.BoolValue(group.Muted)
 	model.RunParallel = types.BoolValue(valueOrZero(group.RunParallel))
-	model.Locations = stringSetFromAPINullIfUnset(ctx, group.Locations, model.Locations, diags)
-	model.PrivateLocations = stringSetFromAPINullIfUnset(ctx, valueOrZero(group.PrivateLocations), model.PrivateLocations, diags)
-	model.Tags = stringSetFromAPINullIfUnset(ctx, group.Tags, model.Tags, diags)
+	model.Locations = setFromStrings(ctx, group.Locations, diags)
+	model.PrivateLocations = setFromStrings(ctx, valueOrZero(group.PrivateLocations), diags)
+	model.Tags = setFromStrings(ctx, group.Tags, diags)
 	model.EnvironmentVariables = environmentVariablesToList(ctx, group.EnvironmentVariables, model.EnvironmentVariables, diags)
 	model.SetupSnippetID = int64ValueOrNull(valueOrZero(group.SetupSnippetID))
 	model.TeardownSnippetID = int64ValueOrNull(valueOrZero(group.TearDownSnippetID))
@@ -385,7 +385,7 @@ func checkGroupToModel(ctx context.Context, group *checkly.GroupV2, model *Check
 		model.RuntimeID = stringOrNullWhenUnknown(model.RuntimeID)
 	}
 
-	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, group.AlertChannelSubscriptions, model.AlertChannelSubscriptions, diags)
+	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, group.AlertChannelSubscriptions, diags)
 	model.AlertSettings = alertSettingsToObject(ctx, valueOrZero(group.AlertSettings), model.AlertSettings, diags)
 	model.UseGlobalAlertSettings = types.BoolValue(valueOrZero(group.UseGlobalAlertSettings))
 

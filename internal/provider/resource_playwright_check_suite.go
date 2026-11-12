@@ -641,17 +641,17 @@ func playwrightCheckSuiteToModel(
 	model.GroupID = int64ValueOrNull(check.GroupID)
 	model.GroupOrder = groupOrderFromAPI(check.GroupOrder, model.GroupOrder)
 
-	model.Locations = stringSetFromAPINullIfUnset(ctx, check.Locations, model.Locations, diags)
-	model.Tags = stringSetFromAPINullIfUnset(ctx, check.Tags, model.Tags, diags)
+	model.Locations = setFromStrings(ctx, check.Locations, diags)
+	model.Tags = setFromStrings(ctx, check.Tags, diags)
 
-	model.PrivateLocations = stringSetFromAPINullIfUnset(ctx, valueOrZero(check.PrivateLocations), model.PrivateLocations, diags)
+	model.PrivateLocations = setFromStrings(ctx, valueOrZero(check.PrivateLocations), diags)
 
 	model.EnvironmentVariables = environmentVariablesToList(ctx, check.EnvironmentVariables, model.EnvironmentVariables, diags)
 
-	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, check.AlertChannelSubscriptions, model.AlertChannelSubscriptions, diags)
+	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, check.AlertChannelSubscriptions, diags)
 
 	model.TriggerIncident = triggerIncidentToObject(ctx, check.TriggerIncident, diags)
-	model.Intent = checkIntentToObject(ctx, check.Intent, model.Intent, diags)
+	model.Intent = checkIntentToObject(ctx, check.Intent, diags)
 	model.AIAutoRepairEnabled = types.BoolPointerValue(check.AIAutoRepairEnabled)
 
 	alertSettings := check.AlertSettings

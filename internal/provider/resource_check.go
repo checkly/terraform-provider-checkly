@@ -875,11 +875,11 @@ func checkToModel(ctx context.Context, check checkly.Check, model *CheckResource
 	model.Muted = types.BoolValue(c.Muted)
 	model.ShouldFail = types.BoolValue(c.ShouldFail)
 	model.RunParallel = types.BoolValue(c.RunParallel)
-	model.Locations = stringSetFromAPINullIfUnset(ctx, c.Locations, prior.Locations, diags)
-	model.Tags = stringSetFromAPINullIfUnset(ctx, c.Tags, prior.Tags, diags)
+	model.Locations = setFromStrings(ctx, c.Locations, diags)
+	model.Tags = setFromStrings(ctx, c.Tags, diags)
 	model.RuntimeID = stringValueOrPriorEmpty(valueOrZero(c.RuntimeID), prior.RuntimeID)
-	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, prior.AlertChannelSubscriptions, diags)
-	model.PrivateLocations = stringSetFromAPINullIfUnset(ctx, valueOrZero(c.PrivateLocations), prior.PrivateLocations, diags)
+	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, diags)
+	model.PrivateLocations = setFromStrings(ctx, valueOrZero(c.PrivateLocations), diags)
 	// When the API reports no alert settings, the prior value is kept;
 	// converting the absence of a value would overwrite the stored values
 	// with empty ones. Unknown values cannot be stored in state and resolve
@@ -898,7 +898,7 @@ func checkToModel(ctx context.Context, check checkly.Check, model *CheckResource
 	model.GroupOrder = groupOrderFromAPI(c.GroupOrder, model.GroupOrder)
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, prior.RetryStrategy, diags)
 	model.TriggerIncident = triggerIncidentToObject(ctx, c.TriggerIncident, diags)
-	model.Intent = checkIntentToObject(ctx, c.Intent, prior.Intent, diags)
+	model.Intent = checkIntentToObject(ctx, c.Intent, diags)
 	model.AIAutoRepairEnabled = types.BoolPointerValue(c.AIAutoRepairEnabled)
 
 	switch typed := check.(type) {
@@ -916,7 +916,7 @@ func checkToModel(ctx context.Context, check checkly.Check, model *CheckResource
 		model.TeardownSnippetID = int64ValueOrNull(typed.TearDownSnippetID)
 		model.LocalSetupScript = types.StringValue(valueOrZero(typed.LocalSetupScript))
 		model.LocalTeardownScript = types.StringValue(valueOrZero(typed.LocalTearDownScript))
-		model.Request = apiCheckRequestToObject(ctx, typed.Request, prior.Request, diags)
+		model.Request = apiCheckRequestToObject(ctx, typed.Request, diags)
 	case *checkly.BrowserCheck:
 		model.Type = types.StringValue(string(checkly.CheckTypeBrowser))
 		model.Script = types.StringValue(typed.Script)

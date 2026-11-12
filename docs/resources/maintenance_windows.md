@@ -148,7 +148,7 @@ Required:
 Optional:
 
 - `affect_all_components` (Boolean) Mark every component of the status page as affected, including components added later. Can't be combined with `components`. (Default `false`).
-- `components` (Attributes Set) The affected components of the status page, each with the status it shows while the maintenance is in progress. Required unless `affect_all_components` is `true`, and can't be an empty set: leave it out instead. (see [below for nested schema](#nestedatt--status_page_visibility--component_configs--components))
+- `components` (Attributes Set) The affected components of the status page, each with the status it shows while the maintenance is in progress. Required unless `affect_all_components` is `true`; an empty set means the same as leaving it out. (see [below for nested schema](#nestedatt--status_page_visibility--component_configs--components))
 
 <a id="nestedatt--status_page_visibility--component_configs--components"></a>
 ### Nested Schema for `status_page_visibility.component_configs.components`

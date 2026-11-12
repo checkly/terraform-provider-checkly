@@ -35,8 +35,7 @@ type AlertChannelSubscriptionAttributeSchemaOptions struct {
 }
 
 // makeAlertChannelSubscriptionSchema returns the schema for the
-// alert_channel_subscriptions attribute. It is optional without a default, so
-// leaving it out stores null; see alertChannelSubscriptionsToSet.
+// alert_channel_subscriptions attribute. Leaving it out stores an empty set.
 func makeAlertChannelSubscriptionSchema(options AlertChannelSubscriptionAttributeSchemaOptions) schema.SetNestedAttribute {
 	name := string(options.Subject)
 
@@ -54,6 +53,8 @@ func makeAlertChannelSubscriptionSchema(options AlertChannelSubscriptionAttribut
 
 	return schema.SetNestedAttribute{
 		Optional:    true,
+		Computed:    true,
+		Default:     emptySetDefault(types.ObjectType{AttrTypes: alertChannelSubscriptionAttrTypes}),
 		Description: description,
 		NestedObject: schema.NestedAttributeObject{
 			Attributes: map[string]schema.Attribute{
@@ -98,14 +99,8 @@ func alertChannelSubscriptionsFromSet(ctx context.Context, set types.Set, diags 
 
 // alertChannelSubscriptionsToSet converts the API representation of alert
 // channel subscriptions to the alert_channel_subscriptions attribute value.
-// The API reports no subscriptions as an empty array, so no subscriptions
-// convert to null when the prior value (planned or previously stored) is null
-// or unknown, and to an empty set when it is an empty set.
-func alertChannelSubscriptionsToSet(ctx context.Context, subs []checkly.AlertChannelSubscription, prior types.Set, diags *diag.Diagnostics) types.Set {
-	if len(subs) == 0 && (prior.IsNull() || prior.IsUnknown()) {
-		return types.SetNull(types.ObjectType{AttrTypes: alertChannelSubscriptionAttrTypes})
-	}
-
+// No subscriptions convert to an empty set.
+func alertChannelSubscriptionsToSet(ctx context.Context, subs []checkly.AlertChannelSubscription, diags *diag.Diagnostics) types.Set {
 	models := make([]AlertChannelSubscriptionModel, len(subs))
 	for i, sub := range subs {
 		models[i] = AlertChannelSubscriptionModel{

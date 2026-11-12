@@ -961,20 +961,16 @@ func TestAccApiCheckUnsetSweepCollections(t *testing.T) {
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckNoResourceAttr(
-					"checkly_api_check.test",
-					"locations.#",
-				),
-				resource.TestCheckNoResourceAttr(
-					"checkly_api_check.test",
-					"tags.#",
-				),
 				resource.TestCheckResourceAttr(
 					"checkly_api_check.test",
 					"private_locations.#",
 					"1",
 				),
 			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue("checkly_api_check.test", tfjsonpath.New("tags"), emptySet),
+				statecheck.ExpectKnownValue("checkly_api_check.test", tfjsonpath.New("locations"), emptySet),
+			},
 		},
 		// An explicitly empty private_locations is stored as an empty set.
 		// The check needs a public location again to remain valid.
@@ -999,7 +995,7 @@ func TestAccApiCheckUnsetSweepCollections(t *testing.T) {
 				),
 			},
 		},
-		// Leaving private_locations out stores null.
+		// Leaving private_locations out stores an empty set.
 		{
 			Config: privateLocation + `
 				resource "checkly_api_check" "test" {
@@ -1023,7 +1019,7 @@ func TestAccApiCheckUnsetSweepCollections(t *testing.T) {
 				statecheck.ExpectKnownValue(
 					"checkly_api_check.test",
 					tfjsonpath.New("private_locations"),
-					knownvalue.Null(),
+					emptySet,
 				),
 			},
 		},
@@ -1176,16 +1172,14 @@ func TestAccApiCheckUnsetSweepGroupAndAlerts(t *testing.T) {
 					"checkly_api_check.test",
 					"group_order",
 				),
-				resource.TestCheckResourceAttr(
-					"checkly_api_check.test",
-					"alert_channel_subscriptions.#",
-					"0",
-				),
 				resource.TestCheckNoResourceAttr(
 					"checkly_api_check.test",
 					"trigger_incident",
 				),
 			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue("checkly_api_check.test", tfjsonpath.New("alert_channel_subscriptions"), emptySet),
+			},
 		},
 	})
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/defaults"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
@@ -26,10 +27,11 @@ import (
 //   - Single nested objects were blocks limited to one element, which SDK v2
 //     stores as a JSON array: `[{...}]`, or `[]` when the block is absent.
 //     They are single nested attributes now.
-//   - SDK v2 cannot store null for an unset string, number or collection, so
-//     state refreshed by it holds `""`, `0`, `[]` or `{}` instead. Several Read
+//   - SDK v2 cannot store null for an unset string or number, so state
+//     refreshed by it holds `""` or `0` instead. Several Read
 //     implementations keep such prior values, so they would never become
-//     null again and every plan would propose removing them.
+//     null again and every plan would propose removing them. Unset
+//     collections are stored as empty by both implementations.
 //   - Repeated blocks are list or set nested attributes now, and every
 //     collection has a plural name where SDK v2 used the singular name of a
 //     repeated block or attribute (see sdkv2PluralRenames). The
@@ -49,8 +51,9 @@ const sdkv2SchemaVersion = 0
 // by the current schema: values stored under the singular name of a
 // collection the schema now names in the plural are moved to the plural name,
 // every value at a single nested position is unwrapped from its one-element
-// array, empty strings, zero numbers and empty collections of optional,
-// non-computed attributes become null, and attributes the current schema no
+// array, empty strings and zero numbers of optional, non-computed attributes
+// become null, collections are kept as stored or, where the state lacks them,
+// filled with their empty default, and attributes the current schema no
 // longer has are dropped. All other values carry over unchanged; Read
 // refreshes them from the API afterwards.
 //
@@ -120,15 +123,24 @@ func upgradeSDKv2RawState(ctx context.Context, raw *tfprotov6.RawState, s schema
 // under the SDK v2 names of renamed collections move to the names in attrs
 // (see renameSDKv2Collections), every single nested attribute described by
 // attrs holds an object (or null) instead of a list of at most one object,
-// and every optional, non-computed attribute holds null instead of an empty
-// string, zero number or empty collection. The current schemas have no
-// blocks, so attrs describes everything obj may hold.
+// every optional, non-computed string or number holds null instead of an
+// empty string or zero number, and every collection keeps its stored value
+// or, where it is null or missing, holds its empty schema default. Every
+// optional collection of the current schemas is computed (see
+// TestCollectionDefaultsAreEmpty), so the zero-value rule never nulls one.
+// The current schemas have no blocks, so attrs describes everything obj may
+// hold.
 func normalizeSDKv2Object(obj map[string]any, attrs map[string]schema.Attribute) {
 	renameSDKv2Collections(obj, attrs)
 
 	for name, attr := range attrs {
 		value, ok := obj[name]
 		if !ok || value == nil {
+			// A collection added since SDK v2, such as one in an object that
+			// existed then, is missing from the state.
+			if empty := emptyCollectionDefaultJSON(attr); empty != nil {
+				obj[name] = empty
+			}
 			continue
 		}
 
@@ -162,6 +174,30 @@ func normalizeSDKv2Object(obj map[string]any, attrs map[string]schema.Attribute)
 		obj[name] = value
 	}
 
+}
+
+// emptyCollectionDefaultJSON returns the JSON value of the default of a
+// collection attribute with a schema default, or nil for any other attribute.
+// It returns an empty collection without evaluating the default, relying on
+// every collection default of the provider being empty (see emptySetDefault);
+// TestCollectionDefaultsAreEmpty fails if a collection gets a non-empty
+// default, which this function would then have to evaluate instead.
+func emptyCollectionDefaultJSON(attr schema.Attribute) any {
+	switch attr := attr.(type) {
+	case interface{ ListDefaultValue() defaults.List }:
+		if attr.ListDefaultValue() != nil {
+			return []any{}
+		}
+	case interface{ SetDefaultValue() defaults.Set }:
+		if attr.SetDefaultValue() != nil {
+			return []any{}
+		}
+	case interface{ MapDefaultValue() defaults.Map }:
+		if attr.MapDefaultValue() != nil {
+			return map[string]any{}
+		}
+	}
+	return nil
 }
 
 // sdkv2PluralRenames maps the current plural name of a collection to the

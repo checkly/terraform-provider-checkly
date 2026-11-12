@@ -175,6 +175,8 @@ func (r *URLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 					},
 					"assertions": schema.SetNestedAttribute{
 						Optional:    true,
+						Computed:    true,
+						Default:     emptySetDefault(types.ObjectType{AttrTypes: assertionAttrTypes}),
 						Description: "Assertions to validate the HTTP response. URL monitors only support status code assertions.",
 						NestedObject: schema.NestedAttributeObject{
 							// Attributes nested in this set attribute must
@@ -428,15 +430,15 @@ func urlMonitorToModel(ctx context.Context, c *checkly.URLMonitor, model *URLMon
 	model.Muted = types.BoolValue(c.Muted)
 	model.ShouldFail = types.BoolValue(c.ShouldFail)
 	model.RunParallel = types.BoolValue(c.RunParallel)
-	model.Locations = stringSetFromAPINullIfUnset(ctx, c.Locations, model.Locations, diags)
+	model.Locations = setFromStrings(ctx, c.Locations, diags)
 	model.DegradedResponseTime = types.Int64Value(int64(c.DegradedResponseTime))
 	model.MaxResponseTime = types.Int64Value(int64(c.MaxResponseTime))
-	model.Tags = stringSetFromAPINullIfUnset(ctx, c.Tags, model.Tags, diags)
+	model.Tags = setFromStrings(ctx, c.Tags, diags)
 
 	model.AlertSettings = alertSettingsFromAPI(ctx, c.AlertSettings, model.AlertSettings, diags)
 
 	model.UseGlobalAlertSettings = types.BoolValue(c.UseGlobalAlertSettings)
-	model.Request = urlMonitorRequestToObject(ctx, c.Request, model.Request, diags)
+	model.Request = urlMonitorRequestToObject(ctx, c.Request, diags)
 	model.GroupID = int64ValueOrNull(c.GroupID)
 	model.GroupOrder = groupOrderFromAPI(c.GroupOrder, model.GroupOrder)
 
@@ -444,9 +446,9 @@ func urlMonitorToModel(ctx context.Context, c *checkly.URLMonitor, model *URLMon
 	if c.PrivateLocations != nil {
 		privateLocations = *c.PrivateLocations
 	}
-	model.PrivateLocations = stringSetFromAPINullIfUnset(ctx, privateLocations, model.PrivateLocations, diags)
+	model.PrivateLocations = setFromStrings(ctx, privateLocations, diags)
 
-	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, model.AlertChannelSubscriptions, diags)
+	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, diags)
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, model.RetryStrategy, diags)
 	model.TriggerIncident = triggerIncidentToObject(ctx, c.TriggerIncident, diags)
 }
@@ -470,12 +472,12 @@ func urlMonitorRequestFromObject(ctx context.Context, obj types.Object, diags *d
 
 // urlMonitorRequestToObject converts the API representation of the request
 // to the request attribute value.
-func urlMonitorRequestToObject(ctx context.Context, r checkly.URLRequest, prior types.Object, diags *diag.Diagnostics) types.Object {
+func urlMonitorRequestToObject(ctx context.Context, r checkly.URLRequest, diags *diag.Diagnostics) types.Object {
 	obj, d := types.ObjectValueFrom(ctx, urlMonitorRequestAttrTypes, URLMonitorRequestModel{
 		URL:             types.StringValue(r.URL),
 		FollowRedirects: types.BoolValue(r.FollowRedirects),
 		SkipSSL:         types.BoolValue(r.SkipSSL),
-		Assertions:      assertionsToSet(ctx, r.Assertions, priorAssertions(prior), diags),
+		Assertions:      assertionsToSet(ctx, r.Assertions, diags),
 		IPFamily:        types.StringValue(string(r.IPFamily)),
 	})
 	diags.Append(d...)

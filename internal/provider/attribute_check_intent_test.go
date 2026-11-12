@@ -19,6 +19,7 @@ import (
 	tfresource "github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 )
@@ -48,65 +49,28 @@ func stringList(t *testing.T, values ...string) types.List {
 	return list
 }
 
-func TestStringListFromAPINullIfUnset(t *testing.T) {
-	ctx := context.Background()
-	null := types.ListNull(types.StringType)
-	empty := stringList(t)
-	values := stringList(t, "a", "b")
-
-	cases := map[string]struct {
-		values []string
-		prior  types.List
-		want   types.List
-	}{
-		"empty with a null prior stays null":       {nil, null, null},
-		"empty with an unknown prior becomes null": {[]string{}, types.ListUnknown(types.StringType), null},
-		"empty with an empty prior stays empty":    {[]string{}, empty, empty},
-		"values replace a null prior":              {[]string{"a", "b"}, null, values},
-		"empty replaces a prior with values":       {nil, values, empty},
-	}
-
-	for name, c := range cases {
-		t.Run(name, func(t *testing.T) {
-			var diags diag.Diagnostics
-			if got := stringListFromAPINullIfUnset(ctx, c.values, c.prior, &diags); !got.Equal(c.want) {
-				t.Errorf("stringListFromAPINullIfUnset = %s, want %s", got, c.want)
-			}
-			if diags.HasError() {
-				t.Fatal(diags)
-			}
-		})
-	}
-}
-
 func TestCheckIntentToObject(t *testing.T) {
 	ctx := context.Background()
-	null := types.ListNull(types.StringType)
 	empty := stringList(t)
 	objectNull := types.ObjectNull(checkIntentAttrTypes)
 
 	cases := map[string]struct {
 		intent *checkly.CheckIntent
-		prior  types.Object
 		want   types.Object
 	}{
 		"no intent": {
-			prior: checkIntentObject(t, "goal", null, null),
-			want:  objectNull,
+			want: objectNull,
 		},
-		"a goal with a null prior": {
+		"a goal with empty statement lists": {
 			intent: &checkly.CheckIntent{Goal: "goal", RequiredOutcomes: []string{}, MustPreserve: []string{}},
-			prior:  objectNull,
-			want:   checkIntentObject(t, "goal", null, null),
+			want:   checkIntentObject(t, "goal", empty, empty),
 		},
-		"empty lists stay as configured": {
-			intent: &checkly.CheckIntent{Goal: "goal", RequiredOutcomes: []string{}, MustPreserve: []string{}},
-			prior:  checkIntentObject(t, "goal", empty, null),
-			want:   checkIntentObject(t, "goal", empty, null),
+		"a goal with missing statement lists": {
+			intent: &checkly.CheckIntent{Goal: "goal"},
+			want:   checkIntentObject(t, "goal", empty, empty),
 		},
 		"statements keep their order": {
 			intent: &checkly.CheckIntent{Goal: "goal", RequiredOutcomes: []string{"b", "a"}, MustPreserve: []string{"c"}},
-			prior:  objectNull,
 			want:   checkIntentObject(t, "goal", stringList(t, "b", "a"), stringList(t, "c")),
 		},
 	}
@@ -114,7 +78,7 @@ func TestCheckIntentToObject(t *testing.T) {
 	for name, c := range cases {
 		t.Run(name, func(t *testing.T) {
 			var diags diag.Diagnostics
-			if got := checkIntentToObject(ctx, c.intent, c.prior, &diags); !got.Equal(c.want) {
+			if got := checkIntentToObject(ctx, c.intent, &diags); !got.Equal(c.want) {
 				t.Errorf("checkIntentToObject = %s, want %s", got, c.want)
 			}
 			if diags.HasError() {
@@ -428,13 +392,15 @@ func testAccCheckIntent(t *testing.T, c checkIntentCase) {
 			Check: tfresource.ComposeTestCheckFunc(
 				tfresource.TestCheckResourceAttr(c.resource, "intent.required_outcomes.0", "the title shows"),
 				tfresource.TestCheckResourceAttr(c.resource, "intent.required_outcomes.1", "the page loads"),
-				tfresource.TestCheckNoResourceAttr(c.resource, "intent.must_preserve.#"),
 				tfresource.TestCheckResourceAttr(c.resource, "ai_auto_repair_enabled", "true"),
 				stored(&checkly.CheckIntent{
 					Goal:             goal,
 					RequiredOutcomes: []string{"the title shows", "the page loads"},
 				}, &repairOn),
 			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue(c.resource, tfjsonpath.New("intent").AtMapKey("must_preserve"), emptyList),
+			},
 		},
 		{
 			ResourceName:            c.resource,
@@ -453,11 +419,13 @@ func testAccCheckIntent(t *testing.T, c checkIntentCase) {
 				}
 			`, goal)),
 			Check: tfresource.ComposeTestCheckFunc(
-				tfresource.TestCheckResourceAttr(c.resource, "intent.required_outcomes.#", "0"),
-				tfresource.TestCheckResourceAttr(c.resource, "intent.must_preserve.#", "0"),
 				tfresource.TestCheckNoResourceAttr(c.resource, "ai_auto_repair_enabled"),
 				stored(&checkly.CheckIntent{Goal: goal}, nil),
 			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue(c.resource, tfjsonpath.New("intent").AtMapKey("must_preserve"), emptyList),
+				statecheck.ExpectKnownValue(c.resource, tfjsonpath.New("intent").AtMapKey("required_outcomes"), emptyList),
+			},
 		},
 		{
 			Config: c.config(name, ""),

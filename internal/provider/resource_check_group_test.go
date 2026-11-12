@@ -439,13 +439,9 @@ func TestAccCheckGroupEnvironmentVariableRemoval(t *testing.T) {
 					locations   = ["eu-central-1"]
 				}
 			`,
-			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
-					"checkly_check_group.test",
-					"environment_variables.#",
-					"0",
-				),
-			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue("checkly_check_group.test", tfjsonpath.New("environment_variables"), emptyList),
+			},
 		},
 	})
 }
@@ -1065,8 +1061,8 @@ func TestAccCheckGroupUnsetSweepScalars(t *testing.T) {
 				resource.TestCheckResourceAttr("checkly_check_group.test", "local_teardown_script", ""),
 			),
 			ConfigStateChecks: []statecheck.StateCheck{
-				statecheck.ExpectKnownValue("checkly_check_group.test", tfjsonpath.New("locations"), knownvalue.Null()),
-				statecheck.ExpectKnownValue("checkly_check_group.test", tfjsonpath.New("tags"), knownvalue.Null()),
+				statecheck.ExpectKnownValue("checkly_check_group.test", tfjsonpath.New("locations"), emptySet),
+				statecheck.ExpectKnownValue("checkly_check_group.test", tfjsonpath.New("tags"), emptySet),
 			},
 		},
 	})
@@ -1181,15 +1177,15 @@ func TestAccCheckGroupUnsetSweepPrivateLocations(t *testing.T) {
 				}
 			`, slug),
 			ConfigStateChecks: []statecheck.StateCheck{
-				statecheck.ExpectKnownValue("checkly_check_group.test", tfjsonpath.New("private_locations"), knownvalue.Null()),
+				statecheck.ExpectKnownValue("checkly_check_group.test", tfjsonpath.New("private_locations"), emptySet),
 			},
 		},
 	})
 }
 
 // TestAccCheckGroupEmptyCollections verifies that explicitly empty
-// collections are stored as empty sets and that leaving them out stores
-// null, without drift in either case. A group needs no location.
+// collections and collections left out are both stored as empty sets,
+// without drift in either case. A group needs no location.
 func TestAccCheckGroupEmptyCollections(t *testing.T) {
 	const r = "checkly_check_group.test"
 	collections := []string{"locations", "private_locations", "tags"}
@@ -1223,7 +1219,7 @@ func TestAccCheckGroupEmptyCollections(t *testing.T) {
 					concurrency = 1
 				}
 			`,
-			ConfigStateChecks: stateChecks(knownvalue.Null()),
+			ConfigStateChecks: stateChecks(emptySet),
 		},
 	})
 }
@@ -1293,13 +1289,13 @@ func TestAccCheckGroupUnsetSweepAPICheckDefaults(t *testing.T) {
 				resource.TestCheckNoResourceAttr("checkly_check_group.test", "api_check_defaults.basic_auth.%"),
 			),
 			ConfigStateChecks: []statecheck.StateCheck{
-				statecheck.ExpectKnownValue("checkly_check_group.test", tfjsonpath.New("api_check_defaults").AtMapKey("headers"), knownvalue.Null()),
-				statecheck.ExpectKnownValue("checkly_check_group.test", tfjsonpath.New("api_check_defaults").AtMapKey("query_parameters"), knownvalue.Null()),
-				statecheck.ExpectKnownValue("checkly_check_group.test", tfjsonpath.New("api_check_defaults").AtMapKey("assertions"), knownvalue.Null()),
+				statecheck.ExpectKnownValue("checkly_check_group.test", tfjsonpath.New("api_check_defaults").AtMapKey("headers"), emptyMap),
+				statecheck.ExpectKnownValue("checkly_check_group.test", tfjsonpath.New("api_check_defaults").AtMapKey("query_parameters"), emptyMap),
+				statecheck.ExpectKnownValue("checkly_check_group.test", tfjsonpath.New("api_check_defaults").AtMapKey("assertions"), emptySet),
 			},
 		},
 		// Step 3: remove the whole object; it must reset to the default, an
-		// empty url with null collections.
+		// empty url with empty collections.
 		{
 			Config: `
 				resource "checkly_check_group" "test" {
@@ -1314,9 +1310,9 @@ func TestAccCheckGroupUnsetSweepAPICheckDefaults(t *testing.T) {
 				resource.TestCheckNoResourceAttr("checkly_check_group.test", "api_check_defaults.basic_auth.%"),
 			),
 			ConfigStateChecks: []statecheck.StateCheck{
-				statecheck.ExpectKnownValue("checkly_check_group.test", tfjsonpath.New("api_check_defaults").AtMapKey("headers"), knownvalue.Null()),
-				statecheck.ExpectKnownValue("checkly_check_group.test", tfjsonpath.New("api_check_defaults").AtMapKey("query_parameters"), knownvalue.Null()),
-				statecheck.ExpectKnownValue("checkly_check_group.test", tfjsonpath.New("api_check_defaults").AtMapKey("assertions"), knownvalue.Null()),
+				statecheck.ExpectKnownValue("checkly_check_group.test", tfjsonpath.New("api_check_defaults").AtMapKey("headers"), emptyMap),
+				statecheck.ExpectKnownValue("checkly_check_group.test", tfjsonpath.New("api_check_defaults").AtMapKey("query_parameters"), emptyMap),
+				statecheck.ExpectKnownValue("checkly_check_group.test", tfjsonpath.New("api_check_defaults").AtMapKey("assertions"), emptySet),
 			},
 		},
 	})
@@ -1480,13 +1476,9 @@ func TestAccCheckGroupAlertChannelSubscriptions(t *testing.T) {
 					locations   = ["eu-central-1"]
 				}
 			`,
-			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
-					"checkly_check_group.test",
-					"alert_channel_subscriptions.#",
-					"0",
-				),
-			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue("checkly_check_group.test", tfjsonpath.New("alert_channel_subscriptions"), emptySet),
+			},
 		},
 	})
 }
@@ -1842,7 +1834,7 @@ func TestAccCheckGroupMovedToV2(t *testing.T) {
 			useGlobalAlertSettings: "true",
 		},
 		// Only private locations: enforce_locations holds them, and its
-		// locations stay null.
+		// locations stay empty.
 		"private_locations": {
 			v1: `
 				resource "checkly_check_group" "test" {

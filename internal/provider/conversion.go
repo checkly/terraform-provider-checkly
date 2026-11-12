@@ -8,6 +8,10 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/defaults"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapdefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 
@@ -52,12 +56,6 @@ func setFromStrings(ctx context.Context, values []string, diags *diag.Diagnostic
 	return set
 }
 
-// stringSetFromAPINullIfUnset converts a string slice from the API to a set
-// of strings, null when empty and unset before (see setNullIfUnset).
-func stringSetFromAPINullIfUnset(ctx context.Context, values []string, prior types.Set, diags *diag.Diagnostics) types.Set {
-	return setNullIfUnset(ctx, setFromStrings(ctx, values, diags), prior)
-}
-
 // stringsFromList converts a list of strings to a Go slice. Null and unknown
 // lists convert to nil.
 func stringsFromList(ctx context.Context, list types.List, diags *diag.Diagnostics) []string {
@@ -82,33 +80,6 @@ func listFromStrings(ctx context.Context, values []string, diags *diag.Diagnosti
 	diags.Append(d...)
 
 	return list
-}
-
-// stringListFromAPINullIfUnset converts a string slice from the API to a list
-// of strings, null when empty and unset before (see listNullIfUnset).
-func stringListFromAPINullIfUnset(ctx context.Context, values []string, prior types.List, diags *diag.Diagnostics) types.List {
-	return listNullIfUnset(ctx, listFromStrings(ctx, values, diags), prior)
-}
-
-// listNullIfUnset is setNullIfUnset for lists.
-func listNullIfUnset(ctx context.Context, list types.List, prior types.List) types.List {
-	if len(list.Elements()) == 0 && (prior.IsNull() || prior.IsUnknown()) {
-		return types.ListNull(list.ElementType(ctx))
-	}
-
-	return list
-}
-
-// setNullIfUnset returns a null set in place of an empty set when the prior
-// value (planned or previously stored) is null or unknown. The API reports an
-// unset collection as empty, so an optional attribute absent from the
-// configuration thus stays null instead of drifting to an empty set.
-func setNullIfUnset(ctx context.Context, set types.Set, prior types.Set) types.Set {
-	if len(set.Elements()) == 0 && (prior.IsNull() || prior.IsUnknown()) {
-		return types.SetNull(set.ElementType(ctx))
-	}
-
-	return set
 }
 
 // keyValuesFromStringMap converts a map of strings to the API's key-value
@@ -139,14 +110,9 @@ func keyValuesFromStringMap(ctx context.Context, m types.Map, diags *diag.Diagno
 	return kvs
 }
 
-// stringMapFromAPINullIfUnset converts the API's key-value pair
-// representation to a map of strings. No pairs convert to null when prior is
-// null or unknown, by the same rule as setNullIfUnset.
-func stringMapFromAPINullIfUnset(ctx context.Context, kvs []checkly.KeyValue, prior types.Map, diags *diag.Diagnostics) types.Map {
-	if len(kvs) == 0 && (prior.IsNull() || prior.IsUnknown()) {
-		return types.MapNull(types.StringType)
-	}
-
+// stringMapFromKeyValues converts the API's key-value pair representation
+// to a map of strings. No pairs convert to an empty map.
+func stringMapFromKeyValues(ctx context.Context, kvs []checkly.KeyValue, diags *diag.Diagnostics) types.Map {
 	values := map[string]string{}
 	for _, kv := range kvs {
 		values[kv.Key] = kv.Value
@@ -156,6 +122,50 @@ func stringMapFromAPINullIfUnset(ctx context.Context, kvs []checkly.KeyValue, pr
 	diags.Append(d...)
 
 	return m
+}
+
+// Optional collection attributes are computed with an empty default, so that
+// a collection the configuration leaves out is stored as empty rather than
+// null, the same way the API reports it. Expressions such as length() then
+// work on it without a null check, and an import plans no change for it.
+
+// emptySetDefault returns the schema default of an optional set attribute:
+// an empty set of elemType.
+func emptySetDefault(elemType attr.Type) defaults.Set {
+	return setdefault.StaticValue(types.SetValueMust(elemType, []attr.Value{}))
+}
+
+// emptyListDefault returns the schema default of an optional list
+// attribute: an empty list of elemType.
+func emptyListDefault(elemType attr.Type) defaults.List {
+	return listdefault.StaticValue(types.ListValueMust(elemType, []attr.Value{}))
+}
+
+// emptyMapDefault returns the schema default of an optional map attribute:
+// an empty map of elemType.
+func emptyMapDefault(elemType attr.Type) defaults.Map {
+	return mapdefault.StaticValue(types.MapValueMust(elemType, map[string]attr.Value{}))
+}
+
+// emptySetIfNull returns an empty set of the element type of set in place of
+// a null set, and set itself otherwise. It suits values carried over from a
+// prior or source value that may be null, such as when nothing is stored yet,
+// into an attribute that stores an empty set when unset.
+func emptySetIfNull(ctx context.Context, set types.Set) types.Set {
+	if set.IsNull() {
+		return types.SetValueMust(set.ElementType(ctx), []attr.Value{})
+	}
+
+	return set
+}
+
+// emptyListIfNull is emptySetIfNull for lists.
+func emptyListIfNull(ctx context.Context, list types.List) types.List {
+	if list.IsNull() {
+		return types.ListValueMust(list.ElementType(ctx), []attr.Value{})
+	}
+
+	return list
 }
 
 // priorAttribute returns the attribute called name of prior, the planned or

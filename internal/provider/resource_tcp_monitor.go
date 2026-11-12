@@ -174,6 +174,8 @@ func (r *TCPMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 					},
 					"assertions": schema.SetNestedAttribute{
 						Optional:    true,
+						Computed:    true,
+						Default:     emptySetDefault(types.ObjectType{AttrTypes: assertionAttrTypes}),
 						Description: "A request can have multiple assertions.",
 						NestedObject: schema.NestedAttributeObject{
 							// Attributes nested in this set attribute must
@@ -433,16 +435,12 @@ func tcpMonitorToModel(ctx context.Context, c *checkly.TCPMonitor, model *TCPMon
 	model.ShouldFail = types.BoolValue(c.ShouldFail)
 	model.RunParallel = types.BoolValue(c.RunParallel)
 
-	// The API reports no locations as an empty array. Preserve a prior null
-	// value so that an unset attribute stays unset.
-	model.Locations = stringSetFromAPINullIfUnset(ctx, c.Locations, model.Locations, diags)
+	model.Locations = setFromStrings(ctx, c.Locations, diags)
 
 	model.DegradedResponseTime = types.Int64Value(int64(c.DegradedResponseTime))
 	model.MaxResponseTime = types.Int64Value(int64(c.MaxResponseTime))
 
-	// The API reports no tags as an empty array. Preserve a prior null value
-	// so that an unset attribute stays unset.
-	model.Tags = stringSetFromAPINullIfUnset(ctx, c.Tags, model.Tags, diags)
+	model.Tags = setFromStrings(ctx, c.Tags, diags)
 
 	// The API does not track a runtime ID for monitors using the default
 	// runtime. A prior empty string is preserved because it converts to the
@@ -457,7 +455,7 @@ func tcpMonitorToModel(ctx context.Context, c *checkly.TCPMonitor, model *TCPMon
 	if c.PrivateLocations != nil {
 		privateLocations = *c.PrivateLocations
 	}
-	model.PrivateLocations = stringSetFromAPINullIfUnset(ctx, privateLocations, model.PrivateLocations, diags)
+	model.PrivateLocations = setFromStrings(ctx, privateLocations, diags)
 
 	model.AlertSettings = alertSettingsFromAPI(ctx, c.AlertSettings, model.AlertSettings, diags)
 
@@ -465,8 +463,8 @@ func tcpMonitorToModel(ctx context.Context, c *checkly.TCPMonitor, model *TCPMon
 	model.GroupID = int64ValueOrNull(c.GroupID)
 	model.GroupOrder = groupOrderFromAPI(c.GroupOrder, model.GroupOrder)
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, model.RetryStrategy, diags)
-	model.Request = tcpMonitorRequestToObject(ctx, c.Request, model.Request, diags)
-	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, model.AlertChannelSubscriptions, diags)
+	model.Request = tcpMonitorRequestToObject(ctx, c.Request, diags)
+	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, diags)
 	model.TriggerIncident = triggerIncidentToObject(ctx, c.TriggerIncident, diags)
 }
 
@@ -489,12 +487,12 @@ func tcpMonitorRequestFromObject(ctx context.Context, obj types.Object, diags *d
 
 // tcpMonitorRequestToObject converts the API representation of a TCP request
 // to the request attribute value.
-func tcpMonitorRequestToObject(ctx context.Context, request checkly.TCPRequest, prior types.Object, diags *diag.Diagnostics) types.Object {
+func tcpMonitorRequestToObject(ctx context.Context, request checkly.TCPRequest, diags *diag.Diagnostics) types.Object {
 	obj, d := types.ObjectValue(tcpMonitorRequestAttrTypes, map[string]attr.Value{
 		"hostname":   types.StringValue(request.Hostname),
 		"port":       types.Int64Value(int64(request.Port)),
 		"data":       types.StringValue(request.Data),
-		"assertions": assertionsToSet(ctx, request.Assertions, priorAssertions(prior), diags),
+		"assertions": assertionsToSet(ctx, request.Assertions, diags),
 		"ip_family":  types.StringValue(string(request.IPFamily)),
 	})
 	diags.Append(d...)

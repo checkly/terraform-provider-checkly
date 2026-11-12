@@ -56,10 +56,7 @@ func testStatusPageVisibility(t *testing.T, statusPageIDs []string, configs type
 	t.Helper()
 	ctx := context.Background()
 	var diags diag.Diagnostics
-	pageIDs := types.SetNull(types.StringType)
-	if statusPageIDs != nil {
-		pageIDs = setFromStrings(ctx, statusPageIDs, &diags)
-	}
+	pageIDs := setFromStrings(ctx, statusPageIDs, &diags)
 	obj, d := types.ObjectValueFrom(ctx, maintenanceWindowStatusPageVisibilityAttrTypes, MaintenanceWindowStatusPageVisibilityModel{
 		Enabled:               types.BoolValue(true),
 		Severity:              types.StringNull(),
@@ -67,12 +64,12 @@ func testStatusPageVisibility(t *testing.T, statusPageIDs []string, configs type
 		NotifyOnStart:         types.BoolValue(false),
 		NotifyOnEnd:           types.BoolValue(false),
 		SuppressAutoIncidents: types.BoolValue(false),
-		ReminderMinutesBefore: types.SetNull(types.Int64Type),
+		ReminderMinutesBefore: types.SetValueMust(types.Int64Type, []attr.Value{}),
 		AutoStart:             types.BoolValue(true),
 		AutoEnd:               types.BoolValue(true),
 		ShowAffectedServices:  types.BoolValue(true),
 		StatusPageIDs:         pageIDs,
-		ServiceIDs:            types.SetNull(types.StringType),
+		ServiceIDs:            types.SetValueMust(types.StringType, []attr.Value{}),
 		ComponentConfigs:      configs,
 	})
 	diags.Append(d...)
@@ -99,7 +96,7 @@ func plannedComponentConfigs(t *testing.T) types.Set {
 		MaintenanceWindowComponentConfigModel{
 			StatusPageID:        types.StringValue(testV3PageB),
 			AffectAllComponents: types.BoolValue(true),
-			Components:          types.SetNull(types.ObjectType{AttrTypes: maintenanceWindowComponentImpactAttrTypes}),
+			Components:          testComponents(t),
 		},
 	)
 }
@@ -182,50 +179,30 @@ func TestMaintenanceWindowComponentConfigsFromObjectSendsEmpty(t *testing.T) {
 	}
 }
 
-// Empty component configs from the API stay null where the prior value had
-// them null, and stay an empty set where the prior value was one, like the
-// other collections of status_page_visibility.
+// No component configs from the API, and no components in an entry, read as
+// empty sets whatever the prior value holds, like the other collections of
+// status_page_visibility.
 func TestMaintenanceWindowComponentConfigsToSetEmpty(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
-	configType := types.ObjectType{AttrTypes: maintenanceWindowComponentConfigAttrTypes}
-	empty := testComponentConfigs(t)
-	for name, tc := range map[string]struct {
-		prior types.Set
-		want  types.Set
-	}{
-		"null prior":    {prior: types.SetNull(configType), want: types.SetNull(configType)},
-		"unknown prior": {prior: types.SetUnknown(configType), want: types.SetNull(configType)},
-		"empty prior":   {prior: empty, want: empty},
-	} {
-		t.Run(name, func(t *testing.T) {
-			var diags diag.Diagnostics
-			got := maintenanceWindowComponentConfigsToSet(ctx, []checkly.MaintenanceWindowComponentConfig{}, tc.prior, &diags)
-			if diags.HasError() {
-				t.Fatal(diags)
-			}
-			if !got.Equal(tc.want) {
-				t.Errorf("component_configs = %v, want %v", got, tc.want)
-			}
-		})
+
+	var diags diag.Diagnostics
+	got := maintenanceWindowComponentConfigsToSet(ctx, []checkly.MaintenanceWindowComponentConfig{}, &diags)
+	if diags.HasError() {
+		t.Fatal(diags)
+	}
+	if want := testComponentConfigs(t); !got.Equal(want) {
+		t.Errorf("component_configs = %v, want %v", got, want)
 	}
 
-	// An entry's empty components list reads as null whatever the prior
-	// entry holds, since a configured empty set is rejected by validation.
-	prior := testComponentConfigs(t, MaintenanceWindowComponentConfigModel{
+	want := testComponentConfigs(t, MaintenanceWindowComponentConfigModel{
 		StatusPageID:        types.StringValue(testV3PageA),
 		AffectAllComponents: types.BoolValue(true),
 		Components:          testComponents(t),
 	})
-	want := testComponentConfigs(t, MaintenanceWindowComponentConfigModel{
-		StatusPageID:        types.StringValue(testV3PageA),
-		AffectAllComponents: types.BoolValue(true),
-		Components:          types.SetNull(types.ObjectType{AttrTypes: maintenanceWindowComponentImpactAttrTypes}),
-	})
-	var diags diag.Diagnostics
-	got := maintenanceWindowComponentConfigsToSet(ctx, []checkly.MaintenanceWindowComponentConfig{
+	got = maintenanceWindowComponentConfigsToSet(ctx, []checkly.MaintenanceWindowComponentConfig{
 		{StatusPageID: testV3PageA, AffectAllComponents: true},
-	}, prior, &diags)
+	}, &diags)
 	if diags.HasError() {
 		t.Fatal(diags)
 	}
@@ -241,30 +218,39 @@ func TestMaintenanceWindowComponentConfigsWithDefaults(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 	withDefaults := objectWithSetDefaults("component_configs", maintenanceWindowComponentConfigsWithDefaults)
-	configured := testStatusPageVisibility(t, []string{testV3PageA, testV3PageB}, testComponentConfigs(t,
-		MaintenanceWindowComponentConfigModel{
-			StatusPageID:        types.StringValue(testV3PageA),
-			AffectAllComponents: types.BoolUnknown(),
-			Components: testComponents(t,
-				MaintenanceWindowComponentImpactModel{ComponentID: types.StringValue(testV3CompA), Status: types.StringValue("MAJOR_OUTAGE")},
-				MaintenanceWindowComponentImpactModel{ComponentID: types.StringValue(testV3CompB), Status: types.StringUnknown()},
-			),
-		},
-		MaintenanceWindowComponentConfigModel{
-			StatusPageID:        types.StringValue(testV3PageB),
-			AffectAllComponents: types.BoolValue(true),
-			Components:          types.SetNull(types.ObjectType{AttrTypes: maintenanceWindowComponentImpactAttrTypes}),
-		},
-	))
+	impactType := types.ObjectType{AttrTypes: maintenanceWindowComponentImpactAttrTypes}
 
 	var diags diag.Diagnostics
-	got := withDefaults(ctx, configured, &diags)
-	if diags.HasError() {
-		t.Fatal(diags)
-	}
-	want := testStatusPageVisibility(t, []string{testV3PageA, testV3PageB}, plannedComponentConfigs(t))
-	if !got.Equal(want) {
-		t.Errorf("status_page_visibility = %v, want %v", got, want)
+	// An unset components is null in the configuration and unknown in the
+	// plan, since the attribute is computed; both become an empty set.
+	for name, unsetComponents := range map[string]types.Set{
+		"null components":    types.SetNull(impactType),
+		"unknown components": types.SetUnknown(impactType),
+	} {
+		configured := testStatusPageVisibility(t, []string{testV3PageA, testV3PageB}, testComponentConfigs(t,
+			MaintenanceWindowComponentConfigModel{
+				StatusPageID:        types.StringValue(testV3PageA),
+				AffectAllComponents: types.BoolUnknown(),
+				Components: testComponents(t,
+					MaintenanceWindowComponentImpactModel{ComponentID: types.StringValue(testV3CompA), Status: types.StringValue("MAJOR_OUTAGE")},
+					MaintenanceWindowComponentImpactModel{ComponentID: types.StringValue(testV3CompB), Status: types.StringUnknown()},
+				),
+			},
+			MaintenanceWindowComponentConfigModel{
+				StatusPageID:        types.StringValue(testV3PageB),
+				AffectAllComponents: types.BoolValue(true),
+				Components:          unsetComponents,
+			},
+		))
+
+		got := withDefaults(ctx, configured, &diags)
+		if diags.HasError() {
+			t.Fatal(diags)
+		}
+		want := testStatusPageVisibility(t, []string{testV3PageA, testV3PageB}, plannedComponentConfigs(t))
+		if !got.Equal(want) {
+			t.Errorf("%s: status_page_visibility = %v, want %v", name, got, want)
+		}
 	}
 
 	null := types.ObjectNull(maintenanceWindowStatusPageVisibilityAttrTypes)
@@ -343,6 +329,11 @@ func TestValidateMaintenanceWindowComponentConfigs(t *testing.T) {
 			wantError: "Missing Components",
 		},
 		{
+			name:    "affect all with empty components",
+			pages:   linked,
+			configs: testComponentConfigs(t, entry(pageA, types.BoolValue(true), testComponents(t))),
+		},
+		{
 			name:  "component listed twice",
 			pages: linked,
 			configs: testComponentConfigs(t, entry(pageA, types.BoolNull(), testComponents(t,
@@ -391,26 +382,22 @@ func TestValidateMaintenanceWindowComponentConfigs(t *testing.T) {
 
 func TestInt64SetFromInts(t *testing.T) {
 	ctx := context.Background()
-	null := types.SetNull(types.Int64Type)
 	empty := types.SetValueMust(types.Int64Type, []attr.Value{})
 	values := types.SetValueMust(types.Int64Type, []attr.Value{types.Int64Value(15), types.Int64Value(60)})
 
 	cases := map[string]struct {
 		values []int
-		prior  types.Set
 		want   types.Set
 	}{
-		"empty with a null prior stays null":       {nil, null, null},
-		"empty with an unknown prior becomes null": {[]int{}, types.SetUnknown(types.Int64Type), null},
-		"empty with an empty prior stays empty":    {[]int{}, empty, empty},
-		"values replace a null prior":              {[]int{15, 60}, null, values},
-		"empty replaces a prior with values":       {nil, values, empty},
+		"nil":    {nil, empty},
+		"empty":  {[]int{}, empty},
+		"values": {[]int{15, 60}, values},
 	}
 
 	for name, c := range cases {
 		t.Run(name, func(t *testing.T) {
 			var diags diag.Diagnostics
-			if got := int64SetFromInts(ctx, c.values, c.prior, &diags); !got.Equal(c.want) {
+			if got := int64SetFromInts(ctx, c.values, &diags); !got.Equal(c.want) {
 				t.Errorf("int64SetFromInts = %s, want %s", got, c.want)
 			}
 			if diags.HasError() {

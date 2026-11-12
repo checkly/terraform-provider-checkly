@@ -27,11 +27,13 @@ var scriptDependencyAttrTypes = map[string]attr.Type{
 }
 
 // makeScriptDependenciesSchema returns the schema for the dependencies
-// attribute of browser and multistep checks. It is optional without a
-// default, so leaving it out stores null; see scriptDependenciesToList.
+// attribute of browser and multistep checks. Leaving it out stores an empty
+// list.
 func makeScriptDependenciesSchema() schema.ListNestedAttribute {
 	return schema.ListNestedAttribute{
 		Optional:    true,
+		Computed:    true,
+		Default:     emptyListDefault(types.ObjectType{AttrTypes: scriptDependencyAttrTypes}),
 		Description: "Script dependency files for editor-style multi-file scripts. Use together with `script_path` to mirror a multi-file layout. The Checkly API does not preserve the configured order, so after an import the first plan can show the dependencies reordered to match the configuration; applying it once settles the order.",
 		NestedObject: schema.NestedAttributeObject{
 			Attributes: map[string]schema.Attribute{
@@ -79,15 +81,9 @@ func scriptDependenciesFromList(ctx context.Context, list types.List, diags *dia
 // dependencies to the dependencies attribute value. The API does not preserve
 // the configured order of dependencies, so the prior list's order (matched by
 // path) is kept where possible; dependencies without a prior entry are
-// appended in API order. The API reports no dependencies as an empty array,
-// so no dependencies convert to null when the prior value is null or unknown,
-// and to an empty list when it is known.
+// appended in API order. No dependencies convert to an empty list.
 func scriptDependenciesToList(ctx context.Context, deps []checkly.ScriptDependency, prior types.List, diags *diag.Diagnostics) types.List {
 	elementType := types.ObjectType{AttrTypes: scriptDependencyAttrTypes}
-
-	if len(deps) == 0 && (prior.IsNull() || prior.IsUnknown()) {
-		return types.ListNull(elementType)
-	}
 
 	byPath := make(map[string]checkly.ScriptDependency, len(deps))
 	for _, dep := range deps {

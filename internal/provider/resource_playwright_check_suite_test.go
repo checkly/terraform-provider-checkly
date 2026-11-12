@@ -8,6 +8,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 )
 
 const playwrightCheckSuiteBase = `
@@ -203,13 +205,15 @@ func TestAccPlaywrightCheckSuitePrivateLocationsOnly(t *testing.T) {
 				}
 			`, slug),
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckNoResourceAttr("checkly_playwright_check_suite.test", "locations.#"),
 				resource.TestCheckResourceAttr("checkly_playwright_check_suite.test", "private_locations.#", "1"),
 			),
 			ConfigPlanChecks: resource.ConfigPlanChecks{
 				PostApplyPostRefresh: []plancheck.PlanCheck{
 					plancheck.ExpectEmptyPlan(),
 				},
+			},
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue("checkly_playwright_check_suite.test", tfjsonpath.New("locations"), emptySet),
 			},
 		},
 	})
@@ -1601,12 +1605,9 @@ func TestAccPlaywrightCheckSuiteEnvironmentVariableRemoval(t *testing.T) {
 					}
 				}
 			`,
-			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckNoResourceAttr(
-					"checkly_playwright_check_suite.test",
-					"environment_variables.#",
-				),
-			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue("checkly_playwright_check_suite.test", tfjsonpath.New("environment_variables"), emptyList),
+			},
 		},
 	})
 }

@@ -96,16 +96,21 @@ var checkGroupV2EnforceSchedulingStrategyAttrTypes = map[string]attr.Type{
 }
 
 // checkGroupV2DisabledEnforcementObject returns the canonical attribute
-// value for a disabled enforcement: enabled is false and all other members
-// are null. Enforcement attributes default to this value, which means that
-// removing an enforcement from the configuration plans a change back to the
-// disabled enforcement.
+// value for a disabled enforcement: enabled is false, collections are empty,
+// as their schema defaults make them, and all other members are null.
+// Enforcement attributes default to this value, which means that removing an
+// enforcement from the configuration plans a change back to the disabled
+// enforcement.
 func checkGroupV2DisabledEnforcementObject(attrTypes map[string]attr.Type) types.Object {
 	attrValues := make(map[string]attr.Value, len(attrTypes))
 
 	for name, attrType := range attrTypes {
 		if name == "enabled" {
 			attrValues[name] = types.BoolValue(false)
+			continue
+		}
+		if setType, ok := attrType.(types.SetType); ok {
+			attrValues[name] = types.SetValueMust(setType.ElemType, []attr.Value{})
 			continue
 		}
 
@@ -208,11 +213,15 @@ func (r *CheckGroupV2Resource) Schema(ctx context.Context, req resource.SchemaRe
 					"locations": schema.SetAttribute{
 						ElementType: types.StringType,
 						Optional:    true,
+						Computed:    true,
+						Default:     emptySetDefault(types.StringType),
 						Description: "An array of one or more data center locations where to run the checks.",
 					},
 					"private_locations": schema.SetAttribute{
 						ElementType: types.StringType,
 						Optional:    true,
+						Computed:    true,
+						Default:     emptySetDefault(types.StringType),
 						Description: "An array of one or more private locations slugs.",
 					},
 				},
@@ -522,8 +531,9 @@ func (r *CheckGroupV2Resource) MoveState(ctx context.Context) []resource.StateMo
 //
 // Values carry over unchanged except for the representations that differ
 // between the two resource types:
-//   - Empty collections, environment variables included, become null, which
-//     is what checkly_check_group_v2 stores for an omitted collection.
+//   - Null collections, which state written before collections defaulted to
+//     empty may hold, become empty, as checkly_check_group_v2 stores an
+//     omitted collection.
 //   - Alert settings with an empty escalation type are what
 //     checkly_check_group stores for a group without alert settings, and
 //     become null.
@@ -536,24 +546,14 @@ func (r *CheckGroupV2Resource) MoveState(ctx context.Context) []resource.StateMo
 //   - double_check is dropped: retry_strategy already holds the strategy it
 //     stands for.
 func checkGroupV2ModelFromCheckGroupModel(ctx context.Context, source *CheckGroupResourceModel, diags *diag.Diagnostics) CheckGroupV2ResourceModel {
-	// A null prior makes setNullIfUnset return null for every empty set.
-	nullIfEmpty := func(set types.Set) types.Set {
-		return setNullIfUnset(ctx, set, types.SetNull(set.ElementType(ctx)))
-	}
-
-	environmentVariables := source.EnvironmentVariables
-	if len(environmentVariables.Elements()) == 0 {
-		environmentVariables = types.ListNull(environmentVariables.ElementType(ctx))
-	}
-
 	target := CheckGroupV2ResourceModel{
 		ID:                   source.ID,
 		Name:                 source.Name,
 		Concurrency:          source.Concurrency,
 		Activated:            source.Activated,
 		Muted:                source.Muted,
-		Tags:                 nullIfEmpty(source.Tags),
-		EnvironmentVariables: environmentVariables,
+		Tags:                 emptySetIfNull(ctx, source.Tags),
+		EnvironmentVariables: emptyListIfNull(ctx, source.EnvironmentVariables),
 		APICheckDefaults:     source.APICheckDefaults,
 		SetupScript: checkGroupV2ScriptToObject(
 			pointerOrNilWhenZero(source.SetupSnippetID.ValueInt64()),
@@ -574,17 +574,15 @@ func checkGroupV2ModelFromCheckGroupModel(ctx context.Context, source *CheckGrou
 		"enabled":                             types.BoolValue(true),
 		alertSettingsAttributeName:            alertSettings,
 		"use_global_alert_settings":           types.BoolValue(source.UseGlobalAlertSettings.ValueBool()),
-		alertChannelSubscriptionAttributeName: nullIfEmpty(source.AlertChannelSubscriptions),
+		alertChannelSubscriptionAttributeName: emptySetIfNull(ctx, source.AlertChannelSubscriptions),
 	})
 	diags.Append(d...)
 	target.EnforceAlertSettings = enforceAlertSettings
 
-	locations := nullIfEmpty(source.Locations)
-	privateLocations := nullIfEmpty(source.PrivateLocations)
 	enforceLocations, d := types.ObjectValue(checkGroupV2EnforceLocationsAttrTypes, map[string]attr.Value{
-		"enabled":           types.BoolValue(!locations.IsNull() || !privateLocations.IsNull()),
-		"locations":         locations,
-		"private_locations": privateLocations,
+		"enabled":           types.BoolValue(len(source.Locations.Elements()) != 0 || len(source.PrivateLocations.Elements()) != 0),
+		"locations":         emptySetIfNull(ctx, source.Locations),
+		"private_locations": emptySetIfNull(ctx, source.PrivateLocations),
 	})
 	diags.Append(d...)
 	target.EnforceLocations = enforceLocations
@@ -872,7 +870,7 @@ func checkGroupV2ToModel(ctx context.Context, group *checkly.GroupV2, model *Che
 	model.Concurrency = types.Int64Value(int64(group.Concurrency))
 	model.Activated = types.BoolValue(group.Activated)
 	model.Muted = types.BoolValue(group.Muted)
-	model.Tags = stringSetFromAPINullIfUnset(ctx, group.Tags, model.Tags, diags)
+	model.Tags = setFromStrings(ctx, group.Tags, diags)
 	model.EnvironmentVariables = environmentVariablesToList(ctx, group.EnvironmentVariables, model.EnvironmentVariables, diags)
 	model.SetupScript = checkGroupV2ScriptToObject(group.SetupSnippetID, group.LocalSetupScript)
 	model.TeardownScript = checkGroupV2ScriptToObject(group.TearDownSnippetID, group.LocalTearDownScript)
@@ -915,13 +913,13 @@ func checkGroupV2DefaultRuntimeToObject(runtimeID *string) types.Object {
 // of a group's alert settings to the enforce_alert_settings attribute value.
 // Members that the API does not track (for example, details of a disabled
 // enforcement) are preserved from prior; unknown prior values resolve to
-// null.
+// null, and to an empty set for alert_channel_subscriptions.
 func checkGroupV2EnforceAlertSettingsToObject(ctx context.Context, group *checkly.GroupV2, prior types.Object, diags *diag.Diagnostics) types.Object {
 	priorAlertSettings := knownPriorAttribute(prior, alertSettingsAttributeName, types.ObjectNull(alertSettingsAttrTypes))
 
 	useGlobal := knownPriorAttribute(prior, "use_global_alert_settings", types.BoolNull())
 
-	subscriptions := knownPriorAttribute(prior, alertChannelSubscriptionAttributeName, types.SetNull(checkGroupV2AlertChannelSubscriptionSetType.ElemType))
+	subscriptions := emptySetIfNull(ctx, knownPriorAttribute(prior, alertChannelSubscriptionAttributeName, types.SetNull(checkGroupV2AlertChannelSubscriptionSetType.ElemType)))
 
 	enforced := group.AlertSettings != nil ||
 		group.UseGlobalAlertSettings != nil ||
@@ -942,13 +940,7 @@ func checkGroupV2EnforceAlertSettingsToObject(ctx context.Context, group *checkl
 			useGlobal = types.BoolValue(*group.UseGlobalAlertSettings)
 		}
 
-		if len(group.AlertChannelSubscriptions) != 0 {
-			subscriptions = alertChannelSubscriptionsToSet(ctx, group.AlertChannelSubscriptions, subscriptions, diags)
-		} else if !subscriptions.IsNull() && len(subscriptions.Elements()) != 0 {
-			// The API reports no subscriptions, so the prior non-empty value
-			// is stale.
-			subscriptions = types.SetNull(checkGroupV2AlertChannelSubscriptionSetType.ElemType)
-		}
+		subscriptions = alertChannelSubscriptionsToSet(ctx, group.AlertChannelSubscriptions, diags)
 	}
 
 	obj, d := types.ObjectValue(checkGroupV2EnforceAlertSettingsAttrTypes, map[string]attr.Value{
@@ -965,28 +957,20 @@ func checkGroupV2EnforceAlertSettingsToObject(ctx context.Context, group *checkl
 // checkGroupV2EnforceLocationsToObject converts the API representation of a
 // group's locations to the enforce_locations attribute value. Members that
 // the API does not track (for example, details of a disabled enforcement)
-// are preserved from prior; unknown prior values resolve to null.
+// are preserved from prior; null and unknown prior values resolve to empty
+// sets.
 func checkGroupV2EnforceLocationsToObject(ctx context.Context, group *checkly.GroupV2, prior types.Object, diags *diag.Diagnostics) types.Object {
-	locations := knownPriorAttribute(prior, "locations", types.SetNull(types.StringType))
+	locations := emptySetIfNull(ctx, knownPriorAttribute(prior, "locations", types.SetNull(types.StringType)))
 
-	privateLocations := knownPriorAttribute(prior, "private_locations", types.SetNull(types.StringType))
+	privateLocations := emptySetIfNull(ctx, knownPriorAttribute(prior, "private_locations", types.SetNull(types.StringType)))
 
 	hasLocations := len(group.Locations) != 0
 	hasPrivateLocations := group.PrivateLocations != nil && len(*group.PrivateLocations) != 0
 	enforced := hasLocations || hasPrivateLocations
 
 	if enforced {
-		if hasLocations {
-			locations = setFromStrings(ctx, group.Locations, diags)
-		} else if !locations.IsNull() && len(locations.Elements()) != 0 {
-			locations = types.SetNull(types.StringType)
-		}
-
-		if hasPrivateLocations {
-			privateLocations = setFromStrings(ctx, *group.PrivateLocations, diags)
-		} else if !privateLocations.IsNull() && len(privateLocations.Elements()) != 0 {
-			privateLocations = types.SetNull(types.StringType)
-		}
+		locations = setFromStrings(ctx, group.Locations, diags)
+		privateLocations = setFromStrings(ctx, valueOrZero(group.PrivateLocations), diags)
 	}
 
 	obj, d := types.ObjectValue(checkGroupV2EnforceLocationsAttrTypes, map[string]attr.Value{

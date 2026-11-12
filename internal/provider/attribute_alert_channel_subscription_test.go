@@ -48,34 +48,27 @@ func testCheckAlertChannelSubscription(resourceName, attrPath, channelResourceNa
 	}
 }
 
-// The API reports no subscriptions as an empty array, which converts to null
-// unless an empty set was configured.
+// The API reports no subscriptions as an empty array, which converts to an
+// empty set.
 func TestAlertChannelSubscriptionsToSet(t *testing.T) {
 	ctx := context.Background()
 	elemType := types.ObjectType{AttrTypes: alertChannelSubscriptionAttrTypes}
 	empty := types.SetValueMust(elemType, nil)
 
 	for name, c := range map[string]struct {
-		subs  []checkly.AlertChannelSubscription
-		prior types.Set
-		want  types.Set
+		subs []checkly.AlertChannelSubscription
+		want types.Set
 	}{
-		"none, prior null":    {prior: types.SetNull(elemType), want: types.SetNull(elemType)},
-		"none, prior unknown": {prior: types.SetUnknown(elemType), want: types.SetNull(elemType)},
-		"none, prior empty":   {prior: empty, want: empty},
-		"none, prior non-empty": {
-			prior: alertChannelSubscriptionsSet(1, true),
-			want:  empty,
-		},
-		"one, prior null": {
-			subs:  []checkly.AlertChannelSubscription{{ChannelID: 1, Activated: true}},
-			prior: types.SetNull(elemType),
-			want:  alertChannelSubscriptionsSet(1, true),
+		"none":              {want: empty},
+		"none, empty slice": {subs: []checkly.AlertChannelSubscription{}, want: empty},
+		"one": {
+			subs: []checkly.AlertChannelSubscription{{ChannelID: 1, Activated: true}},
+			want: alertChannelSubscriptionsSet(1, true),
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			var diags diag.Diagnostics
-			got := alertChannelSubscriptionsToSet(ctx, c.subs, c.prior, &diags)
+			got := alertChannelSubscriptionsToSet(ctx, c.subs, &diags)
 			if diags.HasError() {
 				t.Fatal(diags)
 			}
