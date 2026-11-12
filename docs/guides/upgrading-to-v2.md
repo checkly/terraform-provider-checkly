@@ -194,13 +194,9 @@ environment_variables = [for key, value in var.environment : {
 }]
 ```
 
-Leaving out `alert_channel_subscriptions`, `environment_variables` or `components` still removes them in Checkly, as leaving out all the blocks did in v1.x. Leaving out `request.assertions` or `api_check_defaults.assertions` removes all assertions too, and stores null (see [Unset collections are null](#unset-collections-are-null)). Leaving out `runtime.playwright.devices` while `runtime.auto_detect` is enabled, which is the default, selects the default devices: chromium, firefox and webkit.
+Leaving out `alert_channel_subscriptions`, `environment_variables` or `components` still removes them in Checkly, as leaving out all the blocks did in v1.x. Leaving out `request.assertions` or `api_check_defaults.assertions` removes all assertions too. Leaving out `runtime.playwright.devices` selects the default devices, chromium, firefox and webkit, whether or not `runtime.auto_detect` is enabled.
 
 As with [single nested objects](#single-nested-objects-are-attributes), a misspelled name inside an element is ignored instead of raising an error. Entries in `ignore_changes` and references to these attributes, such as `checkly_url_monitor.example.alert_channel_subscription`, must use the new names too.
-
-### Unset collections are null
-
-An optional collection without a default, such as `tags`, `locations`, `private_locations` or `request.assertions`, is null when your configuration leaves it out. v1.x stored an empty list, set or map instead. The API treats both the same, but expressions that read such an attribute from a resource get null, so `length()` or `concat()` over it fails. Write `x == null ? [] : x` for a list or set and `x == null ? {} : x` for a map, for example `length(checkly_check_group.example.tags == null ? [] : checkly_check_group.example.tags)`, or set the attribute in your configuration. Passing the attribute on to another resource, as in `locations = checkly_check_group.example.locations`, keeps working, since null is valid there too.
 
 ### No group or snippet is null
 
@@ -425,7 +421,7 @@ The attributes translate as follows. The left column uses the v2 names of `check
 
 | `checkly_check_group` | `checkly_check_group_v2` |
 |---|---|
-| `name`, `activated`, `muted`, `concurrency`, `tags`, `api_check_defaults`, `environment_variables` | The same attributes. Leave out a collection that is empty instead of writing `tags = []` or `environment_variables = []`: the moved group stores it as null. |
+| `name`, `activated`, `muted`, `concurrency`, `tags`, `api_check_defaults`, `environment_variables` | The same attributes. |
 | `locations`, `private_locations` | `enforce_locations = { enabled = true, locations = [...], private_locations = [...] }`. Leave `enforce_locations` out if the group has neither. |
 | `run_parallel` | `enforce_scheduling_strategy = { enabled = true, run_parallel = ... }`, with `run_parallel = false` if the v1 group does not set it. |
 | `use_global_alert_settings`, `alert_settings`, `alert_channel_subscriptions` | `enforce_alert_settings = { enabled = true, alert_settings = { ... }, alert_channel_subscriptions = [...] }`, with `use_global_alert_settings = ...` if the v1 group sets it. |
@@ -473,7 +469,7 @@ resource "checkly_maintenance_window" "example" {
 
 ## Expected one-time changes
 
-- v1.x stored an unset optional attribute as an empty value (`""`, `0`, `[]` or `{}`). v2 stores null instead for an unset collection and for an unset optional attribute without a documented default, such as `runtime_id`, `frequency_offset` or a maintenance window's `repeat_interval`; an attribute with a documented default, such as a check's `description` or `activated`, keeps storing that default. `group_id`, `group_order`, `setup_snippet_id` and `teardown_snippet_id` are stored as null when unset, and setting `group_id` or a snippet ID to `0` fails the plan; see [No group or snippet is null](#no-group-or-snippet-is-null). If your configuration sets an attribute that v2 stores as null to an empty value explicitly, for example `tags = []`, `headers = {}` or `repeat_interval = 0`, the first plan shows an in-place update to that empty value. The same goes for the first plan after an import, which also stores null for an empty value. Removing the attribute from the configuration has the same effect and avoids the update. Expressions over an unset collection are affected too; see [Unset collections are null](#unset-collections-are-null).
+- v1.x stored an unset optional string or number attribute as `""` or `0`. v2 stores null instead for one without a documented default, such as `runtime_id`, `frequency_offset` or a maintenance window's `repeat_interval`; an attribute with a documented default, such as a check's `description` or `activated`, keeps storing that default. `group_id`, `group_order`, `setup_snippet_id` and `teardown_snippet_id` are stored as null when unset, and setting `group_id` or a snippet ID to `0` fails the plan; see [No group or snippet is null](#no-group-or-snippet-is-null). If your configuration sets an attribute that v2 stores as null to `""` or `0` explicitly, for example `repeat_interval = 0`, the first plan shows an in-place update to that value. The same goes for the first plan after an import, which also stores null for such a value. Removing the attribute from the configuration has the same effect and avoids the update. Unset collections are stored as empty lists, sets or maps, as in v1.x, so `tags = []` and leaving `tags` out both plan no change.
 - v1.x could not clear these attributes: leaving one out kept the stored value, and every plan showed the same change. v2 clears them, so a value set in the web app and absent from your configuration is erased by the first apply. To keep such a value, add it to your configuration.
   - `checkly_status_page`: `custom_domain`, `logo`, `redirect_to` and `favicon`.
   - `checkly_dashboard`: `custom_domain`, `logo`, `link`, `description` and `favicon`.
