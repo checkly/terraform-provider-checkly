@@ -926,12 +926,9 @@ func TestAccCheckGroupV2AlertChannelSubscriptions(t *testing.T) {
 					}
 				}
 			`,
-			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckNoResourceAttr(
-					checkGroupV2Resource,
-					"enforce_alert_settings.alert_channel_subscriptions.#",
-				),
-			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue(checkGroupV2Resource, tfjsonpath.New("enforce_alert_settings").AtMapKey("alert_channel_subscriptions"), emptySet),
+			},
 		},
 	})
 }
@@ -1155,7 +1152,7 @@ func TestAccCheckGroupV2Tags(t *testing.T) {
 				statecheck.ExpectKnownValue(checkGroupV2Resource, tfjsonpath.New("tags"), knownvalue.SetExact([]knownvalue.Check{})),
 			},
 		},
-		// Leaving tags out stores null.
+		// Leaving tags out stores an empty set.
 		{
 			Config: `
 				resource "checkly_check_group_v2" "test" {
@@ -1163,7 +1160,7 @@ func TestAccCheckGroupV2Tags(t *testing.T) {
 				}
 			`,
 			ConfigStateChecks: []statecheck.StateCheck{
-				statecheck.ExpectKnownValue(checkGroupV2Resource, tfjsonpath.New("tags"), knownvalue.Null()),
+				statecheck.ExpectKnownValue(checkGroupV2Resource, tfjsonpath.New("tags"), emptySet),
 			},
 		},
 	})
@@ -1234,13 +1231,9 @@ func TestAccCheckGroupV2EnvironmentVariable(t *testing.T) {
 					name = "env-var-test"
 				}
 			`,
-			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
-					checkGroupV2Resource,
-					"environment_variables.#",
-					"0",
-				),
-			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue(checkGroupV2Resource, tfjsonpath.New("environment_variables"), emptyList),
+			},
 		},
 	})
 }
@@ -1772,11 +1765,10 @@ func TestAccCheckGroupV2UnsetSweepAlertChannelSubscriptions(t *testing.T) {
 					"enforce_alert_settings.enabled",
 					"true",
 				),
-				resource.TestCheckNoResourceAttr(
-					checkGroupV2Resource,
-					"enforce_alert_settings.alert_channel_subscriptions.#",
-				),
 			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue(checkGroupV2Resource, tfjsonpath.New("enforce_alert_settings").AtMapKey("alert_channel_subscriptions"), emptySet),
+			},
 		},
 		// Step 3: remove the whole enforcement; it must plan back to the
 		// disabled default and the server must disable it.
@@ -1798,11 +1790,10 @@ func TestAccCheckGroupV2UnsetSweepAlertChannelSubscriptions(t *testing.T) {
 					"enforce_alert_settings.enabled",
 					"false",
 				),
-				resource.TestCheckNoResourceAttr(
-					checkGroupV2Resource,
-					"enforce_alert_settings.alert_channel_subscriptions.#",
-				),
 			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue(checkGroupV2Resource, tfjsonpath.New("enforce_alert_settings").AtMapKey("alert_channel_subscriptions"), emptySet),
+			},
 		},
 	})
 }
@@ -2007,9 +1998,9 @@ func TestAccCheckGroupV2UnsetSweepAPICheckDefaults(t *testing.T) {
 				resource.TestCheckNoResourceAttr(checkGroupV2Resource, "api_check_defaults.basic_auth.%"),
 			),
 			ConfigStateChecks: []statecheck.StateCheck{
-				statecheck.ExpectKnownValue(checkGroupV2Resource, tfjsonpath.New("api_check_defaults").AtMapKey("headers"), knownvalue.Null()),
-				statecheck.ExpectKnownValue(checkGroupV2Resource, tfjsonpath.New("api_check_defaults").AtMapKey("query_parameters"), knownvalue.Null()),
-				statecheck.ExpectKnownValue(checkGroupV2Resource, tfjsonpath.New("api_check_defaults").AtMapKey("assertions"), knownvalue.Null()),
+				statecheck.ExpectKnownValue(checkGroupV2Resource, tfjsonpath.New("api_check_defaults").AtMapKey("headers"), emptyMap),
+				statecheck.ExpectKnownValue(checkGroupV2Resource, tfjsonpath.New("api_check_defaults").AtMapKey("query_parameters"), emptyMap),
+				statecheck.ExpectKnownValue(checkGroupV2Resource, tfjsonpath.New("api_check_defaults").AtMapKey("assertions"), emptySet),
 			},
 		},
 	})

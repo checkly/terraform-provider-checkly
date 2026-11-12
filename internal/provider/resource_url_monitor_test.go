@@ -1675,9 +1675,8 @@ func TestAccURLMonitorAlertChannelSubscriptions(t *testing.T) {
 				),
 			),
 		},
-		// Step 3: Configure an empty set, which removes all subscriptions
-		// and is stored as an empty set, not null; otherwise the post-apply
-		// plan would not be empty.
+		// Step 3: Configure an empty set, which removes all subscriptions;
+		// otherwise the post-apply plan would not be empty.
 		{
 			Config: `
 				resource "checkly_alert_channel" "email_1" {
@@ -1717,14 +1716,8 @@ func TestAccURLMonitorAlertChannelSubscriptions(t *testing.T) {
 					alert_channel_subscriptions = []
 				}
 			`,
-			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
-					"checkly_url_monitor.test",
-					"alert_channel_subscriptions.#",
-					"0",
-				),
-			),
 			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue("checkly_url_monitor.test", tfjsonpath.New("alert_channel_subscriptions"), emptySet),
 				statecheck.ExpectKnownValue(
 					"checkly_url_monitor.test",
 					tfjsonpath.New("alert_channel_subscriptions"),
@@ -1732,7 +1725,7 @@ func TestAccURLMonitorAlertChannelSubscriptions(t *testing.T) {
 				),
 			},
 		},
-		// Step 4: Leave the attribute out, which stores null.
+		// Step 4: Leave the attribute out, which stores an empty set.
 		{
 			Config: `
 				resource "checkly_alert_channel" "email_1" {
@@ -1770,14 +1763,11 @@ func TestAccURLMonitorAlertChannelSubscriptions(t *testing.T) {
 					}
 				}
 			`,
-			Check: resource.ComposeTestCheckFunc(
+			ConfigStateChecks: []statecheck.StateCheck{
 				// Unlike a check of the element count, which also passes
-				// for an empty set, this fails unless the value is null.
-				resource.TestCheckNoResourceAttr(
-					"checkly_url_monitor.test",
-					"alert_channel_subscriptions",
-				),
-			),
+				// for a null set, this fails unless the value is empty.
+				statecheck.ExpectKnownValue("checkly_url_monitor.test", tfjsonpath.New("alert_channel_subscriptions"), emptySet),
+			},
 		},
 	})
 }
@@ -1838,8 +1828,10 @@ func TestAccURLMonitorUnsetSweepBasics(t *testing.T) {
 				resource.TestCheckResourceAttr("checkly_url_monitor.test", "use_global_alert_settings", "true"),
 				resource.TestCheckResourceAttr("checkly_url_monitor.test", "degraded_response_time", "3000"),
 				resource.TestCheckResourceAttr("checkly_url_monitor.test", "max_response_time", "5000"),
-				resource.TestCheckNoResourceAttr("checkly_url_monitor.test", "tags.#"),
 			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue("checkly_url_monitor.test", tfjsonpath.New("tags"), emptySet),
+			},
 		},
 	})
 }
@@ -1920,9 +1912,9 @@ func TestAccURLMonitorUnsetSweepLocations(t *testing.T) {
 					}
 				}
 			`,
-			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckNoResourceAttr("checkly_url_monitor.test", "locations.#"),
-			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue("checkly_url_monitor.test", tfjsonpath.New("locations"), emptySet),
+			},
 		},
 	})
 }
@@ -1969,9 +1961,9 @@ func TestAccURLMonitorUnsetSweepPrivateLocations(t *testing.T) {
 					}
 				}
 			`,
-			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckNoResourceAttr("checkly_url_monitor.test", "private_locations.#"),
-			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue("checkly_url_monitor.test", tfjsonpath.New("private_locations"), emptySet),
+			},
 		},
 	})
 }
@@ -2025,8 +2017,10 @@ func TestAccURLMonitorUnsetSweepRequest(t *testing.T) {
 				resource.TestCheckResourceAttr("checkly_url_monitor.test", "request.follow_redirects", "true"),
 				resource.TestCheckResourceAttr("checkly_url_monitor.test", "request.skip_ssl", "false"),
 				resource.TestCheckResourceAttr("checkly_url_monitor.test", "request.ip_family", "IPv4"),
-				resource.TestCheckNoResourceAttr("checkly_url_monitor.test", "request.assertions"),
 			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue("checkly_url_monitor.test", tfjsonpath.New("request").AtMapKey("assertions"), emptySet),
+			},
 		},
 	})
 }

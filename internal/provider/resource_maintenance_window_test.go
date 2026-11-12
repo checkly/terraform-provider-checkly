@@ -16,7 +16,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 
 	"github.com/checkly/checkly-go-sdk/v2"
 )
@@ -80,10 +82,10 @@ func nullMaintenanceWindowModel() MaintenanceWindowResourceModel {
 		RepeatUnit:           types.StringNull(),
 		RepeatInterval:       types.Int64Null(),
 		RepeatEndsAt:         types.StringNull(),
-		Tags:                 types.SetNull(types.StringType),
+		Tags:                 types.SetValueMust(types.StringType, []attr.Value{}),
 		Timezone:             types.StringNull(),
 		PauseAllChecks:       types.BoolValue(false),
-		SilenceAlertsTags:    types.SetNull(types.StringType),
+		SilenceAlertsTags:    types.SetValueMust(types.StringType, []attr.Value{}),
 		SilenceAllAlerts:     types.BoolValue(false),
 		Description:          types.StringNull(),
 		StatusPageVisibility: types.ObjectNull(maintenanceWindowStatusPageVisibilityAttrTypes),
@@ -102,13 +104,13 @@ func defaultStatusPageVisibility(t *testing.T) types.Object {
 		NotifyOnStart:         types.BoolValue(false),
 		NotifyOnEnd:           types.BoolValue(false),
 		SuppressAutoIncidents: types.BoolValue(false),
-		ReminderMinutesBefore: types.SetNull(types.Int64Type),
+		ReminderMinutesBefore: types.SetValueMust(types.Int64Type, []attr.Value{}),
 		AutoStart:             types.BoolValue(true),
 		AutoEnd:               types.BoolValue(true),
 		ShowAffectedServices:  types.BoolValue(true),
-		StatusPageIDs:         types.SetNull(types.StringType),
-		ServiceIDs:            types.SetNull(types.StringType),
-		ComponentConfigs:      types.SetNull(types.ObjectType{AttrTypes: maintenanceWindowComponentConfigAttrTypes}),
+		StatusPageIDs:         types.SetValueMust(types.StringType, []attr.Value{}),
+		ServiceIDs:            types.SetValueMust(types.StringType, []attr.Value{}),
+		ComponentConfigs:      types.SetValueMust(types.ObjectType{AttrTypes: maintenanceWindowComponentConfigAttrTypes}, []attr.Value{}),
 	})
 	diags.Append(d...)
 	if diags.HasError() {
@@ -159,7 +161,7 @@ func TestMaintenanceWindowToModelStatusPageVisibility(t *testing.T) {
 				t.Errorf("status_page_visibility set = %t, want %t", got, tc.want)
 			}
 			if tc.want {
-				// Empty sets from the API stay null like the prior value's.
+				// Empty sets from the API read as the empty defaults.
 				if !reflect.DeepEqual(model.StatusPageVisibility, tc.prior) {
 					t.Errorf("status_page_visibility = %v, want %v", model.StatusPageVisibility, tc.prior)
 				}
@@ -189,8 +191,8 @@ func TestMaintenanceWindowToModelStatusPageVisibility(t *testing.T) {
 	if got := len(block.StatusPageIDs.Elements()); got != 1 {
 		t.Errorf("status_page_ids.# = %d, want 1", got)
 	}
-	if !block.ServiceIDs.IsNull() {
-		t.Errorf("service_ids = %v, want null", block.ServiceIDs)
+	if want := types.SetValueMust(types.StringType, []attr.Value{}); !block.ServiceIDs.Equal(want) {
+		t.Errorf("service_ids = %v, want %v", block.ServiceIDs, want)
 	}
 }
 
@@ -463,14 +465,16 @@ func TestAccMaintenanceWindowControlsAllFields(t *testing.T) {
 				resource.TestCheckNoResourceAttr(r, "repeat_unit"),
 				resource.TestCheckNoResourceAttr(r, "repeat_interval"),
 				resource.TestCheckNoResourceAttr(r, "repeat_ends_at"),
-				resource.TestCheckNoResourceAttr(r, "tags"),
 				resource.TestCheckNoResourceAttr(r, "timezone"),
 				resource.TestCheckResourceAttr(r, "pause_all_checks", "false"),
-				resource.TestCheckNoResourceAttr(r, "silence_alerts_tags"),
 				resource.TestCheckResourceAttr(r, "silence_all_alerts", "false"),
 				resource.TestCheckNoResourceAttr(r, "description"),
 				resource.TestCheckNoResourceAttr(r, "status_page_visibility"),
 			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue(r, tfjsonpath.New("silence_alerts_tags"), emptySet),
+				statecheck.ExpectKnownValue(r, tfjsonpath.New("tags"), emptySet),
+			},
 		},
 		{
 			// An explicit object with default settings is kept in state; the

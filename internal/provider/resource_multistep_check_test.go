@@ -201,9 +201,8 @@ func TestAccMultistepCheckResourceDependencies(t *testing.T) {
 			ImportStateVerifyIgnore: []string{"dependencies"},
 		},
 		{
-			// An empty list must clear the dependencies remotely and is
-			// stored as an empty list, not null; otherwise the post-apply
-			// refresh and plan would not be empty.
+			// An empty list must clear the dependencies remotely; otherwise
+			// the post-apply refresh and plan would not be empty.
 			Config: `resource "checkly_multistep_check" "test" {
 				name                      = "Multistep Check Resource Dependencies"
 				activated                 = true
@@ -215,14 +214,8 @@ func TestAccMultistepCheckResourceDependencies(t *testing.T) {
 
 				dependencies = []
 			}`,
-			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
-					"checkly_multistep_check.test",
-					"dependencies.#",
-					"0",
-				),
-			),
 			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue("checkly_multistep_check.test", tfjsonpath.New("dependencies"), emptyList),
 				statecheck.ExpectKnownValue(
 					"checkly_multistep_check.test",
 					tfjsonpath.New("dependencies"),
@@ -231,7 +224,7 @@ func TestAccMultistepCheckResourceDependencies(t *testing.T) {
 			},
 		},
 		{
-			// Leaving the attribute out stores null.
+			// Leaving the attribute out stores an empty list.
 			Config: `resource "checkly_multistep_check" "test" {
 				name                      = "Multistep Check Resource Dependencies"
 				activated                 = true
@@ -241,14 +234,11 @@ func TestAccMultistepCheckResourceDependencies(t *testing.T) {
 				runtime_id                = "2023.09"
 				script                    = "console.log('main')"
 			}`,
-			Check: resource.ComposeTestCheckFunc(
+			ConfigStateChecks: []statecheck.StateCheck{
 				// Unlike a check of the element count, which also passes
-				// for an empty list, this fails unless the value is null.
-				resource.TestCheckNoResourceAttr(
-					"checkly_multistep_check.test",
-					"dependencies",
-				),
-			),
+				// for a null list, this fails unless the value is empty.
+				statecheck.ExpectKnownValue("checkly_multistep_check.test", tfjsonpath.New("dependencies"), emptyList),
+			},
 		},
 	})
 }
@@ -490,25 +480,17 @@ func TestAccMultistepCheckUnsetSweepCollections(t *testing.T) {
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckNoResourceAttr(
-					"checkly_multistep_check.test",
-					"locations.#",
-				),
-				resource.TestCheckNoResourceAttr(
-					"checkly_multistep_check.test",
-					"tags.#",
-				),
-				resource.TestCheckResourceAttr(
-					"checkly_multistep_check.test",
-					"environment_variables.#",
-					"0",
-				),
 				resource.TestCheckResourceAttr(
 					"checkly_multistep_check.test",
 					"private_locations.#",
 					"1",
 				),
 			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue("checkly_multistep_check.test", tfjsonpath.New("environment_variables"), emptyList),
+				statecheck.ExpectKnownValue("checkly_multistep_check.test", tfjsonpath.New("tags"), emptySet),
+				statecheck.ExpectKnownValue("checkly_multistep_check.test", tfjsonpath.New("locations"), emptySet),
+			},
 		},
 		// An explicitly empty private_locations is stored as an empty set.
 		// The check needs a public location again to remain valid.
@@ -531,7 +513,7 @@ func TestAccMultistepCheckUnsetSweepCollections(t *testing.T) {
 				),
 			},
 		},
-		// Leaving private_locations out stores null.
+		// Leaving private_locations out stores an empty set.
 		{
 			Config: privateLocation + `
 				resource "checkly_multistep_check" "test" {
@@ -553,7 +535,7 @@ func TestAccMultistepCheckUnsetSweepCollections(t *testing.T) {
 				statecheck.ExpectKnownValue(
 					"checkly_multistep_check.test",
 					tfjsonpath.New("private_locations"),
-					knownvalue.Null(),
+					emptySet,
 				),
 			},
 		},
@@ -714,11 +696,6 @@ func TestAccMultistepCheckUnsetSweepGroupAndAlerts(t *testing.T) {
 					"checkly_multistep_check.test",
 					"group_order",
 				),
-				resource.TestCheckResourceAttr(
-					"checkly_multistep_check.test",
-					"alert_channel_subscriptions.#",
-					"0",
-				),
 				resource.TestCheckNoResourceAttr(
 					"checkly_multistep_check.test",
 					"trigger_incident",
@@ -729,6 +706,9 @@ func TestAccMultistepCheckUnsetSweepGroupAndAlerts(t *testing.T) {
 					"NO_RETRIES",
 				),
 			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue("checkly_multistep_check.test", tfjsonpath.New("alert_channel_subscriptions"), emptySet),
+			},
 		},
 	})
 }

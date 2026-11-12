@@ -135,6 +135,8 @@ func maintenanceWindowStatusPageVisibilitySchema() schema.SingleNestedAttribute 
 			},
 			"reminder_minutes_before": schema.SetAttribute{
 				Optional:    true,
+				Computed:    true,
+				Default:     emptySetDefault(types.Int64Type),
 				ElementType: types.Int64Type,
 				Description: "Up to three reminders, in minutes before the maintenance starts (60 to 10080), sent to status page subscribers.",
 				Validators: []validator.Set{
@@ -162,6 +164,8 @@ func maintenanceWindowStatusPageVisibilitySchema() schema.SingleNestedAttribute 
 			},
 			"status_page_ids": schema.SetAttribute{
 				Optional:    true,
+				Computed:    true,
+				Default:     emptySetDefault(types.StringType),
 				ElementType: types.StringType,
 				Description: "The IDs of the status pages to show the maintenance window on. " +
 					"A v2 status page (`checkly_status_page`) requires `service_ids` or `affect_all_services`, " +
@@ -169,11 +173,15 @@ func maintenanceWindowStatusPageVisibilitySchema() schema.SingleNestedAttribute 
 			},
 			"service_ids": schema.SetAttribute{
 				Optional:    true,
+				Computed:    true,
+				Default:     emptySetDefault(types.StringType),
 				ElementType: types.StringType,
 				Description: "The IDs of the affected status page services (`checkly_status_page_service`). Each service must be on one of the linked v2 status pages.",
 			},
 			"component_configs": schema.SetNestedAttribute{
 				Optional: true,
+				Computed: true,
+				Default:  emptySetDefault(types.ObjectType{AttrTypes: maintenanceWindowComponentConfigAttrTypes}),
 				Description: "The affected components of each linked v3 status page (`checkly_status_page_v3`), at most one entry per page. " +
 					"Omitting the attribute removes the window's component links.",
 				NestedObject: schema.NestedAttributeObject{
@@ -187,15 +195,13 @@ func maintenanceWindowStatusPageVisibilitySchema() schema.SingleNestedAttribute 
 							Computed:    true,
 							Description: "Mark every component of the status page as affected, including components added later. Can't be combined with `components`. (Default `false`).",
 						},
+						// The empty default is applied in ModifyPlan (see
+						// maintenanceWindowComponentConfigsWithDefaults), as
+						// defaults inside set elements break element identity.
 						"components": schema.SetNestedAttribute{
 							Optional:    true,
-							Description: "The affected components of the status page, each with the status it shows while the maintenance is in progress. Required unless `affect_all_components` is `true`, and can't be an empty set: leave it out instead.",
-							// The API reports an entry without components with an
-							// empty list, which can't be told apart from an unset
-							// attribute on import, so only null means none.
-							Validators: []validator.Set{
-								setvalidator.SizeAtLeast(1),
-							},
+							Computed:    true,
+							Description: "The affected components of the status page, each with the status it shows while the maintenance is in progress. Required unless `affect_all_components` is `true`; an empty set means the same as leaving it out.",
 							NestedObject: schema.NestedAttributeObject{
 								Attributes: map[string]schema.Attribute{
 									"component_id": schema.StringAttribute{
@@ -260,21 +266,10 @@ func maintenanceWindowStatusPageVisibilityFromObject(ctx context.Context, obj ty
 // settings when the prior state has no value either, so a configuration
 // without the attribute doesn't show a diff. A value that is in the prior
 // state is always written back, which keeps an explicit all-defaults object
-// stable. Empty sets from the API stay null where the prior value had them
-// null.
+// stable.
 func maintenanceWindowStatusPageVisibilityToObject(ctx context.Context, v checkly.MaintenanceWindowStatusPageVisibility, prior types.Object, diags *diag.Diagnostics) types.Object {
-	priorModel := objectAs[MaintenanceWindowStatusPageVisibilityModel](ctx, prior, diags)
-	if priorModel == nil && isDefaultMaintenanceWindowStatusPageVisibility(v) {
+	if (prior.IsNull() || prior.IsUnknown()) && isDefaultMaintenanceWindowStatusPageVisibility(v) {
 		return types.ObjectNull(maintenanceWindowStatusPageVisibilityAttrTypes)
-	}
-	if priorModel == nil {
-		priorModel = &MaintenanceWindowStatusPageVisibilityModel{
-			Severity:              types.StringNull(),
-			ReminderMinutesBefore: types.SetNull(types.Int64Type),
-			StatusPageIDs:         types.SetNull(types.StringType),
-			ServiceIDs:            types.SetNull(types.StringType),
-			ComponentConfigs:      types.SetNull(types.ObjectType{AttrTypes: maintenanceWindowComponentConfigAttrTypes}),
-		}
 	}
 
 	obj, d := types.ObjectValueFrom(ctx, maintenanceWindowStatusPageVisibilityAttrTypes, MaintenanceWindowStatusPageVisibilityModel{
@@ -284,13 +279,13 @@ func maintenanceWindowStatusPageVisibilityToObject(ctx context.Context, v checkl
 		NotifyOnStart:         types.BoolValue(v.NotifyOnStart),
 		NotifyOnEnd:           types.BoolValue(v.NotifyOnEnd),
 		SuppressAutoIncidents: types.BoolValue(v.SuppressAutoIncidents),
-		ReminderMinutesBefore: int64SetFromInts(ctx, v.ReminderMinutesBefore, priorModel.ReminderMinutesBefore, diags),
+		ReminderMinutesBefore: int64SetFromInts(ctx, v.ReminderMinutesBefore, diags),
 		AutoStart:             types.BoolValue(v.AutoStart == nil || *v.AutoStart),
 		AutoEnd:               types.BoolValue(v.AutoEnd == nil || *v.AutoEnd),
 		ShowAffectedServices:  types.BoolValue(v.ShowAffectedServices == nil || *v.ShowAffectedServices),
-		StatusPageIDs:         stringSetFromAPINullIfUnset(ctx, v.StatusPageIDs, priorModel.StatusPageIDs, diags),
-		ServiceIDs:            stringSetFromAPINullIfUnset(ctx, v.ServiceIDs, priorModel.ServiceIDs, diags),
-		ComponentConfigs:      maintenanceWindowComponentConfigsToSet(ctx, v.ComponentConfigs, priorModel.ComponentConfigs, diags),
+		StatusPageIDs:         setFromStrings(ctx, v.StatusPageIDs, diags),
+		ServiceIDs:            setFromStrings(ctx, v.ServiceIDs, diags),
+		ComponentConfigs:      maintenanceWindowComponentConfigsToSet(ctx, v.ComponentConfigs, diags),
 	})
 	diags.Append(d...)
 
@@ -341,9 +336,9 @@ func intsFromInt64Set(ctx context.Context, set types.Set, diags *diag.Diagnostic
 	return ints
 }
 
-// int64SetFromInts converts integers from the API to a set, null when empty
-// and unset before (see setNullIfUnset).
-func int64SetFromInts(ctx context.Context, values []int, prior types.Set, diags *diag.Diagnostics) types.Set {
+// int64SetFromInts converts integers from the API to a set. No integers
+// convert to an empty set.
+func int64SetFromInts(ctx context.Context, values []int, diags *diag.Diagnostics) types.Set {
 	int64s := make([]int64, len(values))
 	for i, v := range values {
 		int64s[i] = int64(v)
@@ -352,7 +347,7 @@ func int64SetFromInts(ctx context.Context, values []int, prior types.Set, diags 
 	set, d := types.SetValueFrom(ctx, types.Int64Type, int64s)
 	diags.Append(d...)
 
-	return setNullIfUnset(ctx, set, prior)
+	return set
 }
 
 // maintenanceWindowComponentConfigsFromSet converts the component_configs
@@ -395,34 +390,23 @@ func maintenanceWindowComponentConfigsFromSet(ctx context.Context, set types.Set
 }
 
 // maintenanceWindowComponentConfigsToSet converts the component configs from
-// the API to a set. The API reports no configs as an empty list, which
-// converts to null when the prior value is null, so an omitted attribute
-// doesn't drift to an empty set. An entry that affects all components reports
-// an empty components list, which always converts to null: validation rejects
-// a configured empty components set, so null is the only matching
-// configuration, and an import reads back what that configuration plans.
-func maintenanceWindowComponentConfigsToSet(ctx context.Context, configs []checkly.MaintenanceWindowComponentConfig, prior types.Set, diags *diag.Diagnostics) types.Set {
+// the API to a set. No configs convert to an empty set, and so do the
+// components of an entry without any, such as one that affects all
+// components, which the API reports with an empty components list.
+func maintenanceWindowComponentConfigsToSet(ctx context.Context, configs []checkly.MaintenanceWindowComponentConfig, diags *diag.Diagnostics) types.Set {
 	configType := types.ObjectType{AttrTypes: maintenanceWindowComponentConfigAttrTypes}
-	if len(configs) == 0 && (prior.IsNull() || prior.IsUnknown()) {
-		return types.SetNull(configType)
-	}
-
 	impactType := types.ObjectType{AttrTypes: maintenanceWindowComponentImpactAttrTypes}
 	models := make([]MaintenanceWindowComponentConfigModel, len(configs))
 	for i, config := range configs {
-		components := types.SetNull(impactType)
-		if len(config.Components) > 0 {
-			impacts := make([]MaintenanceWindowComponentImpactModel, len(config.Components))
-			for j, component := range config.Components {
-				impacts[j] = MaintenanceWindowComponentImpactModel{
-					ComponentID: types.StringValue(component.ComponentID),
-					Status:      types.StringValue(string(component.Status)),
-				}
+		impacts := make([]MaintenanceWindowComponentImpactModel, len(config.Components))
+		for j, component := range config.Components {
+			impacts[j] = MaintenanceWindowComponentImpactModel{
+				ComponentID: types.StringValue(component.ComponentID),
+				Status:      types.StringValue(string(component.Status)),
 			}
-			var d diag.Diagnostics
-			components, d = types.SetValueFrom(ctx, impactType, impacts)
-			diags.Append(d...)
 		}
+		components, d := types.SetValueFrom(ctx, impactType, impacts)
+		diags.Append(d...)
 
 		models[i] = MaintenanceWindowComponentConfigModel{
 			StatusPageID:        types.StringValue(config.StatusPageID),
@@ -440,12 +424,16 @@ func maintenanceWindowComponentConfigsToSet(ctx context.Context, configs []check
 // maintenanceWindowComponentConfigsWithDefaults applies the default values of
 // the optional+computed component_configs attributes during plan
 // modification, where schema defaults cannot be used because the attributes
-// are nested in set elements: affect_all_components defaults to false and a
-// component's status to UNDER_MAINTENANCE, as in the API.
+// are nested in set elements: affect_all_components defaults to false,
+// components to an empty set and a component's status to UNDER_MAINTENANCE,
+// as in the API.
 func maintenanceWindowComponentConfigsWithDefaults(ctx context.Context, set types.Set, diags *diag.Diagnostics) types.Set {
 	return setElementsWithDefaults(ctx, set, func(m *MaintenanceWindowComponentConfigModel) {
 		if m.AffectAllComponents.IsNull() || m.AffectAllComponents.IsUnknown() {
 			m.AffectAllComponents = types.BoolValue(false)
+		}
+		if m.Components.IsNull() || m.Components.IsUnknown() {
+			m.Components = types.SetValueMust(types.ObjectType{AttrTypes: maintenanceWindowComponentImpactAttrTypes}, []attr.Value{})
 		}
 		m.Components = maintenanceWindowComponentsWithDefaults(ctx, m.Components, diags)
 	}, diags)

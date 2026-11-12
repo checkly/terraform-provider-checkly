@@ -10,6 +10,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 
 	"github.com/checkly/checkly-go-sdk/v2"
 )
@@ -996,13 +998,9 @@ func TestAccICMPMonitorAlertChannelSubscriptions(t *testing.T) {
 					}
 				}
 			`,
-			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
-					"checkly_icmp_monitor.test",
-					"alert_channel_subscriptions.#",
-					"0",
-				),
-			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue("checkly_icmp_monitor.test", tfjsonpath.New("alert_channel_subscriptions"), emptySet),
+			},
 		},
 	})
 }
@@ -1060,8 +1058,10 @@ func TestAccICMPMonitorUnsetSweepBasics(t *testing.T) {
 				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "use_global_alert_settings", "true"),
 				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "degraded_packet_loss_threshold", "10"),
 				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "max_packet_loss_threshold", "20"),
-				resource.TestCheckNoResourceAttr("checkly_icmp_monitor.test", "tags.#"),
 			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue("checkly_icmp_monitor.test", tfjsonpath.New("tags"), emptySet),
+			},
 		},
 	})
 }
@@ -1165,9 +1165,9 @@ func TestAccICMPMonitorUnsetSweepLocations(t *testing.T) {
 					}
 				}
 			`,
-			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckNoResourceAttr("checkly_icmp_monitor.test", "locations.#"),
-			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue("checkly_icmp_monitor.test", tfjsonpath.New("locations"), emptySet),
+			},
 		},
 	})
 }
@@ -1219,8 +1219,10 @@ func TestAccICMPMonitorUnsetSweepRequest(t *testing.T) {
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "request.ip_family", "IPv4"),
 				resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "request.ping_count", "10"),
-				resource.TestCheckNoResourceAttr("checkly_icmp_monitor.test", "request.assertions"),
 			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue("checkly_icmp_monitor.test", tfjsonpath.New("request").AtMapKey("assertions"), emptySet),
+			},
 		},
 	})
 }

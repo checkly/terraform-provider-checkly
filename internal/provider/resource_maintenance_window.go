@@ -109,6 +109,8 @@ func (r *MaintenanceWindowResource) Schema(ctx context.Context, req resource.Sch
 			},
 			"tags": schema.SetAttribute{
 				Optional:    true,
+				Computed:    true,
+				Default:     emptySetDefault(types.StringType),
 				ElementType: types.StringType,
 				Description: "The tags of the checks and groups that are paused during the maintenance window. Ignored when `pause_all_checks` is `true`.",
 			},
@@ -132,6 +134,8 @@ func (r *MaintenanceWindowResource) Schema(ctx context.Context, req resource.Sch
 			},
 			"silence_alerts_tags": schema.SetAttribute{
 				Optional:    true,
+				Computed:    true,
+				Default:     emptySetDefault(types.StringType),
 				ElementType: types.StringType,
 				Description: "The tags of the checks and groups whose alerts are silenced during the maintenance window. Ignored when `silence_all_alerts` is `true`.",
 			},
@@ -357,10 +361,10 @@ func maintenanceWindowToModel(ctx context.Context, mw *checkly.MaintenanceWindow
 	model.RepeatUnit = stringValueOrNull(string(mw.RepeatUnit))
 	model.RepeatInterval = maintenanceWindowRepeatInterval(mw.RepeatInterval, model.RepeatInterval)
 	model.RepeatEndsAt = stringValueOrPriorEmpty(mw.RepeatEndsAt, model.RepeatEndsAt)
-	model.Tags = stringSetFromAPINullIfUnset(ctx, mw.Tags, model.Tags, diags)
+	model.Tags = setFromStrings(ctx, mw.Tags, diags)
 	model.Timezone = maintenanceWindowTimezone(mw.Timezone, model.Timezone)
 	model.PauseAllChecks = types.BoolValue(mw.PauseAllChecks)
-	model.SilenceAlertsTags = stringSetFromAPINullIfUnset(ctx, mw.SilenceAlertsTags, model.SilenceAlertsTags, diags)
+	model.SilenceAlertsTags = setFromStrings(ctx, mw.SilenceAlertsTags, diags)
 	model.SilenceAllAlerts = types.BoolValue(mw.SilenceAllAlerts)
 	model.Description = stringValueOrPriorEmpty(mw.Description, model.Description)
 	model.StatusPageVisibility = maintenanceWindowStatusPageVisibilityToObject(ctx, mw.StatusPageVisibility, model.StatusPageVisibility, diags)

@@ -454,6 +454,8 @@ func (r *SSLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 					// too — it is not generated from this schema.
 					"assertions": schema.SetNestedAttribute{
 						Optional:    true,
+						Computed:    true,
+						Default:     emptySetDefault(types.ObjectType{AttrTypes: assertionAttrTypes}),
 						Description: "A request can have multiple assertions. The allowed comparisons, properties, and target formats depend on the assertion source — see the [Assertion Reference](#assertion-reference) below.",
 						NestedObject: schema.NestedAttributeObject{
 							// Attributes nested in this set attribute must
@@ -707,10 +709,10 @@ func sslMonitorToModel(ctx context.Context, c *checkly.SSLMonitor, model *SSLMon
 	model.Activated = types.BoolValue(c.Activated)
 	model.Muted = types.BoolValue(c.Muted)
 	model.RunParallel = types.BoolValue(c.RunParallel)
-	model.Locations = stringSetFromAPINullIfUnset(ctx, c.Locations, model.Locations, diags)
+	model.Locations = setFromStrings(ctx, c.Locations, diags)
 	model.DegradedResponseTime = types.Int64Value(int64(c.DegradedResponseTime))
 	model.MaxResponseTime = types.Int64Value(int64(c.MaxResponseTime))
-	model.Tags = stringSetFromAPINullIfUnset(ctx, c.Tags, model.Tags, diags)
+	model.Tags = setFromStrings(ctx, c.Tags, diags)
 
 	// The API does not track a runtime ID for monitors using the default
 	// runtime. A prior empty string is preserved because it converts to the
@@ -725,7 +727,7 @@ func sslMonitorToModel(ctx context.Context, c *checkly.SSLMonitor, model *SSLMon
 	if c.PrivateLocations != nil {
 		privateLocations = *c.PrivateLocations
 	}
-	model.PrivateLocations = stringSetFromAPINullIfUnset(ctx, privateLocations, model.PrivateLocations, diags)
+	model.PrivateLocations = setFromStrings(ctx, privateLocations, diags)
 
 	model.AlertSettings = alertSettingsFromAPI(ctx, c.AlertSettings, model.AlertSettings, diags)
 
@@ -734,7 +736,7 @@ func sslMonitorToModel(ctx context.Context, c *checkly.SSLMonitor, model *SSLMon
 	model.GroupOrder = groupOrderFromAPI(c.GroupOrder, model.GroupOrder)
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, model.RetryStrategy, diags)
 	model.Request = sslMonitorRequestToObject(ctx, c.Request, model.Request, diags)
-	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, model.AlertChannelSubscriptions, diags)
+	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, diags)
 	model.TriggerIncident = triggerIncidentToObject(ctx, c.TriggerIncident, diags)
 }
 
@@ -812,7 +814,7 @@ func sslMonitorRequestToObject(ctx context.Context, r checkly.SSLRequest, prior 
 		AlertDaysBeforeExpiry: types.Int64Value(int64(config.AlertDaysBeforeExpiry)),
 		SecurityBaseline:      sslMonitorSecurityBaselineToObject(ctx, config.SecurityBaseline, diags),
 		ClientCertificate:     sslMonitorClientCertificateToObject(ctx, r, priorRequest.ClientCertificate, diags),
-		Assertions:            assertionsToSet(ctx, r.Assertions, priorAssertions(prior), diags),
+		Assertions:            assertionsToSet(ctx, r.Assertions, diags),
 	})
 	diags.Append(d...)
 

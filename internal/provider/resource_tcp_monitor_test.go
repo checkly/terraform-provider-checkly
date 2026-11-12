@@ -8,7 +8,9 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 )
 
 func TestAccTCPMonitorRequiredFields(t *testing.T) {
@@ -1262,11 +1264,10 @@ func TestAccTCPMonitorUnsetSweepBooleansAndTags(t *testing.T) {
 					"use_global_alert_settings",
 					"true",
 				),
-				resource.TestCheckNoResourceAttr(
-					"checkly_tcp_monitor.test",
-					"tags.#",
-				),
 			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue("checkly_tcp_monitor.test", tfjsonpath.New("tags"), emptySet),
+			},
 		},
 	})
 }
@@ -1418,16 +1419,15 @@ func TestAccTCPMonitorUnsetSweepLocations(t *testing.T) {
 				}
 			`, slug),
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckNoResourceAttr(
-					"checkly_tcp_monitor.test",
-					"locations.#",
-				),
 				resource.TestCheckResourceAttr(
 					"checkly_tcp_monitor.test",
 					"private_locations.#",
 					"1",
 				),
 			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue("checkly_tcp_monitor.test", tfjsonpath.New("locations"), emptySet),
+			},
 		},
 		// Removing private locations while public locations are configured
 		// must clear the private locations server-side.
@@ -1455,11 +1455,10 @@ func TestAccTCPMonitorUnsetSweepLocations(t *testing.T) {
 					"locations.#",
 					"1",
 				),
-				resource.TestCheckNoResourceAttr(
-					"checkly_tcp_monitor.test",
-					"private_locations.#",
-				),
 			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue("checkly_tcp_monitor.test", tfjsonpath.New("private_locations"), emptySet),
+			},
 		},
 	})
 }
@@ -1522,8 +1521,10 @@ func TestAccTCPMonitorUnsetSweepRequest(t *testing.T) {
 			Check: resource.ComposeTestCheckFunc(
 				resource.TestCheckResourceAttr("checkly_tcp_monitor.test", "request.data", "PONG"),
 				resource.TestCheckResourceAttr("checkly_tcp_monitor.test", "request.ip_family", "IPv4"),
-				resource.TestCheckResourceAttr("checkly_tcp_monitor.test", "request.assertions.#", "0"),
 			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue("checkly_tcp_monitor.test", tfjsonpath.New("request").AtMapKey("assertions"), emptySet),
+			},
 		},
 	})
 }
@@ -1880,13 +1881,9 @@ func TestAccTCPMonitorAlertChannelSubscriptions(t *testing.T) {
 					}
 				}
 			`,
-			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
-					"checkly_tcp_monitor.test",
-					"alert_channel_subscriptions.#",
-					"0",
-				),
-			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue("checkly_tcp_monitor.test", tfjsonpath.New("alert_channel_subscriptions"), emptySet),
+			},
 		},
 	})
 }

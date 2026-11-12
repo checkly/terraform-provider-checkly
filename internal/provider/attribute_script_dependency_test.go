@@ -9,9 +9,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-// The API reports no dependencies as an empty array, which converts to null
-// unless the prior value is known.
-func TestScriptDependenciesToListNullVersusEmpty(t *testing.T) {
+// The API reports no dependencies as an empty array, which converts to an
+// empty list whatever the prior value.
+func TestScriptDependenciesToListEmpty(t *testing.T) {
 	ctx := context.Background()
 	elemType := types.ObjectType{AttrTypes: scriptDependencyAttrTypes}
 	empty := types.ListValueMust(elemType, nil)
@@ -24,8 +24,8 @@ func TestScriptDependenciesToListNullVersusEmpty(t *testing.T) {
 		prior types.List
 		want  types.List
 	}{
-		"prior null":      {prior: types.ListNull(elemType), want: types.ListNull(elemType)},
-		"prior unknown":   {prior: types.ListUnknown(elemType), want: types.ListNull(elemType)},
+		"prior null":      {prior: types.ListNull(elemType), want: empty},
+		"prior unknown":   {prior: types.ListUnknown(elemType), want: empty},
 		"prior empty":     {prior: empty, want: empty},
 		"prior non-empty": {prior: nonEmpty, want: empty},
 	} {

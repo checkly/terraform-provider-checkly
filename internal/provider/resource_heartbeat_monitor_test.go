@@ -427,10 +427,6 @@ func TestAccHeartbeatMonitorUnsetSweepBooleansAndTags(t *testing.T) {
 					"use_global_alert_settings",
 					"true",
 				),
-				resource.TestCheckNoResourceAttr(
-					"checkly_heartbeat_monitor.test",
-					"tags.#",
-				),
 				resource.TestCheckResourceAttr(
 					"checkly_heartbeat_monitor.test",
 					"heartbeat.grace",
@@ -442,6 +438,9 @@ func TestAccHeartbeatMonitorUnsetSweepBooleansAndTags(t *testing.T) {
 					"seconds",
 				),
 			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue("checkly_heartbeat_monitor.test", tfjsonpath.New("tags"), emptySet),
+			},
 		},
 	})
 }
@@ -676,13 +675,9 @@ func TestAccHeartbeatMonitorAlertChannelSubscriptions(t *testing.T) {
 					}
 				}
 			`,
-			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
-					"checkly_heartbeat_monitor.test",
-					"alert_channel_subscriptions.#",
-					"0",
-				),
-			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue("checkly_heartbeat_monitor.test", tfjsonpath.New("alert_channel_subscriptions"), emptySet),
+			},
 		},
 	})
 }

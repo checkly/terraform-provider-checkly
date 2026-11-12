@@ -36,6 +36,8 @@ var checkIntentAttrTypes = map[string]attr.Type{
 func makeCheckIntentStatementsSchema(description string) schema.ListAttribute {
 	return schema.ListAttribute{
 		Optional:    true,
+		Computed:    true,
+		Default:     emptyListDefault(types.StringType),
 		ElementType: types.StringType,
 		Description: description,
 		Validators: []validator.List{
@@ -99,22 +101,17 @@ func checkIntentFromObject(ctx context.Context, obj types.Object, diags *diag.Di
 }
 
 // checkIntentToObject converts the API representation of an intent to the
-// intent attribute value. No intent converts to null. The prior value decides
-// whether an empty statement list stays null or empty.
-func checkIntentToObject(ctx context.Context, intent *checkly.CheckIntent, prior types.Object, diags *diag.Diagnostics) types.Object {
+// intent attribute value. No intent converts to null, and an empty statement
+// list to an empty list.
+func checkIntentToObject(ctx context.Context, intent *checkly.CheckIntent, diags *diag.Diagnostics) types.Object {
 	if intent == nil {
 		return types.ObjectNull(checkIntentAttrTypes)
 	}
 
-	priorModel := objectAs[CheckIntentModel](ctx, prior, diags)
-	if priorModel == nil {
-		priorModel = &CheckIntentModel{}
-	}
-
 	obj, d := types.ObjectValueFrom(ctx, checkIntentAttrTypes, CheckIntentModel{
 		Goal:             types.StringValue(intent.Goal),
-		RequiredOutcomes: stringListFromAPINullIfUnset(ctx, intent.RequiredOutcomes, priorModel.RequiredOutcomes, diags),
-		MustPreserve:     stringListFromAPINullIfUnset(ctx, intent.MustPreserve, priorModel.MustPreserve, diags),
+		RequiredOutcomes: listFromStrings(ctx, intent.RequiredOutcomes, diags),
+		MustPreserve:     listFromStrings(ctx, intent.MustPreserve, diags),
 	})
 	diags.Append(d...)
 

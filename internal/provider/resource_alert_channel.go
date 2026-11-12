@@ -302,11 +302,15 @@ func (r *AlertChannelResource) Schema(ctx context.Context, req resource.SchemaRe
 					},
 					"headers": schema.MapAttribute{
 						Optional:    true,
+						Computed:    true,
+						Default:     emptyMapDefault(types.StringType),
 						ElementType: types.StringType,
 						Description: "HTTP headers to send with the webhook request, as a map of header names to values. The values are not sensitive and show in plan output. To keep a credential in a header out of plan output, take it from a variable declared with `sensitive = true` or wrap it in `sensitive(...)`.",
 					},
 					"query_parameters": schema.MapAttribute{
 						Optional:    true,
+						Computed:    true,
+						Default:     emptyMapDefault(types.StringType),
 						ElementType: types.StringType,
 						Description: "Query parameters to add to the webhook URL, as a map of parameter names to values. The values are not sensitive and show in plan output. To keep a credential in a parameter out of plan output, take it from a variable declared with `sensitive = true` or wrap it in `sensitive(...)`.",
 					},
@@ -736,8 +740,8 @@ func alertChannelWebhookToObject(ctx context.Context, cfg *checkly.AlertChannelW
 	return alertChannelObjectFrom(ctx, alertChannelWebhookAttrTypes, alertChannelWebhookModel{
 		Name:            types.StringValue(cfg.Name),
 		Method:          types.StringValue(cfg.Method),
-		Headers:         stringMapFromAPINullIfUnset(ctx, cfg.Headers, priorModel.Headers, diags),
-		QueryParameters: stringMapFromAPINullIfUnset(ctx, cfg.QueryParameters, priorModel.QueryParameters, diags),
+		Headers:         stringMapFromKeyValues(ctx, cfg.Headers, diags),
+		QueryParameters: stringMapFromKeyValues(ctx, cfg.QueryParameters, diags),
 		// The API returns "" for optional string fields that are not set.
 		Template:      stringValueOrPriorEmpty(cfg.Template, priorModel.Template),
 		URL:           types.StringValue(cfg.URL),

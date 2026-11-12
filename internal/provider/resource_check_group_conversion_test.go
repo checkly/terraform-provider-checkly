@@ -267,7 +267,7 @@ func TestPlanUnconfiguredAlertSettingsAsUnknown(t *testing.T) {
 // configures nothing optional, as checkly_check_group stores it: zero snippet
 // IDs and scripts, no alert settings, and no retries.
 func checkGroupModelForMove() CheckGroupResourceModel {
-	stringSet := types.SetNull(types.StringType)
+	stringSet := types.SetValueMust(types.StringType, []attr.Value{})
 	return CheckGroupResourceModel{
 		ID:                        types.StringValue("42"),
 		Name:                      types.StringValue("g"),
@@ -278,13 +278,13 @@ func checkGroupModelForMove() CheckGroupResourceModel {
 		Locations:                 stringSet,
 		PrivateLocations:          stringSet,
 		Tags:                      stringSet,
-		EnvironmentVariables:      types.ListNull(types.ObjectType{AttrTypes: environmentVariableAttrTypes}),
+		EnvironmentVariables:      types.ListValueMust(types.ObjectType{AttrTypes: environmentVariableAttrTypes}, []attr.Value{}),
 		SetupSnippetID:            types.Int64Null(),
 		TeardownSnippetID:         types.Int64Null(),
 		LocalSetupScript:          types.StringValue(""),
 		LocalTeardownScript:       types.StringValue(""),
 		RuntimeID:                 types.StringNull(),
-		AlertChannelSubscriptions: types.SetNull(types.ObjectType{AttrTypes: alertChannelSubscriptionAttrTypes}),
+		AlertChannelSubscriptions: types.SetValueMust(types.ObjectType{AttrTypes: alertChannelSubscriptionAttrTypes}, []attr.Value{}),
 		AlertSettings:             types.ObjectNull(alertSettingsAttrTypes),
 		UseGlobalAlertSettings:    types.BoolValue(true),
 		DoubleCheck:               types.BoolValue(false),
@@ -333,12 +333,13 @@ func TestCheckGroupV2ModelFromCheckGroupModel(t *testing.T) {
 		"a group without optional settings": {
 			check: func(t *testing.T, target CheckGroupV2ResourceModel) {
 				requireValue(t, "id", target.ID, types.StringValue("42"))
-				requireValue(t, "tags", target.Tags, types.SetNull(types.StringType))
+				requireValue(t, "tags", target.Tags, stringSet())
+				requireValue(t, "environment_variables", target.EnvironmentVariables, types.ListValueMust(types.ObjectType{AttrTypes: environmentVariableAttrTypes}, []attr.Value{}))
 				requireValue(t, "enforce_locations", target.EnforceLocations, checkGroupV2DisabledEnforcementObject(checkGroupV2EnforceLocationsAttrTypes))
 				requireValue(t, "enforce_alert_settings", target.EnforceAlertSettings, enabled(checkGroupV2EnforceAlertSettingsAttrTypes, map[string]attr.Value{
 					alertSettingsAttributeName:            types.ObjectNull(alertSettingsAttrTypes),
 					"use_global_alert_settings":           types.BoolValue(true),
-					alertChannelSubscriptionAttributeName: types.SetNull(checkGroupV2AlertChannelSubscriptionSetType.ElemType),
+					alertChannelSubscriptionAttributeName: types.SetValueMust(checkGroupV2AlertChannelSubscriptionSetType.ElemType, []attr.Value{}),
 				}))
 				requireValue(t, "enforce_retry_strategy", target.EnforceRetryStrategy, enabled(checkGroupV2EnforceRetryStrategyAttrTypes, map[string]attr.Value{
 					retryStrategyAttributeName: noRetriesObject(true),
@@ -352,17 +353,19 @@ func TestCheckGroupV2ModelFromCheckGroupModel(t *testing.T) {
 				requireValue(t, "api_check_defaults", target.APICheckDefaults, apiCheckDefaultsDefaultObject())
 			},
 		},
-		"empty collections become null": {
+		"null collections become empty": {
 			edit: func(source *CheckGroupResourceModel) {
-				source.Tags = stringSet()
-				source.Locations = stringSet()
-				source.PrivateLocations = stringSet()
-				source.AlertChannelSubscriptions = types.SetValueMust(types.ObjectType{AttrTypes: alertChannelSubscriptionAttrTypes}, []attr.Value{})
+				source.Tags = types.SetNull(types.StringType)
+				source.Locations = types.SetNull(types.StringType)
+				source.PrivateLocations = types.SetNull(types.StringType)
+				source.EnvironmentVariables = types.ListNull(types.ObjectType{AttrTypes: environmentVariableAttrTypes})
+				source.AlertChannelSubscriptions = types.SetNull(types.ObjectType{AttrTypes: alertChannelSubscriptionAttrTypes})
 			},
 			check: func(t *testing.T, target CheckGroupV2ResourceModel) {
-				requireValue(t, "tags", target.Tags, types.SetNull(types.StringType))
+				requireValue(t, "tags", target.Tags, stringSet())
+				requireValue(t, "environment_variables", target.EnvironmentVariables, types.ListValueMust(types.ObjectType{AttrTypes: environmentVariableAttrTypes}, []attr.Value{}))
 				requireValue(t, "enforce_locations", target.EnforceLocations, checkGroupV2DisabledEnforcementObject(checkGroupV2EnforceLocationsAttrTypes))
-				requireValue(t, "enforce_alert_settings.alert_channel_subscriptions", target.EnforceAlertSettings.Attributes()[alertChannelSubscriptionAttributeName], types.SetNull(checkGroupV2AlertChannelSubscriptionSetType.ElemType))
+				requireValue(t, "enforce_alert_settings.alert_channel_subscriptions", target.EnforceAlertSettings.Attributes()[alertChannelSubscriptionAttributeName], types.SetValueMust(checkGroupV2AlertChannelSubscriptionSetType.ElemType, []attr.Value{}))
 			},
 		},
 		"tags and locations": {
@@ -374,7 +377,7 @@ func TestCheckGroupV2ModelFromCheckGroupModel(t *testing.T) {
 			check: func(t *testing.T, target CheckGroupV2ResourceModel) {
 				requireValue(t, "tags", target.Tags, stringSet("a"))
 				requireValue(t, "enforce_locations", target.EnforceLocations, enabled(checkGroupV2EnforceLocationsAttrTypes, map[string]attr.Value{
-					"locations":         types.SetNull(types.StringType),
+					"locations":         stringSet(),
 					"private_locations": stringSet("dc-1"),
 				}))
 			},
@@ -484,14 +487,6 @@ func TestCheckGroupV2ModelFromCheckGroupModel(t *testing.T) {
 			},
 			check: func(t *testing.T, target CheckGroupV2ResourceModel) {
 				requireValue(t, "default_runtime", target.DefaultRuntime, types.ObjectNull(checkGroupV2DefaultRuntimeAttrTypes))
-			},
-		},
-		"no environment variables": {
-			edit: func(source *CheckGroupResourceModel) {
-				source.EnvironmentVariables = types.ListValueMust(types.ObjectType{AttrTypes: environmentVariableAttrTypes}, []attr.Value{})
-			},
-			check: func(t *testing.T, target CheckGroupV2ResourceModel) {
-				requireValue(t, "environment_variables", target.EnvironmentVariables, types.ListNull(types.ObjectType{AttrTypes: environmentVariableAttrTypes}))
 			},
 		},
 		"secret environment variables": {

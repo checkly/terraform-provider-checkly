@@ -52,10 +52,12 @@ func attributeDefault(t *testing.T, ctx context.Context, a schema.Attribute) att
 		a.Default.DefaultInt64(ctx, defaults.Int64Request{}, &resp)
 		return resp.PlanValue
 	case schema.SetAttribute:
-		if a.Default != nil {
-			t.Errorf("set attribute has a default")
+		if a.Default == nil {
+			return nil
 		}
-		return nil
+		var resp defaults.SetResponse
+		a.Default.DefaultSet(ctx, defaults.SetRequest{}, &resp)
+		return resp.PlanValue
 	case schema.StringAttribute:
 		if a.Default != nil {
 			t.Errorf("string attribute has a default")
@@ -75,6 +77,7 @@ func TestCommonCheckAttributeSchemas(t *testing.T) {
 	}
 	optionalDefault := func(v attr.Value) shape { return shape{optional: true, computed: true, def: v} }
 	optional := shape{optional: true}
+	emptyStringSet := types.SetValueMust(types.StringType, []attr.Value{})
 
 	all := CommonCheckAttributeSchemaOptions{
 		Subject:         subjectCheck,
@@ -89,9 +92,9 @@ func TestCommonCheckAttributeSchemas(t *testing.T) {
 		mutedAttributeName:            optionalDefault(types.BoolValue(false)),
 		shouldFailAttributeName:       optionalDefault(types.BoolValue(false)),
 		runParallelAttributeName:      optionalDefault(types.BoolValue(false)),
-		locationsAttributeName:        optional,
-		privateLocationsAttributeName: optional,
-		tagsAttributeName:             optional,
+		locationsAttributeName:        optionalDefault(emptyStringSet),
+		privateLocationsAttributeName: optionalDefault(emptyStringSet),
+		tagsAttributeName:             optionalDefault(emptyStringSet),
 		// use_global_alert_settings is derived by a plan modifier instead
 		// of a static default.
 		useGlobalAlertSettingsAttributeName: {optional: true, computed: true},
@@ -326,7 +329,7 @@ func TestResourcesUseCommonCheckAttributes(t *testing.T) {
 
 // checkly_check_group_v2 describes its top-level attributes in terms of v2
 // group semantics and does not use the builder, but its tags follow the same
-// convention: optional, not computed, no default.
+// convention: optional and computed, with an empty default.
 func TestCheckGroupV2TagsShape(t *testing.T) {
 	var resp resource.SchemaResponse
 	NewCheckGroupV2Resource().Schema(context.Background(), resource.SchemaRequest{}, &resp)
@@ -335,7 +338,12 @@ func TestCheckGroupV2TagsShape(t *testing.T) {
 	if !ok {
 		t.Fatalf("tags is %T", resp.Schema.Attributes[tagsAttributeName])
 	}
-	if !tags.Optional || tags.Computed || tags.Default != nil {
-		t.Errorf("tags: optional=%v computed=%v default=%v, want optional only", tags.Optional, tags.Computed, tags.Default)
+	if !tags.Optional || !tags.Computed || tags.Default == nil {
+		t.Fatalf("tags: optional=%v computed=%v default=%v, want optional and computed with a default", tags.Optional, tags.Computed, tags.Default)
+	}
+	var def defaults.SetResponse
+	tags.Default.DefaultSet(context.Background(), defaults.SetRequest{}, &def)
+	if want := types.SetValueMust(types.StringType, []attr.Value{}); !def.PlanValue.Equal(want) {
+		t.Errorf("tags default = %s, want %s", def.PlanValue, want)
 	}
 }

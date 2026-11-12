@@ -11,7 +11,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 
 	"github.com/checkly/checkly-go-sdk/v2"
 )
@@ -359,9 +361,11 @@ func testAccMonitorPrivateLocations(t *testing.T, c monitorPrivateLocationsCase)
 		{
 			Config: config(""),
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckNoResourceAttr(c.resource, "private_locations.#"),
 				stored(),
 			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue(c.resource, tfjsonpath.New("private_locations"), emptySet),
+			},
 		},
 		{
 			// Private locations set outside Terraform show up as a removal.
@@ -377,9 +381,11 @@ func testAccMonitorPrivateLocations(t *testing.T, c monitorPrivateLocationsCase)
 				},
 			},
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckNoResourceAttr(c.resource, "private_locations.#"),
 				stored(),
 			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue(c.resource, tfjsonpath.New("private_locations"), emptySet),
+			},
 		},
 	})
 }

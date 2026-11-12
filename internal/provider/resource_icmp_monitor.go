@@ -170,6 +170,8 @@ func (r *ICMPMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 					},
 					"assertions": schema.SetNestedAttribute{
 						Optional:    true,
+						Computed:    true,
+						Default:     emptySetDefault(types.ObjectType{AttrTypes: assertionAttrTypes}),
 						Description: "Assertions to validate the ICMP response.",
 						NestedObject: schema.NestedAttributeObject{
 							// Attributes nested in this set attribute must
@@ -421,24 +423,24 @@ func icmpMonitorToModel(ctx context.Context, c *checkly.ICMPMonitor, model *ICMP
 	model.Activated = types.BoolValue(c.Activated)
 	model.Muted = types.BoolValue(c.Muted)
 	model.RunParallel = types.BoolValue(c.RunParallel)
-	model.Locations = stringSetFromAPINullIfUnset(ctx, c.Locations, model.Locations, diags)
+	model.Locations = setFromStrings(ctx, c.Locations, diags)
 	model.DegradedPacketLossThreshold = types.Int64Value(int64(c.DegradedPacketLossThreshold))
 	model.MaxPacketLossThreshold = types.Int64Value(int64(c.MaxPacketLossThreshold))
-	model.Tags = stringSetFromAPINullIfUnset(ctx, c.Tags, model.Tags, diags)
+	model.Tags = setFromStrings(ctx, c.Tags, diags)
 
 	var privateLocations []string
 	if c.PrivateLocations != nil {
 		privateLocations = *c.PrivateLocations
 	}
-	model.PrivateLocations = stringSetFromAPINullIfUnset(ctx, privateLocations, model.PrivateLocations, diags)
+	model.PrivateLocations = setFromStrings(ctx, privateLocations, diags)
 
 	model.AlertSettings = alertSettingsFromAPI(ctx, c.AlertSettings, model.AlertSettings, diags)
 
 	model.UseGlobalAlertSettings = types.BoolValue(c.UseGlobalAlertSettings)
-	model.Request = icmpMonitorRequestToObject(ctx, c.Request, model.Request, diags)
+	model.Request = icmpMonitorRequestToObject(ctx, c.Request, diags)
 	model.GroupID = int64ValueOrNull(c.GroupID)
 	model.GroupOrder = groupOrderFromAPI(c.GroupOrder, model.GroupOrder)
-	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, model.AlertChannelSubscriptions, diags)
+	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, diags)
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, model.RetryStrategy, diags)
 	model.TriggerIncident = triggerIncidentToObject(ctx, c.TriggerIncident, diags)
 }
@@ -461,12 +463,12 @@ func icmpMonitorRequestFromObject(ctx context.Context, obj types.Object, diags *
 
 // icmpMonitorRequestToObject converts the API representation of the request
 // to the request attribute value.
-func icmpMonitorRequestToObject(ctx context.Context, r checkly.ICMPRequest, prior types.Object, diags *diag.Diagnostics) types.Object {
+func icmpMonitorRequestToObject(ctx context.Context, r checkly.ICMPRequest, diags *diag.Diagnostics) types.Object {
 	obj, d := types.ObjectValueFrom(ctx, icmpMonitorRequestAttrTypes, ICMPMonitorRequestModel{
 		Hostname:   types.StringValue(r.Hostname),
 		IPFamily:   types.StringValue(string(r.IPFamily)),
 		PingCount:  types.Int64Value(int64(r.PingCount)),
-		Assertions: assertionsToSet(ctx, r.Assertions, priorAssertions(prior), diags),
+		Assertions: assertionsToSet(ctx, r.Assertions, diags),
 	})
 	diags.Append(d...)
 

@@ -33,16 +33,17 @@ var apiCheckDefaultsAttrTypes = map[string]attr.Type{
 }
 
 // apiCheckDefaultsDefaultObject returns the canonical attribute value for a
-// group without API check defaults: an empty base URL, no headers or query
-// parameters, no assertions and no basic auth credentials. This matches what
+// group without API check defaults: an empty base URL, empty headers, query
+// parameters and assertions, as their schema defaults make them, and no basic
+// auth credentials. This matches what
 // the Checkly API stores when no defaults are configured, so removing the
 // attribute from the configuration plans a change back to this value.
 func apiCheckDefaultsDefaultObject() types.Object {
 	return types.ObjectValueMust(apiCheckDefaultsAttrTypes, map[string]attr.Value{
 		"url":              types.StringValue(""),
-		"headers":          types.MapNull(types.StringType),
-		"query_parameters": types.MapNull(types.StringType),
-		"assertions":       types.SetNull(types.ObjectType{AttrTypes: assertionAttrTypes}),
+		"headers":          types.MapValueMust(types.StringType, map[string]attr.Value{}),
+		"query_parameters": types.MapValueMust(types.StringType, map[string]attr.Value{}),
+		"assertions":       types.SetValueMust(types.ObjectType{AttrTypes: assertionAttrTypes}, []attr.Value{}),
 		"basic_auth":       types.ObjectNull(apiCheckBasicAuthAttrTypes),
 	})
 }
@@ -64,15 +65,21 @@ func makeAPICheckDefaultsAttributeSchema() schema.SingleNestedAttribute {
 			"headers": schema.MapAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
+				Computed:    true,
+				Default:     emptyMapDefault(types.StringType),
 				Description: "Default headers for API checks in this group. The values are not sensitive and show in plan output. To keep a credential in a header out of plan output, take it from a variable declared with `sensitive = true` or wrap it in `sensitive(...)`.",
 			},
 			"query_parameters": schema.MapAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
+				Computed:    true,
+				Default:     emptyMapDefault(types.StringType),
 				Description: "Default query parameters for API checks in this group. The values are not sensitive and show in plan output. To keep a credential in a parameter out of plan output, take it from a variable declared with `sensitive = true` or wrap it in `sensitive(...)`.",
 			},
 			"assertions": schema.SetNestedAttribute{
 				Optional:    true,
+				Computed:    true,
+				Default:     emptySetDefault(types.ObjectType{AttrTypes: assertionAttrTypes}),
 				Description: "Default assertions for API checks in this group.",
 				NestedObject: schema.NestedAttributeObject{
 					// Attributes nested in this set attribute must not use
@@ -172,9 +179,9 @@ func apiCheckDefaultsToObject(ctx context.Context, defaults checkly.APICheckDefa
 
 	obj, d := types.ObjectValue(apiCheckDefaultsAttrTypes, map[string]attr.Value{
 		"url":              types.StringValue(defaults.BaseURL),
-		"headers":          stringMapFromAPINullIfUnset(ctx, defaults.Headers, priorAttribute(prior, "headers", types.MapNull(types.StringType)), diags),
-		"query_parameters": stringMapFromAPINullIfUnset(ctx, defaults.QueryParameters, priorAttribute(prior, "query_parameters", types.MapNull(types.StringType)), diags),
-		"assertions":       assertionsToSet(ctx, defaults.Assertions, priorAssertions(prior), diags),
+		"headers":          stringMapFromKeyValues(ctx, defaults.Headers, diags),
+		"query_parameters": stringMapFromKeyValues(ctx, defaults.QueryParameters, diags),
+		"assertions":       assertionsToSet(ctx, defaults.Assertions, diags),
 		"basic_auth":       basicAuth,
 	})
 	diags.Append(d...)

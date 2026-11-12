@@ -168,6 +168,8 @@ func (r *DashboardResource) Schema(ctx context.Context, req resource.SchemaReque
 			},
 			"tags": schema.SetAttribute{
 				Optional:    true,
+				Computed:    true,
+				Default:     emptySetDefault(types.StringType),
 				ElementType: types.StringType,
 				Description: "A list of one or more tags that filter which checks to display on the dashboard.",
 			},
@@ -419,7 +421,7 @@ func dashboardToModel(ctx context.Context, dashboard *checkly.Dashboard, model *
 	model.Paginate = dashboardBoolValue(dashboard.Paginate, true)
 	model.ChecksPerPage = types.Int64Value(int64(dashboard.ChecksPerPage))
 	model.PaginationRate = types.Int64Value(int64(dashboard.PaginationRate))
-	model.Tags = stringSetFromAPINullIfUnset(ctx, dashboard.Tags, model.Tags, diags)
+	model.Tags = setFromStrings(ctx, dashboard.Tags, diags)
 	model.HideTags = types.BoolValue(dashboard.HideTags)
 	model.UseTagsAndOperator = types.BoolValue(dashboard.UseTagsAndOperator)
 	model.EnableIncidents = types.BoolValue(dashboard.EnableIncidents)

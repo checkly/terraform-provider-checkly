@@ -169,9 +169,8 @@ func TestAccStatusPageV3AutomationRuleHappyPath(t *testing.T) {
 			),
 		},
 		{
-			// An empty set removes the component links and is stored as an
-			// empty set, not null; otherwise the post-apply plan would not be
-			// empty.
+			// An empty set removes the component links; otherwise the
+			// post-apply plan would not be empty.
 			Config: base + `
 				resource "checkly_status_page_v3_automation_rule" "test" {
 					status_page_id           = checkly_status_page_v3.test.id
@@ -185,14 +184,8 @@ func TestAccStatusPageV3AutomationRuleHappyPath(t *testing.T) {
 					components               = []
 				}
 			`,
-			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
-					statusPageV3AutomationRuleResource,
-					"components.#",
-					"0",
-				),
-			),
 			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue(statusPageV3AutomationRuleResource, tfjsonpath.New("components"), emptySet),
 				statecheck.ExpectKnownValue(
 					statusPageV3AutomationRuleResource,
 					tfjsonpath.New("components"),
@@ -229,14 +222,13 @@ func TestAccStatusPageV3AutomationRuleHappyPath(t *testing.T) {
 					"cool_down_window_minutes",
 					"5",
 				),
-				// Leaving components out stores null. Unlike a check of the
-				// element count, which also passes for an empty set, this
-				// fails unless the value is null.
-				resource.TestCheckNoResourceAttr(
-					statusPageV3AutomationRuleResource,
-					"components",
-				),
 			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				// Leaving components out stores an empty set. Unlike a check
+				// of the element count, which also passes for a null set,
+				// this fails unless the value is empty.
+				statecheck.ExpectKnownValue(statusPageV3AutomationRuleResource, tfjsonpath.New("components"), emptySet),
+			},
 		},
 		{
 			ResourceName:      statusPageV3AutomationRuleResource,

@@ -1885,13 +1885,9 @@ func TestAccCheckEnvironmentVariableRemoval(t *testing.T) {
 					script                    = "console.log('test')"
 				}
 			`,
-			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
-					"checkly_check.test",
-					"environment_variables.#",
-					"0",
-				),
-			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue("checkly_check.test", tfjsonpath.New("environment_variables"), emptyList),
+			},
 		},
 	})
 }
@@ -2348,13 +2344,9 @@ func TestAccCheckAlertChannelSubscriptions(t *testing.T) {
 					}
 				}
 			`,
-			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
-					"checkly_check.test",
-					"alert_channel_subscriptions.#",
-					"0",
-				),
-			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue("checkly_check.test", tfjsonpath.New("alert_channel_subscriptions"), emptySet),
+			},
 		},
 	})
 }
@@ -2536,13 +2528,15 @@ func TestAccCheckUpdateClearsRemovedValues(t *testing.T) {
 		{
 			Config: config(`group_id = checkly_check_group.test.id`),
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckNoResourceAttr(r, "tags.#"),
 				resource.TestCheckNoResourceAttr(r, "setup_snippet_id"),
 				resource.TestCheckNoResourceAttr(r, "teardown_snippet_id"),
 				resource.TestCheckResourceAttr(r, "local_setup_script", ""),
 				resource.TestCheckResourceAttr(r, "local_teardown_script", ""),
 				resource.TestCheckNoResourceAttr(r, "group_order"),
 			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue(r, tfjsonpath.New("tags"), emptySet),
+			},
 		},
 		{
 			Config: config(""),
@@ -2587,7 +2581,7 @@ func TestAccCheckEmptyPrivateLocations(t *testing.T) {
 		{
 			Config: config(""),
 			ConfigStateChecks: []statecheck.StateCheck{
-				statecheck.ExpectKnownValue(r, tfjsonpath.New("private_locations"), knownvalue.Null()),
+				statecheck.ExpectKnownValue(r, tfjsonpath.New("private_locations"), emptySet),
 			},
 		},
 	})

@@ -182,8 +182,8 @@ func runParallelAttributeSchema(subject CheckSubject) schema.BoolAttribute {
 	}
 }
 
-// The collection attributes have no default and are not computed: when they
-// are not configured they are null, which the API treats as empty.
+// The collection attributes default to an empty set, which is what the API
+// reports when they are not configured.
 
 func locationsAttributeSchema(subject CheckSubject) schema.SetAttribute {
 	description := fmt.Sprintf("The data center locations to run the %[1]s from, such as `us-east-1`. The %[1]s "+
@@ -195,6 +195,8 @@ func locationsAttributeSchema(subject CheckSubject) schema.SetAttribute {
 	return schema.SetAttribute{
 		ElementType: types.StringType,
 		Optional:    true,
+		Computed:    true,
+		Default:     emptySetDefault(types.StringType),
 		Description: description,
 	}
 }
@@ -208,6 +210,8 @@ func privateLocationsAttributeSchema(subject CheckSubject, note string) schema.S
 	return schema.SetAttribute{
 		ElementType: types.StringType,
 		Optional:    true,
+		Computed:    true,
+		Default:     emptySetDefault(types.StringType),
 		Description: describe(description, note),
 	}
 }
@@ -224,6 +228,8 @@ func tagsAttributeSchema(subject CheckSubject) schema.SetAttribute {
 	return schema.SetAttribute{
 		ElementType: types.StringType,
 		Optional:    true,
+		Computed:    true,
+		Default:     emptySetDefault(types.StringType),
 		Description: description,
 	}
 }

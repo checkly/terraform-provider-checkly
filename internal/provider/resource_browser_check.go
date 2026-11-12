@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -248,7 +249,7 @@ func browserCheckModelFromCheckModel(source *CheckResourceModel) BrowserCheckRes
 		Locations:                 source.Locations,
 		Script:                    source.Script,
 		ScriptPath:                types.StringNull(),
-		Dependencies:              types.ListNull(types.ObjectType{AttrTypes: scriptDependencyAttrTypes}),
+		Dependencies:              types.ListValueMust(types.ObjectType{AttrTypes: scriptDependencyAttrTypes}, []attr.Value{}),
 		EnvironmentVariables:      source.EnvironmentVariables,
 		Tags:                      source.Tags,
 		SSLCheckDomain:            source.SSLCheckDomain,
@@ -359,7 +360,7 @@ func browserCheckToModel(ctx context.Context, c *checkly.BrowserCheck, model *Br
 	model.Activated = types.BoolValue(c.Activated)
 	model.Muted = types.BoolValue(c.Muted)
 	model.RunParallel = types.BoolValue(c.RunParallel)
-	model.Locations = stringSetFromAPINullIfUnset(ctx, c.Locations, prior.Locations, diags)
+	model.Locations = setFromStrings(ctx, c.Locations, diags)
 	model.Script = types.StringValue(c.Script)
 
 	// An empty script path is not tracked by the Checkly API. A configured
@@ -375,7 +376,7 @@ func browserCheckToModel(ctx context.Context, c *checkly.BrowserCheck, model *Br
 
 	model.Dependencies = scriptDependenciesToList(ctx, c.Dependencies, prior.Dependencies, diags)
 	model.EnvironmentVariables = environmentVariablesToList(ctx, c.EnvironmentVariables, prior.EnvironmentVariables, diags)
-	model.Tags = stringSetFromAPINullIfUnset(ctx, c.Tags, prior.Tags, diags)
+	model.Tags = setFromStrings(ctx, c.Tags, diags)
 
 	// An empty SSL check domain is not tracked by the Checkly API. A
 	// configured empty value is preserved so that it does not drift to null.
@@ -390,9 +391,9 @@ func browserCheckToModel(ctx context.Context, c *checkly.BrowserCheck, model *Br
 
 	model.RuntimeID = stringValueOrPriorEmpty(valueOrZero(c.RuntimeID), prior.RuntimeID)
 
-	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, prior.AlertChannelSubscriptions, diags)
+	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, diags)
 
-	model.PrivateLocations = stringSetFromAPINullIfUnset(ctx, valueOrZero(c.PrivateLocations), prior.PrivateLocations, diags)
+	model.PrivateLocations = setFromStrings(ctx, valueOrZero(c.PrivateLocations), diags)
 
 	model.AlertSettings = alertSettingsFromAPI(ctx, c.AlertSettings, prior.AlertSettings, diags)
 
@@ -401,6 +402,6 @@ func browserCheckToModel(ctx context.Context, c *checkly.BrowserCheck, model *Br
 	model.GroupOrder = groupOrderFromAPI(c.GroupOrder, model.GroupOrder)
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, prior.RetryStrategy, diags)
 	model.TriggerIncident = triggerIncidentToObject(ctx, c.TriggerIncident, diags)
-	model.Intent = checkIntentToObject(ctx, c.Intent, prior.Intent, diags)
+	model.Intent = checkIntentToObject(ctx, c.Intent, diags)
 	model.AIAutoRepairEnabled = types.BoolPointerValue(c.AIAutoRepairEnabled)
 }

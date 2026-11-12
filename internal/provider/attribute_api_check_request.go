@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 
 	"github.com/checkly/checkly-go-sdk/v2"
 )
@@ -101,11 +100,15 @@ func apiCheckRequestAttributeSchema(opts apiCheckRequestAttributeSchemaOptions) 
 			},
 			"headers": schema.MapAttribute{
 				Optional:    true,
+				Computed:    true,
+				Default:     emptyMapDefault(types.StringType),
 				ElementType: types.StringType,
 				Description: "HTTP headers to send with the request, as a map of header names to values. The values are not sensitive and show in plan output. To keep a credential in a header out of plan output, take it from a variable declared with `sensitive = true` or wrap it in `sensitive(...)`.",
 			},
 			"query_parameters": schema.MapAttribute{
 				Optional:    true,
+				Computed:    true,
+				Default:     emptyMapDefault(types.StringType),
 				ElementType: types.StringType,
 				Description: "Query parameters to add to the request URL, as a map of parameter names to values. The values are not sensitive and show in plan output. To keep a credential in a parameter out of plan output, take it from a variable declared with `sensitive = true` or wrap it in `sensitive(...)`.",
 			},
@@ -126,6 +129,8 @@ func apiCheckRequestAttributeSchema(opts apiCheckRequestAttributeSchemaOptions) 
 			},
 			"assertions": schema.SetNestedAttribute{
 				Optional:    true,
+				Computed:    true,
+				Default:     emptySetDefault(types.ObjectType{AttrTypes: assertionAttrTypes}),
 				Description: "A request can have multiple assertions.",
 				NestedObject: schema.NestedAttributeObject{
 					// Attributes nested in this set attribute must not use
@@ -210,33 +215,18 @@ func apiCheckRequestFromObject(ctx context.Context, obj types.Object, diags *dia
 }
 
 // apiCheckRequestToObject converts the API representation of an API check
-// request config to the request attribute value. The prior attribute value
-// (the previously stored state) is consulted so that headers, query
-// parameters and assertions omitted from the configuration stay null instead
-// of drifting to empty collections.
-func apiCheckRequestToObject(ctx context.Context, r checkly.Request, prior types.Object, diags *diag.Diagnostics) types.Object {
-	priorModel := apiCheckRequestModel{
-		Headers:         types.MapNull(types.StringType),
-		QueryParameters: types.MapNull(types.StringType),
-		Assertions:      types.SetNull(types.ObjectType{AttrTypes: assertionAttrTypes}),
-	}
-	if !prior.IsNull() && !prior.IsUnknown() {
-		diags.Append(prior.As(ctx, &priorModel, basetypes.ObjectAsOptions{})...)
-		if diags.HasError() {
-			return types.ObjectNull(apiCheckRequestAttrTypes)
-		}
-	}
-
+// request config to the request attribute value.
+func apiCheckRequestToObject(ctx context.Context, r checkly.Request, diags *diag.Diagnostics) types.Object {
 	obj, d := types.ObjectValueFrom(ctx, apiCheckRequestAttrTypes, apiCheckRequestModel{
 		Method:          types.StringValue(r.Method),
 		URL:             types.StringValue(r.URL),
 		FollowRedirects: types.BoolValue(r.FollowRedirects),
 		SkipSSL:         types.BoolValue(r.SkipSSL),
-		Headers:         stringMapFromAPINullIfUnset(ctx, r.Headers, priorModel.Headers, diags),
-		QueryParameters: stringMapFromAPINullIfUnset(ctx, r.QueryParameters, priorModel.QueryParameters, diags),
+		Headers:         stringMapFromKeyValues(ctx, r.Headers, diags),
+		QueryParameters: stringMapFromKeyValues(ctx, r.QueryParameters, diags),
 		Body:            types.StringValue(r.Body),
 		BodyType:        types.StringValue(string(r.BodyType)),
-		Assertions:      assertionsToSet(ctx, r.Assertions, priorModel.Assertions, diags),
+		Assertions:      assertionsToSet(ctx, r.Assertions, diags),
 		BasicAuth:       apiCheckBasicAuthToObject(ctx, r.BasicAuth, diags),
 		IPFamily:        types.StringValue(string(r.IPFamily)),
 	})

@@ -110,30 +110,26 @@ func TestValueContainsUnknown(t *testing.T) {
 	}
 }
 
-func TestStringSetFromAPI(t *testing.T) {
+func TestSetFromStrings(t *testing.T) {
 	ctx := context.Background()
 
-	null := types.SetNull(types.StringType)
-	unknown := types.SetUnknown(types.StringType)
 	empty := types.SetValueMust(types.StringType, []attr.Value{})
 	one := types.SetValueMust(types.StringType, []attr.Value{types.StringValue("a")})
 
 	cases := map[string]struct {
 		values []string
-		prior  types.Set
 		want   types.Set
 	}{
-		"empty with a null prior":     {nil, null, null},
-		"empty with an unknown prior": {nil, unknown, null},
-		"empty with an empty prior":   {nil, empty, empty},
-		"values":                      {[]string{"a"}, null, one},
+		"nil":    {nil, empty},
+		"empty":  {[]string{}, empty},
+		"values": {[]string{"a"}, one},
 	}
 
 	for name, c := range cases {
 		t.Run(name, func(t *testing.T) {
 			var diags diag.Diagnostics
-			if got := stringSetFromAPINullIfUnset(ctx, c.values, c.prior, &diags); !got.Equal(c.want) {
-				t.Errorf("stringSetFromAPINullIfUnset = %s, want %s", got, c.want)
+			if got := setFromStrings(ctx, c.values, &diags); !got.Equal(c.want) {
+				t.Errorf("setFromStrings = %s, want %s", got, c.want)
 			}
 			if diags.HasError() {
 				t.Fatal(diags)

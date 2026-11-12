@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -278,7 +279,17 @@ func (r *PlaywrightCheckSuiteResource) Schema(ctx context.Context, req resource.
 								Optional: true,
 								Computed: true,
 								Description: "The list of devices that should be made available for Playwright. " +
-									"Defaults to chromium, firefox, and webkit.",
+									"Defaults to chromium, firefox, and webkit, whether or not `auto_detect` is enabled. " +
+									"Can't be empty: leave it out to use the default devices.",
+								// An empty set can't be planned as the default devices,
+								// since Terraform requires the planned value of a
+								// configured attribute to match the configuration, and it
+								// can't be sent either: the API applies its own default to
+								// a request without devices. Validating the configuration
+								// rejects it even while the code bundle metadata is unknown.
+								Validators: []validator.Set{
+									setvalidator.SizeAtLeast(1),
+								},
 								NestedObject: schema.NestedAttributeObject{
 									Attributes: map[string]schema.Attribute{
 										"type": schema.StringAttribute{
@@ -641,17 +652,17 @@ func playwrightCheckSuiteToModel(
 	model.GroupID = int64ValueOrNull(check.GroupID)
 	model.GroupOrder = groupOrderFromAPI(check.GroupOrder, model.GroupOrder)
 
-	model.Locations = stringSetFromAPINullIfUnset(ctx, check.Locations, model.Locations, diags)
-	model.Tags = stringSetFromAPINullIfUnset(ctx, check.Tags, model.Tags, diags)
+	model.Locations = setFromStrings(ctx, check.Locations, diags)
+	model.Tags = setFromStrings(ctx, check.Tags, diags)
 
-	model.PrivateLocations = stringSetFromAPINullIfUnset(ctx, valueOrZero(check.PrivateLocations), model.PrivateLocations, diags)
+	model.PrivateLocations = setFromStrings(ctx, valueOrZero(check.PrivateLocations), diags)
 
 	model.EnvironmentVariables = environmentVariablesToList(ctx, check.EnvironmentVariables, model.EnvironmentVariables, diags)
 
-	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, check.AlertChannelSubscriptions, model.AlertChannelSubscriptions, diags)
+	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, check.AlertChannelSubscriptions, diags)
 
 	model.TriggerIncident = triggerIncidentToObject(ctx, check.TriggerIncident, diags)
-	model.Intent = checkIntentToObject(ctx, check.Intent, model.Intent, diags)
+	model.Intent = checkIntentToObject(ctx, check.Intent, diags)
 	model.AIAutoRepairEnabled = types.BoolPointerValue(check.AIAutoRepairEnabled)
 
 	alertSettings := check.AlertSettings
@@ -895,9 +906,10 @@ func (m playwrightCheckSuiteRuntimePlanModifier) PlanModifyObject(ctx context.Co
 }
 
 // playwrightCheckSuiteResolveRuntime resolves the configured runtime value
-// against the code bundle metadata, filling unset values by auto-detection
-// (when enabled) and validating that a complete runtime configuration
-// results.
+// against the code bundle metadata. It fills unset devices with the static
+// default devices, fills other unset values by auto-detection from the bundle
+// metadata (when enabled), and validates that a complete runtime
+// configuration results.
 func playwrightCheckSuiteResolveRuntime(
 	ctx context.Context,
 	configRuntime types.Object,
@@ -945,8 +957,10 @@ func playwrightCheckSuiteResolveRuntime(
 	}
 
 	version := types.StringNull()
-	deviceTypes := []string(nil)
-	devicesConfigured := false
+	// The default devices apply whether or not auto-detection is enabled:
+	// they are not detected from the bundle, and leaving devices out of the
+	// configuration means the defaults either way.
+	deviceTypes := playwrightCheckSuiteDefaultBrowsers
 	if !cfg.Playwright.IsNull() {
 		var playwright PlaywrightCheckSuiteRuntimePlaywrightModel
 		diags.Append(cfg.Playwright.As(ctx, &playwright, basetypes.ObjectAsOptions{})...)
@@ -957,14 +971,13 @@ func playwrightCheckSuiteResolveRuntime(
 		version = playwright.Version
 
 		if !playwright.Devices.IsNull() {
-			devicesConfigured = true
-
 			var devices []PlaywrightCheckSuiteRuntimeDeviceModel
 			diags.Append(playwright.Devices.ElementsAs(ctx, &devices, false)...)
 			if diags.HasError() {
 				return null
 			}
 
+			deviceTypes = make([]string, 0, len(devices))
 			for _, device := range devices {
 				deviceTypes = append(deviceTypes, device.Type.ValueString())
 			}
@@ -1007,10 +1020,6 @@ func playwrightCheckSuiteResolveRuntime(
 			version = types.StringValue(metadata.PlaywrightVersion)
 		}
 
-		if !devicesConfigured {
-			deviceTypes = playwrightCheckSuiteDefaultBrowsers
-		}
-
 		if testCommand.IsNull() {
 			if command, ok := playwrightCheckSuiteDefaultTestCommands[metadata.PackageManager]; ok {
 				testCommand = types.StringValue(command)
@@ -1040,6 +1049,16 @@ func playwrightCheckSuiteResolveRuntime(
 		}
 	}
 
+	// The schema validator rejects a configured empty devices set, but skips a
+	// value that is unknown at validation time and only becomes empty later.
+	if len(deviceTypes) == 0 {
+		diags.AddError(
+			"Invalid Runtime Configuration",
+			`"runtime.playwright.devices" can't be empty; leave it out to use the default devices`,
+		)
+		return null
+	}
+
 	if version.IsNull() || version.ValueString() == "" {
 		if autoDetect {
 			diags.AddError(
@@ -1052,22 +1071,6 @@ func playwrightCheckSuiteResolveRuntime(
 			diags.AddError(
 				"Invalid Runtime Configuration",
 				`"runtime.playwright.version" is required when "runtime.auto_detect" is false`,
-			)
-		}
-		return null
-	}
-
-	if len(deviceTypes) == 0 {
-		if autoDetect {
-			diags.AddError(
-				"Invalid Runtime Configuration",
-				"unable to detect default devices from the code bundle; "+
-					"set \"runtime.playwright.devices\" entries explicitly",
-			)
-		} else {
-			diags.AddError(
-				"Invalid Runtime Configuration",
-				`at least one "runtime.playwright.devices" entry is required when "runtime.auto_detect" is false`,
 			)
 		}
 		return null

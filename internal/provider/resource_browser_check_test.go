@@ -109,12 +109,9 @@ func TestAccBrowserCheckResourceBasic(t *testing.T) {
 			// otherwise the post-apply refresh would report the remote tags
 			// as drift and fail this step.
 			Config: browserCheckResource_basic_withoutTags,
-			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckNoResourceAttr(
-					"checkly_browser_check.test",
-					"tags.#",
-				),
-			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue("checkly_browser_check.test", tfjsonpath.New("tags"), emptySet),
+			},
 		},
 	})
 }
@@ -248,14 +245,8 @@ func TestAccBrowserCheckResourceEnvironmentVariables(t *testing.T) {
 
 				environment_variables = []
 			}`,
-			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
-					"checkly_browser_check.test",
-					"environment_variables.#",
-					"0",
-				),
-			),
 			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue("checkly_browser_check.test", tfjsonpath.New("environment_variables"), emptyList),
 				statecheck.ExpectKnownValue(
 					"checkly_browser_check.test",
 					tfjsonpath.New("environment_variables"),
@@ -263,7 +254,7 @@ func TestAccBrowserCheckResourceEnvironmentVariables(t *testing.T) {
 				),
 			},
 		},
-		// Leaving the attribute out stores null.
+		// Leaving the attribute out stores an empty list.
 		{
 			Config: `resource "checkly_browser_check" "test" {
 				name                      = "Browser Check Resource Env Vars"
@@ -273,14 +264,11 @@ func TestAccBrowserCheckResourceEnvironmentVariables(t *testing.T) {
 				locations                 = ["us-east-1"]
 				script                    = "console.log('test')"
 			}`,
-			Check: resource.ComposeTestCheckFunc(
+			ConfigStateChecks: []statecheck.StateCheck{
 				// Unlike a check of the element count, which also passes
-				// for an empty list, this fails unless the value is null.
-				resource.TestCheckNoResourceAttr(
-					"checkly_browser_check.test",
-					"environment_variables",
-				),
-			),
+				// for a null list, this fails unless the value is empty.
+				statecheck.ExpectKnownValue("checkly_browser_check.test", tfjsonpath.New("environment_variables"), emptyList),
+			},
 		},
 	})
 }
@@ -392,13 +380,9 @@ func TestAccBrowserCheckResourceDependencies(t *testing.T) {
 				locations                 = ["us-east-1"]
 				script                    = "console.log('main')"
 			}`,
-			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
-					"checkly_browser_check.test",
-					"dependencies.#",
-					"0",
-				),
-			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue("checkly_browser_check.test", tfjsonpath.New("dependencies"), emptyList),
+			},
 		},
 	})
 }
@@ -639,16 +623,15 @@ func TestAccBrowserCheckUnsetSweepCollections(t *testing.T) {
 				}
 			`,
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckNoResourceAttr(
-					"checkly_browser_check.test",
-					"locations.#",
-				),
 				resource.TestCheckResourceAttr(
 					"checkly_browser_check.test",
 					"private_locations.#",
 					"1",
 				),
 			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue("checkly_browser_check.test", tfjsonpath.New("locations"), emptySet),
+			},
 		},
 		// An explicitly empty private_locations is stored as an empty set.
 		// The check needs a public location again to remain valid.
@@ -671,7 +654,7 @@ func TestAccBrowserCheckUnsetSweepCollections(t *testing.T) {
 				),
 			},
 		},
-		// Leaving private_locations out stores null.
+		// Leaving private_locations out stores an empty set.
 		{
 			Config: privateLocation + `
 				resource "checkly_browser_check" "test" {
@@ -693,7 +676,7 @@ func TestAccBrowserCheckUnsetSweepCollections(t *testing.T) {
 				statecheck.ExpectKnownValue(
 					"checkly_browser_check.test",
 					tfjsonpath.New("private_locations"),
-					knownvalue.Null(),
+					emptySet,
 				),
 			},
 		},
@@ -854,11 +837,6 @@ func TestAccBrowserCheckUnsetSweepGroupAndAlerts(t *testing.T) {
 					"checkly_browser_check.test",
 					"group_order",
 				),
-				resource.TestCheckResourceAttr(
-					"checkly_browser_check.test",
-					"alert_channel_subscriptions.#",
-					"0",
-				),
 				resource.TestCheckNoResourceAttr(
 					"checkly_browser_check.test",
 					"trigger_incident",
@@ -869,6 +847,9 @@ func TestAccBrowserCheckUnsetSweepGroupAndAlerts(t *testing.T) {
 					"NO_RETRIES",
 				),
 			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue("checkly_browser_check.test", tfjsonpath.New("alert_channel_subscriptions"), emptySet),
+			},
 		},
 	})
 }

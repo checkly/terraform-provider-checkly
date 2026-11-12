@@ -144,10 +144,10 @@ func (r *StatusPageV3AutomationRuleResource) Schema(ctx context.Context, req res
 					setvalidator.SizeAtLeast(1),
 				},
 			},
-			// Optional without a default, so leaving it out stores null; see
-			// statusPageV3AutomationRuleToModel.
 			"components": schema.SetNestedAttribute{
 				Optional:    true,
+				Computed:    true,
+				Default:     emptySetDefault(types.ObjectType{AttrTypes: statusPageV3AutomationRuleComponentAttrTypes}),
 				Description: "The components an automated incident impacts, with the impact each gets.",
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
@@ -368,9 +368,7 @@ func statusPageV3AutomationRuleFromModel(ctx context.Context, model *StatusPageV
 }
 
 // statusPageV3AutomationRuleToModel updates the model to match the API
-// representation of the rule. The API reports no components as an empty
-// array, so no components convert to null when the prior components value in
-// model is null or unknown, and to an empty set when it is known.
+// representation of the rule. No components convert to an empty set.
 func statusPageV3AutomationRuleToModel(ctx context.Context, rule *checkly.StatusPageAutomationRuleV3, model *StatusPageV3AutomationRuleResourceModel, diags *diag.Diagnostics) {
 	componentType := types.ObjectType{AttrTypes: statusPageV3AutomationRuleComponentAttrTypes}
 	componentModels := make([]statusPageV3AutomationRuleComponentModel, 0, len(rule.Components))
@@ -383,9 +381,6 @@ func statusPageV3AutomationRuleToModel(ctx context.Context, rule *checkly.Status
 
 	components, d := types.SetValueFrom(ctx, componentType, componentModels)
 	diags.Append(d...)
-	if len(rule.Components) == 0 && (model.Components.IsNull() || model.Components.IsUnknown()) {
-		components = types.SetNull(componentType)
-	}
 
 	model.ID = types.StringValue(rule.ID)
 	model.StatusPageID = types.StringValue(rule.StatusPageID)

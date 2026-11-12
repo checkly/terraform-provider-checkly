@@ -98,9 +98,9 @@ func TestEnvironmentVariablesToListKeepsSecretValues(t *testing.T) {
 	}
 }
 
-// The API reports no variables as an empty array, which converts to null
-// unless the prior value is known.
-func TestEnvironmentVariablesToListNullVersusEmpty(t *testing.T) {
+// The API reports no variables as an empty array, which converts to an empty
+// list whatever the prior value.
+func TestEnvironmentVariablesToListEmpty(t *testing.T) {
 	ctx := context.Background()
 	elemType := types.ObjectType{AttrTypes: environmentVariableAttrTypes}
 	empty := types.ListValueMust(elemType, nil)
@@ -109,8 +109,8 @@ func TestEnvironmentVariablesToListNullVersusEmpty(t *testing.T) {
 		prior types.List
 		want  types.List
 	}{
-		"prior null":    {prior: types.ListNull(elemType), want: types.ListNull(elemType)},
-		"prior unknown": {prior: types.ListUnknown(elemType), want: types.ListNull(elemType)},
+		"prior null":    {prior: types.ListNull(elemType), want: empty},
+		"prior unknown": {prior: types.ListUnknown(elemType), want: empty},
 		"prior empty":   {prior: empty, want: empty},
 		"prior non-empty": {
 			prior: environmentVariablesList(t, "A", "1"),

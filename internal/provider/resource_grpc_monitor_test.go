@@ -15,6 +15,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 )
 
 func TestValidateGRPCEncoding(t *testing.T) {
@@ -567,19 +569,21 @@ func TestAccGRPCMonitorUnsetAllAttributes(t *testing.T) {
 				resource.TestCheckResourceAttr(name, "run_parallel", "false"),
 				resource.TestCheckNoResourceAttr(name, "group_id"),
 				resource.TestCheckResourceAttr(name, "use_global_alert_settings", "true"),
-				resource.TestCheckResourceAttr(name, "alert_channel_subscriptions.#", "0"),
 				resource.TestCheckResourceAttr(name, "retry_strategy.type", "NO_RETRIES"),
 				resource.TestCheckNoResourceAttr(name, "trigger_incident"),
-				resource.TestCheckNoResourceAttr(name, "private_locations.#"),
 				resource.TestCheckNoResourceAttr(name, "runtime_id"),
 				resource.TestCheckResourceAttr(name, "request.ip_family", "IPv4"),
 				resource.TestCheckResourceAttr(name, "request.tls", "true"),
 				resource.TestCheckResourceAttr(name, "request.skip_ssl", "false"),
 				resource.TestCheckResourceAttr(name, "request.timeout", "60"),
 				resource.TestCheckResourceAttr(name, "request.message", ""),
-				resource.TestCheckResourceAttr(name, "request.metadata.#", "0"),
-				resource.TestCheckNoResourceAttr(name, "request.assertions"),
 			),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue(name, tfjsonpath.New("request").AtMapKey("assertions"), emptySet),
+				statecheck.ExpectKnownValue(name, tfjsonpath.New("request").AtMapKey("metadata"), emptySet),
+				statecheck.ExpectKnownValue(name, tfjsonpath.New("private_locations"), emptySet),
+				statecheck.ExpectKnownValue(name, tfjsonpath.New("alert_channel_subscriptions"), emptySet),
+			},
 		},
 		{
 			Config: config("", grpcUnsetHealthService),

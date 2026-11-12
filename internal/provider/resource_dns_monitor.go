@@ -206,6 +206,8 @@ func (r *DNSMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 					},
 					"assertions": schema.SetNestedAttribute{
 						Optional:    true,
+						Computed:    true,
+						Default:     emptySetDefault(types.ObjectType{AttrTypes: assertionAttrTypes}),
 						Description: "Assertions to validate the DNS response.",
 						NestedObject: schema.NestedAttributeObject{
 							// Attributes nested in this set attribute must not use
@@ -455,24 +457,24 @@ func dnsMonitorToModel(ctx context.Context, c *checkly.DNSMonitor, model *DNSMon
 	model.Activated = types.BoolValue(c.Activated)
 	model.Muted = types.BoolValue(c.Muted)
 	model.RunParallel = types.BoolValue(c.RunParallel)
-	model.Locations = stringSetFromAPINullIfUnset(ctx, c.Locations, model.Locations, diags)
+	model.Locations = setFromStrings(ctx, c.Locations, diags)
 	model.DegradedResponseTime = types.Int64Value(int64(c.DegradedResponseTime))
 	model.MaxResponseTime = types.Int64Value(int64(c.MaxResponseTime))
-	model.Tags = stringSetFromAPINullIfUnset(ctx, c.Tags, model.Tags, diags)
+	model.Tags = setFromStrings(ctx, c.Tags, diags)
 
 	var privateLocations []string
 	if c.PrivateLocations != nil {
 		privateLocations = *c.PrivateLocations
 	}
-	model.PrivateLocations = stringSetFromAPINullIfUnset(ctx, privateLocations, model.PrivateLocations, diags)
+	model.PrivateLocations = setFromStrings(ctx, privateLocations, diags)
 
 	model.AlertSettings = alertSettingsFromAPI(ctx, c.AlertSettings, model.AlertSettings, diags)
 
 	model.UseGlobalAlertSettings = types.BoolValue(c.UseGlobalAlertSettings)
-	model.Request = dnsMonitorRequestToObject(ctx, c.Request, model.Request, diags)
+	model.Request = dnsMonitorRequestToObject(ctx, c.Request, diags)
 	model.GroupID = int64ValueOrNull(c.GroupID)
 	model.GroupOrder = groupOrderFromAPI(c.GroupOrder, model.GroupOrder)
-	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, model.AlertChannelSubscriptions, diags)
+	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, diags)
 	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, model.RetryStrategy, diags)
 	model.TriggerIncident = triggerIncidentToObject(ctx, c.TriggerIncident, diags)
 }
@@ -499,13 +501,13 @@ func dnsMonitorRequestFromObject(ctx context.Context, obj types.Object, diags *d
 
 // dnsMonitorRequestToObject converts the API representation of the request
 // to the request attribute value.
-func dnsMonitorRequestToObject(ctx context.Context, r checkly.DNSRequest, prior types.Object, diags *diag.Diagnostics) types.Object {
+func dnsMonitorRequestToObject(ctx context.Context, r checkly.DNSRequest, diags *diag.Diagnostics) types.Object {
 	obj, d := types.ObjectValueFrom(ctx, dnsMonitorRequestAttrTypes, DNSMonitorRequestModel{
 		RecordType: types.StringValue(string(r.RecordType)),
 		Query:      types.StringValue(r.Query),
 		Protocol:   types.StringValue(string(r.Protocol)),
 		NameServer: dnsMonitorNameServerToObject(ctx, r.NameServer, r.Port, diags),
-		Assertions: assertionsToSet(ctx, r.Assertions, priorAssertions(prior), diags),
+		Assertions: assertionsToSet(ctx, r.Assertions, diags),
 	})
 	diags.Append(d...)
 
