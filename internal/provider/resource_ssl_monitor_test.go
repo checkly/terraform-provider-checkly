@@ -5,54 +5,38 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 
 	"github.com/checkly/checkly-go-sdk/v2"
 )
 
-// sslMonitorTestBaseline returns a request.security_baseline attribute value
-// with the given enabled flag and minimum key size rule (when keySize is
-// non-nil). Every other rule is null.
-func sslMonitorTestBaseline(t *testing.T, enabled bool, keySize *SSLMonitorBaselineKeySizeRuleModel) types.Object {
-	t.Helper()
-
-	ctx := context.Background()
-
-	keySizeRule := types.ObjectNull(sslMonitorBaselineKeySizeRuleAttrTypes)
-	if keySize != nil {
-		var d diag.Diagnostics
-		keySizeRule, d = types.ObjectValueFrom(ctx, sslMonitorBaselineKeySizeRuleAttrTypes, *keySize)
-		if d.HasError() {
-			t.Fatalf("unexpected diagnostics: %v", d)
-		}
+// sslMonitorTestRemoteBaseline is a complete security baseline, as the API
+// returns it, in which every rule differs from its server default.
+func sslMonitorTestRemoteBaseline() *checkly.SecurityBaseline {
+	return &checkly.SecurityBaseline{
+		Enabled:                 new(false),
+		MinTLSVersion:           &checkly.SSLBaselineTLSRule{Value: checkly.TLSVersion13, Severity: checkly.SSLBaselineSeverityDegrade},
+		MinKeySizeBits:          &checkly.SSLBaselineKeySizeRule{Value: 4096, Severity: checkly.SSLBaselineSeverityDegrade},
+		WeakSignatureAlgorithm:  &checkly.SSLBaselineSeverityRule{Severity: checkly.SSLBaselineSeverityDegrade},
+		WeakCipherSuite:         &checkly.SSLBaselineSeverityRule{Severity: checkly.SSLBaselineSeverityIgnore},
+		KnownBadCA:              &checkly.SSLBaselineSeverityRule{Severity: checkly.SSLBaselineSeverityDegrade},
+		RecommendedTLSVersion:   &checkly.SSLBaselineTLSRule{Value: checkly.TLSVersion12, Severity: checkly.SSLBaselineSeverityDegrade},
+		RecommendedKeySizeBits:  &checkly.SSLBaselineKeySizeRule{Value: 8192, Severity: checkly.SSLBaselineSeverityFail},
+		OCSPMustStapleRespected: &checkly.SSLBaselineSeverityRule{Severity: checkly.SSLBaselineSeverityFail},
+		SCTPresent:              &checkly.SSLBaselineSeverityRule{Severity: checkly.SSLBaselineSeverityDegrade},
 	}
-
-	obj, d := types.ObjectValueFrom(ctx, sslMonitorSecurityBaselineAttrTypes, SSLMonitorSecurityBaselineModel{
-		Enabled:                 types.BoolValue(enabled),
-		MinTLSVersion:           types.ObjectNull(sslMonitorBaselineTLSRuleAttrTypes),
-		MinKeySizeBits:          keySizeRule,
-		WeakSignatureAlgorithm:  types.ObjectNull(sslMonitorBaselineSeverityRuleAttrTypes),
-		WeakCipherSuite:         types.ObjectNull(sslMonitorBaselineSeverityRuleAttrTypes),
-		KnownBadCA:              types.ObjectNull(sslMonitorBaselineSeverityRuleAttrTypes),
-		RecommendedTLSVersion:   types.ObjectNull(sslMonitorBaselineTLSRuleAttrTypes),
-		RecommendedKeySizeBits:  types.ObjectNull(sslMonitorBaselineKeySizeRuleAttrTypes),
-		OCSPMustStapleRespected: types.ObjectNull(sslMonitorBaselineSeverityRuleAttrTypes),
-		SCTPresent:              types.ObjectNull(sslMonitorBaselineSeverityRuleAttrTypes),
-	})
-	if d.HasError() {
-		t.Fatalf("unexpected diagnostics: %v", d)
-	}
-
-	return obj
 }
 
 // TestSSLMonitorSecurityBaselineFromObject asserts that the security_baseline
-// attribute expands into a payload carrying exactly the configured rules: the
-// API replaces the stored baseline wholesale on every write, so a rule absent
-// from the payload is reset to its server default.
+// attribute expands into a payload carrying every rule, and that a null
+// value leaves the baseline out of the payload.
 func TestSSLMonitorSecurityBaselineFromObject(t *testing.T) {
 	t.Parallel()
 
@@ -60,71 +44,63 @@ func TestSSLMonitorSecurityBaselineFromObject(t *testing.T) {
 	var diags diag.Diagnostics
 
 	if got := sslMonitorSecurityBaselineFromObject(ctx, types.ObjectNull(sslMonitorSecurityBaselineAttrTypes), &diags); got != nil {
-		t.Fatalf("an absent baseline must expand to nil so the server default baseline applies, got %+v", got)
+		t.Fatalf("a null baseline must expand to nil, got %+v", got)
 	}
 
-	baseline := sslMonitorSecurityBaselineFromObject(ctx, sslMonitorTestBaseline(t, false, &SSLMonitorBaselineKeySizeRuleModel{
-		Value:    types.Int64Value(4096),
-		Severity: types.StringValue("degrade"),
-	}), &diags)
+	want := sslMonitorTestRemoteBaseline()
+	got := sslMonitorSecurityBaselineFromObject(ctx, sslMonitorSecurityBaselineToObject(ctx, want, &diags), &diags)
 	if diags.HasError() {
 		t.Fatalf("unexpected diagnostics: %v", diags)
 	}
-	if baseline == nil || baseline.Enabled == nil || *baseline.Enabled {
-		t.Fatalf("expected enabled=false to survive expansion, got %+v", baseline)
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Fatalf("baseline did not round-trip (-want +got):\n%s", diff)
 	}
-	if baseline.MinKeySizeBits == nil || baseline.MinKeySizeBits.Value != 4096 || baseline.MinKeySizeBits.Severity != "degrade" {
-		t.Fatalf("expected minKeySizeBits {4096 degrade}, got %+v", baseline.MinKeySizeBits)
+
+	// The schema default expands to the server's default baseline.
+	got = sslMonitorSecurityBaselineFromObject(ctx, sslMonitorSecurityBaselineToObject(ctx, nil, &diags), &diags)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
 	}
-	if baseline.MinTLSVersion != nil || baseline.KnownBadCA != nil {
-		t.Fatalf("rules absent from config must be omitted from the payload, got %+v", baseline)
+	if diff := cmp.Diff(&sslMonitorDefaultSecurityBaseline, got); diff != "" {
+		t.Fatalf("default baseline did not expand to the server default (-want +got):\n%s", diff)
 	}
 }
 
-// TestSSLMonitorSecurityBaselineToObject asserts the read-side projection:
-// the server normalizes every baseline to the full rule set, and only the
-// rules present in prior state (i.e. in the config as of the last apply) are
-// written back. Otherwise a config with a partial baseline would diff forever.
+// TestSSLMonitorSecurityBaselineToObject asserts that a missing baseline,
+// enabled flag or rule (not expected from the API) converts to its default,
+// while the rules the server returns keep the server's values.
 func TestSSLMonitorSecurityBaselineToObject(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	var diags diag.Diagnostics
 
-	enabled := true
-	remote := &checkly.SecurityBaseline{
-		Enabled:        &enabled,
-		MinTLSVersion:  &checkly.SSLBaselineTLSRule{Value: "TLS1.2", Severity: "fail"},
-		MinKeySizeBits: &checkly.SSLBaselineKeySizeRule{Value: 4096, Severity: "fail"},
-		KnownBadCA:     &checkly.SSLBaselineSeverityRule{Severity: "fail"},
-	}
+	partial := sslMonitorTestRemoteBaseline()
+	partial.Enabled = nil
+	partial.MinKeySizeBits = nil
 
-	if got := sslMonitorSecurityBaselineToObject(ctx, remote, types.ObjectNull(sslMonitorSecurityBaselineAttrTypes), &diags); !got.IsNull() {
-		t.Fatalf("without a prior baseline (unconfigured, or a fresh import), the server default must not be projected into state, got %v", got)
-	}
+	partialWant := sslMonitorTestRemoteBaseline()
+	partialWant.Enabled = new(true)
+	partialWant.MinKeySizeBits = sslMonitorDefaultSecurityBaseline.MinKeySizeBits
 
-	prior := sslMonitorTestBaseline(t, true, &SSLMonitorBaselineKeySizeRuleModel{
-		Value:    types.Int64Value(2048),
-		Severity: types.StringValue("fail"),
-	})
-	got := sslMonitorSecurityBaselineToObject(ctx, remote, prior, &diags)
-	if diags.HasError() {
-		t.Fatalf("unexpected diagnostics: %v", diags)
-	}
+	for name, tc := range map[string]struct {
+		remote *checkly.SecurityBaseline
+		want   *checkly.SecurityBaseline
+	}{
+		"nil baseline":                 {remote: nil, want: &sslMonitorDefaultSecurityBaseline},
+		"nil enabled and nil key size": {remote: partial, want: partialWant},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
-	var model SSLMonitorSecurityBaselineModel
-	diags.Append(got.As(ctx, &model, basetypes.ObjectAsOptions{})...)
-	if diags.HasError() || got.IsNull() {
-		t.Fatalf("expected a projected baseline, got %v (%v)", got, diags)
-	}
-	if !model.MinTLSVersion.IsNull() {
-		t.Fatalf("rule absent from prior state must not be projected, got %v", model.MinTLSVersion)
-	}
-
-	var rule SSLMonitorBaselineKeySizeRuleModel
-	diags.Append(model.MinKeySizeBits.As(ctx, &rule, basetypes.ObjectAsOptions{})...)
-	if diags.HasError() || rule.Value.ValueInt64() != 4096 {
-		t.Fatalf("configured rule must carry the remote (drifted) value 4096, got %v", model.MinKeySizeBits)
+			var diags diag.Diagnostics
+			got := sslMonitorSecurityBaselineFromObject(ctx, sslMonitorSecurityBaselineToObject(ctx, tc.remote, &diags), &diags)
+			if diags.HasError() {
+				t.Fatalf("unexpected diagnostics: %v", diags)
+			}
+			if diff := cmp.Diff(tc.want, got); diff != "" {
+				t.Fatalf("unexpected baseline (-want +got):\n%s", diff)
+			}
+		})
 	}
 }
 
@@ -277,23 +253,39 @@ func TestAccSSLMonitorFull(t *testing.T) {
 						"target":     "true",
 					},
 				),
+				resource.TestCheckResourceAttr("checkly_ssl_monitor.test", "request.security_baseline.enabled", "true"),
+				sslMonitorCheckBaselineRule("min_tls_version", "TLS1.3", "degrade"),
+				sslMonitorCheckBaselineRule("min_key_size_bits", "3072", "degrade"),
+				sslMonitorCheckBaselineRule("weak_signature_algorithm", "", "degrade"),
+				sslMonitorCheckBaselineRule("weak_cipher_suite", "", "degrade"),
+				sslMonitorCheckBaselineRule("known_bad_ca", "", "degrade"),
+				sslMonitorCheckBaselineRule("recommended_tls_version", "TLS1.2", "degrade"),
+				sslMonitorCheckBaselineRule("recommended_key_size_bits", "4096", "degrade"),
+				sslMonitorCheckBaselineRule("ocsp_must_staple_respected", "", "degrade"),
+				sslMonitorCheckBaselineRule("sct_present", "", "fail"),
 			),
 		},
 		{
 			// The full config enumerates every baseline rule, including the
 			// severity-only and advisory ones — a clean re-plan proves each
-			// rule's read-side projection round-trips.
+			// rule round-trips.
 			Config:             sslMonitor_full,
 			PlanOnly:           true,
 			ExpectNonEmptyPlan: false,
 		},
 		{
-			// Import has no prior baseline to project the server's onto, so
-			// the configured baseline is the only difference.
-			ResourceName:            "checkly_ssl_monitor.test",
-			ImportState:             true,
-			ImportStateVerify:       true,
-			ImportStateVerifyIgnore: []string{"request.security_baseline"},
+			// State holds the server's full baseline, so an imported monitor
+			// matches the state written by create.
+			ResourceName:      "checkly_ssl_monitor.test",
+			ImportState:       true,
+			ImportStateVerify: true,
+		},
+		{
+			// An import block with a config listing every rule plans no
+			// changes.
+			ResourceName:    "checkly_ssl_monitor.test",
+			ImportState:     true,
+			ImportStateKind: resource.ImportBlockWithID,
 		},
 	})
 }
@@ -313,48 +305,89 @@ func TestAccSSLMonitorMinimalCleanReplan(t *testing.T) {
 		},
 		{
 			// An imported monitor without a configured baseline matches the
-			// state written by create: the server's default baseline is not
-			// projected into state.
+			// state written by create: both hold the server's default
+			// baseline.
 			ResourceName:      "checkly_ssl_monitor.test",
 			ImportState:       true,
 			ImportStateVerify: true,
 		},
+		{
+			// An import block with a config that omits security_baseline
+			// plans no changes: the schema default is the server default.
+			ResourceName:    "checkly_ssl_monitor.test",
+			ImportState:     true,
+			ImportStateKind: resource.ImportBlockWithID,
+		},
 	})
 }
 
+// sslMonitorCheckBaselineRule checks the value and severity of a security
+// baseline rule in state. An empty value skips the value check, for rules
+// that have none.
+func sslMonitorCheckBaselineRule(rule, value, severity string) resource.TestCheckFunc {
+	const name = "checkly_ssl_monitor.test"
+	prefix := "request.security_baseline." + rule + "."
+
+	checks := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(name, prefix+"severity", severity),
+	}
+	if value != "" {
+		checks = append(checks, resource.TestCheckResourceAttr(name, prefix+"value", value))
+	}
+
+	return resource.ComposeAggregateTestCheckFunc(checks...)
+}
+
+// sslMonitorCheckDefaultBaselineExcept checks that every security baseline
+// rule except the named ones holds its server default in state.
+func sslMonitorCheckDefaultBaselineExcept(except ...string) resource.TestCheckFunc {
+	defaults := map[string][2]string{
+		"min_tls_version":            {"TLS1.2", "fail"},
+		"min_key_size_bits":          {"2048", "fail"},
+		"weak_signature_algorithm":   {"", "fail"},
+		"weak_cipher_suite":          {"", "fail"},
+		"known_bad_ca":               {"", "fail"},
+		"recommended_tls_version":    {"TLS1.3", "ignore"},
+		"recommended_key_size_bits":  {"3072", "ignore"},
+		"ocsp_must_staple_respected": {"", "ignore"},
+		"sct_present":                {"", "ignore"},
+	}
+	for _, rule := range except {
+		delete(defaults, rule)
+	}
+
+	var checks []resource.TestCheckFunc
+	for rule, def := range defaults {
+		checks = append(checks, sslMonitorCheckBaselineRule(rule, def[0], def[1]))
+	}
+
+	return resource.ComposeAggregateTestCheckFunc(checks...)
+}
+
 // TestAccSSLMonitorCustomSecurityBaseline exercises the security_baseline
-// lifecycle: a PARTIAL baseline applies and re-plans clean (the server fills
-// in the unlisted rules, which must not be projected into state),
-// adding a rule works, removing a rule produces a diff and resets it to the
-// server default (the API replaces the baseline wholesale on writes), and
+// lifecycle: a partial baseline applies, holds the server defaults for the
+// unlisted rules and re-plans clean; an import with the same config plans
+// no changes; an external change to an unlisted rule shows up as drift;
+// adding a rule works; removing a rule plans a reset to its default; and
 // removing the whole attribute resets the baseline entirely.
 func TestAccSSLMonitorCustomSecurityBaseline(t *testing.T) {
+	const name = "checkly_ssl_monitor.test"
+
+	var id string
+	captureID := func(s *terraform.State) error {
+		id = s.RootModule().Resources[name].Primary.ID
+		return nil
+	}
+
 	accTestCase(t, []resource.TestStep{
 		{
 			// Partial baseline: one rule only.
 			Config: sslMonitor_partialSecurityBaseline,
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
-					"checkly_ssl_monitor.test",
-					"request.security_baseline.min_key_size_bits.value",
-					"4096",
-				),
-				resource.TestCheckResourceAttr(
-					"checkly_ssl_monitor.test",
-					"request.security_baseline.min_key_size_bits.severity",
-					"fail",
-				),
-				resource.TestCheckResourceAttr(
-					"checkly_ssl_monitor.test",
-					"request.security_baseline.enabled",
-					"true",
-				),
-				// Rules the config does not mention must not be projected
-				// into state, or the partial baseline would diff forever.
-				resource.TestCheckNoResourceAttr(
-					"checkly_ssl_monitor.test",
-					"request.security_baseline.min_tls_version.value",
-				),
+				captureID,
+				sslMonitorCheckBaselineRule("min_key_size_bits", "4096", "fail"),
+				resource.TestCheckResourceAttr(name, "request.security_baseline.enabled", "true"),
+				sslMonitorCheckDefaultBaselineExcept("min_key_size_bits"),
 			),
 		},
 		{
@@ -364,31 +397,69 @@ func TestAccSSLMonitorCustomSecurityBaseline(t *testing.T) {
 			ExpectNonEmptyPlan: false,
 		},
 		{
+			// An import block with a config listing one rule plans no
+			// changes: the unlisted rules plan their defaults, which is
+			// what the server holds.
+			ResourceName:    name,
+			ImportState:     true,
+			ImportStateKind: resource.ImportBlockWithID,
+		},
+		{
+			// A rule the config does not list is still drift-checked: a
+			// change made outside Terraform plans an update back to the
+			// default.
+			PreConfig: func() {
+				ctx := context.Background()
+				client := testAccClient()
+				monitor, err := client.GetSSLMonitor(ctx, id)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if monitor.Request.SSLConfig.SecurityBaseline == nil {
+					t.Fatal("the API returned no security baseline")
+				}
+				monitor.Request.SSLConfig.SecurityBaseline.SCTPresent = &checkly.SSLBaselineSeverityRule{Severity: checkly.SSLBaselineSeverityDegrade}
+				if _, err := client.UpdateSSLMonitor(ctx, id, *monitor); err != nil {
+					t.Fatal(err)
+				}
+			},
+			Config: sslMonitor_partialSecurityBaseline,
+			ConfigPlanChecks: resource.ConfigPlanChecks{
+				PreApply: []plancheck.PlanCheck{
+					plancheck.ExpectResourceAction(name, plancheck.ResourceActionUpdate),
+					plancheck.ExpectKnownValue(name,
+						tfjsonpath.New("request").AtMapKey("security_baseline").AtMapKey("sct_present").AtMapKey("severity"),
+						knownvalue.StringExact("ignore")),
+				},
+			},
+			Check: sslMonitorCheckBaselineRule("sct_present", "", "ignore"),
+		},
+		{
 			// Add a second rule.
 			Config: sslMonitor_twoRuleSecurityBaseline,
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
-					"checkly_ssl_monitor.test",
-					"request.security_baseline.min_tls_version.value",
-					"TLS1.3",
-				),
-				resource.TestCheckResourceAttr(
-					"checkly_ssl_monitor.test",
-					"request.security_baseline.min_key_size_bits.value",
-					"4096",
-				),
+				sslMonitorCheckBaselineRule("min_tls_version", "TLS1.3", "fail"),
+				sslMonitorCheckBaselineRule("min_key_size_bits", "4096", "fail"),
 			),
 		},
 		{
-			// Remove the min_tls_version rule again: the plan must show the
-			// removal, and afterwards the rule must be gone from state (the
-			// server reset it to its default).
+			// Remove the min_tls_version rule again: the plan resets it to
+			// its default.
 			Config: sslMonitor_partialSecurityBaseline,
+			ConfigPlanChecks: resource.ConfigPlanChecks{
+				PreApply: []plancheck.PlanCheck{
+					plancheck.ExpectResourceAction(name, plancheck.ResourceActionUpdate),
+					plancheck.ExpectKnownValue(name,
+						tfjsonpath.New("request").AtMapKey("security_baseline").AtMapKey("min_tls_version"),
+						knownvalue.ObjectExact(map[string]knownvalue.Check{
+							"value":    knownvalue.StringExact("TLS1.2"),
+							"severity": knownvalue.StringExact("fail"),
+						})),
+				},
+			},
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckNoResourceAttr(
-					"checkly_ssl_monitor.test",
-					"request.security_baseline.min_tls_version.value",
-				),
+				sslMonitorCheckBaselineRule("min_key_size_bits", "4096", "fail"),
+				sslMonitorCheckDefaultBaselineExcept("min_key_size_bits"),
 			),
 		},
 		{
@@ -398,19 +469,12 @@ func TestAccSSLMonitorCustomSecurityBaseline(t *testing.T) {
 		},
 		{
 			// Disable baseline enforcement entirely. The server still returns
-			// the full rule set with enabled=false; only enabled may be
-			// projected into state.
+			// the full rule set with enabled=false, and the rule removed from
+			// the config is reset to its default.
 			Config: sslMonitor_disabledSecurityBaseline,
 			Check: resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(
-					"checkly_ssl_monitor.test",
-					"request.security_baseline.enabled",
-					"false",
-				),
-				resource.TestCheckNoResourceAttr(
-					"checkly_ssl_monitor.test",
-					"request.security_baseline.min_key_size_bits.value",
-				),
+				resource.TestCheckResourceAttr(name, "request.security_baseline.enabled", "false"),
+				sslMonitorCheckDefaultBaselineExcept(),
 			),
 		},
 		{
@@ -419,12 +483,11 @@ func TestAccSSLMonitorCustomSecurityBaseline(t *testing.T) {
 			ExpectNonEmptyPlan: false,
 		},
 		{
-			// Remove the whole attribute: resets to the account default
-			// baseline.
+			// Remove the whole attribute: resets to the default baseline.
 			Config: sslMonitor_minimal,
-			Check: resource.TestCheckNoResourceAttr(
-				"checkly_ssl_monitor.test",
-				"request.security_baseline.enabled",
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(name, "request.security_baseline.enabled", "true"),
+				sslMonitorCheckDefaultBaselineExcept(),
 			),
 		},
 		{
@@ -449,6 +512,8 @@ const sslMonitor_basic = `
 	}
 `
 
+// sslMonitor_full sets every optional attribute. Each security baseline rule
+// has a value that differs from its default.
 const sslMonitor_full = `
 	resource "checkly_ssl_monitor" "test" {
 	  name                   = "sslMonitor_full"
@@ -473,35 +538,35 @@ const sslMonitor_full = `
 		security_baseline = {
 		  enabled = true
 		  min_tls_version = {
-			value    = "TLS1.2"
-			severity = "fail"
+			value    = "TLS1.3"
+			severity = "degrade"
 		  }
 		  min_key_size_bits = {
-			value    = 2048
-			severity = "fail"
+			value    = 3072
+			severity = "degrade"
 		  }
 		  weak_signature_algorithm = {
-			severity = "fail"
+			severity = "degrade"
 		  }
 		  weak_cipher_suite = {
-			severity = "fail"
+			severity = "degrade"
 		  }
 		  known_bad_ca = {
-			severity = "fail"
+			severity = "degrade"
 		  }
 		  recommended_tls_version = {
-			value    = "TLS1.3"
-			severity = "ignore"
+			value    = "TLS1.2"
+			severity = "degrade"
 		  }
 		  recommended_key_size_bits = {
-			value    = 3072
-			severity = "ignore"
+			value    = 4096
+			severity = "degrade"
 		  }
 		  ocsp_must_staple_respected = {
-			severity = "ignore"
+			severity = "degrade"
 		  }
 		  sct_present = {
-			severity = "ignore"
+			severity = "fail"
 		  }
 		}
 
@@ -552,8 +617,8 @@ const sslMonitor_minimal = `
 	}
 `
 
-// sslMonitor_partialSecurityBaseline overrides a single rule; the server fills
-// in the rest, which must stay out of state (projection) so this re-plans clean.
+// sslMonitor_partialSecurityBaseline overrides a single rule; every other
+// rule takes its server default.
 const sslMonitor_partialSecurityBaseline = `
 	resource "checkly_ssl_monitor" "test" {
 	  name      = "ssl-custom-baseline"

@@ -170,17 +170,39 @@ var sslMonitorRequestAttrTypes = map[string]attr.Type{
 	"assertions":               types.SetType{ElemType: types.ObjectType{AttrTypes: assertionAttrTypes}},
 }
 
+// sslMonitorDefaultSecurityBaseline is the security baseline a monitor gets
+// for the rules its configuration leaves out. The schema defaults of the
+// baseline, of each rule and of each rule's leaves are all derived from this
+// value, and the provider sends the complete baseline on every write.
+//
+// The values must follow the Checkly API's default security baseline, so
+// that a monitor whose configuration omits a rule plans no changes against
+// what the API stores for it. Changing a value here plans an update for
+// every monitor that leaves that rule unconfigured.
+var sslMonitorDefaultSecurityBaseline = checkly.SecurityBaseline{
+	Enabled:                 new(true),
+	MinTLSVersion:           &checkly.SSLBaselineTLSRule{Value: checkly.TLSVersion12, Severity: checkly.SSLBaselineSeverityFail},
+	MinKeySizeBits:          &checkly.SSLBaselineKeySizeRule{Value: 2048, Severity: checkly.SSLBaselineSeverityFail},
+	WeakSignatureAlgorithm:  &checkly.SSLBaselineSeverityRule{Severity: checkly.SSLBaselineSeverityFail},
+	WeakCipherSuite:         &checkly.SSLBaselineSeverityRule{Severity: checkly.SSLBaselineSeverityFail},
+	KnownBadCA:              &checkly.SSLBaselineSeverityRule{Severity: checkly.SSLBaselineSeverityFail},
+	RecommendedTLSVersion:   &checkly.SSLBaselineTLSRule{Value: checkly.TLSVersion13, Severity: checkly.SSLBaselineSeverityIgnore},
+	RecommendedKeySizeBits:  &checkly.SSLBaselineKeySizeRule{Value: 3072, Severity: checkly.SSLBaselineSeverityIgnore},
+	OCSPMustStapleRespected: &checkly.SSLBaselineSeverityRule{Severity: checkly.SSLBaselineSeverityIgnore},
+	SCTPresent:              &checkly.SSLBaselineSeverityRule{Severity: checkly.SSLBaselineSeverityIgnore},
+}
+
 // sslMonitorBaselineSeverityAttribute returns the severity attribute for a
 // security baseline rule. The default mirrors the server's: enforceable rules
 // default to "fail", advisory rules to "ignore". Because every leaf carries a
-// default, a rule that is present in the configuration always produces
-// a fully-populated payload, and removing a leaf from the configuration falls
+// default, a rule given with only some of its leaves still produces a
+// fully-populated payload, and removing a leaf from the configuration falls
 // back to the default with a visible plan diff.
-func sslMonitorBaselineSeverityAttribute(defaultSeverity string) schema.StringAttribute {
+func sslMonitorBaselineSeverityAttribute(defaultSeverity checkly.SSLBaselineSeverity) schema.StringAttribute {
 	return schema.StringAttribute{
 		Optional:    true,
 		Computed:    true,
-		Default:     stringdefault.StaticString(defaultSeverity),
+		Default:     stringdefault.StaticString(string(defaultSeverity)),
 		Description: fmt.Sprintf("What happens when the rule is violated: `fail` fails the monitor, `degrade` marks it degraded, `ignore` disables the rule. (Default `%s`).", defaultSeverity),
 		Validators: []validator.String{
 			stringvalidator.OneOf("fail", "degrade", "ignore"),
@@ -188,50 +210,61 @@ func sslMonitorBaselineSeverityAttribute(defaultSeverity string) schema.StringAt
 	}
 }
 
-func sslMonitorBaselineTLSRuleAttribute(defaultValue, defaultSeverity, description string) schema.SingleNestedAttribute {
+// The rule attributes are computed with the rule's default from
+// sslMonitorDefaultSecurityBaseline, so that a rule left out of the
+// configuration (or removed from it) plans the default and state can hold
+// the full baseline the server returns.
+
+func sslMonitorBaselineTLSRuleAttribute(def *checkly.SSLBaselineTLSRule, description string) schema.SingleNestedAttribute {
 	return schema.SingleNestedAttribute{
 		Optional:    true,
+		Computed:    true,
 		Description: description,
+		Default:     objectdefault.StaticValue(sslMonitorTLSRuleToObject(def, def)),
 		Attributes: map[string]schema.Attribute{
 			"value": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Default:     stringdefault.StaticString(defaultValue),
-				Description: fmt.Sprintf("The TLS version. Possible values are `TLS1.2` and `TLS1.3`. (Default `%s`).", defaultValue),
+				Default:     stringdefault.StaticString(string(def.Value)),
+				Description: fmt.Sprintf("The TLS version. Possible values are `TLS1.2` and `TLS1.3`. (Default `%s`).", def.Value),
 				Validators: []validator.String{
 					stringvalidator.OneOf("TLS1.2", "TLS1.3"),
 				},
 			},
-			"severity": sslMonitorBaselineSeverityAttribute(defaultSeverity),
+			"severity": sslMonitorBaselineSeverityAttribute(def.Severity),
 		},
 	}
 }
 
-func sslMonitorBaselineKeySizeRuleAttribute(defaultValue int64, defaultSeverity, description string) schema.SingleNestedAttribute {
+func sslMonitorBaselineKeySizeRuleAttribute(def *checkly.SSLBaselineKeySizeRule, description string) schema.SingleNestedAttribute {
 	return schema.SingleNestedAttribute{
 		Optional:    true,
+		Computed:    true,
 		Description: description,
+		Default:     objectdefault.StaticValue(sslMonitorKeySizeRuleToObject(def, def)),
 		Attributes: map[string]schema.Attribute{
 			"value": schema.Int64Attribute{
 				Optional:    true,
 				Computed:    true,
-				Default:     int64default.StaticInt64(defaultValue),
-				Description: fmt.Sprintf("The key size in bits. Possible values are between 1024 and 16384. (Default `%d`).", defaultValue),
+				Default:     int64default.StaticInt64(int64(def.Value)),
+				Description: fmt.Sprintf("The key size in bits. Possible values are between 1024 and 16384. (Default `%d`).", def.Value),
 				Validators: []validator.Int64{
 					int64validator.Between(1024, 16384),
 				},
 			},
-			"severity": sslMonitorBaselineSeverityAttribute(defaultSeverity),
+			"severity": sslMonitorBaselineSeverityAttribute(def.Severity),
 		},
 	}
 }
 
-func sslMonitorBaselineSeverityRuleAttribute(defaultSeverity, description string) schema.SingleNestedAttribute {
+func sslMonitorBaselineSeverityRuleAttribute(def *checkly.SSLBaselineSeverityRule, description string) schema.SingleNestedAttribute {
 	return schema.SingleNestedAttribute{
 		Optional:    true,
+		Computed:    true,
 		Description: description,
+		Default:     objectdefault.StaticValue(sslMonitorSeverityRuleToObject(def, def)),
 		Attributes: map[string]schema.Attribute{
-			"severity": sslMonitorBaselineSeverityAttribute(defaultSeverity),
+			"severity": sslMonitorBaselineSeverityAttribute(def.Severity),
 		},
 	}
 }
@@ -386,25 +419,30 @@ func (r *SSLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 							},
 						},
 					},
+					// The server stores a complete baseline on every monitor and
+					// returns all rules, so the attribute is computed with the
+					// full default baseline and state holds every rule.
 					"security_baseline": schema.SingleNestedAttribute{
 						Optional:    true,
-						Description: "The SSL security baseline — a set of enforceable and advisory rules. Omit the attribute to inherit the account default baseline. Rules that are not listed keep their server defaults; removing a rule (or the whole attribute) resets it to its default on the next apply. Only listed rules are drift-checked: an external change to an unlisted rule is not shown by `terraform plan` and is reset on the next apply.",
+						Computed:    true,
+						Description: "The SSL security baseline — a set of enforceable and advisory rules. Omit the attribute, or a rule, to use its default (the values listed below, which match the Checkly API's defaults). Removing a rule (or the whole attribute) resets it to its default on the next apply. Every rule is drift-checked, whether or not it is listed: an external change to any rule shows up in `terraform plan`.",
+						Default:     objectdefault.StaticValue(sslMonitorSecurityBaselineToObject(ctx, nil, &resp.Diagnostics)),
 						Attributes: map[string]schema.Attribute{
 							"enabled": schema.BoolAttribute{
 								Optional:    true,
 								Computed:    true,
-								Default:     booldefault.StaticBool(true),
+								Default:     booldefault.StaticBool(*sslMonitorDefaultSecurityBaseline.Enabled),
 								Description: "Whether the security baseline is enforced. (Default `true`).",
 							},
-							"min_tls_version":            sslMonitorBaselineTLSRuleAttribute("TLS1.2", "fail", "Enforceable rule: the minimum TLS version the server must accept."),
-							"min_key_size_bits":          sslMonitorBaselineKeySizeRuleAttribute(2048, "fail", "Enforceable rule: the minimum public key size in bits."),
-							"weak_signature_algorithm":   sslMonitorBaselineSeverityRuleAttribute("fail", "Enforceable rule: the certificate must not use a weak signature algorithm."),
-							"weak_cipher_suite":          sslMonitorBaselineSeverityRuleAttribute("fail", "Enforceable rule: the connection must not negotiate a weak cipher suite."),
-							"known_bad_ca":               sslMonitorBaselineSeverityRuleAttribute("fail", "Enforceable rule: the certificate chain must not include a known-bad CA."),
-							"recommended_tls_version":    sslMonitorBaselineTLSRuleAttribute("TLS1.3", "ignore", "Advisory rule: the recommended TLS version."),
-							"recommended_key_size_bits":  sslMonitorBaselineKeySizeRuleAttribute(3072, "ignore", "Advisory rule: the recommended public key size in bits."),
-							"ocsp_must_staple_respected": sslMonitorBaselineSeverityRuleAttribute("ignore", "Advisory rule: an OCSP Must-Staple extension, when present, must be respected."),
-							"sct_present":                sslMonitorBaselineSeverityRuleAttribute("ignore", "Advisory rule: the certificate should carry a Signed Certificate Timestamp."),
+							"min_tls_version":            sslMonitorBaselineTLSRuleAttribute(sslMonitorDefaultSecurityBaseline.MinTLSVersion, "Enforceable rule: the minimum TLS version the server must accept."),
+							"min_key_size_bits":          sslMonitorBaselineKeySizeRuleAttribute(sslMonitorDefaultSecurityBaseline.MinKeySizeBits, "Enforceable rule: the minimum public key size in bits."),
+							"weak_signature_algorithm":   sslMonitorBaselineSeverityRuleAttribute(sslMonitorDefaultSecurityBaseline.WeakSignatureAlgorithm, "Enforceable rule: the certificate must not use a weak signature algorithm."),
+							"weak_cipher_suite":          sslMonitorBaselineSeverityRuleAttribute(sslMonitorDefaultSecurityBaseline.WeakCipherSuite, "Enforceable rule: the connection must not negotiate a weak cipher suite."),
+							"known_bad_ca":               sslMonitorBaselineSeverityRuleAttribute(sslMonitorDefaultSecurityBaseline.KnownBadCA, "Enforceable rule: the certificate chain must not include a known-bad CA."),
+							"recommended_tls_version":    sslMonitorBaselineTLSRuleAttribute(sslMonitorDefaultSecurityBaseline.RecommendedTLSVersion, "Advisory rule: the recommended TLS version."),
+							"recommended_key_size_bits":  sslMonitorBaselineKeySizeRuleAttribute(sslMonitorDefaultSecurityBaseline.RecommendedKeySizeBits, "Advisory rule: the recommended public key size in bits."),
+							"ocsp_must_staple_respected": sslMonitorBaselineSeverityRuleAttribute(sslMonitorDefaultSecurityBaseline.OCSPMustStapleRespected, "Advisory rule: an OCSP Must-Staple extension, when present, must be respected."),
+							"sct_present":                sslMonitorBaselineSeverityRuleAttribute(sslMonitorDefaultSecurityBaseline.SCTPresent, "Advisory rule: the certificate should carry a Signed Certificate Timestamp."),
 						},
 					},
 					// The full assertion grammar (per-source property
@@ -715,11 +753,9 @@ func sslMonitorRequestFromObject(ctx context.Context, obj types.Object, diags *d
 		SkipChainValidation:   model.SkipChainValidation.ValueBool(),
 		HandshakeTimeoutMs:    int(model.HandshakeTimeoutMs.ValueInt64()),
 		AlertDaysBeforeExpiry: int(model.AlertDaysBeforeExpiry.ValueInt64()),
-		// A nil baseline (attribute omitted) makes the server apply its
-		// default baseline. The API replaces the stored baseline wholesale on
-		// every write (rules missing from the payload are reset to their
-		// defaults), so the payload carries exactly the rules present in the
-		// configuration; no state values are mixed in.
+		// The schema defaults fill every rule the configuration leaves out,
+		// so the payload always carries the complete baseline and the
+		// server stores exactly what the plan shows.
 		SecurityBaseline: sslMonitorSecurityBaselineFromObject(ctx, model.SecurityBaseline, diags),
 	}
 
@@ -754,9 +790,8 @@ func sslMonitorRequestFromObject(ctx context.Context, obj types.Object, diags *d
 // sslMonitorRequestToObject converts the API representation of an SSL
 // request to the request attribute value. prior is the request value held
 // before the conversion (the plan on create/update, the state on read); it
-// drives the security baseline projection (see
-// sslMonitorSecurityBaselineToObject) and preserves a configured empty client
-// certificate ID.
+// preserves a configured empty client certificate ID and keeps an
+// unconfigured assertion set null.
 func sslMonitorRequestToObject(ctx context.Context, r checkly.SSLRequest, prior types.Object, diags *diag.Diagnostics) types.Object {
 	priorRequest := sslMonitorPriorRequest(ctx, prior, diags)
 
@@ -775,7 +810,7 @@ func sslMonitorRequestToObject(ctx context.Context, r checkly.SSLRequest, prior 
 		SkipChainValidation:   types.BoolValue(config.SkipChainValidation),
 		HandshakeTimeoutMs:    types.Int64Value(int64(config.HandshakeTimeoutMs)),
 		AlertDaysBeforeExpiry: types.Int64Value(int64(config.AlertDaysBeforeExpiry)),
-		SecurityBaseline:      sslMonitorSecurityBaselineToObject(ctx, config.SecurityBaseline, priorRequest.SecurityBaseline, diags),
+		SecurityBaseline:      sslMonitorSecurityBaselineToObject(ctx, config.SecurityBaseline, diags),
 		ClientCertificate:     sslMonitorClientCertificateToObject(ctx, r, priorRequest.ClientCertificate, diags),
 		Assertions:            assertionsToSet(ctx, r.Assertions, priorAssertions(prior), diags),
 	})
@@ -785,10 +820,9 @@ func sslMonitorRequestToObject(ctx context.Context, r checkly.SSLRequest, prior 
 }
 
 // sslMonitorPriorRequest returns the model of a prior request value. Without
-// a prior value (e.g. on import) the nested values are null.
+// a prior value (e.g. on import) the client certificate is null.
 func sslMonitorPriorRequest(ctx context.Context, prior types.Object, diags *diag.Diagnostics) SSLMonitorRequestModel {
 	empty := SSLMonitorRequestModel{
-		SecurityBaseline:  types.ObjectNull(sslMonitorSecurityBaselineAttrTypes),
 		ClientCertificate: types.ObjectNull(sslMonitorClientCertificateAttrTypes),
 	}
 
@@ -833,11 +867,10 @@ func sslMonitorClientCertificateToObject(ctx context.Context, r checkly.SSLReque
 }
 
 // sslMonitorSecurityBaselineFromObject converts the request.security_baseline
-// attribute value to its API representation. An absent baseline converts to
-// nil, which omits securityBaseline from the payload so the server applies
-// (or resets to) its default baseline. Rules present in the configuration
-// always carry both leaves, as the schema defaults fill whatever the
-// configuration leaves out.
+// attribute value to its API representation. After the schema defaults are
+// applied the value holds every rule with all leaves, so the payload is the
+// complete baseline. A null value (not expected once defaults apply)
+// converts to nil, which leaves securityBaseline out of the payload.
 func sslMonitorSecurityBaselineFromObject(ctx context.Context, obj types.Object, diags *diag.Diagnostics) *checkly.SecurityBaseline {
 	model := objectAs[SSLMonitorSecurityBaselineModel](ctx, obj, diags)
 	if model == nil {
@@ -898,49 +931,46 @@ func sslMonitorSeverityRuleFromObject(ctx context.Context, obj types.Object, dia
 	}
 }
 
-// sslMonitorSecurityBaselineToObject projects the server-returned security
-// baseline onto the shape of the prior request.security_baseline value
-// (which mirrors the configuration as of the last apply). The server
-// normalizes every baseline to the full rule set, so writing the raw response
-// into state would make any configuration that omits a rule diff forever.
-// Instead, only rules present in the prior value are written back, with the
-// server's values: drift on configured rules stays visible, while
-// server-filled defaults for unconfigured rules stay null. Without a prior
-// baseline (never configured, or a fresh import) the baseline stays null;
-// after an import the first plan therefore shows the configured baseline as
-// an addition.
-func sslMonitorSecurityBaselineToObject(ctx context.Context, remote *checkly.SecurityBaseline, prior types.Object, diags *diag.Diagnostics) types.Object {
-	null := types.ObjectNull(sslMonitorSecurityBaselineAttrTypes)
-
+// sslMonitorSecurityBaselineToObject converts the server-returned security
+// baseline to the request.security_baseline value. The server returns every
+// rule, and state holds them all, so drift on any rule is visible; the schema
+// defaults make an omitted rule plan its default, which the provider sends
+// and the server then returns. A missing baseline or rule (not expected from
+// the API) converts to its default.
+func sslMonitorSecurityBaselineToObject(ctx context.Context, remote *checkly.SecurityBaseline, diags *diag.Diagnostics) types.Object {
+	def := &sslMonitorDefaultSecurityBaseline
 	if remote == nil {
-		return null
+		remote = def
 	}
 
-	priorModel := objectAs[SSLMonitorSecurityBaselineModel](ctx, prior, diags)
-	if priorModel == nil {
-		return null
+	enabled := *def.Enabled
+	if remote.Enabled != nil {
+		enabled = *remote.Enabled
 	}
 
 	obj, d := types.ObjectValueFrom(ctx, sslMonitorSecurityBaselineAttrTypes, SSLMonitorSecurityBaselineModel{
-		Enabled:                 types.BoolValue(remote.Enabled == nil || *remote.Enabled),
-		MinTLSVersion:           sslMonitorTLSRuleToObject(remote.MinTLSVersion, priorModel.MinTLSVersion),
-		MinKeySizeBits:          sslMonitorKeySizeRuleToObject(remote.MinKeySizeBits, priorModel.MinKeySizeBits),
-		WeakSignatureAlgorithm:  sslMonitorSeverityRuleToObject(remote.WeakSignatureAlgorithm, priorModel.WeakSignatureAlgorithm),
-		WeakCipherSuite:         sslMonitorSeverityRuleToObject(remote.WeakCipherSuite, priorModel.WeakCipherSuite),
-		KnownBadCA:              sslMonitorSeverityRuleToObject(remote.KnownBadCA, priorModel.KnownBadCA),
-		RecommendedTLSVersion:   sslMonitorTLSRuleToObject(remote.RecommendedTLSVersion, priorModel.RecommendedTLSVersion),
-		RecommendedKeySizeBits:  sslMonitorKeySizeRuleToObject(remote.RecommendedKeySizeBits, priorModel.RecommendedKeySizeBits),
-		OCSPMustStapleRespected: sslMonitorSeverityRuleToObject(remote.OCSPMustStapleRespected, priorModel.OCSPMustStapleRespected),
-		SCTPresent:              sslMonitorSeverityRuleToObject(remote.SCTPresent, priorModel.SCTPresent),
+		Enabled:                 types.BoolValue(enabled),
+		MinTLSVersion:           sslMonitorTLSRuleToObject(remote.MinTLSVersion, def.MinTLSVersion),
+		MinKeySizeBits:          sslMonitorKeySizeRuleToObject(remote.MinKeySizeBits, def.MinKeySizeBits),
+		WeakSignatureAlgorithm:  sslMonitorSeverityRuleToObject(remote.WeakSignatureAlgorithm, def.WeakSignatureAlgorithm),
+		WeakCipherSuite:         sslMonitorSeverityRuleToObject(remote.WeakCipherSuite, def.WeakCipherSuite),
+		KnownBadCA:              sslMonitorSeverityRuleToObject(remote.KnownBadCA, def.KnownBadCA),
+		RecommendedTLSVersion:   sslMonitorTLSRuleToObject(remote.RecommendedTLSVersion, def.RecommendedTLSVersion),
+		RecommendedKeySizeBits:  sslMonitorKeySizeRuleToObject(remote.RecommendedKeySizeBits, def.RecommendedKeySizeBits),
+		OCSPMustStapleRespected: sslMonitorSeverityRuleToObject(remote.OCSPMustStapleRespected, def.OCSPMustStapleRespected),
+		SCTPresent:              sslMonitorSeverityRuleToObject(remote.SCTPresent, def.SCTPresent),
 	})
 	diags.Append(d...)
 
 	return obj
 }
 
-func sslMonitorTLSRuleToObject(remote *checkly.SSLBaselineTLSRule, prior types.Object) types.Object {
-	if remote == nil || prior.IsNull() || prior.IsUnknown() {
-		return types.ObjectNull(sslMonitorBaselineTLSRuleAttrTypes)
+// The rule converters below convert a rule to its attribute value, falling
+// back to def when the rule is missing.
+
+func sslMonitorTLSRuleToObject(remote, def *checkly.SSLBaselineTLSRule) types.Object {
+	if remote == nil {
+		remote = def
 	}
 
 	return types.ObjectValueMust(sslMonitorBaselineTLSRuleAttrTypes, map[string]attr.Value{
@@ -949,9 +979,9 @@ func sslMonitorTLSRuleToObject(remote *checkly.SSLBaselineTLSRule, prior types.O
 	})
 }
 
-func sslMonitorKeySizeRuleToObject(remote *checkly.SSLBaselineKeySizeRule, prior types.Object) types.Object {
-	if remote == nil || prior.IsNull() || prior.IsUnknown() {
-		return types.ObjectNull(sslMonitorBaselineKeySizeRuleAttrTypes)
+func sslMonitorKeySizeRuleToObject(remote, def *checkly.SSLBaselineKeySizeRule) types.Object {
+	if remote == nil {
+		remote = def
 	}
 
 	return types.ObjectValueMust(sslMonitorBaselineKeySizeRuleAttrTypes, map[string]attr.Value{
@@ -960,9 +990,9 @@ func sslMonitorKeySizeRuleToObject(remote *checkly.SSLBaselineKeySizeRule, prior
 	})
 }
 
-func sslMonitorSeverityRuleToObject(remote *checkly.SSLBaselineSeverityRule, prior types.Object) types.Object {
-	if remote == nil || prior.IsNull() || prior.IsUnknown() {
-		return types.ObjectNull(sslMonitorBaselineSeverityRuleAttrTypes)
+func sslMonitorSeverityRuleToObject(remote, def *checkly.SSLBaselineSeverityRule) types.Object {
+	if remote == nil {
+		remote = def
 	}
 
 	return types.ObjectValueMust(sslMonitorBaselineSeverityRuleAttrTypes, map[string]attr.Value{
