@@ -265,7 +265,7 @@ Required:
 
 Optional:
 
-- `devices` (Attributes Set) The list of devices that should be made available for Playwright. Defaults to chromium, firefox, and webkit. (see [below for nested schema](#nestedatt--runtime--playwright--devices))
+- `devices` (Attributes Set) The list of devices that should be made available for Playwright. Defaults to chromium, firefox, and webkit, whether or not `auto_detect` is enabled. Can't be empty: leave it out to use the default devices. (see [below for nested schema](#nestedatt--runtime--playwright--devices))
 - `version` (String) The Playwright version to use. Defaults to the version detected from the code bundle's lockfile.
 
 <a id="nestedatt--runtime--playwright--devices"></a>

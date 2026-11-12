@@ -1,12 +1,22 @@
 package provider
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	fwresource "github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
@@ -1190,38 +1200,100 @@ func TestAccPlaywrightCheckSuiteAutoDetectFalseMissingVersion(t *testing.T) {
 	})
 }
 
-func TestAccPlaywrightCheckSuiteAutoDetectFalseMissingDevices(t *testing.T) {
-	accTestCase(t, []resource.TestStep{
-		{
-			Config: playwrightCheckSuiteBase + `
-				resource "checkly_playwright_check_suite" "test" {
-					name                      = "PW Check auto_detect false missing devices"
-					activated                 = true
-					frequency                 = 720
-					use_global_alert_settings = true
-					locations                 = ["us-east-1"]
+// An explicitly empty devices set can't be planned as the default devices,
+// so validation rejects it with or without auto-detection.
+func TestAccPlaywrightCheckSuiteEmptyDevicesRejected(t *testing.T) {
+	config := func(autoDetect bool) string {
+		return playwrightCheckSuiteBase + fmt.Sprintf(`
+			resource "checkly_playwright_check_suite" "test" {
+				name                      = "PW Check empty devices"
+				activated                 = true
+				frequency                 = 720
+				use_global_alert_settings = true
+				locations                 = ["us-east-1"]
 
-					bundle = {
-						id       = checkly_playwright_code_bundle.test.id
-						metadata = checkly_playwright_code_bundle.test.metadata
+				bundle = {
+					id       = checkly_playwright_code_bundle.test.id
+					metadata = checkly_playwright_code_bundle.test.metadata
+				}
+
+				runtime = {
+					auto_detect = %t
+
+					steps = {
+						test = {
+							command = "npx playwright test"
+						}
 					}
 
-					runtime = {
-						auto_detect = false
-
-						steps = {
-							test = {
-								command = "npx playwright test"
-							}
-						}
-
-						playwright = {
-							version = "1.56.1"
-						}
+					playwright = {
+						version = "1.56.1"
+						devices = []
 					}
 				}
-			`,
-			ExpectError: regexp.MustCompile(`at least one "runtime.playwright.devices" entry is required`),
+			}
+		`, autoDetect)
+	}
+	wantError := regexp.MustCompile(`runtime\.playwright\.devices\s+set\s+must\s+contain\s+at\s+least\s+1\s+elements`)
+
+	accTestCase(t, []resource.TestStep{
+		{Config: config(true), ExpectError: wantError},
+		{Config: config(false), ExpectError: wantError},
+	})
+}
+
+// With auto_detect = false and no devices configured, the suite gets the
+// default devices, as with auto-detection, and plans no changes after the
+// apply.
+func TestAccPlaywrightCheckSuiteAutoDetectFalseDefaultDevices(t *testing.T) {
+	config := playwrightCheckSuiteBase + `
+		resource "checkly_playwright_check_suite" "test" {
+			name                      = "PW Check auto_detect false default devices"
+			activated                 = true
+			frequency                 = 720
+			use_global_alert_settings = true
+			locations                 = ["us-east-1"]
+
+			bundle = {
+				id       = checkly_playwright_code_bundle.test.id
+				metadata = checkly_playwright_code_bundle.test.metadata
+			}
+
+			runtime = {
+				auto_detect = false
+
+				steps = {
+					test = {
+						command = "npx playwright test"
+					}
+				}
+
+				playwright = {
+					version = "1.56.1"
+				}
+			}
+		}
+	`
+
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: config,
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue(
+					"checkly_playwright_check_suite.test",
+					tfjsonpath.New("runtime").AtMapKey("playwright").AtMapKey("devices"),
+					knownvalue.SetExact([]knownvalue.Check{
+						knownvalue.ObjectExact(map[string]knownvalue.Check{"type": knownvalue.StringExact("chromium")}),
+						knownvalue.ObjectExact(map[string]knownvalue.Check{"type": knownvalue.StringExact("firefox")}),
+						knownvalue.ObjectExact(map[string]knownvalue.Check{"type": knownvalue.StringExact("webkit")}),
+					}),
+				),
+			},
+		},
+		{
+			// The defaults resolve the same way on every plan.
+			Config:   config,
+			PlanOnly: true,
 		},
 	})
 }
@@ -1767,5 +1839,80 @@ func TestAccPlaywrightCheckSuiteEngineVersionValidation(t *testing.T) {
 			`,
 			ExpectError: regexp.MustCompile(`"runtime.engine.version" is not valid`),
 		},
+	})
+}
+
+// Leaving devices out resolves to the default devices whatever auto_detect
+// is, and validation rejects an explicitly empty devices set.
+func TestPlaywrightCheckSuiteResolveRuntimeDevices(t *testing.T) {
+	ctx := context.Background()
+
+	runtime := func(autoDetect bool, devices types.Set) types.Object {
+		return types.ObjectValueMust(playwrightCheckSuiteRuntimeAttrTypes, map[string]attr.Value{
+			"auto_detect": types.BoolValue(autoDetect),
+			"working_dir": types.StringNull(),
+			"steps": types.ObjectValueMust(playwrightCheckSuiteRuntimeStepsAttrTypes, map[string]attr.Value{
+				"install": types.ObjectNull(playwrightCheckSuiteRuntimeCommandAttrTypes),
+				"test": types.ObjectValueMust(playwrightCheckSuiteRuntimeCommandAttrTypes, map[string]attr.Value{
+					"command": types.StringValue("npx playwright test"),
+				}),
+			}),
+			"playwright": types.ObjectValueMust(playwrightCheckSuiteRuntimePlaywrightAttrTypes, map[string]attr.Value{
+				"version": types.StringValue("1.56.1"),
+				"devices": devices,
+			}),
+			"engine": types.ObjectNull(playwrightCheckSuiteRuntimeEngineAttrTypes),
+		})
+	}
+
+	var diags diag.Diagnostics
+	defaults := playwrightCheckSuiteDeviceSet(ctx, playwrightCheckSuiteDefaultBrowsers, &diags)
+	if diags.HasError() {
+		t.Fatal(diags)
+	}
+
+	for _, autoDetect := range []bool{true, false} {
+		t.Run(fmt.Sprintf("auto_detect=%v", autoDetect), func(t *testing.T) {
+			var diags diag.Diagnostics
+			got := playwrightCheckSuiteResolveRuntime(ctx, runtime(autoDetect, types.SetNull(playwrightCheckSuiteRuntimeDeviceElementType)), &PlaywrightCodeBundleMetadata{}, &diags)
+			if diags.HasError() {
+				t.Fatal(diags)
+			}
+			devices := got.Attributes()["playwright"].(types.Object).Attributes()["devices"]
+			if !devices.Equal(defaults) {
+				t.Errorf("devices = %s, want %s", devices, defaults)
+			}
+		})
+	}
+
+	// A devices value that was unknown during validation can still resolve
+	// to an empty set; the resolver rejects it too.
+	t.Run("empty in resolver", func(t *testing.T) {
+		var diags diag.Diagnostics
+		empty := types.SetValueMust(playwrightCheckSuiteRuntimeDeviceElementType, []attr.Value{})
+		playwrightCheckSuiteResolveRuntime(ctx, runtime(false, empty), &PlaywrightCodeBundleMetadata{}, &diags)
+		if !diags.HasError() {
+			t.Error("resolving an empty devices set succeeded, want an error")
+		}
+	})
+
+	t.Run("empty", func(t *testing.T) {
+		var resp fwresource.SchemaResponse
+		NewPlaywrightCheckSuiteResource().Schema(ctx, fwresource.SchemaRequest{}, &resp)
+		runtimeAttr := resp.Schema.Attributes["runtime"].(schema.SingleNestedAttribute)
+		playwrightAttr := runtimeAttr.Attributes["playwright"].(schema.SingleNestedAttribute)
+		devicesAttr := playwrightAttr.Attributes["devices"].(schema.SetNestedAttribute)
+
+		req := validator.SetRequest{
+			Path:        path.Root("runtime").AtName("playwright").AtName("devices"),
+			ConfigValue: types.SetValueMust(playwrightCheckSuiteRuntimeDeviceElementType, []attr.Value{}),
+		}
+		var vresp validator.SetResponse
+		for _, v := range devicesAttr.Validators {
+			v.ValidateSet(ctx, req, &vresp)
+		}
+		if !vresp.Diagnostics.HasError() {
+			t.Error("expected a validation error for an empty devices set")
+		}
 	})
 }
