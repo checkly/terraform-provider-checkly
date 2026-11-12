@@ -52,7 +52,7 @@ resource "checkly_ssl_monitor" "example-ssl-monitor-2" {
     alert_days_before_expiry = 20
 
     # Override individual security-baseline rules; rules that are not listed
-    # keep their server defaults.
+    # use their defaults.
     security_baseline = {
       min_tls_version = {
         value    = "TLS1.2"

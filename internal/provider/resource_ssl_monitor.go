@@ -425,7 +425,7 @@ func (r *SSLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 					"security_baseline": schema.SingleNestedAttribute{
 						Optional:    true,
 						Computed:    true,
-						Description: "The SSL security baseline — a set of enforceable and advisory rules. Omit the attribute, or a rule, to use its default (the values listed below, which match the Checkly API's defaults). Removing a rule (or the whole attribute) resets it to its default on the next apply.",
+						Description: "The SSL security baseline — a set of enforceable and advisory rules. Omit the attribute, or a rule, to use its default. Removing a rule (or the whole attribute) resets it to its default on the next apply.",
 						Default:     objectdefault.StaticValue(sslMonitorSecurityBaselineToObject(ctx, nil, &resp.Diagnostics)),
 						Attributes: map[string]schema.Attribute{
 							"enabled": schema.BoolAttribute{
