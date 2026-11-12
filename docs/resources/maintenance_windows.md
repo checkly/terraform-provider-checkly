@@ -24,7 +24,7 @@ resource "checkly_maintenance_windows" "maintenance-1" {
   starts_at       = "2014-08-24T00:00:00.000Z"
   ends_at         = "2014-08-25T00:00:00.000Z"
   repeat_unit     = "MONTH"
-  repeat_ends_at  = "2014-08-24T00:00:00.000Z"
+  repeat_ends_at  = "2014-12-31"
   repeat_interval = 1
   tags = [
     "production"
@@ -98,16 +98,16 @@ moved {
 
 ### Required
 
-- `ends_at` (String) The end date of the maintenance window.
+- `ends_at` (String) The end of the maintenance window: an RFC 3339 date-time such as `2099-06-01T11:00:00Z` or `2099-06-01T11:00:00+02:00`, or a date such as `2099-06-02`, which means midnight UTC.
 - `name` (String) The maintenance window name (1 to 200 characters).
-- `starts_at` (String) The start date of the maintenance window.
+- `starts_at` (String) The start of the maintenance window: an RFC 3339 date-time such as `2099-06-01T09:00:00Z` or `2099-06-01T09:00:00+02:00`, or a date such as `2099-06-01`, which means midnight UTC.
 
 ### Optional
 
 - `description` (String) A description of the maintenance window (at most 2000 characters). When the window is visible on status pages, the description is shown there too.
 - `pause_all_checks` (Boolean) Pause every check in the account during the maintenance window, regardless of `tags`. Defaults to `false`.
-- `repeat_ends_at` (String) The date on which the maintenance window should stop repeating, interpreted as a calendar date in `timezone`.
-- `repeat_interval` (Number) The repeat interval of the maintenance window from the first occurrence.
+- `repeat_ends_at` (String) The last calendar date, in `timezone` (UTC when unset), on which an occurrence may start. Use a date such as `2099-12-31`. An RFC 3339 date-time is accepted too and counts as its UTC date: `2099-06-01T23:00:00-05:00` means `2099-06-02`. Requires a `repeat_interval` of 1 or more. An empty string, like leaving it out, means the window repeats indefinitely.
+- `repeat_interval` (Number) How many `repeat_unit`s apart the occurrences of the maintenance window are, counted from the first occurrence: 1 to 365. `0`, like leaving it out, means the window does not repeat. A value of 1 or more requires `repeat_unit`.
 - `repeat_unit` (String) The repeat cadence for the maintenance window. Possible values `DAY`, `WEEK` and `MONTH`.
 - `silence_alerts_tags` (Set of String) The tags of the checks and groups whose alerts are silenced during the maintenance window. Ignored when `silence_all_alerts` is `true`.
 - `silence_all_alerts` (Boolean) Silence alerts for every check in the account during the maintenance window, regardless of `silence_alerts_tags`. Defaults to `false`.

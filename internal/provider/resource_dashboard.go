@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -26,6 +27,11 @@ var (
 	_ resource.ResourceWithUpgradeState = (*DashboardResource)(nil)
 	_ resource.ResourceWithImportState  = (*DashboardResource)(nil)
 )
+
+// dashboardCustomURLRegex is the API's rule for a dashboard's custom_url. The
+// API stores the value as given, so uppercase letters are accepted. The empty
+// string, which the API accepts with a custom_domain, is accepted too.
+var dashboardCustomURLRegex = regexp.MustCompile(`^$|^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$`)
 
 // NewDashboardResource returns a new checkly_dashboard resource.
 func NewDashboardResource() resource.Resource {
@@ -53,6 +59,8 @@ type DashboardResourceModel struct {
 	Paginate           types.Bool   `tfsdk:"paginate"`
 	ChecksPerPage      types.Int64  `tfsdk:"checks_per_page"`
 	PaginationRate     types.Int64  `tfsdk:"pagination_rate"`
+	SortByStatus       types.Bool   `tfsdk:"sort_by_status"`
+	ShowGroupNames     types.Bool   `tfsdk:"show_group_names"`
 	Tags               types.Set    `tfsdk:"tags"`
 	HideTags           types.Bool   `tfsdk:"hide_tags"`
 	UseTagsAndOperator types.Bool   `tfsdk:"use_tags_and_operator"`
@@ -83,8 +91,16 @@ func (r *DashboardResource) Schema(ctx context.Context, req resource.SchemaReque
 				},
 			},
 			"custom_url": schema.StringAttribute{
-				Required:    true,
-				Description: "A subdomain name under 'checklyhq.com'. Needs to be unique across all users.",
+				Required: true,
+				Description: "A subdomain name under 'checklyhq.com'. Needs to be unique across all users. " +
+					"Letters, digits and dashes, no leading or trailing dash, at most 63 characters.",
+				Validators: []validator.String{
+					predicateStringValidator{
+						check:       dashboardCustomURLRegex.MatchString,
+						message:     "%q can only contain letters, digits and dashes, with no leading or trailing dash and at most 63 characters, got: %s",
+						description: "value must be letters, digits and dashes, with no leading or trailing dash and at most 63 characters",
+					},
+				},
 			},
 			"custom_domain": schema.StringAttribute{
 				Optional:    true,
@@ -94,19 +110,28 @@ func (r *DashboardResource) Schema(ctx context.Context, req resource.SchemaReque
 				Optional:    true,
 				Computed:    true,
 				Default:     stringdefault.StaticString(""),
-				Description: "A URL pointing to an image file to use for the dashboard logo.",
+				Description: "An http or https URL pointing to an image file to use for the dashboard logo.",
+				Validators: []validator.String{
+					httpURL().orEmpty(),
+				},
 			},
 			"favicon": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
 				Default:     stringdefault.StaticString(""),
-				Description: "A URL pointing to an image file to use as browser favicon.",
+				Description: "An http or https URL pointing to an image file to use as browser favicon.",
+				Validators: []validator.String{
+					httpURL().orEmpty(),
+				},
 			},
 			"link": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
 				Default:     stringdefault.StaticString(""),
-				Description: "A link to for the dashboard logo.",
+				Description: "The http or https URL that clicking the dashboard logo leads to.",
+				Validators: []validator.String{
+					httpURL().orEmpty(),
+				},
 			},
 			"description": schema.StringAttribute{
 				Optional:    true,
@@ -165,6 +190,18 @@ func (r *DashboardResource) Schema(ctx context.Context, req resource.SchemaReque
 				Validators: []validator.Int64{
 					int64validator.OneOf(30, 60, 300),
 				},
+			},
+			"sort_by_status": schema.BoolAttribute{
+				Optional:    true,
+				Computed:    true,
+				Default:     booldefault.StaticBool(false),
+				Description: "List failing checks first. (Default `false`).",
+			},
+			"show_group_names": schema.BoolAttribute{
+				Optional:    true,
+				Computed:    true,
+				Default:     booldefault.StaticBool(true),
+				Description: "Show or hide the names of the groups of the checks on the dashboard. (Default `true`).",
 			},
 			"tags": schema.SetAttribute{
 				Optional:    true,
@@ -373,6 +410,7 @@ func dashboardFromModel(ctx context.Context, model *DashboardResourceModel, diag
 	showHeader := model.ShowHeader.ValueBool()
 	showP95 := model.ShowP95.ValueBool()
 	showP99 := model.ShowP99.ValueBool()
+	showGroupNames := model.ShowGroupNames.ValueBool()
 
 	return checkly.Dashboard{
 		CustomURL:          model.CustomURL.ValueString(),
@@ -388,6 +426,8 @@ func dashboardFromModel(ctx context.Context, model *DashboardResourceModel, diag
 		Paginate:           model.Paginate.ValueBoolPointer(),
 		ChecksPerPage:      int(model.ChecksPerPage.ValueInt64()),
 		PaginationRate:     int(model.PaginationRate.ValueInt64()),
+		SortByStatus:       model.SortByStatus.ValueBool(),
+		ShowGroupNames:     &showGroupNames,
 		Tags:               stringsFromSet(ctx, model.Tags, diags),
 		HideTags:           model.HideTags.ValueBool(),
 		UseTagsAndOperator: model.UseTagsAndOperator.ValueBool(),
@@ -421,6 +461,8 @@ func dashboardToModel(ctx context.Context, dashboard *checkly.Dashboard, model *
 	model.Paginate = dashboardBoolValue(dashboard.Paginate, true)
 	model.ChecksPerPage = types.Int64Value(int64(dashboard.ChecksPerPage))
 	model.PaginationRate = types.Int64Value(int64(dashboard.PaginationRate))
+	model.SortByStatus = types.BoolValue(dashboard.SortByStatus)
+	model.ShowGroupNames = dashboardBoolValue(dashboard.ShowGroupNames, true)
 	model.Tags = setFromStrings(ctx, dashboard.Tags, diags)
 	model.HideTags = types.BoolValue(dashboard.HideTags)
 	model.UseTagsAndOperator = types.BoolValue(dashboard.UseTagsAndOperator)

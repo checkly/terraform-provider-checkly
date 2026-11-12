@@ -114,11 +114,13 @@ func (r *StatusPageResource) Schema(ctx context.Context, req resource.SchemaRequ
 				},
 			},
 			"custom_domain": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     stringdefault.StaticString(""),
-				Description: "A custom user domain, e.g. \"status.example.com\". See the docs on updating your DNS and SSL usage.",
+				Optional: true,
+				Computed: true,
+				Default:  stringdefault.StaticString(""),
+				Description: "A custom user domain, e.g. \"status.mycompany.com\": a lowercase hostname without a scheme. " +
+					"Domains under example.com, example.net and example.org are not supported. See the docs on updating your DNS and SSL usage.",
 				Validators: []validator.String{
+					statusPageCustomDomainFormatValidator,
 					statusPageCustomDomainValidator{},
 				},
 			},
@@ -126,19 +128,28 @@ func (r *StatusPageResource) Schema(ctx context.Context, req resource.SchemaRequ
 				Optional:    true,
 				Computed:    true,
 				Default:     stringdefault.StaticString(""),
-				Description: "A URL to an image file to use as the logo for the status page.",
+				Description: "An http or https URL to an image file to use as the logo for the status page.",
+				Validators: []validator.String{
+					httpURL().orEmpty(),
+				},
 			},
 			"redirect_to": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
 				Default:     stringdefault.StaticString(""),
-				Description: "The URL the user should be redirected to when clicking the logo.",
+				Description: "The http or https URL the user should be redirected to when clicking the logo.",
+				Validators: []validator.String{
+					httpURL().orEmpty(),
+				},
 			},
 			"favicon": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
 				Default:     stringdefault.StaticString(""),
-				Description: "A URL to an image file to use as the favicon of the status page.",
+				Description: "An http or https URL to an image file to use as the favicon of the status page.",
+				Validators: []validator.String{
+					httpURL().orEmpty(),
+				},
 			},
 			"default_theme": schema.StringAttribute{
 				Optional:    true,
@@ -415,11 +426,12 @@ var _ validator.String = statusPageCustomDomainValidator{}
 
 // statusPageCustomDomainValidator rejects custom domains under reserved
 // documentation domains (example.com, example.net, example.org), which the
-// Checkly API does not support.
+// Checkly API does not support: the domain itself or a subdomain of it, but
+// not a domain that merely ends in the same letters, such as myexample.com.
 type statusPageCustomDomainValidator struct{}
 
 func (v statusPageCustomDomainValidator) Description(ctx context.Context) string {
-	return "custom domains ending in example.com, example.net or example.org are not supported"
+	return "custom domains under example.com, example.net or example.org are not supported"
 }
 
 func (v statusPageCustomDomainValidator) MarkdownDescription(ctx context.Context) string {
@@ -431,19 +443,19 @@ func (v statusPageCustomDomainValidator) ValidateString(ctx context.Context, req
 		return
 	}
 
-	unsupportedSuffixes := []string{
+	unsupportedDomains := []string{
 		"example.com",
 		"example.net",
 		"example.org",
 	}
 
 	value := strings.ToLower(req.ConfigValue.ValueString())
-	for _, suffix := range unsupportedSuffixes {
-		if strings.HasSuffix(value, suffix) {
+	for _, domain := range unsupportedDomains {
+		if value == domain || strings.HasSuffix(value, "."+domain) {
 			resp.Diagnostics.AddAttributeError(
 				req.Path,
 				"Unsupported Custom Domain",
-				fmt.Sprintf("custom domains ending in %s are not supported", suffix),
+				fmt.Sprintf("custom domains under %s are not supported", domain),
 			)
 			return
 		}

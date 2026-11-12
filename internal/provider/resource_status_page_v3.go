@@ -45,6 +45,10 @@ var statusPageURLRegex = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9]
 // value is accepted too: it clears the domain like leaving it out does.
 var statusPageV3CustomDomainRegex = regexp.MustCompile(`^$|^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$`)
 
+// The API's rule for a Google Analytics tag ID, such as "G-XXXXXXXXXX". The
+// empty string is accepted too: it removes the tag like leaving it out does.
+var statusPageV3GoogleAnalyticsTagRegex = regexp.MustCompile(`^[A-Za-z0-9-]*$`)
+
 // Same format the API accepts: #RGB or #RRGGBB, case-insensitive.
 var statusPageV3HexColorRegex = regexp.MustCompile(`^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$`)
 
@@ -138,6 +142,15 @@ var statusPageURLValidator = predicateStringValidator{
 	check:       statusPageURLRegex.MatchString,
 	message:     "%q can only contain lowercase alphanumeric characters and dashes, with no leading or trailing dash, got: %s",
 	description: "value must be lowercase alphanumeric characters and dashes, with no leading or trailing dash",
+}
+
+// statusPageCustomDomainFormatValidator accepts the custom domains of both
+// status page resources in the form the API stores them; see
+// statusPageV3CustomDomainRegex.
+var statusPageCustomDomainFormatValidator = predicateStringValidator{
+	check:       statusPageV3CustomDomainRegex.MatchString,
+	message:     "%q must be a lowercase hostname without a scheme, such as \"status.mycompany.com\", got: %s",
+	description: "value must be a lowercase hostname without a scheme",
 }
 
 var statusPageV3HexColorValidator = predicateStringValidator{
@@ -248,17 +261,23 @@ func (r *StatusPageV3Resource) Schema(ctx context.Context, req resource.SchemaRe
 			},
 			"custom_domain": statusPageV3OptionalString(
 				"A custom user domain, e.g. \"status.example.com\": a lowercase hostname without a scheme. See the docs on updating your DNS and SSL usage.",
-				predicateStringValidator{
-					check:       statusPageV3CustomDomainRegex.MatchString,
-					message:     "%q must be a lowercase hostname without a scheme, such as \"status.example.com\", got: %s",
-					description: "value must be a lowercase hostname without a scheme",
-				},
+				statusPageCustomDomainFormatValidator,
 			),
-			"description": statusPageV3OptionalString("A short description shown on the status page."),
-			"logo":        statusPageV3OptionalString("A URL to an image file to use as the logo for the status page."),
-			"logo_dark":   statusPageV3OptionalString("A URL to an image file to use as the logo in dark mode."),
-			"redirect_to": statusPageV3OptionalString("The URL the user should be redirected to when clicking the logo."),
-			"favicon":     statusPageV3OptionalString("A URL to an image file to use as the favicon of the status page."),
+			"description": statusPageV3OptionalString("A short description shown on the status page (at most 500 characters).",
+				utf16LengthBetween(0, 500),
+			),
+			"logo": statusPageV3OptionalString("An http or https URL to an image file to use as the logo for the status page.",
+				httpURL().orEmpty(),
+			),
+			"logo_dark": statusPageV3OptionalString("An http or https URL to an image file to use as the logo in dark mode.",
+				httpURL().orEmpty(),
+			),
+			"redirect_to": statusPageV3OptionalString("The http or https URL the user should be redirected to when clicking the logo.",
+				httpURL().orEmpty(),
+			),
+			"favicon": statusPageV3OptionalString("An http or https URL to an image file to use as the favicon of the status page.",
+				httpURL().orEmpty(),
+			),
 			"default_theme": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
@@ -268,11 +287,26 @@ func (r *StatusPageV3Resource) Schema(ctx context.Context, req resource.SchemaRe
 					stringvalidator.OneOf(statusPageV3ThemeValues.Values()...),
 				},
 			},
-			"privacy_policy_link":   statusPageV3OptionalString("A link to your privacy policy, shown in the page footer."),
-			"terms_of_service_link": statusPageV3OptionalString("A link to your terms of service, shown in the page footer."),
-			"support_link":          statusPageV3OptionalString("A support contact link (http, https or mailto), shown in the page footer."),
-			"footer_text":           statusPageV3OptionalString("Free-form footer text."),
-			"google_analytics_tag":  statusPageV3OptionalString("A Google Analytics tag ID (e.g. \"G-XXXXXXXXXX\") to embed on the public page."),
+			"privacy_policy_link": statusPageV3OptionalString("An http or https link to your privacy policy, shown in the page footer (at most 255 characters).",
+				httpURL().orEmpty(),
+				utf16LengthBetween(0, 255),
+			),
+			"terms_of_service_link": statusPageV3OptionalString("An http or https link to your terms of service, shown in the page footer (at most 255 characters).",
+				httpURL().orEmpty(),
+				utf16LengthBetween(0, 255),
+			),
+			"support_link": statusPageV3OptionalString("A support contact link (http, https or mailto), shown in the page footer (at most 255 characters).",
+				urlWithSchemes("http", "https", "mailto").orEmpty(),
+				utf16LengthBetween(0, 255),
+			),
+			"footer_text": statusPageV3OptionalString("Free-form footer text (at most 1000 characters).",
+				utf16LengthBetween(0, 1000),
+			),
+			"google_analytics_tag": statusPageV3OptionalString("A Google Analytics tag ID (e.g. \"G-XXXXXXXXXX\") to embed on the public page: "+
+				"letters, digits and dashes, at most 255 characters.",
+				stringvalidator.RegexMatches(statusPageV3GoogleAnalyticsTagRegex, "must contain only letters, digits and dashes"),
+				utf16LengthBetween(0, 255),
+			),
 			"allow_indexing": schema.BoolAttribute{
 				Optional:    true,
 				Computed:    true,

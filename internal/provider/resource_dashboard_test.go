@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"strings"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	fwresource "github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -21,6 +23,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
+
+	"github.com/checkly/checkly-go-sdk/v2"
 )
 
 func TestAccDashboardCheckRequiredFields(t *testing.T) {
@@ -153,6 +157,16 @@ func TestAccDashboardMinimalConfig(t *testing.T) {
 					"show_p99",
 					"true",
 				),
+				resource.TestCheckResourceAttr(
+					"checkly_dashboard.test",
+					"sort_by_status",
+					"false",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_dashboard.test",
+					"show_group_names",
+					"true",
+				),
 			),
 		},
 	})
@@ -185,6 +199,8 @@ func TestAccDashboardFullConfig(t *testing.T) {
 					custom_css            = ".header { color: blue; }"
 					show_p95              = false
 					show_p99              = false
+					sort_by_status        = true
+					show_group_names      = false
 					tags                  = ["production", "api"]
 				}
 			`, rInt, rInt),
@@ -299,6 +315,16 @@ func TestAccDashboardFullConfig(t *testing.T) {
 					"show_p99",
 					"false",
 				),
+				resource.TestCheckResourceAttr(
+					"checkly_dashboard.test",
+					"sort_by_status",
+					"true",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_dashboard.test",
+					"show_group_names",
+					"false",
+				),
 			),
 		},
 		{
@@ -325,6 +351,8 @@ func TestAccDashboardFullConfig(t *testing.T) {
 					custom_css            = "body { background: #f0f0f0; }"
 					show_p95              = true
 					show_p99              = true
+					sort_by_status        = false
+					show_group_names      = true
 					tags                  = ["staging"]
 				}
 			`, rInt, rInt),
@@ -439,6 +467,16 @@ func TestAccDashboardFullConfig(t *testing.T) {
 				resource.TestCheckResourceAttr(
 					"checkly_dashboard.test",
 					"show_p99",
+					"true",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_dashboard.test",
+					"sort_by_status",
+					"false",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_dashboard.test",
+					"show_group_names",
 					"true",
 				),
 			),
@@ -792,6 +830,61 @@ func TestAccDashboardCustomCSS(t *testing.T) {
 			),
 		},
 	})
+}
+
+func TestDashboardAttributeValidation(t *testing.T) {
+	r := NewDashboardResource()
+	cases := []struct {
+		attribute string
+		value     string
+		valid     bool
+	}{
+		{"custom_url", "status", true},
+		{"custom_url", "My-Status-1", true},
+		{"custom_url", "", true},
+		{"custom_url", "-status", false},
+		{"custom_url", "status-", false},
+		{"custom_url", "my_status", false},
+		{"custom_url", "status.mycompany", false},
+		{"custom_url", "a" + strings.Repeat("b", 62), true},
+		{"custom_url", "a" + strings.Repeat("b", 63), false},
+		{"logo", "", true},
+		{"logo", "https://example.com/logo.png", true},
+		{"logo", "logo.png", false},
+		{"favicon", "ftp://example.com/favicon.ico", false},
+		{"link", "http://example.com", true},
+		{"link", "example.com", false},
+	}
+	for _, c := range cases {
+		diags := validateStringAttribute(t, r, c.attribute, types.StringValue(c.value))
+		if diags.HasError() == c.valid {
+			t.Errorf("%s = %q: valid = %v, diagnostics: %v", c.attribute, c.value, c.valid, diags)
+		}
+	}
+}
+
+// sort_by_status and show_group_names are sent on every request, and the
+// API's defaults apply when the response leaves them out.
+func TestDashboardSortAndGroupNames(t *testing.T) {
+	ctx := context.Background()
+	model := DashboardResourceModel{
+		SortByStatus:   types.BoolValue(true),
+		ShowGroupNames: types.BoolValue(false),
+		Tags:           types.SetValueMust(types.StringType, nil),
+	}
+	var diags diag.Diagnostics
+	dashboard := dashboardFromModel(ctx, &model, &diags)
+	if !dashboard.SortByStatus || dashboard.ShowGroupNames == nil || *dashboard.ShowGroupNames {
+		t.Errorf("SortByStatus = %v, ShowGroupNames = %v", dashboard.SortByStatus, dashboard.ShowGroupNames)
+	}
+
+	dashboardToModel(ctx, &checkly.Dashboard{}, &model, &diags)
+	if diags.HasError() {
+		t.Fatal(diags)
+	}
+	if !model.SortByStatus.Equal(types.BoolValue(false)) || !model.ShowGroupNames.Equal(types.BoolValue(true)) {
+		t.Errorf("sort_by_status = %v, show_group_names = %v", model.SortByStatus, model.ShowGroupNames)
+	}
 }
 
 func TestDashboardKeyPlanModifier(t *testing.T) {

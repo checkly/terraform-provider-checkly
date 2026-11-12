@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
@@ -22,10 +23,11 @@ import (
 )
 
 var (
-	_ resource.Resource                 = (*StatusPageV3AutomationRuleResource)(nil)
-	_ resource.ResourceWithConfigure    = (*StatusPageV3AutomationRuleResource)(nil)
-	_ resource.ResourceWithUpgradeState = (*StatusPageV3AutomationRuleResource)(nil)
-	_ resource.ResourceWithImportState  = (*StatusPageV3AutomationRuleResource)(nil)
+	_ resource.Resource                   = (*StatusPageV3AutomationRuleResource)(nil)
+	_ resource.ResourceWithConfigure      = (*StatusPageV3AutomationRuleResource)(nil)
+	_ resource.ResourceWithUpgradeState   = (*StatusPageV3AutomationRuleResource)(nil)
+	_ resource.ResourceWithImportState    = (*StatusPageV3AutomationRuleResource)(nil)
+	_ resource.ResourceWithValidateConfig = (*StatusPageV3AutomationRuleResource)(nil)
 )
 
 var statusPageV3TargetImpactValues = allowedValues[string]{
@@ -115,11 +117,17 @@ func (r *StatusPageV3AutomationRuleResource) Schema(ctx context.Context, req res
 			},
 			"first_update": schema.StringAttribute{
 				Required:    true,
-				Description: "Body of the status update that opens the incident.",
+				Description: "Body of the status update that opens the incident. Must not be empty.",
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
+				},
 			},
 			"last_update": schema.StringAttribute{
 				Required:    true,
-				Description: "Body of the status update that resolves the incident.",
+				Description: "Body of the status update that resolves the incident. Must not be empty.",
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
+				},
 			},
 			"notify_subscribers": schema.BoolAttribute{
 				Optional:    true,
@@ -139,9 +147,10 @@ func (r *StatusPageV3AutomationRuleResource) Schema(ctx context.Context, req res
 			"tags": schema.SetAttribute{
 				ElementType: types.StringType,
 				Required:    true,
-				Description: "A failing check matches this rule when it, or its group, carries ANY of these tags. At least one tag is required.",
+				Description: "A failing check matches this rule when it, or its group, carries ANY of these tags. At least one tag is required, and tags must not be empty.",
 				Validators: []validator.Set{
 					setvalidator.SizeAtLeast(1),
+					setvalidator.ValueStringsAre(stringvalidator.LengthAtLeast(1)),
 				},
 			},
 			"components": schema.SetNestedAttribute{
@@ -153,7 +162,7 @@ func (r *StatusPageV3AutomationRuleResource) Schema(ctx context.Context, req res
 					Attributes: map[string]schema.Attribute{
 						"component_id": schema.StringAttribute{
 							Required:    true,
-							Description: "The ID of the impacted component. Must be on the same status page.",
+							Description: "The ID of the impacted component. Must be on the same status page, and listed only once.",
 						},
 						"target_impact": schema.StringAttribute{
 							Required:    true,
@@ -173,6 +182,61 @@ func (r *StatusPageV3AutomationRuleResource) Schema(ctx context.Context, req res
 // implementation; see sdkv2StateUpgraders.
 func (r *StatusPageV3AutomationRuleResource) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
 	return sdkv2StateUpgraders(ctx, r)
+}
+
+// ValidateConfig rejects a component_id that is listed more than once. The
+// API stores one impact per component and fails on a duplicate with an
+// opaque server error. IDs that are unknown at plan time are checked again
+// at apply, in statusPageV3AutomationRuleFromModel.
+func (r *StatusPageV3AutomationRuleResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var components types.Set
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("components"), &components)...)
+	if resp.Diagnostics.HasError() || components.IsNull() || components.IsUnknown() {
+		return
+	}
+
+	// Elements are read one at a time: a wholly unknown element, such as
+	// one from a variable that is not known yet, has no attributes and is
+	// left to the apply-time check.
+	var componentIDs []types.String
+	for _, element := range components.Elements() {
+		if element.IsNull() || element.IsUnknown() {
+			continue
+		}
+		object, ok := element.(types.Object)
+		if !ok {
+			continue
+		}
+		if id, ok := object.Attributes()["component_id"].(types.String); ok {
+			componentIDs = append(componentIDs, id)
+		}
+	}
+
+	if componentID, found := statusPageV3DuplicateComponentID(componentIDs); found {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("components"),
+			"Duplicate Component",
+			fmt.Sprintf("component %q is listed more than once. A rule sets one impact per component.", componentID),
+		)
+	}
+}
+
+// statusPageV3DuplicateComponentID returns the first component ID that
+// occurs more than once in ids. Null and unknown IDs are skipped. The API
+// stores one impact per (rule, component) and fails on a duplicate with an
+// opaque server error.
+func statusPageV3DuplicateComponentID(ids []types.String) (string, bool) {
+	seen := map[string]bool{}
+	for _, id := range ids {
+		if id.IsNull() || id.IsUnknown() {
+			continue
+		}
+		if seen[id.ValueString()] {
+			return id.ValueString(), true
+		}
+		seen[id.ValueString()] = true
+	}
+	return "", false
 }
 
 func (r *StatusPageV3AutomationRuleResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
@@ -338,19 +402,16 @@ func statusPageV3AutomationRuleFromModel(ctx context.Context, model *StatusPageV
 			return checkly.StatusPageAutomationRuleV3{}, nil
 		}
 
-		seen := map[string]bool{}
+		componentIDs := make([]types.String, 0, len(componentModels))
 		for _, component := range componentModels {
-			componentID := component.ComponentID.ValueString()
-			// The API stores one impact per (rule, component); a duplicate
-			// would surface as an opaque server error.
-			if seen[componentID] {
-				return checkly.StatusPageAutomationRuleV3{}, fmt.Errorf("component %q is listed more than once", componentID)
-			}
-			seen[componentID] = true
+			componentIDs = append(componentIDs, component.ComponentID)
 			components = append(components, checkly.StatusPageAutomationRuleComponentV3{
-				ComponentID:  componentID,
+				ComponentID:  component.ComponentID.ValueString(),
 				TargetImpact: checkly.StatusPageTargetImpactV3(component.TargetImpact.ValueString()),
 			})
+		}
+		if componentID, found := statusPageV3DuplicateComponentID(componentIDs); found {
+			return checkly.StatusPageAutomationRuleV3{}, fmt.Errorf("component %q is listed more than once", componentID)
 		}
 	}
 

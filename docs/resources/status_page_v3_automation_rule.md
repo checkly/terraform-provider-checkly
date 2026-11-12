@@ -47,11 +47,11 @@ resource "checkly_status_page_v3_automation_rule" "api_outage" {
 
 ### Required
 
-- `first_update` (String) Body of the status update that opens the incident.
-- `last_update` (String) Body of the status update that resolves the incident.
+- `first_update` (String) Body of the status update that opens the incident. Must not be empty.
+- `last_update` (String) Body of the status update that resolves the incident. Must not be empty.
 - `name` (String) The name of the rule (1 to 255 characters).
 - `status_page_id` (String) The ID of the v3 status page the rule belongs to.
-- `tags` (Set of String) A failing check matches this rule when it, or its group, carries ANY of these tags. At least one tag is required.
+- `tags` (Set of String) A failing check matches this rule when it, or its group, carries ANY of these tags. At least one tag is required, and tags must not be empty.
 
 ### Optional
 
@@ -69,7 +69,7 @@ resource "checkly_status_page_v3_automation_rule" "api_outage" {
 
 Required:
 
-- `component_id` (String) The ID of the impacted component. Must be on the same status page.
+- `component_id` (String) The ID of the impacted component. Must be on the same status page, and listed only once.
 - `target_impact` (String) The impact set on the component while the incident is open. The allowed values are `UNDER_MAINTENANCE`, `DEGRADED_PERFORMANCE`, `PARTIAL_OUTAGE` and `MAJOR_OUTAGE`.
 
 ## Import

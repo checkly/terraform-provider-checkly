@@ -3,11 +3,18 @@ package provider
 import (
 	"context"
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-go/tftypes"
 
 	"github.com/checkly/checkly-go-sdk/v2"
 )
@@ -343,6 +350,130 @@ func TestStatusPageV3CustomDomainValidation(t *testing.T) {
 	for _, invalid := range []string{"Status.example.com", "https://status.example.com", "status.example.com/", "example", "-status.example.com"} {
 		if statusPageV3CustomDomainRegex.MatchString(invalid) {
 			t.Errorf("expected %q to be rejected", invalid)
+		}
+	}
+}
+
+// The v3 status page attributes reject at plan time what the API rejects.
+func TestStatusPageV3AttributeValidation(t *testing.T) {
+	r := NewStatusPageV3Resource()
+	cases := []struct {
+		attribute string
+		value     string
+		valid     bool
+	}{
+		{"description", strings.Repeat("a", 500), true},
+		{"description", strings.Repeat("a", 501), false},
+		{"footer_text", strings.Repeat("a", 1000), true},
+		{"footer_text", strings.Repeat("a", 1001), false},
+		{"logo", "", true},
+		{"logo", "https://example.org/logo.png", true},
+		{"logo", "logo.png", false},
+		{"logo_dark", "ftp://example.org/logo.png", false},
+		{"redirect_to", "http://example.org", true},
+		{"redirect_to", "example.org", false},
+		{"favicon", "data:image/png;base64,AAAA", false},
+		{"privacy_policy_link", "https://example.org/privacy", true},
+		{"privacy_policy_link", "https://example.org/" + strings.Repeat("a", 236), false},
+		{"privacy_policy_link", "mailto:legal@example.org", false},
+		{"terms_of_service_link", "", true},
+		{"terms_of_service_link", "/terms", false},
+		{"support_link", "mailto:support@example.org", true},
+		{"support_link", "https://example.org/help", true},
+		{"support_link", "support@example.org", false},
+		{"google_analytics_tag", "", true},
+		{"google_analytics_tag", "G-XXXXXXXXXX", true},
+		{"google_analytics_tag", "GTM-abc123", true},
+		{"google_analytics_tag", "UA-12345-1", true},
+		{"google_analytics_tag", "G_XXXX", false},
+		{"google_analytics_tag", "G-XXXX ", false},
+		{"google_analytics_tag", "G.XXXX", false},
+		{"google_analytics_tag", strings.Repeat("a", 255), true},
+		{"google_analytics_tag", "<script>", false},
+		{"google_analytics_tag", strings.Repeat("a", 256), false},
+	}
+	for _, c := range cases {
+		diags := validateStringAttribute(t, r, c.attribute, types.StringValue(c.value))
+		if diags.HasError() == c.valid {
+			t.Errorf("%s = %q: valid = %v, diagnostics: %v", c.attribute, c.value, c.valid, diags)
+		}
+	}
+}
+
+// A component_id listed twice with different impacts fails at plan time; a
+// component_id that is still unknown is left for the apply-time check.
+func TestStatusPageV3AutomationRuleValidateConfigDuplicateComponents(t *testing.T) {
+	ctx := context.Background()
+	r := NewStatusPageV3AutomationRuleResource()
+	var schemaResp resource.SchemaResponse
+	r.Schema(ctx, resource.SchemaRequest{}, &schemaResp)
+	objectType := schemaResp.Schema.Type().TerraformType(ctx).(tftypes.Object)
+	setType := objectType.AttributeTypes["components"].(tftypes.Set)
+	elementType := setType.ElementType.(tftypes.Object)
+	component := func(id any, impact string) tftypes.Value {
+		return tftypes.NewValue(elementType, map[string]tftypes.Value{
+			"component_id":  tftypes.NewValue(tftypes.String, id),
+			"target_impact": tftypes.NewValue(tftypes.String, impact),
+		})
+	}
+	const id = "0e4f5a72-6a5c-42a1-9a8a-5f7d38c8a9d1"
+
+	for name, c := range map[string]struct {
+		components []tftypes.Value
+		wantError  bool
+	}{
+		"distinct":  {[]tftypes.Value{component(id, "MAJOR_OUTAGE"), component("1e4f5a72-6a5c-42a1-9a8a-5f7d38c8a9d1", "MAJOR_OUTAGE")}, false},
+		"duplicate": {[]tftypes.Value{component(id, "MAJOR_OUTAGE"), component(id, "PARTIAL_OUTAGE")}, true},
+		"unknown":   {[]tftypes.Value{component(id, "MAJOR_OUTAGE"), component(tftypes.UnknownValue, "PARTIAL_OUTAGE")}, false},
+		// A whole element from a variable that is not known yet.
+		"unknown element": {[]tftypes.Value{component(id, "MAJOR_OUTAGE"), tftypes.NewValue(elementType, tftypes.UnknownValue)}, false},
+		"duplicate next to an unknown element": {[]tftypes.Value{
+			component(id, "MAJOR_OUTAGE"), component(id, "PARTIAL_OUTAGE"), tftypes.NewValue(elementType, tftypes.UnknownValue),
+		}, true},
+	} {
+		t.Run(name, func(t *testing.T) {
+			config := tfsdk.Config{Schema: schemaResp.Schema, Raw: objectWith(objectType, map[string]tftypes.Value{
+				"components": tftypes.NewValue(setType, c.components),
+			})}
+			var resp resource.ValidateConfigResponse
+			r.(resource.ResourceWithValidateConfig).ValidateConfig(ctx, resource.ValidateConfigRequest{Config: config}, &resp)
+			if resp.Diagnostics.HasError() != c.wantError {
+				t.Errorf("error = %v, want %v: %v", resp.Diagnostics.HasError(), c.wantError, resp.Diagnostics)
+			}
+		})
+	}
+}
+
+func TestStatusPageV3AutomationRuleRejectsEmptyStrings(t *testing.T) {
+	r := NewStatusPageV3AutomationRuleResource()
+	for _, attribute := range []string{"first_update", "last_update"} {
+		if diags := validateStringAttribute(t, r, attribute, types.StringValue("")); !diags.HasError() {
+			t.Errorf("an empty %s was accepted", attribute)
+		}
+	}
+
+	ctx := context.Background()
+	var schemaResp resource.SchemaResponse
+	r.Schema(ctx, resource.SchemaRequest{}, &schemaResp)
+	tags := schemaResp.Schema.Attributes["tags"].(schema.SetAttribute)
+	for name, c := range map[string]struct {
+		elements []string
+		valid    bool
+	}{
+		"one tag":   {[]string{"foo-api"}, true},
+		"empty tag": {[]string{"foo-api", ""}, false},
+	} {
+		value, d := types.SetValueFrom(ctx, types.StringType, c.elements)
+		if d.HasError() {
+			t.Fatal(d)
+		}
+		req := validator.SetRequest{Path: path.Root("tags"), ConfigValue: value}
+		var resp validator.SetResponse
+		for _, v := range tags.Validators {
+			v.ValidateSet(ctx, req, &resp)
+		}
+		if resp.Diagnostics.HasError() == c.valid {
+			t.Errorf("%s: valid = %v, diagnostics: %v", name, c.valid, resp.Diagnostics)
 		}
 	}
 }
