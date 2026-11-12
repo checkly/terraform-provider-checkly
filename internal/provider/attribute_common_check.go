@@ -1,9 +1,13 @@
 package provider
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -281,4 +285,37 @@ func runtimeIDAttributeSchema(subject CheckSubject, note string) schema.StringAt
 		Optional:    true,
 		Description: describe(description, fallback, note),
 	}
+}
+
+// validatePlannedCheckScript applies requireCheckScript in ModifyPlan, to a
+// script known at plan time.
+func validatePlannedCheckScript(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse, checkType string) {
+	if req.Plan.Raw.IsNull() {
+		return
+	}
+	var script types.String
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("script"), &script)...)
+	if resp.Diagnostics.HasError() || script.IsUnknown() {
+		return
+	}
+	requireCheckScript(script, checkType, &resp.Diagnostics)
+}
+
+// requireCheckScript rejects an empty planned script of a browser or
+// multi-step check. The API would accept the null that an empty script is
+// sent as, and clear a stored script. The planned value is what counts: the
+// configuration can't show a value known only at apply time, and with
+// ignore_changes = [script] the plan holds the stored script. Resources call
+// it from ModifyPlan for a script known at plan time, and from Create and
+// Update before any request.
+func requireCheckScript(script types.String, checkType string, diags *diag.Diagnostics) {
+	if script.ValueString() != "" {
+		return
+	}
+
+	diags.AddAttributeError(
+		path.Root("script"),
+		"Missing Check Script",
+		fmt.Sprintf(`A %s check needs a script, but "script" is empty: it is not set, null, or resolved to an empty string. Set it to the code of the check.`, checkType),
+	)
 }
