@@ -3,12 +3,12 @@
 page_title: "checkly_private_location Resource - terraform-provider-checkly"
 subcategory: ""
 description: |-
-  
+  A private location runs checks from your own infrastructure: Checkly agents that you deploy, for example as containers in your network, run the checks and monitors assigned to it. The agents authenticate with the location's API keys, which are only available when the location is created; see keys.
 ---
 
 # checkly_private_location (Resource)
 
-
+A private location runs checks from your own infrastructure: Checkly agents that you deploy, for example as containers in your network, run the checks and monitors assigned to it. The agents authenticate with the location's API keys, which are only available when the location is created; see `keys`.
 
 ## Example Usage
 
@@ -39,17 +39,17 @@ resource "checkly_private_location" "location-with-proxy" {
 ### Required
 
 - `name` (String) The private location name.
-- `slug_name` (String) The slug name of the private location: 1 to 30 letters, digits and dashes, not starting with the ID of a public location such as `eu-central-1`.
+- `slug_name` (String) The slug name of the private location: 1 to 30 letters, digits and dashes, not starting with the ID of a public location such as `eu-central-1`. Checks and monitors refer to the location by it. The slug can't be changed after creation: a plan that changes it fails, also with `terraform apply -replace` or `replace_triggered_by`. To use a different slug, add a new `checkly_private_location` resource block with it, move your checks and agents to the new location, then remove the old block.
 
 ### Optional
 
-- `icon` (String) Icon assigned to the private location.
+- `icon` (String) Icon assigned to the private location. (Default `location`).
 - `proxy_url` (String, Sensitive) The proxy that API checks running in the private location send their HTTP requests through, such as `https://user:password@proxy.example.com:3128`. It can hold credentials.
 
 ### Read-Only
 
 - `id` (String) The ID of the private location.
-- `keys` (Set of String, Sensitive) Private location API keys.
+- `keys` (Set of String, Sensitive) The API keys that the location's agents authenticate with. The API returns a key only when it is created, so this holds the key created with the location and is never refreshed: keys added or revoked later, for example in the web app, don't show here. After an import, it is null.
 
 ## Import
 

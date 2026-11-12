@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	"github.com/checkly/checkly-go-sdk/v2"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -173,6 +175,14 @@ func TestConfigureValidatesCredentials(t *testing.T) {
 		accountID    *string
 		apiURL       *string
 		want         string
+		// wantPath is the attribute the error is attached to, if any.
+		wantPath string
+		// wantDetail is text the error detail must contain, if any.
+		wantDetail string
+		// wantExactDetail is the whole error detail, if set.
+		wantExactDetail string
+		// secret is text the error must not repeat, if any.
+		secret string
 	}{
 		"missing":             {want: "Missing Checkly Account ID"},
 		"empty without env":   {accountID: new(""), want: "Missing Checkly Account ID"},
@@ -193,7 +203,22 @@ func TestConfigureValidatesCredentials(t *testing.T) {
 		"invalid API URL": {
 			accountID: new(validAccountID),
 			apiURL:    new("ftp://example.com"),
-			want:      "Unable to Create the Checkly API Client",
+			want:      "Invalid Checkly API URL",
+			wantPath:  "api_url",
+			// The detail embeds the SDK's error without its
+			// "checkly: WithBaseURL: " prefix, so a change to the SDK's
+			// wording fails here.
+			wantExactDetail: "The Checkly API URL must be an http or https URL with a host and without a query or fragment, such as https://api.checklyhq.com: " +
+				"not an http or https URL. Check the api_url value in the provider configuration or the CHECKLY_API_URL environment variable.",
+		},
+		"API URL with a query and a password": {
+			accountID: new(validAccountID),
+			apiURL:    new("https://user:hunter2@api.example.com/?region=eu"),
+			want:      "Invalid Checkly API URL",
+			wantPath:  "api_url",
+			wantExactDetail: "The Checkly API URL must be an http or https URL with a host and without a query or fragment, such as https://api.checklyhq.com: " +
+				`"https://user:xxxxx@api.example.com/?region=eu" has a query. Check the api_url value in the provider configuration or the CHECKLY_API_URL environment variable.`,
+			secret: "hunter2",
 		},
 	}
 
@@ -247,7 +272,22 @@ func TestConfigureValidatesCredentials(t *testing.T) {
 			if got.Summary() != c.want {
 				t.Errorf("summary = %q, want %q", got.Summary(), c.want)
 			}
+			if c.wantPath != "" {
+				withPath, ok := got.(diag.DiagnosticWithPath)
+				if !ok || !withPath.Path().Equal(path.Root(c.wantPath)) {
+					t.Errorf("diagnostic %v is not attached to %s", got, c.wantPath)
+				}
+			}
+			if c.wantExactDetail != "" && got.Detail() != c.wantExactDetail {
+				t.Errorf("detail = %q, want %q", got.Detail(), c.wantExactDetail)
+			}
+			if !strings.Contains(got.Detail(), c.wantDetail) {
+				t.Errorf("detail = %q, want it to contain %q", got.Detail(), c.wantDetail)
+			}
 			text := got.Summary() + " " + got.Detail()
+			if c.secret != "" && strings.Contains(text, c.secret) {
+				t.Errorf("diagnostic contains %q: %q", c.secret, text)
+			}
 			if strings.Contains(text, apiKey) {
 				t.Errorf("diagnostic contains the API key: %q", text)
 			}

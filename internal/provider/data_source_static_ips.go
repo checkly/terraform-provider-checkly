@@ -2,11 +2,15 @@ package provider
 
 import (
 	"context"
+	"fmt"
+	"maps"
 	"slices"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
@@ -36,6 +40,11 @@ type StaticIPsDataSourceModel struct {
 	IPFamily  types.String `tfsdk:"ip_family"`
 }
 
+var staticIPFamilies = allowedValues[string]{
+	{Value: "IPv4"},
+	{Value: "IPv6"},
+}
+
 func (d *StaticIPsDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_static_ips"
 }
@@ -56,13 +65,13 @@ func (d *StaticIPsDataSource) Schema(ctx context.Context, req datasource.SchemaR
 			"locations": schema.SetAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
-				Description: "Specify the locations you want to get static IPs for.",
+				Description: "Specify the locations you want to get static IPs for, such as `eu-central-1`. A location that has no static IPs, such as a misspelled or private one, adds no addresses and gives a warning. When not set, the addresses of every location are returned.",
 			},
 			"ip_family": schema.StringAttribute{
 				Optional:    true,
-				Description: "Specify the IP families you want to get static IPs for. Only `IPv6` or `IPv4` are valid options.",
+				Description: "Specify the IP family you want to get static IPs for. " + staticIPFamilies.String() + " When not set, addresses of both families are returned.",
 				Validators: []validator.String{
-					stringvalidator.OneOf("IPv4", "IPv6"),
+					stringvalidator.OneOf(staticIPFamilies.Values()...),
 				},
 			},
 		},
@@ -98,6 +107,30 @@ func (d *StaticIPsDataSource) Read(ctx context.Context, req datasource.ReadReque
 	if err != nil {
 		addAPIError(&resp.Diagnostics, "Unable to Read Static IPs", err)
 		return
+	}
+
+	// A location without static IPs, such as a misspelled or private one,
+	// adds no addresses. That only warns: the same list of locations often
+	// goes to checks, where private locations and regions without static
+	// IPs are valid.
+	regions := map[string]bool{}
+	for _, ip := range staticIPs {
+		regions[ip.Region] = true
+	}
+	var unknown []string
+	for _, location := range locations {
+		if !regions[location] {
+			unknown = append(unknown, fmt.Sprintf("%q", location))
+		}
+	}
+	if len(unknown) > 0 {
+		slices.Sort(unknown)
+		resp.Diagnostics.AddAttributeWarning(
+			path.Root("locations"),
+			"Location Without Static IPs",
+			fmt.Sprintf("Checkly has no static IPs for %s, so they add no addresses. Private locations and misspelled locations have none. The locations with static IPs are: %s.",
+				strings.Join(unknown, ", "), strings.Join(slices.Sorted(maps.Keys(regions)), ", ")),
+		)
 	}
 
 	var addresses []string

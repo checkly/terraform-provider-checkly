@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -57,7 +58,7 @@ func (p *ChecklyProvider) Schema(ctx context.Context, req provider.SchemaRequest
 			},
 			"api_url": schema.StringAttribute{
 				Optional:    true,
-				Description: "The Checkly API URL. Defaults to `https://api.checklyhq.com`. Can also be set using the `CHECKLY_API_URL` environment variable.",
+				Description: "The Checkly API URL, an http or https URL with a host and without a query or fragment. Defaults to `https://api.checklyhq.com`. Can also be set using the `CHECKLY_API_URL` environment variable.",
 			},
 			"account_id": schema.StringAttribute{
 				Optional:    true,
@@ -119,6 +120,20 @@ func (p *ChecklyProvider) Configure(ctx context.Context, req provider.ConfigureR
 
 	if apiURL == "" {
 		apiURL = "https://api.checklyhq.com"
+	}
+
+	// The base URL is checked on its own first, so that its error is
+	// attached to api_url. The SDK's errors for it quote the URL with any
+	// password redacted, never the API key.
+	if _, err := checkly.NewClient(checkly.WithBaseURL(apiURL)); err != nil {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("api_url"),
+			"Invalid Checkly API URL",
+			"The Checkly API URL must be an http or https URL with a host and without a query or fragment, such as https://api.checklyhq.com: "+
+				strings.TrimPrefix(err.Error(), "checkly: WithBaseURL: ")+
+				". Check the api_url value in the provider configuration or the CHECKLY_API_URL environment variable.",
+		)
+		return
 	}
 
 	requestTimeout, err := parseAPIRequestTimeout()

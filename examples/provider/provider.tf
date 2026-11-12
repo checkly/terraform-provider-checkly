@@ -1,6 +1,12 @@
-# Define a variable to hold the API Key and Account ID
-variable "checkly_api_key" {}
-variable "checkly_account_id" {}
+# Define variables to hold the API Key and Account ID. The API key is a
+# credential, so it is marked sensitive to keep it out of plan output.
+variable "checkly_api_key" {
+  type      = string
+  sensitive = true
+}
+variable "checkly_account_id" {
+  type = string
+}
 
 # Specify the Checkly provider
 terraform {

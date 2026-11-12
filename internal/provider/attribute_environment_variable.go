@@ -9,8 +9,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 
 	"github.com/checkly/checkly-go-sdk/v2"
 )
@@ -56,6 +58,9 @@ func makeEnvironmentVariableSchema(options EnvironmentVariableAttributeSchemaOpt
 		Validators: []validator.List{
 			listvalidator.SizeAtMost(maxEnvironmentVariables),
 		},
+		PlanModifiers: []planmodifier.List{
+			secretEnvironmentVariableValues{},
+		},
 		NestedObject: schema.NestedAttributeObject{
 			Attributes: map[string]schema.Attribute{
 				"key": schema.StringAttribute{
@@ -84,6 +89,62 @@ func makeEnvironmentVariableSchema(options EnvironmentVariableAttributeSchemaOpt
 				},
 			},
 		},
+	}
+}
+
+// secretEnvironmentVariableValues checks the length of the secret values in
+// environment_variables. When a check or check group is written, the API
+// checks a secret value only when it is new or changed: an element whose key
+// was already a secret with the same value in the prior state keeps its
+// stored value and is not checked again. A short value is an error when it is
+// sent, and a warning when the API keeps it. Elements with an unknown key,
+// value or secret flag are skipped.
+type secretEnvironmentVariableValues struct{}
+
+var _ planmodifier.List = secretEnvironmentVariableValues{}
+
+func (m secretEnvironmentVariableValues) Description(ctx context.Context) string {
+	return fmt.Sprintf("A new or changed secret value must have at least %d characters.", minSecretEnvironmentVariableValueCharacters)
+}
+
+func (m secretEnvironmentVariableValues) MarkdownDescription(ctx context.Context) string {
+	return m.Description(ctx)
+}
+
+func (m secretEnvironmentVariableValues) PlanModifyList(ctx context.Context, req planmodifier.ListRequest, resp *planmodifier.ListResponse) {
+	if req.PlanValue.IsNull() || req.PlanValue.IsUnknown() {
+		return
+	}
+
+	// The secret values in the prior state, by key.
+	stored := map[string]string{}
+	if !req.StateValue.IsNull() && !req.StateValue.IsUnknown() {
+		var models []EnvironmentVariableModel
+		if diags := req.StateValue.ElementsAs(ctx, &models, false); !diags.HasError() {
+			for _, model := range models {
+				if model.Secret.ValueBool() {
+					stored[model.Key.ValueString()] = model.Value.ValueString()
+				}
+			}
+		}
+	}
+
+	for i, element := range req.PlanValue.Elements() {
+		object, ok := element.(types.Object)
+		if !ok || object.IsNull() || object.IsUnknown() {
+			continue
+		}
+		var model EnvironmentVariableModel
+		if diags := object.As(ctx, &model, basetypes.ObjectAsOptions{}); diags.HasError() {
+			continue
+		}
+		if model.Key.IsUnknown() || model.Value.IsUnknown() || model.Secret.IsUnknown() || !model.Secret.ValueBool() {
+			continue
+		}
+
+		storedValue, wasSecret := stored[model.Key.ValueString()]
+		sent := !wasSecret || storedValue != model.Value.ValueString()
+		checkSecretEnvironmentVariableValue(&resp.Diagnostics, req.Path.AtListIndex(i).AtName("value"), model.Value.ValueString(), sent)
 	}
 }
 

@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
@@ -59,6 +60,7 @@ type AlertChannelResourceModel struct {
 	SendDegraded       types.Bool   `tfsdk:"send_degraded"`
 	SSLExpiry          types.Bool   `tfsdk:"ssl_expiry"`
 	SSLExpiryThreshold types.Int64  `tfsdk:"ssl_expiry_threshold"`
+	AutoSubscribe      types.Bool   `tfsdk:"auto_subscribe"`
 }
 
 type alertChannelEmailModel struct {
@@ -155,6 +157,19 @@ var alertChannelPagerdutyAttrTypes = map[string]attr.Type{
 	"service_name": types.StringType,
 }
 
+var alertChannelOpsgenieRegions = allowedValues[string]{
+	{Value: string(checkly.OpsgenieRegionEU)},
+	{Value: string(checkly.OpsgenieRegionUS)},
+}
+
+var alertChannelOpsgeniePriorities = allowedValues[string]{
+	{Value: string(checkly.OpsgeniePriorityP1)},
+	{Value: string(checkly.OpsgeniePriorityP2)},
+	{Value: string(checkly.OpsgeniePriorityP3)},
+	{Value: string(checkly.OpsgeniePriorityP4)},
+	{Value: string(checkly.OpsgeniePriorityP5)},
+}
+
 var alertChannelWebhookTypes = allowedValues[string]{
 	{Value: "WEBHOOK_CORALOGIX"},
 	{Value: "WEBHOOK_DISCORD"},
@@ -168,6 +183,10 @@ var alertChannelWebhookTypes = allowedValues[string]{
 	{Value: "WEBHOOK_SPLUNK"},
 	{Value: "WEBHOOK_TELEGRAM"},
 }
+
+// alertChannelSlackDestinationRegex is the API's rule for a slack_app
+// destination: a channel that starts with "#" or a user that starts with "@".
+var alertChannelSlackDestinationRegex = regexp.MustCompile(`^[#@]`)
 
 func (r *AlertChannelResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_alert_channel"
@@ -218,6 +237,12 @@ func (r *AlertChannelResource) Schema(ctx context.Context, req resource.SchemaRe
 					int64validator.Between(1, 30),
 				},
 			},
+			"auto_subscribe": schema.BoolAttribute{
+				Optional:    true,
+				Computed:    true,
+				Default:     booldefault.StaticBool(false),
+				Description: "Whether new checks are subscribed to this alert channel automatically. Only the web app, which preselects the channel when you create a check there, and the Vercel integration, for the checks it creates, act on it. Checks created through the API, the Checkly CLI or Terraform are not subscribed, and neither are existing checks; subscribe them with `alert_channel_subscriptions`. (Default `false`).",
+			},
 			"email": schema.SingleNestedAttribute{
 				Optional:    true,
 				Description: "Sends alerts by email.",
@@ -225,6 +250,9 @@ func (r *AlertChannelResource) Schema(ctx context.Context, req resource.SchemaRe
 					"address": schema.StringAttribute{
 						Required:    true,
 						Description: "The email address of this email alert channel.",
+						Validators: []validator.String{
+							stringvalidator.LengthAtLeast(1),
+						},
 					},
 				},
 			},
@@ -251,9 +279,13 @@ func (r *AlertChannelResource) Schema(ctx context.Context, req resource.SchemaRe
 					"slack_channels": schema.ListAttribute{
 						Required:    true,
 						ElementType: types.StringType,
-						Description: "The Slack channels or users to notify, e.g. `[\"#ops\", \"@John\"]`.",
+						Description: "The Slack channels or users to notify, e.g. `[\"#ops\", \"@John\"]`. Each element starts with `#` for a channel or `@` for a user, and has no trailing whitespace.",
 						Validators: []validator.List{
 							listvalidator.SizeAtLeast(1),
+							listvalidator.ValueStringsAre(
+								stringvalidator.RegexMatches(alertChannelSlackDestinationRegex, "must start with # for a channel, such as #operations, or @ for a user, such as @john"),
+								trimmedStringValidator{},
+							),
 						},
 					},
 				},
@@ -293,12 +325,22 @@ func (r *AlertChannelResource) Schema(ctx context.Context, req resource.SchemaRe
 					"name": schema.StringAttribute{
 						Required:    true,
 						Description: "The name of this alert channel.",
+						Validators: []validator.String{
+							stringvalidator.LengthAtLeast(1),
+						},
 					},
 					"method": schema.StringAttribute{
 						Optional:    true,
 						Computed:    true,
 						Default:     stringdefault.StaticString("POST"),
-						Description: "The HTTP method of the webhook request. Possible values are `GET`, `POST`, `PUT`, `HEAD`, `DELETE` and `PATCH`. (Default `POST`).",
+						Description: "The HTTP method of the webhook request, such as `GET`, `POST`, `PUT`, `HEAD`, `DELETE` or `PATCH`. Must not be empty. (Default `POST`).",
+						Validators: []validator.String{
+							// The API stores any method as given and the
+							// webhook sender passes it on, so only an empty
+							// one is rejected: the API would store POST
+							// instead.
+							stringvalidator.LengthAtLeast(1),
+						},
 					},
 					"headers": schema.MapAttribute{
 						Optional:    true,
@@ -322,6 +364,9 @@ func (r *AlertChannelResource) Schema(ctx context.Context, req resource.SchemaRe
 						Required:    true,
 						Sensitive:   true,
 						Description: "The URL to send the webhook request to.",
+						Validators: []validator.String{
+							stringvalidator.LengthAtLeast(1),
+						},
 					},
 					"webhook_secret": schema.StringAttribute{
 						Optional:    true,
@@ -344,19 +389,31 @@ func (r *AlertChannelResource) Schema(ctx context.Context, req resource.SchemaRe
 					"name": schema.StringAttribute{
 						Required:    true,
 						Description: "The name of this alert channel.",
+						Validators: []validator.String{
+							stringvalidator.LengthAtLeast(1),
+						},
 					},
 					"api_key": schema.StringAttribute{
 						Required:    true,
 						Sensitive:   true,
 						Description: "The API key of the Opsgenie integration to create alerts with.",
+						Validators: []validator.String{
+							stringvalidator.LengthAtLeast(1),
+						},
 					},
 					"region": schema.StringAttribute{
 						Required:    true,
-						Description: "The region of the Opsgenie account, which selects the Opsgenie API to call. Possible values are `EU` and `US`.",
+						Description: "The region of the Opsgenie account, which selects the Opsgenie API to call. " + alertChannelOpsgenieRegions.String(),
+						Validators: []validator.String{
+							stringvalidator.OneOf(alertChannelOpsgenieRegions.Values()...),
+						},
 					},
 					"priority": schema.StringAttribute{
 						Required:    true,
-						Description: "The priority of the alerts created in Opsgenie. Possible values are `P1`, `P2`, `P3`, `P4` and `P5`.",
+						Description: "The priority of the alerts created in Opsgenie. " + alertChannelOpsgeniePriorities.String(),
+						Validators: []validator.String{
+							stringvalidator.OneOf(alertChannelOpsgeniePriorities.Values()...),
+						},
 					},
 				},
 			},
@@ -368,6 +425,9 @@ func (r *AlertChannelResource) Schema(ctx context.Context, req resource.SchemaRe
 						Required:    true,
 						Sensitive:   true,
 						Description: "The integration key of the PagerDuty service to send alerts to.",
+						Validators: []validator.String{
+							stringvalidator.LengthAtLeast(1),
+						},
 					},
 					"service_name": schema.StringAttribute{
 						Optional:    true,
@@ -555,6 +615,9 @@ func alertChannelFromModel(ctx context.Context, model *AlertChannelResourceModel
 		SendFailure:  model.SendFailure.ValueBoolPointer(),
 		SendDegraded: model.SendDegraded.ValueBoolPointer(),
 		SSLExpiry:    model.SSLExpiry.ValueBoolPointer(),
+		// The API resets an autoSubscribe that a request leaves out to
+		// false, so it is always sent.
+		AutoSubscribe: model.AutoSubscribe.ValueBoolPointer(),
 	}
 
 	if !model.SSLExpiryThreshold.IsNull() && !model.SSLExpiryThreshold.IsUnknown() {
@@ -664,6 +727,9 @@ func alertChannelToModel(ctx context.Context, ac *checkly.AlertChannel, model *A
 	}
 	if ac.SSLExpiryThreshold != nil {
 		model.SSLExpiryThreshold = types.Int64Value(int64(*ac.SSLExpiryThreshold))
+	}
+	if ac.AutoSubscribe != nil {
+		model.AutoSubscribe = types.BoolValue(*ac.AutoSubscribe)
 	}
 }
 

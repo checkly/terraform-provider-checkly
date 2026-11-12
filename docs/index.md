@@ -19,10 +19,16 @@ You also need to set your target Account ID, which you can find under your [acco
 
 > If you don't have access to account settings, please contact your account owner/admin.
 
-Now open the terminal and expose the `API Key` and `Account ID` as environment variables:
+Now open the terminal and expose the `API Key` and `Account ID` as environment variables for the Terraform variables of the example below:
 ```bash
 $ export TF_VAR_checkly_api_key="your-api-key"
 $ export TF_VAR_checkly_account_id="your-account-id"
+```
+
+Alternatively, leave `api_key` and `account_id` out of the provider configuration and set the `CHECKLY_API_KEY` and `CHECKLY_ACCOUNT_ID` environment variables, which the provider reads directly:
+```bash
+$ export CHECKLY_API_KEY="your-api-key"
+$ export CHECKLY_ACCOUNT_ID="your-account-id"
 ```
 
 ## Request timeout
@@ -32,9 +38,15 @@ Each request to the Checkly API times out after 15 seconds. To change this, set 
 ## Example Usage
 
 ```terraform
-# Define a variable to hold the API Key and Account ID
-variable "checkly_api_key" {}
-variable "checkly_account_id" {}
+# Define variables to hold the API Key and Account ID. The API key is a
+# credential, so it is marked sensitive to keep it out of plan output.
+variable "checkly_api_key" {
+  type      = string
+  sensitive = true
+}
+variable "checkly_account_id" {
+  type = string
+}
 
 # Specify the Checkly provider
 terraform {
@@ -83,6 +95,6 @@ resource "checkly_api_check" "example_check" {
 
 - `account_id` (String) The Checkly account ID, which every API key needs. Required, but can also be set using the `CHECKLY_ACCOUNT_ID` environment variable.
 - `api_key` (String, Sensitive) The Checkly API key. Can also be set using the `CHECKLY_API_KEY` environment variable.
-- `api_url` (String) The Checkly API URL. Defaults to `https://api.checklyhq.com`. Can also be set using the `CHECKLY_API_URL` environment variable.
+- `api_url` (String) The Checkly API URL, an http or https URL with a host and without a query or fragment. Defaults to `https://api.checklyhq.com`. Can also be set using the `CHECKLY_API_URL` environment variable.
 
 > For additional documentation and examples, check the Resources sections.

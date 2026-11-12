@@ -335,3 +335,68 @@ func TestClientCertificateKeyRequiresReplace(t *testing.T) {
 		})
 	}
 }
+
+func TestClientCertificatePathProblem(t *testing.T) {
+	valid := []string{
+		"",
+		"/partner",
+		"/partner/api",
+		"/partner/api/",
+		"/partner%20api",
+		"/caf%C3%A9",
+		"/a-b_c.d~e/f!$&'()*+,;=:@g",
+		"/v1.2/...x/.hidden",
+		"/a|b/[c]",
+		"/a%zz",
+		"/50%",
+		"/" + strings.Repeat("a", clientCertificatePathMaxLength-1),
+	}
+	for _, p := range valid {
+		if problem := clientCertificatePathProblem(p); problem != "" {
+			t.Errorf("%q: unexpected problem %q", p, problem)
+		}
+	}
+
+	invalid := map[string]string{
+		"partner":      `must start with "/"`,
+		" /partner":    `must start with "/"`,
+		"/":            `must name a path below "/"`,
+		"//":           `must not contain empty segments`,
+		"/a//b":        `must not contain empty segments`,
+		"/a//":         `must not contain empty segments`,
+		"/a/./b":       `must not contain "." or ".." segments`,
+		"/a/..":        `must not contain "." or ".." segments`,
+		"/a/%2E%2e/b":  `must not contain "." or ".." segments`,
+		"/partner api": "must not contain whitespace",
+		"/partner ":    "must not contain whitespace",
+		"/a\tb":        "must not contain whitespace",
+		"/a\x7fb":      "must not contain whitespace",
+		"/a?b":         "must not contain whitespace",
+		"/a#b":         "must not contain whitespace",
+		"/a\\b":        "must not contain whitespace",
+		"/café":        "percent-encoded",
+		"/{id}":        "percent-encoded",
+		"/a^b":         "percent-encoded",
+		"/a`b":         "percent-encoded",
+		"/a\"b":        "percent-encoded",
+		"/a<b>":        "percent-encoded",
+		"/" + strings.Repeat("a", clientCertificatePathMaxLength): "must be at most",
+	}
+	for p, want := range invalid {
+		if problem := clientCertificatePathProblem(p); !strings.Contains(problem, want) {
+			t.Errorf("%q: problem = %q, want it to contain %q", p, problem, want)
+		}
+	}
+}
+
+func TestClientCertificateAttributeValidators(t *testing.T) {
+	var schemaResp fwresource.SchemaResponse
+	NewClientCertificateResource().Schema(context.Background(), fwresource.SchemaRequest{}, &schemaResp)
+
+	runAttributeValidationCases(t, schemaResp.Schema, []attributeValidationCase{
+		{[]string{"certificate"}, types.StringValue(""), false},
+		{[]string{"private_key"}, types.StringValue(""), false},
+		{[]string{"path"}, types.StringValue("/partner/api/"), true},
+		{[]string{"path"}, types.StringValue("/partner api"), false},
+	})
+}

@@ -2,7 +2,9 @@ package provider
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -10,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/checkly/checkly-go-sdk/v2"
@@ -49,6 +52,10 @@ func (r *PrivateLocationResource) Metadata(ctx context.Context, req resource.Met
 func (r *PrivateLocationResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Version: sdkv2SchemaVersion + 1,
+		Description: "A private location runs checks from your own infrastructure: Checkly agents that you " +
+			"deploy, for example as containers in your network, run the checks and monitors assigned to it. " +
+			"The agents authenticate with the location's API keys, which are only available when the " +
+			"location is created; see `keys`.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -60,23 +67,37 @@ func (r *PrivateLocationResource) Schema(ctx context.Context, req resource.Schem
 			"name": schema.StringAttribute{
 				Required:    true,
 				Description: "The private location name.",
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
+				},
 			},
 			"slug_name": schema.StringAttribute{
-				Required:    true,
-				Description: "The slug name of the private location: 1 to 30 letters, digits and dashes, not starting with the ID of a public location such as `eu-central-1`.",
-				Validators:  privateLocationSlugValidators,
+				Required: true,
+				Description: "The slug name of the private location: 1 to 30 letters, digits and dashes, not starting with the ID of a public location such as `eu-central-1`. " +
+					"Checks and monitors refer to the location by it. The slug can't be changed after creation: a plan that changes it fails, also with `terraform apply -replace` or `replace_triggered_by`. " +
+					"To use a different slug, add a new `checkly_private_location` resource block with it, move your checks and agents to the new location, then remove the old block.",
+				Validators: privateLocationSlugValidators,
+				PlanModifiers: []planmodifier.String{
+					privateLocationSlugUnchanged{},
+				},
 			},
 			"icon": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
 				Default:     stringdefault.StaticString("location"),
-				Description: "Icon assigned to the private location.",
+				Description: "Icon assigned to the private location. (Default `location`).",
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
+				},
 			},
 			"keys": schema.SetAttribute{
 				Computed:    true,
 				Sensitive:   true,
 				ElementType: types.StringType,
-				Description: "Private location API keys.",
+				Description: "The API keys that the location's agents authenticate with. The API returns a key " +
+					"only when it is created, so this holds the key created with the location and is never " +
+					"refreshed: keys added or revoked later, for example in the web app, don't show here. " +
+					"After an import, it is null.",
 				// The API returns raw key material only in the creation
 				// response; subsequent reads never include it. Keep the
 				// keys captured at creation time in state.
@@ -91,6 +112,43 @@ func (r *PrivateLocationResource) Schema(ctx context.Context, req resource.Schem
 			},
 		},
 	}
+}
+
+// privateLocationSlugUnchanged fails the plan when it changes the slug of an
+// existing private location. The API ignores slugName on update, so an
+// in-place change would never apply. Replacing the location instead isn't
+// safe: the API refuses to delete a location that checks or groups use, and
+// a new location has new API keys, which disconnects the running agents.
+type privateLocationSlugUnchanged struct{}
+
+var _ planmodifier.String = privateLocationSlugUnchanged{}
+
+func (m privateLocationSlugUnchanged) Description(ctx context.Context) string {
+	return "The slug can't be changed after the private location is created."
+}
+
+func (m privateLocationSlugUnchanged) MarkdownDescription(ctx context.Context) string {
+	return m.Description(ctx)
+}
+
+func (m privateLocationSlugUnchanged) PlanModifyString(ctx context.Context, req planmodifier.StringRequest, resp *planmodifier.StringResponse) {
+	if req.StateValue.IsNull() || req.PlanValue.IsUnknown() || req.PlanValue.IsNull() {
+		return
+	}
+	if req.PlanValue.Equal(req.StateValue) {
+		return
+	}
+
+	resp.Diagnostics.AddAttributeError(
+		req.Path,
+		"Private Location Slug Can't Change",
+		fmt.Sprintf("The slug of an existing private location can't be changed: the API keeps %s. "+
+			"Replacing the location isn't supported either, also not with terraform apply -replace or replace_triggered_by: "+
+			"the API refuses to delete a location that checks or groups use, and the agents of a new location need its new API keys. "+
+			"To use %s, add a new checkly_private_location resource block with it, move your checks and agents to the new location, "+
+			"then remove the old block. For a location that no check or group uses yet, you can instead remove its resource block, "+
+			"apply, and add it back with the new slug.", req.StateValue, req.PlanValue),
+	)
 }
 
 // UpgradeState upgrades state written by the provider's SDK v2

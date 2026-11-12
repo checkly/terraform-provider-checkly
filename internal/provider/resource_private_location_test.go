@@ -7,6 +7,9 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	fwresource "github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -385,6 +388,80 @@ func testAccMonitorPrivateLocations(t *testing.T, c monitorPrivateLocationsCase)
 			),
 			ConfigStateChecks: []statecheck.StateCheck{
 				statecheck.ExpectKnownValue(c.resource, tfjsonpath.New("private_locations"), emptySet),
+			},
+		},
+	})
+}
+
+func TestPrivateLocationSlugUnchanged(t *testing.T) {
+	ctx := context.Background()
+
+	cases := []struct {
+		name        string
+		state, plan types.String
+		wantError   bool
+	}{
+		{"create", types.StringNull(), types.StringValue("new-slug"), false},
+		{"unchanged", types.StringValue("slug"), types.StringValue("slug"), false},
+		{"changed", types.StringValue("slug"), types.StringValue("other-slug"), true},
+		{"unknown", types.StringValue("slug"), types.StringUnknown(), false},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			req := planmodifier.StringRequest{
+				Path:        path.Root("slug_name"),
+				StateValue:  c.state,
+				PlanValue:   c.plan,
+				ConfigValue: c.plan,
+			}
+			resp := planmodifier.StringResponse{PlanValue: c.plan}
+			privateLocationSlugUnchanged{}.PlanModifyString(ctx, req, &resp)
+			if got := resp.Diagnostics.HasError(); got != c.wantError {
+				t.Errorf("error = %t, want %t: %v", got, c.wantError, resp.Diagnostics)
+			}
+			if resp.RequiresReplace {
+				t.Error("a slug change must not replace the private location")
+			}
+		})
+	}
+}
+
+func TestPrivateLocationAttributeValidators(t *testing.T) {
+	var schemaResp fwresource.SchemaResponse
+	NewPrivateLocationResource().Schema(context.Background(), fwresource.SchemaRequest{}, &schemaResp)
+
+	runAttributeValidationCases(t, schemaResp.Schema, []attributeValidationCase{
+		{[]string{"name"}, types.StringValue("Lab"), true},
+		{[]string{"name"}, types.StringValue(""), false},
+		{[]string{"icon"}, types.StringValue("bell-fill"), true},
+		{[]string{"icon"}, types.StringValue(""), false},
+	})
+}
+
+// Changing the slug of an existing private location fails the plan, and the
+// location keeps its slug.
+func TestAccPrivateLocationSlugCannotChange(t *testing.T) {
+	rInt := acctest.RandInt() % 100000
+	config := func(slug string) string {
+		return fmt.Sprintf(`resource "checkly_private_location" "test" {
+			name      = "Private Location %d"
+			slug_name = %q
+		}`, rInt, slug)
+	}
+	slug := fmt.Sprintf("tf-test-pl-slug-%d", rInt)
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: config(slug),
+		},
+		{
+			Config:      config(slug + "-new"),
+			ExpectError: regexp.MustCompile(`Private Location Slug Can't Change`),
+		},
+		{
+			Config: config(slug),
+			ConfigPlanChecks: resource.ConfigPlanChecks{
+				PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
 			},
 		},
 	})

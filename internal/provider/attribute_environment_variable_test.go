@@ -2,10 +2,13 @@ package provider
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/checkly/checkly-go-sdk/v2"
@@ -125,6 +128,73 @@ func TestEnvironmentVariablesToListEmpty(t *testing.T) {
 			}
 			if !got.Equal(c.want) {
 				t.Errorf("got %s, want %s", got, c.want)
+			}
+		})
+	}
+}
+
+func TestSecretEnvironmentVariableValues(t *testing.T) {
+	ctx := context.Background()
+
+	variable := func(key, value string, secret bool) EnvironmentVariableModel {
+		return EnvironmentVariableModel{
+			Key:    types.StringValue(key),
+			Value:  types.StringValue(value),
+			Locked: types.BoolValue(false),
+			Secret: types.BoolValue(secret),
+		}
+	}
+	nullState := types.ListNull(types.ObjectType{AttrTypes: environmentVariableAttrTypes})
+
+	cases := map[string]struct {
+		state                 []EnvironmentVariableModel
+		plan                  []EnvironmentVariableModel
+		wantErrors, wantWarns int
+	}{
+		"create with a long secret":    {plan: []EnvironmentVariableModel{variable("K", "q7z", true)}},
+		"create with a short secret":   {plan: []EnvironmentVariableModel{variable("K", "q7", true)}, wantErrors: 1},
+		"create with an empty secret":  {plan: []EnvironmentVariableModel{variable("K", "", true)}, wantErrors: 1},
+		"a short value is not secret":  {plan: []EnvironmentVariableModel{variable("K", "q7", false)}},
+		"code points, not bytes":       {plan: []EnvironmentVariableModel{variable("K", "😀😀😀", true)}},
+		"two code points":              {plan: []EnvironmentVariableModel{variable("K", "😀😀", true)}, wantErrors: 1},
+		"an unchanged short secret":    {state: []EnvironmentVariableModel{variable("K", "q7", true)}, plan: []EnvironmentVariableModel{variable("K", "q7", true)}, wantWarns: 1},
+		"a changed short secret":       {state: []EnvironmentVariableModel{variable("K", "q7z", true)}, plan: []EnvironmentVariableModel{variable("K", "q7", true)}, wantErrors: 1},
+		"a short value made secret":    {state: []EnvironmentVariableModel{variable("K", "q7", false)}, plan: []EnvironmentVariableModel{variable("K", "q7", true)}, wantErrors: 1},
+		"a short secret under new key": {state: []EnvironmentVariableModel{variable("K", "q7", true)}, plan: []EnvironmentVariableModel{variable("L", "q7", true)}, wantErrors: 1},
+		"an unchanged one and a new one": {
+			state:      []EnvironmentVariableModel{variable("K", "q7", true)},
+			plan:       []EnvironmentVariableModel{variable("K", "q7", true), variable("L", "x", true)},
+			wantErrors: 1, wantWarns: 1,
+		},
+		"unknown value": {plan: []EnvironmentVariableModel{{
+			Key: types.StringValue("K"), Value: types.StringUnknown(), Locked: types.BoolValue(false), Secret: types.BoolValue(true),
+		}}},
+		"unknown secret flag": {plan: []EnvironmentVariableModel{{
+			Key: types.StringValue("K"), Value: types.StringValue("q7"), Locked: types.BoolValue(false), Secret: types.BoolUnknown(),
+		}}},
+	}
+
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			state := nullState
+			if c.state != nil {
+				state = environmentVariableTestList(t, c.state)
+			}
+			plan := environmentVariableTestList(t, c.plan)
+			req := planmodifier.ListRequest{Path: path.Root(environmentVariableAttributeName), StateValue: state, PlanValue: plan, ConfigValue: plan}
+			resp := planmodifier.ListResponse{PlanValue: plan}
+			secretEnvironmentVariableValues{}.PlanModifyList(ctx, req, &resp)
+
+			if got := resp.Diagnostics.ErrorsCount(); got != c.wantErrors {
+				t.Errorf("errors = %d, want %d: %v", got, c.wantErrors, resp.Diagnostics)
+			}
+			if got := resp.Diagnostics.WarningsCount(); got != c.wantWarns {
+				t.Errorf("warnings = %d, want %d: %v", got, c.wantWarns, resp.Diagnostics)
+			}
+			for _, d := range resp.Diagnostics {
+				if strings.Contains(d.Detail(), "q7") {
+					t.Errorf("diagnostic repeats the value: %s", d.Detail())
+				}
 			}
 		})
 	}
