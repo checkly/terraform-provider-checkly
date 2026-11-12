@@ -13,6 +13,6 @@ variable "proxy_url" {
 # proxy.
 resource "checkly_private_location" "location-with-proxy" {
   name      = "Private Location behind a proxy"
-  slug_name = "private-location-behind-a-proxy"
+  slug_name = "private-location-with-proxy"
   proxy_url = var.proxy_url
 }

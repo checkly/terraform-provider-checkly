@@ -145,6 +145,10 @@ EOT
 resource "checkly_api_check" "example_check" {
   name = "Example check"
 
+  request = {
+    url = "https://api.example.com/"
+  }
+
   alert_channel_subscriptions = [
     {
       channel_id = checkly_alert_channel.email_ac.id
