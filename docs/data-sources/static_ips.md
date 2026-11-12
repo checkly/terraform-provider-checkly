@@ -39,8 +39,8 @@ resource "aws_security_group_rule" "checkly_ingress" {
 
 ### Optional
 
-- `ip_family` (String) Specify the IP families you want to get static IPs for. Only `IPv6` or `IPv4` are valid options.
-- `locations` (Set of String) Specify the locations you want to get static IPs for.
+- `ip_family` (String) Specify the IP family you want to get static IPs for. The allowed values are `IPv4` and `IPv6`. When not set, addresses of both families are returned.
+- `locations` (Set of String) Specify the locations you want to get static IPs for, such as `eu-central-1`. A location that has no static IPs, such as a misspelled or private one, adds no addresses and gives a warning. When not set, the addresses of every location are returned.
 
 ### Read-Only
 

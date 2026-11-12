@@ -1,9 +1,12 @@
 package provider
 
 import (
+	"context"
 	"regexp"
 	"testing"
 
+	fwresource "github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
@@ -47,5 +50,17 @@ func TestAccSnippetSuccess(t *testing.T) {
 			ImportState:       true,
 			ImportStateVerify: true,
 		},
+	})
+}
+
+func TestSnippetAttributeValidators(t *testing.T) {
+	var schemaResp fwresource.SchemaResponse
+	NewSnippetResource().Schema(context.Background(), fwresource.SchemaRequest{}, &schemaResp)
+
+	runAttributeValidationCases(t, schemaResp.Schema, []attributeValidationCase{
+		{[]string{"name"}, types.StringValue("Snippet"), true},
+		{[]string{"name"}, types.StringValue(""), false},
+		{[]string{"script"}, types.StringValue("console.log(1)"), true},
+		{[]string{"script"}, types.StringValue(""), false},
 	})
 }

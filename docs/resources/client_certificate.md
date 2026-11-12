@@ -46,7 +46,7 @@ resource "checkly_client_certificate" "test" {
 ### Optional
 
 - `passphrase` (String, Sensitive) Passphrase for the private key (at most 95 bytes).
-- `path` (String) Optional URL path prefix that limits the certificate to requests under that path, e.g. `/partner/api`. Matching is on whole path segments: `/partner` applies to `/partner` and `/partner/orders` but not to `/partnership`. Must start with `/` and must not be a bare `/`; a trailing `/` is ignored. API checks and Multistep checks match on path; gRPC, SSL and TCP monitors only use certificates without a path. Omit it to use the certificate for every path on the host.
+- `path` (String) Optional URL path prefix that limits the certificate to requests under that path, e.g. `/partner/api`. Matching is on whole path segments: `/partner` applies to `/partner` and `/partner/orders` but not to `/partnership`. Must start with `/` and must not be a bare `/`; a trailing `/` is ignored. The path must already be in the form the API stores: segments separated by single slashes, with no `.` or `..` segments, no whitespace, control characters, `?`, `#` or `\`, and with non-ASCII characters and the characters `` "<>^`{} `` percent-encoded, e.g. `%7B` for `{` (at most 2048 characters). API checks and Multistep checks match on path; gRPC, SSL and TCP monitors only use certificates without a path. Omit it to use the certificate for every path on the host.
 - `trusted_ca` (String) PEM formatted bundle of CA certificates that the client should trust. The bundle may contain many CA certificates.
 
 ### Read-Only

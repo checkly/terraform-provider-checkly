@@ -7,8 +7,11 @@ import (
 	"strings"
 	"unicode"
 	"unicode/utf16"
+	"unicode/utf8"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
@@ -175,17 +178,26 @@ const (
 	// maxSecretEnvironmentVariableValueBytes is the API's limit on the
 	// UTF-8 length of a secret or locked environment variable value.
 	maxSecretEnvironmentVariableValueBytes = 31 * 1024
+	// minSecretEnvironmentVariableValueCharacters is the API's minimum
+	// length of a secret environment variable value, in Unicode code
+	// points. Runners mask every occurrence of a secret value in the check
+	// output, so a shorter value would mask most of it.
+	minSecretEnvironmentVariableValueCharacters = 3
 )
 
 // environmentVariableValueDescription states the API's limits on an
 // environment variable value, for attribute descriptions.
-var environmentVariableValueDescription = fmt.Sprintf("At most %d bytes in UTF-8, or %d bytes for a secret or locked variable.", maxEnvironmentVariableValueBytes, maxSecretEnvironmentVariableValueBytes)
+var environmentVariableValueDescription = fmt.Sprintf("At most %d bytes in UTF-8, or %d bytes for a secret or locked variable. A secret value has at least %d characters.", maxEnvironmentVariableValueBytes, maxSecretEnvironmentVariableValueBytes, minSecretEnvironmentVariableValueCharacters)
 
 // environmentVariableValueValidator rejects an environment variable value
 // longer than the API accepts. The sibling secret and locked attributes pick
 // the limit: a flag that is null counts as false, and one that is unknown
 // counts as false too, so only the larger limit is enforced until it is
 // known. The error gives lengths only, because the value is sensitive.
+//
+// The minimum length of a secret value is checked at plan time instead (see
+// checkSecretEnvironmentVariableValue), because whether the API checks it
+// depends on the prior state.
 type environmentVariableValueValidator struct{}
 
 var _ validator.String = environmentVariableValueValidator{}
@@ -221,4 +233,27 @@ func (v environmentVariableValueValidator) ValidateString(ctx context.Context, r
 			fmt.Sprintf("%s is %d bytes long in UTF-8, but the API accepts at most %d bytes for the value of %s.", req.Path, n, limit, kind),
 		)
 	}
+}
+
+// checkSecretEnvironmentVariableValue reports a secret value at p that is
+// shorter than the API accepts. The API counts code points, as
+// utf8.RuneCountInString does, and an empty secret value is too short too.
+// It checks the value only when it writes it: sent is true when the plan
+// creates the variable or sends a new value, and the short value is then an
+// error. Otherwise the API keeps the stored value as it is, so the plan only
+// warns, and the same configuration still fails when it creates the variable
+// anew. The diagnostics give lengths only, because the value is sensitive.
+func checkSecretEnvironmentVariableValue(diags *diag.Diagnostics, p path.Path, value string, sent bool) {
+	n := utf8.RuneCountInString(value)
+	if n >= minSecretEnvironmentVariableValueCharacters {
+		return
+	}
+
+	const summary = "Secret Environment Variable Value Too Short"
+	reason := fmt.Sprintf("%s is %d characters long, but the API requires at least %d characters for the value of a secret environment variable, because runners mask every occurrence of a secret value in the check output.", p, n, minSecretEnvironmentVariableValueCharacters)
+	if sent {
+		diags.AddAttributeError(p, summary, reason)
+		return
+	}
+	diags.AddAttributeWarning(p, summary, reason+" The API keeps a stored value equal to it, but rejects it on create, when it changes, and when the value stored in Checkly differs, for example after a change outside Terraform, which the plan can't see. Use a longer value.")
 }

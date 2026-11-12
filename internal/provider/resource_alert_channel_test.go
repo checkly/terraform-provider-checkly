@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	fwresource "github.com/hashicorp/terraform-plugin-framework/resource"
@@ -15,10 +16,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+
+	"github.com/checkly/checkly-go-sdk/v2"
 )
 
 func TestWebhookTypeValidation(t *testing.T) {
@@ -409,4 +414,143 @@ func wrappedMessageRegexp(message string) *regexp.Regexp {
 		words[i] = regexp.QuoteMeta(word)
 	}
 	return regexp.MustCompile(strings.Join(words, `\s+`))
+}
+
+func TestAlertChannelAttributeValidators(t *testing.T) {
+	ctx := context.Background()
+	var schemaResp fwresource.SchemaResponse
+	NewAlertChannelResource().Schema(ctx, fwresource.SchemaRequest{}, &schemaResp)
+
+	str := types.StringValue
+	channels := func(values ...string) types.List {
+		elements := make([]attr.Value, 0, len(values))
+		for _, v := range values {
+			elements = append(elements, types.StringValue(v))
+		}
+		return types.ListValueMust(types.StringType, elements)
+	}
+
+	runAttributeValidationCases(t, schemaResp.Schema, []attributeValidationCase{
+		{[]string{"email", "address"}, str("info@example.com"), true},
+		{[]string{"email", "address"}, str(""), false},
+		{[]string{"webhook", "name"}, str(""), false},
+		{[]string{"webhook", "url"}, str(""), false},
+		{[]string{"webhook", "method"}, str("POST"), true},
+		{[]string{"webhook", "method"}, str("patch"), true},
+		{[]string{"webhook", "method"}, str(""), false},
+		// The API accepts any method, and the webhook sender passes it on.
+		{[]string{"webhook", "method"}, str("PROPFIND"), true},
+		{[]string{"opsgenie", "name"}, str(""), false},
+		{[]string{"opsgenie", "api_key"}, str(""), false},
+		{[]string{"opsgenie", "region"}, str("EU"), true},
+		{[]string{"opsgenie", "region"}, str("US"), true},
+		{[]string{"opsgenie", "region"}, str("eu"), false},
+		{[]string{"opsgenie", "region"}, str("fooregion"), false},
+		{[]string{"opsgenie", "priority"}, str("P5"), true},
+		{[]string{"opsgenie", "priority"}, str("P6"), false},
+		{[]string{"opsgenie", "priority"}, str("p1"), false},
+		{[]string{"pagerduty", "service_key"}, str(""), false},
+		{[]string{"slack_app", "slack_channels"}, channels("#ops", "@john"), true},
+		{[]string{"slack_app", "slack_channels"}, channels("ops"), false},
+		{[]string{"slack_app", "slack_channels"}, channels(" #ops"), false},
+		{[]string{"slack_app", "slack_channels"}, channels("#ops "), false},
+		{[]string{"slack_app", "slack_channels"}, channels(), false},
+	})
+}
+
+// The API resets autoSubscribe to false when an update leaves it out, so it
+// is always sent, and a read stores the API's value.
+func TestAlertChannelAutoSubscribeRoundTrip(t *testing.T) {
+	ctx := context.Background()
+
+	for _, want := range []bool{true, false} {
+		model := AlertChannelResourceModel{
+			ID:                 types.StringValue("1"),
+			Email:              alertChannelEmailToObject(ctx, &checkly.AlertChannelEmail{Address: "info@example.com"}, &diag.Diagnostics{}),
+			Slack:              types.ObjectNull(alertChannelSlackAttrTypes),
+			SlackApp:           types.ObjectNull(alertChannelSlackAppAttrTypes),
+			SMS:                types.ObjectNull(alertChannelSMSAttrTypes),
+			Call:               types.ObjectNull(alertChannelCallAttrTypes),
+			Webhook:            types.ObjectNull(alertChannelWebhookAttrTypes),
+			Opsgenie:           types.ObjectNull(alertChannelOpsgenieAttrTypes),
+			Pagerduty:          types.ObjectNull(alertChannelPagerdutyAttrTypes),
+			SendRecovery:       types.BoolValue(true),
+			SendFailure:        types.BoolValue(true),
+			SendDegraded:       types.BoolValue(false),
+			SSLExpiry:          types.BoolValue(false),
+			SSLExpiryThreshold: types.Int64Value(30),
+			AutoSubscribe:      types.BoolValue(want),
+		}
+
+		var diags diag.Diagnostics
+		ac := alertChannelFromModel(ctx, &model, &diags)
+		if diags.HasError() {
+			t.Fatal(diags)
+		}
+		if ac.AutoSubscribe == nil || *ac.AutoSubscribe != want {
+			t.Errorf("AutoSubscribe sent = %v, want %t", ac.AutoSubscribe, want)
+		}
+
+		read := model
+		read.AutoSubscribe = types.BoolNull()
+		alertChannelToModel(ctx, &ac, &read, &diags)
+		if diags.HasError() {
+			t.Fatal(diags)
+		}
+		if !read.AutoSubscribe.Equal(types.BoolValue(want)) {
+			t.Errorf("auto_subscribe read = %s, want %t", read.AutoSubscribe, want)
+		}
+	}
+}
+
+// auto_subscribe round-trips, survives an import and an update of another
+// attribute, and goes back to false when removed from the configuration.
+func TestAccAlertChannelAutoSubscribe(t *testing.T) {
+	const name = "checkly_alert_channel.test"
+	config := func(attributes string) string {
+		return fmt.Sprintf(`resource "checkly_alert_channel" "test" {
+			email = {
+				address = "info@example.com"
+			}
+			%s
+		}`, attributes)
+	}
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: config(`auto_subscribe = true`),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue(name, tfjsonpath.New("auto_subscribe"), knownvalue.Bool(true)),
+			},
+		},
+		{
+			ResourceName:      name,
+			ImportState:       true,
+			ImportStateVerify: true,
+		},
+		{
+			// Before auto_subscribe was sent, any update turned it off.
+			Config: config(`auto_subscribe = true
+			send_degraded = true`),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue(name, tfjsonpath.New("auto_subscribe"), knownvalue.Bool(true)),
+			},
+		},
+		{
+			Config: config(`send_degraded = true`),
+			ConfigPlanChecks: resource.ConfigPlanChecks{
+				PreApply: []plancheck.PlanCheck{
+					plancheck.ExpectResourceAction(name, plancheck.ResourceActionUpdate),
+				},
+			},
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue(name, tfjsonpath.New("auto_subscribe"), knownvalue.Bool(false)),
+			},
+		},
+		{
+			Config: config(`send_degraded = true`),
+			ConfigPlanChecks: resource.ConfigPlanChecks{
+				PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+			},
+		},
+	})
 }

@@ -41,8 +41,8 @@ resource "checkly_alert_channel" "opsgenie_ac" {
   opsgenie = {
     name     = "opsalerts"
     api_key  = "fookey"
-    region   = "fooregion"
-    priority = "foopriority"
+    region   = "US"
+    priority = "P1"
   }
 }
 
@@ -59,18 +59,18 @@ resource "checkly_alert_channel" "pagerduty_ac" {
 resource "checkly_alert_channel" "webhook_ac" {
   webhook = {
     name           = "foo"
-    method         = "get"
+    method         = "GET"
     template       = "footemplate"
     url            = "https://example.com/foo"
     webhook_secret = "foosecret"
   }
 }
 
-# A Firehydran alert channel integration
+# A FireHydrant alert channel integration
 resource "checkly_alert_channel" "firehydrant_ac" {
   webhook = {
     name         = "firehydrant"
-    method       = "post"
+    method       = "POST"
     template     = <<EOT
 {
   "event": "{{ALERT_TITLE}}",
@@ -80,8 +80,8 @@ resource "checkly_alert_channel" "firehydrant_ac" {
   "alert_type": "{{ALERT_TYPE}}",
   "started_at": "{{STARTED_AT}}",
   "check_result_id": "{{CHECK_RESULT_ID}}"
-},
-    EOT
+}
+EOT
     url          = "https://app.firehydrant.io/integrations/alerting/webhooks/2/checkly"
     webhook_type = "WEBHOOK_FIREHYDRANT"
   }

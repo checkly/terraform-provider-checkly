@@ -2,7 +2,9 @@ package provider
 
 import (
 	"context"
+	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -97,7 +99,11 @@ func (r *ClientCertificateResource) Schema(ctx context.Context, req resource.Sch
 				Description: "Optional URL path prefix that limits the certificate to requests under that path, " +
 					"e.g. `/partner/api`. Matching is on whole path segments: `/partner` applies to `/partner` and " +
 					"`/partner/orders` but not to `/partnership`. Must start with `/` and must not be a bare `/`; a " +
-					"trailing `/` is ignored. API checks and Multistep checks match on path; gRPC, SSL and TCP " +
+					"trailing `/` is ignored. The path must already be in the form the API stores: segments " +
+					"separated by single slashes, with no `.` or `..` segments, no whitespace, control characters, " +
+					"`?`, `#` or `\\`, and with non-ASCII characters and the characters `` \"<>^`{} `` " +
+					"percent-encoded, e.g. `%7B` for `{` (at most " + strconv.Itoa(clientCertificatePathMaxLength) + " characters). " +
+					"API checks and Multistep checks match on path; gRPC, SSL and TCP " +
 					"monitors only use certificates without a path. Omit it to use the " +
 					"certificate for every path on the host.",
 				PlanModifiers: []planmodifier.String{
@@ -114,17 +120,16 @@ func (r *ClientCertificateResource) Schema(ctx context.Context, req resource.Sch
 						"Changing the path other than by a trailing slash forces a new resource to be created.",
 					),
 				},
-				// The API refuses these too; failing at plan time is clearer
-				// than an apply error, and a bare "/" would otherwise be
-				// trimmed to an empty path and silently sent as "no path".
 				Validators: []validator.String{
-					stringvalidator.RegexMatches(regexp.MustCompile(`^(/|$)`), `must start with "/"`),
-					stringvalidator.RegexMatches(regexp.MustCompile(`^$|[^/]`), `must name a path below "/"; omit it to match every path`),
+					clientCertificatePathValidator{},
 				},
 			},
 			"certificate": schema.StringAttribute{
 				Required:    true,
 				Description: "The client certificate in PEM format.",
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
+				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -137,6 +142,10 @@ func (r *ClientCertificateResource) Schema(ctx context.Context, req resource.Sch
 					"first apply after an import records the configured key and passphrase in Terraform state " +
 					"only and sends nothing to Checkly. To upload a different key, replace the resource, for " +
 					"example with `terraform apply -replace`.",
+				// An empty key would create a certificate without one.
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
+				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplaceIf(
 						func(ctx context.Context, req planmodifier.StringRequest, resp *stringplanmodifier.RequiresReplaceIfFuncResponse) {
@@ -182,6 +191,101 @@ func (r *ClientCertificateResource) Schema(ctx context.Context, req resource.Sch
 			},
 		},
 	}
+}
+
+// clientCertificatePathMaxLength is the API's limit on the length of a
+// stored client certificate path.
+const clientCertificatePathMaxLength = 2048
+
+// clientCertificatePathRejected matches the characters the API rejects in a
+// client certificate path: whitespace, control characters, "?", "#" and
+// "\".
+var clientCertificatePathRejected = regexp.MustCompile(`[\s\x00-\x1f\x7f?#\\]`)
+
+// clientCertificatePathEncoded matches the characters that a WHATWG URL
+// parser percent-encodes in a path and the API doesn't reject: the rest of
+// the path percent-encode set ("<>^`{}) and non-ASCII characters. "%" is not
+// among them: the parser keeps it as it is, also when it isn't followed by
+// two hex digits.
+var clientCertificatePathEncoded = regexp.MustCompile("[\"<>^`{}]|[^\\x00-\\x7f]")
+
+// clientCertificatePathValidator accepts a client certificate path only in
+// the form the API stores, apart from a trailing slash, which the API drops
+// and the provider ignores. The API rejects some paths, such as ones with
+// dot segments, "//", whitespace, "?" or "#", and rewrites others: it
+// percent-encodes what a WHATWG URL parser encodes in a path, such as
+// non-ASCII characters and {}"<>. A rewritten path would read
+// back different from the configuration and replace the certificate on every
+// apply. An empty path means none and is accepted.
+type clientCertificatePathValidator struct{}
+
+var _ validator.String = clientCertificatePathValidator{}
+
+func (v clientCertificatePathValidator) Description(ctx context.Context) string {
+	return "value must be a URL path below \"/\" in the form the API stores"
+}
+
+func (v clientCertificatePathValidator) MarkdownDescription(ctx context.Context) string {
+	return v.Description(ctx)
+}
+
+func (v clientCertificatePathValidator) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
+		return
+	}
+
+	if problem := clientCertificatePathProblem(req.ConfigValue.ValueString()); problem != "" {
+		resp.Diagnostics.AddAttributeError(
+			req.Path,
+			"Invalid Client Certificate Path",
+			fmt.Sprintf("%s %s, got: %q", req.Path, problem, req.ConfigValue.ValueString()),
+		)
+	}
+}
+
+// clientCertificatePathProblem returns why the API would reject or rewrite
+// path, phrased to follow the attribute name, or "" when it stores path as it
+// is, apart from a trailing slash.
+func clientCertificatePathProblem(path string) string {
+	if path == "" {
+		return ""
+	}
+	if !strings.HasPrefix(path, "/") {
+		return `must start with "/"`
+	}
+
+	if path == "/" {
+		return `must name a path below "/"; omit it to match every path`
+	}
+
+	trimmed := strings.TrimSuffix(path[1:], "/")
+	if len(trimmed)+1 > clientCertificatePathMaxLength {
+		return fmt.Sprintf("must be at most %d characters long", clientCertificatePathMaxLength)
+	}
+
+	for _, segment := range strings.Split(trimmed, "/") {
+		switch {
+		case segment == "":
+			return `must not contain empty segments ("//")`
+		case isClientCertificatePathDotSegment(segment):
+			return `must not contain "." or ".." segments`
+		case clientCertificatePathRejected.MatchString(segment):
+			return `must not contain whitespace, control characters, "?", "#" or "\"; write a space as %20`
+		case clientCertificatePathEncoded.MatchString(segment):
+			return `must have non-ASCII characters and the characters "<>^` + "`" + `{} percent-encoded, ` +
+				`as the API stores them, for example %7B for {`
+		}
+	}
+
+	return ""
+}
+
+// isClientCertificatePathDotSegment reports whether segment is a dot segment
+// that a URL parser resolves: "." or "..", also with the dots
+// percent-encoded as %2e in any case.
+func isClientCertificatePathDotSegment(segment string) bool {
+	decoded := strings.ReplaceAll(strings.ToLower(segment), "%2e", ".")
+	return decoded == "." || decoded == ".."
 }
 
 // requiresReplaceUnlessOnlyEmptiness requires replacement for any change but

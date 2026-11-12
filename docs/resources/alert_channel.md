@@ -56,8 +56,8 @@ resource "checkly_alert_channel" "opsgenie_ac" {
   opsgenie = {
     name     = "opsalerts"
     api_key  = "fookey"
-    region   = "fooregion"
-    priority = "foopriority"
+    region   = "US"
+    priority = "P1"
   }
 }
 
@@ -74,18 +74,18 @@ resource "checkly_alert_channel" "pagerduty_ac" {
 resource "checkly_alert_channel" "webhook_ac" {
   webhook = {
     name           = "foo"
-    method         = "get"
+    method         = "GET"
     template       = "footemplate"
     url            = "https://example.com/foo"
     webhook_secret = "foosecret"
   }
 }
 
-# A Firehydran alert channel integration
+# A FireHydrant alert channel integration
 resource "checkly_alert_channel" "firehydrant_ac" {
   webhook = {
     name         = "firehydrant"
-    method       = "post"
+    method       = "POST"
     template     = <<EOT
 {
   "event": "{{ALERT_TITLE}}",
@@ -95,8 +95,8 @@ resource "checkly_alert_channel" "firehydrant_ac" {
   "alert_type": "{{ALERT_TYPE}}",
   "started_at": "{{STARTED_AT}}",
   "check_result_id": "{{CHECK_RESULT_ID}}"
-},
-    EOT
+}
+EOT
     url          = "https://app.firehydrant.io/integrations/alerting/webhooks/2/checkly"
     webhook_type = "WEBHOOK_FIREHYDRANT"
   }
@@ -182,6 +182,7 @@ resource "checkly_api_check" "example_check" {
 
 ### Optional
 
+- `auto_subscribe` (Boolean) Whether new checks are subscribed to this alert channel automatically. Only the web app, which preselects the channel when you create a check there, and the Vercel integration, for the checks it creates, act on it. Checks created through the API, the Checkly CLI or Terraform are not subscribed, and neither are existing checks; subscribe them with `alert_channel_subscriptions`. (Default `false`).
 - `call` (Attributes) Sends alerts as phone calls. (see [below for nested schema](#nestedatt--call))
 - `email` (Attributes) Sends alerts by email. (see [below for nested schema](#nestedatt--email))
 - `opsgenie` (Attributes) Creates alerts in Opsgenie. (see [below for nested schema](#nestedatt--opsgenie))
@@ -224,8 +225,8 @@ Required:
 
 - `api_key` (String, Sensitive) The API key of the Opsgenie integration to create alerts with.
 - `name` (String) The name of this alert channel.
-- `priority` (String) The priority of the alerts created in Opsgenie. Possible values are `P1`, `P2`, `P3`, `P4` and `P5`.
-- `region` (String) The region of the Opsgenie account, which selects the Opsgenie API to call. Possible values are `EU` and `US`.
+- `priority` (String) The priority of the alerts created in Opsgenie. The allowed values are `P1`, `P2`, `P3`, `P4` and `P5`.
+- `region` (String) The region of the Opsgenie account, which selects the Opsgenie API to call. The allowed values are `EU` and `US`.
 
 
 <a id="nestedatt--pagerduty"></a>
@@ -255,7 +256,7 @@ Required:
 
 Required:
 
-- `slack_channels` (List of String) The Slack channels or users to notify, e.g. `["#ops", "@John"]`.
+- `slack_channels` (List of String) The Slack channels or users to notify, e.g. `["#ops", "@John"]`. Each element starts with `#` for a channel or `@` for a user, and has no trailing whitespace.
 
 
 <a id="nestedatt--sms"></a>
@@ -278,7 +279,7 @@ Required:
 Optional:
 
 - `headers` (Map of String) HTTP headers to send with the webhook request, as a map of header names to values. The values are not sensitive and show in plan output. To keep a credential in a header out of plan output, take it from a variable declared with `sensitive = true` or wrap it in `sensitive(...)`.
-- `method` (String) The HTTP method of the webhook request. Possible values are `GET`, `POST`, `PUT`, `HEAD`, `DELETE` and `PATCH`. (Default `POST`).
+- `method` (String) The HTTP method of the webhook request, such as `GET`, `POST`, `PUT`, `HEAD`, `DELETE` or `PATCH`. Must not be empty. (Default `POST`).
 - `query_parameters` (Map of String) Query parameters to add to the webhook URL, as a map of parameter names to values. The values are not sensitive and show in plan output. To keep a credential in a parameter out of plan output, take it from a variable declared with `sensitive = true` or wrap it in `sensitive(...)`.
 - `template` (String) The body of the webhook request, which can contain template variables such as `{{ALERT_TITLE}}` and `{{RESULT_LINK}}`. When not set, Checkly sends its default JSON payload.
 - `webhook_secret` (String, Sensitive) A secret to sign webhook requests with. When set, Checkly sends an HMAC-SHA256 signature of the request body, keyed with this secret, in the `x-checkly-signature` header.
