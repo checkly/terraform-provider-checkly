@@ -425,7 +425,7 @@ func (r *SSLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 					"security_baseline": schema.SingleNestedAttribute{
 						Optional:    true,
 						Computed:    true,
-						Description: "The SSL security baseline — a set of enforceable and advisory rules. Omit the attribute, or a rule, to use its default (the values listed below, which match the Checkly API's defaults). Removing a rule (or the whole attribute) resets it to its default on the next apply. Every rule is drift-checked, whether or not it is listed: an external change to any rule shows up in `terraform plan`.",
+						Description: "The SSL security baseline — a set of enforceable and advisory rules. Omit the attribute, or a rule, to use its default (the values listed below, which match the Checkly API's defaults). Removing a rule (or the whole attribute) resets it to its default on the next apply.",
 						Default:     objectdefault.StaticValue(sslMonitorSecurityBaselineToObject(ctx, nil, &resp.Diagnostics)),
 						Attributes: map[string]schema.Attribute{
 							"enabled": schema.BoolAttribute{
@@ -933,9 +933,8 @@ func sslMonitorSeverityRuleFromObject(ctx context.Context, obj types.Object, dia
 
 // sslMonitorSecurityBaselineToObject converts the server-returned security
 // baseline to the request.security_baseline value. The server returns every
-// rule, and state holds them all, so drift on any rule is visible; the schema
-// defaults make an omitted rule plan its default, which the provider sends
-// and the server then returns. A missing baseline or rule (not expected from
+// rule and state holds them all; the schema defaults make an omitted rule plan
+// its default, which the provider sends and the server then returns. A missing baseline or rule (not expected from
 // the API) converts to its default.
 func sslMonitorSecurityBaselineToObject(ctx context.Context, remote *checkly.SecurityBaseline, diags *diag.Diagnostics) types.Object {
 	def := &sslMonitorDefaultSecurityBaseline
