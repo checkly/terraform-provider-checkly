@@ -106,8 +106,9 @@ resource "checkly_alert_channel" "email_ac2" {
 
 
 # Connect the check group to the alert channels
-resource "checkly_check_group" "test_group1" {
-  name = "My test group 1"
+resource "checkly_check_group" "test_group_with_alerts" {
+  name        = "My test group with alerts"
+  concurrency = 3
 
   alert_channel_subscriptions = [
     {

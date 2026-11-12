@@ -22,6 +22,7 @@ var (
 	_ resource.ResourceWithConfigure   = (*MultistepCheckResource)(nil)
 	_ resource.ResourceWithImportState = (*MultistepCheckResource)(nil)
 	_ resource.ResourceWithMoveState   = (*MultistepCheckResource)(nil)
+	_ resource.ResourceWithModifyPlan  = (*MultistepCheckResource)(nil)
 )
 
 // NewMultistepCheckResource returns a new checkly_multistep_check resource.
@@ -116,6 +117,12 @@ func (r *MultistepCheckResource) Configure(ctx context.Context, req resource.Con
 	r.client = clientFromProviderData(req.ProviderData, &resp.Diagnostics)
 }
 
+// ModifyPlan reports an empty script in the plan when it is known there.
+// Create and Update check again for a script known only at apply time.
+func (r *MultistepCheckResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	validatePlannedCheckScript(ctx, req, resp, string(checkly.CheckTypeMultiStep))
+}
+
 func (r *MultistepCheckResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan MultistepCheckResourceModel
 
@@ -124,6 +131,7 @@ func (r *MultistepCheckResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
+	requireCheckScript(plan.Script, string(checkly.CheckTypeMultiStep), &resp.Diagnostics)
 	check := multistepCheckFromModel(ctx, &plan, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
@@ -182,6 +190,7 @@ func (r *MultistepCheckResource) Update(ctx context.Context, req resource.Update
 		return
 	}
 
+	requireCheckScript(plan.Script, string(checkly.CheckTypeMultiStep), &resp.Diagnostics)
 	check := multistepCheckFromModel(ctx, &plan, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return

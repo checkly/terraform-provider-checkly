@@ -353,16 +353,12 @@ func (r *CheckResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanR
 
 	// An empty script is reported in the plan when it is known there.
 	// Create and Update check again for a script known only at apply time.
-	if req.Plan.Raw.IsNull() {
+	var checkType types.String
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("type"), &checkType)...)
+	if resp.Diagnostics.HasError() || checkType.IsNull() || checkType.IsUnknown() || checkType.ValueString() == string(checkly.CheckTypeAPI) {
 		return
 	}
-	var planned CheckResourceModel
-	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("type"), &planned.Type)...)
-	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("script"), &planned.Script)...)
-	if resp.Diagnostics.HasError() || planned.Type.IsNull() || planned.Type.IsUnknown() || planned.Script.IsUnknown() {
-		return
-	}
-	validateCheckScript(&planned, &resp.Diagnostics)
+	validatePlannedCheckScript(ctx, req, resp, checkType.ValueString())
 }
 
 func (r *CheckResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -602,24 +598,13 @@ func (r *CheckResource) validateCheckRuntimeSupport(ctx context.Context, model *
 	}
 }
 
-// validateCheckScript rejects a browser or multi-step check with an empty
-// planned script. The API would accept the null that an empty script is sent
-// as, and clear a stored script. The planned value is what counts: the
-// configuration can't show a value known only at apply time, and with
-// ignore_changes = [script] the plan holds the stored script. ModifyPlan
-// calls it for a script known at plan time, and Create and Update before any
-// request.
+// validateCheckScript applies requireCheckScript to a browser or multi-step
+// checkly_check; API checks have no script.
 func validateCheckScript(model *CheckResourceModel, diags *diag.Diagnostics) {
-	checkType := model.Type.ValueString()
-	if checkType == string(checkly.CheckTypeAPI) || model.Script.ValueString() != "" {
+	if model.Type.ValueString() == string(checkly.CheckTypeAPI) {
 		return
 	}
-
-	diags.AddAttributeError(
-		path.Root("script"),
-		"Missing Check Script",
-		fmt.Sprintf(`A %s check needs a script, but "script" is empty: it is not set, null, or resolved to an empty string. Set it to the code of the check.`, checkType),
-	)
+	requireCheckScript(model.Script, model.Type.ValueString(), diags)
 }
 
 // createCheck creates the check through the endpoint of its planned type.

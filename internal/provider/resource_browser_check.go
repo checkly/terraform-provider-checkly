@@ -21,6 +21,7 @@ var (
 	_ resource.ResourceWithConfigure   = (*BrowserCheckResource)(nil)
 	_ resource.ResourceWithImportState = (*BrowserCheckResource)(nil)
 	_ resource.ResourceWithMoveState   = (*BrowserCheckResource)(nil)
+	_ resource.ResourceWithModifyPlan  = (*BrowserCheckResource)(nil)
 )
 
 // NewBrowserCheckResource returns a new checkly_browser_check resource.
@@ -120,6 +121,12 @@ func (r *BrowserCheckResource) Configure(ctx context.Context, req resource.Confi
 	r.client = clientFromProviderData(req.ProviderData, &resp.Diagnostics)
 }
 
+// ModifyPlan reports an empty script in the plan when it is known there.
+// Create and Update check again for a script known only at apply time.
+func (r *BrowserCheckResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	validatePlannedCheckScript(ctx, req, resp, string(checkly.CheckTypeBrowser))
+}
+
 func (r *BrowserCheckResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan BrowserCheckResourceModel
 
@@ -128,6 +135,7 @@ func (r *BrowserCheckResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
+	requireCheckScript(plan.Script, string(checkly.CheckTypeBrowser), &resp.Diagnostics)
 	check := browserCheckFromModel(ctx, &plan, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
@@ -181,6 +189,7 @@ func (r *BrowserCheckResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
+	requireCheckScript(plan.Script, string(checkly.CheckTypeBrowser), &resp.Diagnostics)
 	check := browserCheckFromModel(ctx, &plan, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return

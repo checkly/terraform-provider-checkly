@@ -133,9 +133,18 @@ resource "checkly_alert_channel" "email_ac2" {
   }
 }
 
-resource "checkly_check" "example_check" {
-  name = "Example check"
-  # ...
+resource "checkly_check" "example_check_with_alerts" {
+  name      = "Example check with alerts"
+  type      = "API"
+  frequency = 1
+
+  locations = [
+    "us-west-1"
+  ]
+
+  request = {
+    url = "https://api.example.com/"
+  }
 
   alert_channel_subscriptions = [
     {
