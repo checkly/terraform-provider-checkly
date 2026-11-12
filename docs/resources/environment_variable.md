@@ -32,7 +32,7 @@ resource "checkly_environment_variable" "variable_2" {
 ### Required
 
 - `key` (String) The name of the environment variable. Changing the name forces the environment variable to be replaced.
-- `value` (String, Sensitive) The value of the environment variable, which must not be empty. At most 64000 bytes in UTF-8, or 31744 bytes for a secret or locked variable. A secret value has at least 3 characters. The API never returns the value of a secret variable, so the provider keeps the configured value: a change made outside Terraform, for example in the web app, doesn't show in the plan. An imported secret variable has a null value, so the first plan after the import shows an update, and applying it overwrites the value in Checkly with the configured one.
+- `value` (String, Sensitive) The value of the environment variable, which must not be empty. At most 64000 bytes in UTF-8, or 31744 bytes for a secret or locked variable. A secret value must have at least 3 characters. The API never returns the value of a secret variable, so the provider keeps the configured value: a change made outside Terraform, for example in the web app, doesn't show in the plan. An imported secret variable has a null value, so the first plan after the import shows an update, and applying it overwrites the value in Checkly with the configured one.
 
 ### Optional
 
