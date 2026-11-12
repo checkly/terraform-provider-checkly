@@ -67,7 +67,7 @@ resource "checkly_ssl_monitor" "example-ssl-monitor-2" {
     alert_days_before_expiry = 20
 
     # Override individual security-baseline rules; rules that are not listed
-    # keep their server defaults.
+    # use their defaults.
     security_baseline = {
       min_tls_version = {
         value    = "TLS1.2"
@@ -150,7 +150,7 @@ Optional:
 - `handshake_timeout_ms` (Number) The number of milliseconds to wait for the TLS handshake to complete before timing out. Possible values are between 1000 and 30000. (Default `10000`).
 - `ip_family` (String) The IP family to use when executing the check. The value can be either `IPv4` or `IPv6`. (Default `IPv4`).
 - `port` (Number) The port number to connect to. Possible values are between 1 and 65535. (Default `443`).
-- `security_baseline` (Attributes) The SSL security baseline — a set of enforceable and advisory rules. Omit the attribute to inherit the account default baseline. Rules that are not listed keep their server defaults; removing a rule (or the whole attribute) resets it to its default on the next apply. Only listed rules are drift-checked: an external change to an unlisted rule is not shown by `terraform plan` and is reset on the next apply. (see [below for nested schema](#nestedatt--request--security_baseline))
+- `security_baseline` (Attributes) The SSL security baseline — a set of enforceable and advisory rules. Omit the attribute, or a rule, to use its default. Removing a rule (or the whole attribute) resets it to its default on the next apply. (see [below for nested schema](#nestedatt--request--security_baseline))
 - `server_name` (String) An optional SNI server name to send in the TLS handshake (at most 2048 characters). Defaults to `hostname` when unset.
 - `skip_chain_validation` (Boolean) When true, the certificate chain is not validated against trusted roots (the certificate is still inspected for expiry and the security baseline). (Default `false`).
 
