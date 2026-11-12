@@ -89,16 +89,16 @@ resource "checkly_status_page_v3_component" "database" {
 - `allow_indexing` (Boolean) Whether search engines may index the public page. (Default `true`).
 - `custom_domain` (String) A custom user domain, e.g. "status.example.com": a lowercase hostname without a scheme. See the docs on updating your DNS and SSL usage.
 - `default_theme` (String) The default theme of the status page. The allowed values are `AUTO`, `DARK` and `LIGHT`.
-- `description` (String) A short description shown on the status page.
-- `favicon` (String) A URL to an image file to use as the favicon of the status page.
-- `footer_text` (String) Free-form footer text.
-- `google_analytics_tag` (String) A Google Analytics tag ID (e.g. "G-XXXXXXXXXX") to embed on the public page.
-- `logo` (String) A URL to an image file to use as the logo for the status page.
-- `logo_dark` (String) A URL to an image file to use as the logo in dark mode.
-- `privacy_policy_link` (String) A link to your privacy policy, shown in the page footer.
-- `redirect_to` (String) The URL the user should be redirected to when clicking the logo.
-- `support_link` (String) A support contact link (http, https or mailto), shown in the page footer.
-- `terms_of_service_link` (String) A link to your terms of service, shown in the page footer.
+- `description` (String) A short description shown on the status page (at most 500 characters).
+- `favicon` (String) An http or https URL to an image file to use as the favicon of the status page.
+- `footer_text` (String) Free-form footer text (at most 1000 characters).
+- `google_analytics_tag` (String) A Google Analytics tag ID (e.g. "G-XXXXXXXXXX") to embed on the public page: letters, digits and dashes, at most 255 characters.
+- `logo` (String) An http or https URL to an image file to use as the logo for the status page.
+- `logo_dark` (String) An http or https URL to an image file to use as the logo in dark mode.
+- `privacy_policy_link` (String) An http or https link to your privacy policy, shown in the page footer (at most 255 characters).
+- `redirect_to` (String) The http or https URL the user should be redirected to when clicking the logo.
+- `support_link` (String) A support contact link (http, https or mailto), shown in the page footer (at most 255 characters).
+- `terms_of_service_link` (String) An http or https link to your terms of service, shown in the page footer (at most 255 characters).
 - `theme_colors` (Attributes) Custom colors for the light and dark theme of the page. Requires custom theme colors to be part of your plan. The complete palette must be given: both `light` and `dark`, each with every color. Leave the attribute out to use Checkly's default colors; the default palette the API then reports is not tracked, and the attribute is not populated when importing a page. (see [below for nested schema](#nestedatt--theme_colors))
 
 ### Read-Only

@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
@@ -250,7 +251,7 @@ func TestAccStatusPageUnsupportedCustomDomains(t *testing.T) {
 				}
 			`, rInt, domain),
 
-			ExpectError: regexp.MustCompile(`custom domains ending in .+ are not supported`),
+			ExpectError: regexp.MustCompile(`custom domains under .+ are not supported`),
 		})
 	}
 
@@ -309,4 +310,43 @@ func TestAccStatusPageUpdateClearsRemovedValues(t *testing.T) {
 			),
 		},
 	})
+}
+
+// The checkly_status_page custom domain must be in the form the API stores,
+// and not under a reserved documentation domain.
+func TestStatusPageCustomDomainValidation(t *testing.T) {
+	r := NewStatusPageResource()
+	cases := map[string]bool{
+		"":                             true,
+		"status.mycompany.com":         true,
+		"status.myexample.com":         true,
+		"example.community.org":        true,
+		"Status.mycompany.com":         false,
+		"https://status.mycompany.com": false,
+		"example.com":                  false,
+		"status.example.com":           false,
+		"STATUS.EXAMPLE.NET":           false,
+		"a.b.example.org":              false,
+	}
+	for value, valid := range cases {
+		diags := validateStringAttribute(t, r, "custom_domain", types.StringValue(value))
+		if diags.HasError() == valid {
+			t.Errorf("%q: valid = %v, diagnostics: %v", value, valid, diags)
+		}
+	}
+}
+
+func TestStatusPageURLAttributes(t *testing.T) {
+	r := NewStatusPageResource()
+	for _, attribute := range []string{"logo", "redirect_to", "favicon"} {
+		if diags := validateStringAttribute(t, r, attribute, types.StringValue("")); diags.HasError() {
+			t.Errorf("an empty %s was rejected: %v", attribute, diags)
+		}
+		if diags := validateStringAttribute(t, r, attribute, types.StringValue("https://example.org/a.png")); diags.HasError() {
+			t.Errorf("an https %s was rejected: %v", attribute, diags)
+		}
+		if diags := validateStringAttribute(t, r, attribute, types.StringValue("example.org/a.png")); !diags.HasError() {
+			t.Errorf("%s without a scheme was accepted", attribute)
+		}
+	}
 }

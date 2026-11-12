@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -85,12 +87,20 @@ func (r *MaintenanceWindowResource) Schema(ctx context.Context, req resource.Sch
 				},
 			},
 			"starts_at": schema.StringAttribute{
-				Required:    true,
-				Description: "The start date of the maintenance window.",
+				Required: true,
+				Description: "The start of the maintenance window: an RFC 3339 date-time such as `2099-06-01T09:00:00Z` " +
+					"or `2099-06-01T09:00:00+02:00`, or a date such as `2099-06-01`, which means midnight UTC.",
+				Validators: []validator.String{
+					maintenanceWindowDateValidator,
+				},
 			},
 			"ends_at": schema.StringAttribute{
-				Required:    true,
-				Description: "The end date of the maintenance window.",
+				Required: true,
+				Description: "The end of the maintenance window: an RFC 3339 date-time such as `2099-06-01T11:00:00Z` " +
+					"or `2099-06-01T11:00:00+02:00`, or a date such as `2099-06-02`, which means midnight UTC.",
+				Validators: []validator.String{
+					maintenanceWindowDateValidator,
+				},
 			},
 			"repeat_unit": schema.StringAttribute{
 				Optional:    true,
@@ -100,12 +110,23 @@ func (r *MaintenanceWindowResource) Schema(ctx context.Context, req resource.Sch
 				},
 			},
 			"repeat_interval": schema.Int64Attribute{
-				Optional:    true,
-				Description: "The repeat interval of the maintenance window from the first occurrence.",
+				Optional: true,
+				Description: "How many `repeat_unit`s apart the occurrences of the maintenance window are, counted from the first " +
+					"occurrence: 1 to 365. `0`, like leaving it out, means the window does not repeat. A value of 1 or more " +
+					"requires `repeat_unit`.",
+				Validators: []validator.Int64{
+					int64validator.Between(0, 365),
+				},
 			},
 			"repeat_ends_at": schema.StringAttribute{
-				Optional:    true,
-				Description: "The date on which the maintenance window should stop repeating, interpreted as a calendar date in `timezone`.",
+				Optional: true,
+				Description: "The last calendar date, in `timezone` (UTC when unset), on which an occurrence may start. Use a date such as " +
+					"`2099-12-31`. An RFC 3339 date-time is accepted too and counts as its UTC date: `2099-06-01T23:00:00-05:00` " +
+					"means `2099-06-02`. Requires a `repeat_interval` of 1 or more. An empty string, like leaving it out, means " +
+					"the window repeats indefinitely.",
+				Validators: []validator.String{
+					maintenanceWindowRepeatEndsAtValidator,
+				},
 			},
 			"tags": schema.SetAttribute{
 				Optional:    true,
@@ -173,16 +194,57 @@ func (r *MaintenanceWindowResource) ModifyPlan(ctx context.Context, req resource
 	planNestedDefaults(ctx, req, resp, path.Root("status_page_visibility"), objectWithSetDefaults("component_configs", maintenanceWindowComponentConfigsWithDefaults))
 }
 
-// ValidateConfig rejects status_page_visibility.component_configs that the
-// API would reject on apply.
+// ValidateConfig rejects repeat settings and
+// status_page_visibility.component_configs that the API would reject or
+// discard on apply.
 func (r *MaintenanceWindowResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
 	var visibility types.Object
+	var repeatUnit, repeatEndsAt types.String
+	var repeatInterval types.Int64
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("status_page_visibility"), &visibility)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("repeat_unit"), &repeatUnit)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("repeat_interval"), &repeatInterval)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("repeat_ends_at"), &repeatEndsAt)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
+	validateMaintenanceWindowRepeat(repeatUnit, repeatInterval, repeatEndsAt, &resp.Diagnostics)
 	validateMaintenanceWindowComponentConfigs(ctx, visibility, &resp.Diagnostics)
+}
+
+// validateMaintenanceWindowRepeat requires repeat_unit and a repeat_interval
+// of 1 or more together, and such a repeat_interval for repeat_ends_at. The
+// API rejects a repeat_interval without a unit. Without a repeat_interval,
+// it clears repeat_unit and repeat_ends_at on update, which would show as a
+// change on every plan. Unknown values are left to the API.
+func validateMaintenanceWindowRepeat(repeatUnit types.String, repeatInterval types.Int64, repeatEndsAt types.String, diags *diag.Diagnostics) {
+	if repeatInterval.IsUnknown() {
+		return
+	}
+	repeats := repeatInterval.ValueInt64() >= 1
+
+	if repeats && repeatUnit.IsNull() {
+		diags.AddAttributeError(
+			path.Root("repeat_unit"),
+			"Missing Repeat Unit",
+			"repeat_unit is required when repeat_interval is 1 or more.",
+		)
+	}
+	if !repeats && !repeatUnit.IsNull() && !repeatUnit.IsUnknown() {
+		diags.AddAttributeError(
+			path.Root("repeat_unit"),
+			"Missing Repeat Interval",
+			"repeat_unit requires a repeat_interval of 1 or more. Remove repeat_unit for a window that does not repeat.",
+		)
+	}
+	if !repeats && !repeatEndsAt.IsUnknown() && repeatEndsAt.ValueString() != "" {
+		diags.AddAttributeError(
+			path.Root("repeat_ends_at"),
+			"Missing Repeat Interval",
+			"repeat_ends_at requires a repeat_interval of 1 or more. Remove repeat_ends_at for a window that does not repeat.",
+		)
+	}
 }
 
 func (r *MaintenanceWindowResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
@@ -354,13 +416,13 @@ func maintenanceWindowFromModel(ctx context.Context, model *MaintenanceWindowRes
 func maintenanceWindowToModel(ctx context.Context, mw *checkly.MaintenanceWindow, model *MaintenanceWindowResourceModel, diags *diag.Diagnostics) {
 	model.ID = types.StringValue(encodeNumericID(mw.ID))
 	model.Name = types.StringValue(mw.Name)
-	model.StartsAt = types.StringValue(mw.StartsAt)
-	model.EndsAt = types.StringValue(mw.EndsAt)
+	model.StartsAt = maintenanceWindowInstant(mw.StartsAt, model.StartsAt)
+	model.EndsAt = maintenanceWindowInstant(mw.EndsAt, model.EndsAt)
 	// The repeat_unit validator rejects an empty string, so an empty value
 	// from the API always means the attribute is unset.
 	model.RepeatUnit = stringValueOrNull(string(mw.RepeatUnit))
 	model.RepeatInterval = maintenanceWindowRepeatInterval(mw.RepeatInterval, model.RepeatInterval)
-	model.RepeatEndsAt = stringValueOrPriorEmpty(mw.RepeatEndsAt, model.RepeatEndsAt)
+	model.RepeatEndsAt = maintenanceWindowRepeatEndsAt(mw.RepeatEndsAt, model.RepeatEndsAt)
 	model.Tags = setFromStrings(ctx, mw.Tags, diags)
 	model.Timezone = maintenanceWindowTimezone(mw.Timezone, model.Timezone)
 	model.PauseAllChecks = types.BoolValue(mw.PauseAllChecks)
@@ -369,6 +431,94 @@ func maintenanceWindowToModel(ctx context.Context, mw *checkly.MaintenanceWindow
 	model.Description = stringValueOrPriorEmpty(mw.Description, model.Description)
 	model.StatusPageVisibility = maintenanceWindowStatusPageVisibilityToObject(ctx, mw.StatusPageVisibility, model.StatusPageVisibility, diags)
 }
+
+// maintenanceWindowDateLayout is the date-only form of starts_at, ends_at and
+// repeat_ends_at.
+const maintenanceWindowDateLayout = "2006-01-02"
+
+// maintenanceWindowDateRegex matches the forms parseMaintenanceWindowDate
+// accepts. time.Parse alone is more lenient than JavaScript's Date, which the
+// API parses with: it also takes a comma before the fraction of a second.
+var maintenanceWindowDateRegex = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2}))?$`)
+
+// parseMaintenanceWindowDate parses an RFC 3339 date-time, or a date, which
+// means midnight UTC, as the API parses it.
+func parseMaintenanceWindowDate(value string) (time.Time, bool) {
+	if !maintenanceWindowDateRegex.MatchString(value) {
+		return time.Time{}, false
+	}
+	if t, err := time.Parse(time.RFC3339, value); err == nil {
+		return t, true
+	}
+	if t, err := time.Parse(maintenanceWindowDateLayout, value); err == nil {
+		return t, true
+	}
+	return time.Time{}, false
+}
+
+// maintenanceWindowInstant converts starts_at or ends_at from the API, which
+// reports them in UTC with milliseconds, such as "2099-06-01T09:00:00.000Z".
+// The prior value is kept when it is the same instant at the millisecond
+// precision the API stores, so that a configuration written in another form,
+// such as a date or with a UTC offset, does not show a change on every plan.
+func maintenanceWindowInstant(value string, prior types.String) types.String {
+	if !prior.IsNull() && !prior.IsUnknown() {
+		p, okPrior := parseMaintenanceWindowDate(prior.ValueString())
+		v, okValue := parseMaintenanceWindowDate(value)
+		if okPrior && okValue && p.Truncate(time.Millisecond).Equal(v.Truncate(time.Millisecond)) {
+			return prior
+		}
+	}
+
+	return types.StringValue(value)
+}
+
+// maintenanceWindowRepeatEndsAt converts repeat_ends_at from the API, which
+// stores the UTC date of the configured value and reports it as midnight
+// UTC, such as "2099-12-31T00:00:00.000Z". The prior value is kept when it
+// has the same UTC date. No value maps to null, or to the empty string when
+// that was the prior value.
+func maintenanceWindowRepeatEndsAt(value string, prior types.String) types.String {
+	if value != "" && !prior.IsNull() && !prior.IsUnknown() {
+		p, okPrior := parseMaintenanceWindowDate(prior.ValueString())
+		v, okValue := parseMaintenanceWindowDate(value)
+		if okPrior && okValue && p.UTC().Format(maintenanceWindowDateLayout) == v.UTC().Format(maintenanceWindowDateLayout) {
+			return prior
+		}
+	}
+
+	return stringValueOrPriorEmpty(value, prior)
+}
+
+// maintenanceWindowDateValidator accepts the forms of starts_at and ends_at
+// that parseMaintenanceWindowDate understands. The API accepts any string
+// JavaScript's Date can parse, but only these forms are unambiguous: a
+// date-time without a UTC offset, for example, is read in the server's time
+// zone.
+var maintenanceWindowDateValidator = predicateStringValidator{
+	check: func(value string) bool {
+		_, ok := parseMaintenanceWindowDate(value)
+		return ok
+	},
+	message:     maintenanceWindowDateMessage,
+	description: maintenanceWindowDateDescription,
+}
+
+// maintenanceWindowRepeatEndsAtValidator is maintenanceWindowDateValidator
+// for repeat_ends_at, which also accepts the empty string as unset.
+var maintenanceWindowRepeatEndsAtValidator = predicateStringValidator{
+	check: func(value string) bool {
+		_, ok := parseMaintenanceWindowDate(value)
+		return ok || value == ""
+	},
+	message:     maintenanceWindowDateMessage,
+	description: maintenanceWindowDateDescription + " or empty",
+}
+
+const (
+	maintenanceWindowDateMessage     = `%q must be an RFC 3339 date-time with a UTC offset, such as "2099-06-01T09:00:00Z" or "2099-06-01T09:00:00+02:00", or a date, such as "2099-06-01", got: %s`
+	maintenanceWindowDateDescription = `value must be an RFC 3339 date-time, such as "2099-06-01T09:00:00Z", or a date, such as "2099-06-01"`
+)
 
 // maintenanceWindowRepeatInterval converts the repeat interval from the API,
 // resolving the zero value against the prior data: the API reports 0 when no

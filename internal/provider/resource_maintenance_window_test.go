@@ -11,8 +11,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
+	fwresource "github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
@@ -345,6 +349,242 @@ func TestMaintenanceWindowDescription(t *testing.T) {
 			t.Errorf("description from %q with prior %v = %v, want %v", tc.api, tc.prior, got, tc.want)
 		}
 	}
+}
+
+func TestMaintenanceWindowDateValidator(t *testing.T) {
+	t.Parallel()
+	cases := map[string]bool{
+		"2099-06-01T09:00:00Z":          true,
+		"2099-06-01T09:00:00.000Z":      true,
+		"2099-06-01T09:00:00.123456Z":   true,
+		"2099-06-01T09:00:00+02:00":     true,
+		"2099-06-01":                    true,
+		"":                              false,
+		"not a date":                    false,
+		"2099-06-01T09:00:00":           false,
+		"2099-06-01 09:00:00Z":          false,
+		"2099-13-01":                    false,
+		"2099-02-30":                    false,
+		"06/01/2099":                    false,
+		"Mon, 01 Jun 2099 09:00:00 GMT": false,
+		"2099-06-01T09:00:00,5Z":        false,
+		"2099-06-01t09:00:00z":          false,
+		"2099-06-01T09:00Z":             false,
+		"2099-06-01T09:00:00+0200":      false,
+	}
+	for value, valid := range cases {
+		diags := validateString([]validator.String{maintenanceWindowDateValidator}, path.Root("starts_at"), types.StringValue(value))
+		if diags.HasError() == valid {
+			t.Errorf("%q: valid = %v, diagnostics: %v", value, valid, diags)
+		}
+	}
+
+	if diags := validateString([]validator.String{maintenanceWindowDateValidator}, path.Root("starts_at"), types.StringValue("")); !diags.HasError() {
+		t.Error("empty starts_at accepted")
+	}
+	if diags := validateString([]validator.String{maintenanceWindowRepeatEndsAtValidator}, path.Root("repeat_ends_at"), types.StringValue("")); diags.HasError() {
+		t.Errorf("empty repeat_ends_at rejected: %v", diags)
+	}
+	if diags := validateString([]validator.String{maintenanceWindowRepeatEndsAtValidator}, path.Root("repeat_ends_at"), types.StringValue("not a date")); !diags.HasError() {
+		t.Error("invalid repeat_ends_at accepted")
+	}
+}
+
+// The API reports starts_at and ends_at in UTC with milliseconds; a prior
+// value for the same instant keeps its form.
+func TestMaintenanceWindowInstant(t *testing.T) {
+	t.Parallel()
+	const api = "2099-06-01T07:00:00.000Z"
+	cases := []struct {
+		prior types.String
+		want  types.String
+	}{
+		{types.StringNull(), types.StringValue(api)},
+		{types.StringValue("2099-06-01T07:00:00Z"), types.StringValue("2099-06-01T07:00:00Z")},
+		{types.StringValue("2099-06-01T09:00:00+02:00"), types.StringValue("2099-06-01T09:00:00+02:00")},
+		{types.StringValue("2099-06-01T07:00:00.0009Z"), types.StringValue("2099-06-01T07:00:00.0009Z")},
+		{types.StringValue("2099-06-01T07:00:00.001Z"), types.StringValue(api)},
+		{types.StringValue("2099-06-01T08:00:00Z"), types.StringValue(api)},
+		{types.StringValue("2099-06-01"), types.StringValue(api)},
+	}
+	for _, tc := range cases {
+		if got := maintenanceWindowInstant(api, tc.prior); !got.Equal(tc.want) {
+			t.Errorf("instant with prior %v = %v, want %v", tc.prior, got, tc.want)
+		}
+	}
+
+	if got := maintenanceWindowInstant("2099-06-01T00:00:00.000Z", types.StringValue("2099-06-01")); !got.Equal(types.StringValue("2099-06-01")) {
+		t.Errorf("a date did not match midnight UTC: %v", got)
+	}
+}
+
+// The API stores the UTC date of repeat_ends_at; a prior value with the same
+// UTC date keeps its form.
+func TestMaintenanceWindowRepeatEndsAt(t *testing.T) {
+	t.Parallel()
+	const api = "2099-06-02T00:00:00.000Z"
+	cases := []struct {
+		api   string
+		prior types.String
+		want  types.String
+	}{
+		{api, types.StringNull(), types.StringValue(api)},
+		{api, types.StringValue("2099-06-02"), types.StringValue("2099-06-02")},
+		{api, types.StringValue("2099-06-02T18:30:00Z"), types.StringValue("2099-06-02T18:30:00Z")},
+		{api, types.StringValue("2099-06-01T23:00:00-05:00"), types.StringValue("2099-06-01T23:00:00-05:00")},
+		{api, types.StringValue("2099-06-02T01:00:00+02:00"), types.StringValue(api)},
+		{api, types.StringValue("2099-06-01"), types.StringValue(api)},
+		{"", types.StringNull(), types.StringNull()},
+		{"", types.StringValue(""), types.StringValue("")},
+		{"", types.StringValue("2099-06-02"), types.StringNull()},
+	}
+	for _, tc := range cases {
+		if got := maintenanceWindowRepeatEndsAt(tc.api, tc.prior); !got.Equal(tc.want) {
+			t.Errorf("repeat_ends_at from %q with prior %v = %v, want %v", tc.api, tc.prior, got, tc.want)
+		}
+	}
+}
+
+func TestValidateMaintenanceWindowRepeat(t *testing.T) {
+	t.Parallel()
+	unit := types.StringValue("DAY")
+	cases := map[string]struct {
+		unit     types.String
+		interval types.Int64
+		endsAt   types.String
+		errors   int
+	}{
+		"no repeat":                   {types.StringNull(), types.Int64Null(), types.StringNull(), 0},
+		"interval 0":                  {types.StringNull(), types.Int64Value(0), types.StringValue(""), 0},
+		"repeat":                      {unit, types.Int64Value(2), types.StringValue("2099-12-31"), 0},
+		"interval without unit":       {types.StringNull(), types.Int64Value(1), types.StringNull(), 1},
+		"unit without interval":       {unit, types.Int64Null(), types.StringNull(), 1},
+		"unit with interval 0":        {unit, types.Int64Value(0), types.StringNull(), 1},
+		"ends at without interval":    {types.StringNull(), types.Int64Null(), types.StringValue("2099-12-31"), 1},
+		"unit and ends at, no repeat": {unit, types.Int64Null(), types.StringValue("2099-12-31"), 2},
+		"unknown interval":            {unit, types.Int64Unknown(), types.StringValue("2099-12-31"), 0},
+		"unknown unit":                {types.StringUnknown(), types.Int64Value(1), types.StringNull(), 0},
+		"unknown unit, no interval":   {types.StringUnknown(), types.Int64Null(), types.StringNull(), 0},
+		"unknown ends at":             {types.StringNull(), types.Int64Null(), types.StringUnknown(), 0},
+	}
+	for name, tc := range cases {
+		var diags diag.Diagnostics
+		validateMaintenanceWindowRepeat(tc.unit, tc.interval, tc.endsAt, &diags)
+		if diags.ErrorsCount() != tc.errors {
+			t.Errorf("%s: got %d errors, want %d: %v", name, diags.ErrorsCount(), tc.errors, diags)
+		}
+	}
+}
+
+// Dates in other forms than the API's own, "2099-06-01T00:00:00.000Z", must
+// read back without a diff: the harness plans again after every step and
+// fails on a non-empty plan.
+// ValidateConfig applies the repeat rules to the configuration.
+func TestMaintenanceWindowValidateConfig(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	r := NewMaintenanceWindowResource()
+	var schemaResp fwresource.SchemaResponse
+	r.Schema(ctx, fwresource.SchemaRequest{}, &schemaResp)
+	objectType := schemaResp.Schema.Type().TerraformType(ctx).(tftypes.Object)
+
+	for name, c := range map[string]struct {
+		values map[string]tftypes.Value
+		errors int
+	}{
+		"no repeat": {map[string]tftypes.Value{}, 0},
+		"repeat": {map[string]tftypes.Value{
+			"repeat_unit":     tftypes.NewValue(tftypes.String, "DAY"),
+			"repeat_interval": tftypes.NewValue(tftypes.Number, 1),
+			"repeat_ends_at":  tftypes.NewValue(tftypes.String, "2099-12-31"),
+		}, 0},
+		"unit and ends at without interval": {map[string]tftypes.Value{
+			"repeat_unit":    tftypes.NewValue(tftypes.String, "DAY"),
+			"repeat_ends_at": tftypes.NewValue(tftypes.String, "2099-12-31"),
+		}, 2},
+		"interval without unit": {map[string]tftypes.Value{
+			"repeat_interval": tftypes.NewValue(tftypes.Number, 2),
+		}, 1},
+	} {
+		t.Run(name, func(t *testing.T) {
+			config := tfsdk.Config{Schema: schemaResp.Schema, Raw: objectWith(objectType, c.values)}
+			var resp fwresource.ValidateConfigResponse
+			r.(fwresource.ResourceWithValidateConfig).ValidateConfig(ctx, fwresource.ValidateConfigRequest{Config: config}, &resp)
+			if resp.Diagnostics.ErrorsCount() != c.errors {
+				t.Errorf("got %d errors, want %d: %v", resp.Diagnostics.ErrorsCount(), c.errors, resp.Diagnostics)
+			}
+		})
+	}
+}
+
+func TestMaintenanceWindowRepeatIntervalRange(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	var schemaResp fwresource.SchemaResponse
+	NewMaintenanceWindowResource().Schema(ctx, fwresource.SchemaRequest{}, &schemaResp)
+	attribute := schemaResp.Schema.Attributes["repeat_interval"].(schema.Int64Attribute)
+	for value, valid := range map[int64]bool{-1: false, 0: true, 1: true, 365: true, 366: false} {
+		req := validator.Int64Request{Path: path.Root("repeat_interval"), ConfigValue: types.Int64Value(value)}
+		var resp validator.Int64Response
+		for _, v := range attribute.Validators {
+			v.ValidateInt64(ctx, req, &resp)
+		}
+		if resp.Diagnostics.HasError() == valid {
+			t.Errorf("repeat_interval = %d: valid = %v, diagnostics: %v", value, valid, resp.Diagnostics)
+		}
+	}
+}
+
+func TestAccMaintenanceWindowDateForms(t *testing.T) {
+	config := fmt.Sprintf(`
+		resource "checkly_maintenance_window" "test" {
+			name            = "Maintenance Window %d"
+			starts_at       = "2099-06-01"
+			ends_at         = "2099-06-01T05:00:00+02:00"
+			repeat_unit     = "DAY"
+			repeat_interval = 1
+			repeat_ends_at  = "2099-06-09T23:00:00-05:00"
+		}
+	`, acctest.RandInt())
+	const r = "checkly_maintenance_window.test"
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: config,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(r, "starts_at", "2099-06-01"),
+				resource.TestCheckResourceAttr(r, "ends_at", "2099-06-01T05:00:00+02:00"),
+				resource.TestCheckResourceAttr(r, "repeat_ends_at", "2099-06-09T23:00:00-05:00"),
+			),
+		},
+		{
+			// A refresh keeps the configured forms.
+			RefreshState: true,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(r, "starts_at", "2099-06-01"),
+				resource.TestCheckResourceAttr(r, "repeat_ends_at", "2099-06-09T23:00:00-05:00"),
+			),
+		},
+		{
+			// An import stores the API's forms.
+			ResourceName:      r,
+			ImportState:       true,
+			ImportStateVerify: true,
+			ImportStateCheck: func(states []*terraform.InstanceState) error {
+				attributes := states[0].Attributes
+				for name, want := range map[string]string{
+					"starts_at":      "2099-06-01T00:00:00.000Z",
+					"ends_at":        "2099-06-01T03:00:00.000Z",
+					"repeat_ends_at": "2099-06-10T00:00:00.000Z",
+				} {
+					if got := attributes[name]; got != want {
+						return fmt.Errorf("imported %s = %q, want %q", name, got, want)
+					}
+				}
+				return nil
+			},
+			ImportStateVerifyIgnore: []string{"starts_at", "ends_at", "repeat_ends_at"},
+		},
+	})
 }
 
 func TestAccMaintenanceWindowControlsAllFields(t *testing.T) {
