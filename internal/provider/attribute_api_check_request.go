@@ -78,6 +78,9 @@ func apiCheckRequestAttributeSchema(opts apiCheckRequestAttributeSchemaOptions) 
 				Computed:    true,
 				Default:     stringdefault.StaticString("GET"),
 				Description: "The HTTP method to use for this API check. Possible values are `GET`, `POST`, `PUT`, `HEAD`, `DELETE`, `PATCH`. (Default `GET`).",
+				Validators: []validator.String{
+					stringvalidator.OneOf("GET", "POST", "PUT", "HEAD", "DELETE", "PATCH"),
+				},
 			},
 			"url": schema.StringAttribute{
 				Required:    true,
@@ -215,8 +218,10 @@ func apiCheckRequestFromObject(ctx context.Context, obj types.Object, diags *dia
 }
 
 // apiCheckRequestToObject converts the API representation of an API check
-// request config to the request attribute value.
-func apiCheckRequestToObject(ctx context.Context, r checkly.Request, diags *diag.Diagnostics) types.Object {
+// request config to the request attribute value. prior is the previously
+// stored request attribute value, which decides how empty basic auth
+// credentials convert (see apiCheckBasicAuthToObject).
+func apiCheckRequestToObject(ctx context.Context, r checkly.Request, prior types.Object, diags *diag.Diagnostics) types.Object {
 	obj, d := types.ObjectValueFrom(ctx, apiCheckRequestAttrTypes, apiCheckRequestModel{
 		Method:          types.StringValue(r.Method),
 		URL:             types.StringValue(r.URL),
@@ -227,7 +232,7 @@ func apiCheckRequestToObject(ctx context.Context, r checkly.Request, diags *diag
 		Body:            types.StringValue(r.Body),
 		BodyType:        types.StringValue(string(r.BodyType)),
 		Assertions:      assertionsToSet(ctx, r.Assertions, diags),
-		BasicAuth:       apiCheckBasicAuthToObject(ctx, r.BasicAuth, diags),
+		BasicAuth:       apiCheckBasicAuthToObject(ctx, r.BasicAuth, priorAttribute(prior, "basic_auth", types.ObjectNull(apiCheckBasicAuthAttrTypes)), diags),
 		IPFamily:        types.StringValue(string(r.IPFamily)),
 	})
 	diags.Append(d...)
@@ -251,11 +256,22 @@ func apiCheckBasicAuthFromObject(ctx context.Context, obj types.Object, diags *d
 }
 
 // apiCheckBasicAuthToObject converts the API representation of basic
-// authentication credentials to the request.basic_auth attribute value. The
-// API returns no credentials when basic authentication is not configured,
-// which converts to null.
-func apiCheckBasicAuthToObject(ctx context.Context, ba *checkly.BasicAuth, diags *diag.Diagnostics) types.Object {
-	if ba == nil {
+// authentication credentials to the request.basic_auth attribute value.
+//
+// The API returns either no credentials or an empty username and password
+// when basic authentication is not configured; checks created in the web app
+// have the empty ones. Both convert to null, so an imported check without
+// basic authentication matches a configuration without basic_auth. Empty
+// credentials keep the prior value instead when it holds empty credentials
+// too, so a configuration that sets them explicitly stays consistent.
+func apiCheckBasicAuthToObject(ctx context.Context, ba *checkly.BasicAuth, prior types.Object, diags *diag.Diagnostics) types.Object {
+	if ba == nil || (ba.Username == "" && ba.Password == "") {
+		if !prior.IsNull() && !prior.IsUnknown() {
+			priorAttrs := prior.Attributes()
+			if stringAttrValue(priorAttrs["username"]) == "" && stringAttrValue(priorAttrs["password"]) == "" {
+				return prior
+			}
+		}
 		return types.ObjectNull(apiCheckBasicAuthAttrTypes)
 	}
 

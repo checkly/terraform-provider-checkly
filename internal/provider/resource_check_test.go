@@ -2644,3 +2644,30 @@ func TestAccCheckUpdateClearsScriptPath(t *testing.T) {
 		},
 	})
 }
+
+func TestAccCheckTypeValidation(t *testing.T) {
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: `
+				resource "checkly_check" "test" {
+					name      = "test-multi-step-high-frequency"
+					type      = "MULTI_STEP"
+					frequency = 0
+					locations = ["eu-central-1"]
+					script    = "console.log('test')"
+				}
+			`,
+			ExpectError: regexp.MustCompile(`"frequency" can be 0 \(high frequency scheduling\) only when "type" is\s+"API"`),
+		},
+		{
+			Config: `
+				resource "checkly_check" "test" {
+					name      = "test-api-without-request"
+					type      = "API"
+					locations = ["eu-central-1"]
+				}
+			`,
+			ExpectError: regexp.MustCompile(`An API check needs a request`),
+		},
+	})
+}

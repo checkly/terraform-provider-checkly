@@ -317,7 +317,7 @@ func TestCheckToModelResolvesAttributesOfOtherTypes(t *testing.T) {
 			t.Errorf("script = %s, want stored", apiModel.Script)
 		}
 
-		request := apiCheckRequestToObject(ctx, checkly.Request{URL: "https://example.com"}, &diags)
+		request := apiCheckRequestToObject(ctx, checkly.Request{URL: "https://example.com"}, types.ObjectNull(apiCheckRequestAttrTypes), &diags)
 		if diags.HasError() {
 			t.Fatal(diags)
 		}

@@ -98,7 +98,13 @@ func makeRetryStrategyAttributeSchema(options RetryStrategyAttributeSchemaOption
 			Optional:    true,
 			Computed:    true,
 			Default:     int64default.StaticInt64(60),
-			Description: "The number of seconds to wait before the first retry attempt. Not available when `type` is `NO_RETRIES`. (Default `60`).",
+			Description: "The number of seconds to wait before the first retry attempt (at least `0`). Not available when `type` is `NO_RETRIES`. (Default `60`).",
+			// The API accepts a negative value, but a retry can't wait a
+			// negative time: the queue that delays retries on public
+			// locations rejects it, so the retry is never scheduled.
+			Validators: []validator.Int64{
+				int64validator.AtLeast(0),
+			},
 		},
 		"max_retries": schema.Int64Attribute{
 			Optional:    true,

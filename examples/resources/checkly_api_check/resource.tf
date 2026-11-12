@@ -85,9 +85,10 @@ resource "checkly_api_check" "example_check_2" {
       },
     ]
 
+    # Credentials the API rejects, so the assertions expect a 401 response.
     basic_auth = {
-      username = ""
-      password = ""
+      username = "monitoring"
+      password = "not-the-password"
     }
   }
 }

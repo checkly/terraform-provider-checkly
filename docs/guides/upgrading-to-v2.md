@@ -276,6 +276,14 @@ The provider checks lengths and formats at plan time, so some configurations tha
 - An uppercase `url` on `checkly_status_page`. The API lowercased it; use the lowercase URL.
 - An element of `environment_variables` on a check or check group with a value over 64000 bytes in UTF-8, or 31744 bytes if it is secret or locked, or more than 200 elements in `environment_variables`. The API dropped those variables without an error.
 
+### Settings that couldn't work
+
+Some settings that v1.x accepted, and that the API accepts too, couldn't work. They now fail the plan:
+
+- A `runtime.playwright.devices` `type` of `checkly_playwright_check_suite` other than `chromium`, `firefox`, `webkit`, `chrome` and `msedge`. The check runners don't provide other browsers.
+- An empty `runtime.steps.install.command` or `runtime.steps.test.command` of `checkly_playwright_check_suite`. The API doesn't store an empty command, so it showed as a change in every plan; leave the attribute out to use the default command.
+- A negative `retry_strategy.base_backoff_seconds`. A retry can't wait a negative time; use `0` to retry without waiting.
+
 ### Debug log removed
 
 The `CHECKLY_DEBUG_LOG` environment variable no longer writes API requests and responses to a file. The file included the API key and secret values in plain text. To inspect the provider's API traffic, route it through an HTTPS proxy with the `HTTPS_PROXY` environment variable, which the provider honors. An intercepting proxy only works once its CA certificate is trusted, for example through the system keychain on macOS or `SSL_CERT_FILE` on Linux. Use `TF_LOG` for Terraform's own logs.
