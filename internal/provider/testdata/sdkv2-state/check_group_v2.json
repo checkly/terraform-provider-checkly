@@ -1,0 +1,100 @@
+{
+    "activated": true,
+    "api_check_defaults": [
+        {
+            "assertion": [],
+            "basic_auth": [
+                {
+                    "password": "p",
+                    "username": "u"
+                }
+            ],
+            "headers": {},
+            "query_parameters": {},
+            "url": "https://example.com"
+        }
+    ],
+    "concurrency": 1,
+    "default_runtime": [
+        {
+            "runtime_id": "2024.09"
+        }
+    ],
+    "enforce_alert_settings": [
+        {
+            "alert_channel_subscription": [],
+            "alert_settings": [
+                {
+                    "escalation_type": "RUN_BASED",
+                    "parallel_run_failure_threshold": [
+                        {
+                            "enabled": false,
+                            "percentage": 10
+                        }
+                    ],
+                    "reminders": [
+                        {
+                            "amount": 1,
+                            "interval": 5
+                        }
+                    ],
+                    "run_based_escalation": [
+                        {
+                            "failed_run_threshold": 2
+                        }
+                    ],
+                    "ssl_certificates": [],
+                    "time_based_escalation": []
+                }
+            ],
+            "enabled": true,
+            "use_global_alert_settings": false
+        }
+    ],
+    "enforce_locations": [
+        {
+            "enabled": true,
+            "locations": [
+                "eu-west-1"
+            ],
+            "private_locations": []
+        }
+    ],
+    "enforce_retry_strategy": [
+        {
+            "enabled": true,
+            "retry_strategy": [
+                {
+                    "base_backoff_seconds": 60,
+                    "max_duration_seconds": 600,
+                    "max_retries": 2,
+                    "only_on": [
+                        {
+                            "network_error": true
+                        }
+                    ],
+                    "same_region": true,
+                    "type": "LINEAR"
+                }
+            ]
+        }
+    ],
+    "enforce_scheduling_strategy": [
+        {
+            "enabled": true,
+            "run_parallel": true
+        }
+    ],
+    "environment_variable": [],
+    "id": "123",
+    "muted": false,
+    "name": "g",
+    "setup_script": [
+      {
+        "inline_script": "console.log('x')",
+        "snippet_id": 0
+      }
+    ],
+    "tags": null,
+    "teardown_script": []
+}

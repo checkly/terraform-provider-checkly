@@ -5,9 +5,9 @@ resource "checkly_status_page_v3" "example" {
   support_link  = "mailto:support@example.com"
 
   # Optional custom colors (requires custom theme colors on your plan). The
-  # complete palette must be given; leave the block out for the defaults.
-  theme_colors {
-    light {
+  # complete palette must be given; leave the attribute out for the defaults.
+  theme_colors = {
+    light = {
       body_background_color           = "#F9FAFB"
       header_background_color         = "#FFFFFF"
       header_font_color               = "#151A1E"
@@ -21,7 +21,7 @@ resource "checkly_status_page_v3" "example" {
       primary_button_background_color = "#151A1E"
       primary_button_font_color       = "#FFFFFF"
     }
-    dark {
+    dark = {
       body_background_color           = "#14171C"
       header_background_color         = "#171B21"
       header_font_color               = "#FFFFFF"

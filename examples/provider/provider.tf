@@ -1,13 +1,19 @@
-# Define a variable to hold the API Key and Account ID
-variable "checkly_api_key" {}
-variable "checkly_account_id" {}
+# Define variables to hold the API Key and Account ID. The API key is a
+# credential, so it is marked sensitive to keep it out of plan output.
+variable "checkly_api_key" {
+  type      = string
+  sensitive = true
+}
+variable "checkly_account_id" {
+  type = string
+}
 
 # Specify the Checkly provider
 terraform {
   required_providers {
     checkly = {
       source  = "checkly/checkly"
-      version = "1.7.1"
+      version = "~> 2.0"
     }
   }
 }
@@ -19,9 +25,8 @@ provider "checkly" {
 }
 
 # Create your first API Check
-resource "checkly_check" "example_check" {
+resource "checkly_api_check" "example_check" {
   name                      = "Example API check"
-  type                      = "API"
   activated                 = true
   should_fail               = false
   frequency                 = 10
@@ -31,13 +36,13 @@ resource "checkly_check" "example_check" {
     "us-west-1"
   ]
 
-  request {
+  request = {
     url              = "https://api.example.com/"
     follow_redirects = true
-    assertion {
+    assertions = [{
       source     = "STATUS_CODE"
       comparison = "EQUALS"
       target     = "200"
-    }
+    }]
   }
 }

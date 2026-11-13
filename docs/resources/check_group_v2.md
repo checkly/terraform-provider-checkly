@@ -4,7 +4,7 @@ page_title: "checkly_check_group_v2 Resource - terraform-provider-checkly"
 subcategory: ""
 description: |-
   Check groups organize related checks together and allow optional shared configuration.
-  Unlike checkly_check_group (v1), which always imposed implicit defaults for various settings, checkly_check_group_v2 does not override any check settings by default. A group can be as minimal as just a name. Use the optional enforce_* blocks only when you explicitly want the group to override individual check settings.
+  Unlike checkly_check_group (v1), which always imposed implicit defaults for various settings, checkly_check_group_v2 does not override any check settings by default. A group can be as minimal as just a name. Use the optional enforce_* attributes only when you explicitly want the group to override individual check settings.
   The new checkly_check_group_v2 resource should always be preferred over the old checkly_check_group resource.
 ---
 
@@ -12,7 +12,7 @@ description: |-
 
 Check groups organize related checks together and allow optional shared configuration. 
 
-Unlike `checkly_check_group` (v1), which always imposed implicit defaults for various settings, `checkly_check_group_v2` does not override any check settings by default. A group can be as minimal as just a name. Use the optional `enforce_*` blocks only when you explicitly want the group to override individual check settings.
+Unlike `checkly_check_group` (v1), which always imposed implicit defaults for various settings, `checkly_check_group_v2` does not override any check settings by default. A group can be as minimal as just a name. Use the optional `enforce_*` attributes only when you explicitly want the group to override individual check settings.
 
 The new `checkly_check_group_v2` resource should always be preferred over the old `checkly_check_group` resource.
 
@@ -34,7 +34,7 @@ resource "checkly_check_group_v2" "production-api" {
 
   # Enforce locations: all checks in this group will run in these locations,
   # regardless of what's configured on the individual check.
-  enforce_locations {
+  enforce_locations = {
     enabled           = true
     locations         = ["us-east-1", "eu-west-1", "ap-southeast-1"]
     private_locations = ["my-datacenter"]
@@ -42,10 +42,10 @@ resource "checkly_check_group_v2" "production-api" {
 
   # Enforce retry strategy: all checks in this group will use this retry
   # strategy, overriding any retry settings on the individual check.
-  enforce_retry_strategy {
+  enforce_retry_strategy = {
     enabled = true
 
-    retry_strategy {
+    retry_strategy = {
       type                 = "LINEAR"
       base_backoff_seconds = 30
       max_retries          = 3
@@ -55,61 +55,64 @@ resource "checkly_check_group_v2" "production-api" {
   }
 
   # Enforce scheduling strategy: all checks run in parallel across locations.
-  enforce_scheduling_strategy {
+  enforce_scheduling_strategy = {
     enabled      = true
     run_parallel = true
   }
 
   # Enforce alert settings: controls when alerts fire for all checks in the group.
-  enforce_alert_settings {
+  enforce_alert_settings = {
     enabled = true
 
-    alert_settings {
+    alert_settings = {
       escalation_type = "RUN_BASED"
 
-      run_based_escalation {
+      run_based_escalation = {
         failed_run_threshold = 2
       }
 
-      reminders {
+      reminders = {
         amount   = 3
         interval = 10
       }
 
-      parallel_run_failure_threshold {
+      parallel_run_failure_threshold = {
         enabled    = true
         percentage = 50
       }
     }
 
     # Subscribe alert channels to this group.
-    alert_channel_subscription {
-      channel_id = 1234
-      activated  = true
-    }
+    alert_channel_subscriptions = [
+      {
+        channel_id = 1234
+        activated  = true
+      }
+    ]
   }
 
   # Environment variables available to all checks in the group.
-  environment_variable {
-    key    = "BASE_URL"
-    value  = "https://api.example.com"
-    locked = false
-  }
-
-  environment_variable {
-    key    = "API_TOKEN"
-    value  = "super-secret-token"
-    locked = true
-    secret = true
-  }
+  environment_variables = [
+    {
+      key    = "BASE_URL"
+      value  = "https://api.example.com"
+      locked = false
+    },
+    {
+      key    = "API_TOKEN"
+      value  = "super-secret-token"
+      locked = true
+      secret = true
+    },
+  ]
 
   # Default runtime for checks that don't specify their own.
-  default_runtime {
+  default_runtime = {
     runtime_id = "2024.02"
   }
 
   # API check defaults: shared base URL, headers, and assertions.
-  api_check_defaults {
+  api_check_defaults = {
     url = "https://api.example.com/"
 
     headers = {
@@ -121,33 +124,34 @@ resource "checkly_check_group_v2" "production-api" {
       "version" = "v2"
     }
 
-    assertion {
-      source     = "STATUS_CODE"
-      comparison = "LESS_THAN"
-      target     = "400"
-    }
+    assertions = [
+      {
+        source     = "STATUS_CODE"
+        comparison = "LESS_THAN"
+        target     = "400"
+      },
+      {
+        source     = "RESPONSE_TIME"
+        comparison = "LESS_THAN"
+        target     = "3000"
+      },
+    ]
 
-    assertion {
-      source     = "RESPONSE_TIME"
-      comparison = "LESS_THAN"
-      target     = "3000"
-    }
-
-    basic_auth {
+    basic_auth = {
       username = "admin"
       password = "pass"
     }
   }
 
   # Setup and teardown scripts run in addition to each check's own scripts.
-  setup_script {
+  setup_script = {
     inline_script = <<-EOF
       // Runs before every API check in this group
       console.log("Setting up...")
     EOF
   }
 
-  teardown_script {
+  teardown_script = {
     inline_script = <<-EOF
       // Runs after every API check in this group
       console.log("Tearing down...")
@@ -160,10 +164,10 @@ resource "checkly_check_group_v2" "production-api" {
 resource "checkly_check_group_v2" "retry-on-network-errors" {
   name = "Retry on Network Errors Only"
 
-  enforce_retry_strategy {
+  enforce_retry_strategy = {
     enabled = true
 
-    retry_strategy {
+    retry_strategy = {
       type                 = "EXPONENTIAL"
       base_backoff_seconds = 10
       max_retries          = 5
@@ -171,7 +175,7 @@ resource "checkly_check_group_v2" "retry-on-network-errors" {
       same_region          = false
 
       # Only retry when the failure is a network error, not an assertion failure.
-      only_on {
+      only_on = {
         network_error = true
       }
     }
@@ -182,17 +186,17 @@ resource "checkly_check_group_v2" "retry-on-network-errors" {
 resource "checkly_check_group_v2" "time-based-alerts" {
   name = "Time-Based Alert Escalation"
 
-  enforce_alert_settings {
+  enforce_alert_settings = {
     enabled = true
 
-    alert_settings {
+    alert_settings = {
       escalation_type = "TIME_BASED"
 
-      time_based_escalation {
+      time_based_escalation = {
         minutes_failing_threshold = 10
       }
 
-      reminders {
+      reminders = {
         amount   = 5
         interval = 15
       }
@@ -204,54 +208,56 @@ resource "checkly_check_group_v2" "time-based-alerts" {
 resource "checkly_check_group_v2" "use-global-alerts" {
   name = "Use Global Alert Settings"
 
-  enforce_alert_settings {
-    enabled                   = true
+  enforce_alert_settings = {
+    enabled = true
+    # The provider derives true anyway when the enforcement sets no
+    # alert_settings; this example only states it explicitly.
     use_global_alert_settings = true
   }
 }
 
 # Example: enforce alert channel subscriptions with custom alert settings.
 resource "checkly_alert_channel" "email" {
-  email {
+  email = {
     address = "alerts@example.com"
   }
 }
 
 resource "checkly_alert_channel" "slack" {
-  slack {
-    channel = "#alerts"
-    url     = "https://hooks.slack.com/services/TXXXXX/XXXXX/XXXXXXXXXX"
+  slack_app = {
+    slack_channels = ["#alerts"]
   }
 }
 
 resource "checkly_check_group_v2" "with-alert-channels" {
   name = "Group with Alert Channels"
 
-  enforce_alert_settings {
+  enforce_alert_settings = {
     enabled = true
 
-    alert_settings {
+    alert_settings = {
       escalation_type = "RUN_BASED"
 
-      run_based_escalation {
+      run_based_escalation = {
         failed_run_threshold = 1
       }
 
-      reminders {
+      reminders = {
         amount   = 0
         interval = 5
       }
     }
 
-    alert_channel_subscription {
-      channel_id = checkly_alert_channel.email.id
-      activated  = true
-    }
-
-    alert_channel_subscription {
-      channel_id = checkly_alert_channel.slack.id
-      activated  = true
-    }
+    alert_channel_subscriptions = [
+      {
+        channel_id = checkly_alert_channel.email.id
+        activated  = true
+      },
+      {
+        channel_id = checkly_alert_channel.slack.id
+        activated  = true
+      },
+    ]
   }
 }
 
@@ -259,10 +265,10 @@ resource "checkly_check_group_v2" "with-alert-channels" {
 resource "checkly_check_group_v2" "no-retries" {
   name = "No Retries Group"
 
-  enforce_retry_strategy {
+  enforce_retry_strategy = {
     enabled = true
 
-    retry_strategy {
+    retry_strategy = {
       type = "NO_RETRIES"
     }
   }
@@ -272,10 +278,10 @@ resource "checkly_check_group_v2" "no-retries" {
 resource "checkly_check_group_v2" "single-retry" {
   name = "Single Retry Group"
 
-  enforce_retry_strategy {
+  enforce_retry_strategy = {
     enabled = true
 
-    retry_strategy {
+    retry_strategy = {
       type                 = "SINGLE_RETRY"
       base_backoff_seconds = 10
       same_region          = true
@@ -293,25 +299,25 @@ resource "checkly_check_group_v2" "single-retry" {
 
 ### Optional
 
-- `activated` (Boolean) Determines whether activated checks in the group should run or not. Deactivating the group will prevent all checks in the group from running, regardless of their activated state. (Default `true`).
-- `api_check_defaults` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--api_check_defaults))
-- `concurrency` (Number) Determines the number of checks to run concurrently when triggering the check group via CI/CD or the API. (Default `1`).
-- `default_runtime` (Block List, Max: 1) Sets a default runtime for the group. Used as a fallback when a check belonging to the group has no runtime set. Takes precedence over the account default runtime. (see [below for nested schema](#nestedblock--default_runtime))
-- `enforce_alert_settings` (Block List, Max: 1) Enforces alert settings for the whole group. Overrides check configuration. (see [below for nested schema](#nestedblock--enforce_alert_settings))
-- `enforce_locations` (Block List, Max: 1) Enforces public and private locations for the whole group. Overrides check configuration. (see [below for nested schema](#nestedblock--enforce_locations))
-- `enforce_retry_strategy` (Block List, Max: 1) Enforces a retry strategy for the whole group. Overrides check configuration. (see [below for nested schema](#nestedblock--enforce_retry_strategy))
-- `enforce_scheduling_strategy` (Block List, Max: 1) Enforces a scheduling strategy for the whole group. Overrides check configuration. (see [below for nested schema](#nestedblock--enforce_scheduling_strategy))
-- `environment_variable` (Block List) Insert environment variables into the runtime environment of checks in the group. Only relevant for check types that support environment variables. Use global environment variables whenever possible. (see [below for nested schema](#nestedblock--environment_variable))
-- `muted` (Boolean) Determines if any notifications will be sent out when a check in this group fails and/or recovers. Muting the group will deactivate all notifications for all checks in the group, regardless of their muted state. (Default `false`).
-- `setup_script` (Block List, Max: 1) A script to run in the setup phase of an API check. Runs in addition to the check's own setup script. (see [below for nested schema](#nestedblock--setup_script))
-- `tags` (Set of String) Additional tags to append to all checks in the group.
-- `teardown_script` (Block List, Max: 1) A script to run in the teardown phase of an API check. Runs in addition to the check's own teardown script. (see [below for nested schema](#nestedblock--teardown_script))
+- `activated` (Boolean) Determines whether the checks and monitors in the group run on their schedule. Deactivating the group stops all of them, regardless of their own `activated`. Defaults to `true`.
+- `api_check_defaults` (Attributes) Default settings for API checks in this group. (see [below for nested schema](#nestedatt--api_check_defaults))
+- `concurrency` (Number) Determines the number of checks to run concurrently when triggering the check group via CI/CD or the API. Defaults to `1`.
+- `default_runtime` (Attributes) Sets a default runtime for the group. Used as a fallback when a check belonging to the group has no runtime set. Takes precedence over the account default runtime. (see [below for nested schema](#nestedatt--default_runtime))
+- `enforce_alert_settings` (Attributes) Enforces alert settings for the whole group. Overrides check configuration. (see [below for nested schema](#nestedatt--enforce_alert_settings))
+- `enforce_locations` (Attributes) Enforces public and private locations for the whole group. Overrides check configuration. (see [below for nested schema](#nestedatt--enforce_locations))
+- `enforce_retry_strategy` (Attributes) Enforces a retry strategy for the whole group. Overrides check configuration. (see [below for nested schema](#nestedatt--enforce_retry_strategy))
+- `enforce_scheduling_strategy` (Attributes) Enforces a scheduling strategy for the whole group. Overrides check configuration. (see [below for nested schema](#nestedatt--enforce_scheduling_strategy))
+- `environment_variables` (Attributes List) Insert environment variables into the runtime environment of checks in the group. Only relevant for check types that support environment variables. Use global environment variables whenever possible. Must contain at most `200` variables. (see [below for nested schema](#nestedatt--environment_variables))
+- `muted` (Boolean) Determines whether notifications are sent when a check or monitor in the group fails or recovers. Muting the group mutes all of them, regardless of their own `muted`. Defaults to `false`.
+- `setup_script` (Attributes) A script to run in the setup phase of an API check. Runs in addition to the check's own setup script. (see [below for nested schema](#nestedatt--setup_script))
+- `tags` (Set of String) Tags for organizing and filtering checks and monitors. The checks and monitors in the group also carry these tags, for example when maintenance windows and status page automation rules select checks by tag.
+- `teardown_script` (Attributes) A script to run in the teardown phase of an API check. Runs in addition to the check's own teardown script. (see [below for nested schema](#nestedatt--teardown_script))
 
 ### Read-Only
 
-- `id` (String) The ID of this resource.
+- `id` (String) The ID of the check group.
 
-<a id="nestedblock--api_check_defaults"></a>
+<a id="nestedatt--api_check_defaults"></a>
 ### Nested Schema for `api_check_defaults`
 
 Required:
@@ -320,36 +326,36 @@ Required:
 
 Optional:
 
-- `assertion` (Block Set) (see [below for nested schema](#nestedblock--api_check_defaults--assertion))
-- `basic_auth` (Block Set, Max: 1) (see [below for nested schema](#nestedblock--api_check_defaults--basic_auth))
-- `headers` (Map of String)
-- `query_parameters` (Map of String)
+- `assertions` (Attributes Set) Default assertions for API checks in this group. (see [below for nested schema](#nestedatt--api_check_defaults--assertions))
+- `basic_auth` (Attributes) Default basic auth credentials for API checks in this group. (see [below for nested schema](#nestedatt--api_check_defaults--basic_auth))
+- `headers` (Map of String) Default headers for API checks in this group. The values are not sensitive and show in plan output. To keep a credential in a header out of plan output, take it from a variable declared with `sensitive = true` or wrap it in `sensitive(...)`.
+- `query_parameters` (Map of String) Default query parameters for API checks in this group. The values are not sensitive and show in plan output. To keep a credential in a parameter out of plan output, take it from a variable declared with `sensitive = true` or wrap it in `sensitive(...)`.
 
-<a id="nestedblock--api_check_defaults--assertion"></a>
-### Nested Schema for `api_check_defaults.assertion`
+<a id="nestedatt--api_check_defaults--assertions"></a>
+### Nested Schema for `api_check_defaults.assertions`
 
 Required:
 
-- `comparison` (String) The type of comparison to be executed between expected and actual value of the assertion. Possible values `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL`, and `NOT_NULL`.
-- `source` (String) The source of the asserted value. Possible values `STATUS_CODE`, `JSON_BODY`, `HEADERS`, `TEXT_BODY`, and `RESPONSE_TIME`.
-- `target` (String)
+- `comparison` (String) The type of comparison to be executed between expected and actual value of the assertion. Possible values are `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL` and `NOT_NULL`.
+- `source` (String) The source of the asserted value. Possible values are `STATUS_CODE`, `JSON_BODY`, `HEADERS`, `TEXT_BODY` and `RESPONSE_TIME`.
+- `target` (String) The value to compare against.
 
 Optional:
 
-- `property` (String)
+- `property` (String) The property of the asserted value, for example a JSON path or header name.
 
 
-<a id="nestedblock--api_check_defaults--basic_auth"></a>
+<a id="nestedatt--api_check_defaults--basic_auth"></a>
 ### Nested Schema for `api_check_defaults.basic_auth`
 
 Required:
 
-- `password` (String)
-- `username` (String)
+- `password` (String, Sensitive) The basic auth password.
+- `username` (String) The basic auth username.
 
 
 
-<a id="nestedblock--default_runtime"></a>
+<a id="nestedatt--default_runtime"></a>
 ### Nested Schema for `default_runtime`
 
 Required:
@@ -357,7 +363,7 @@ Required:
 - `runtime_id` (String) The runtime ID.
 
 
-<a id="nestedblock--enforce_alert_settings"></a>
+<a id="nestedatt--enforce_alert_settings"></a>
 ### Nested Schema for `enforce_alert_settings`
 
 Required:
@@ -366,12 +372,12 @@ Required:
 
 Optional:
 
-- `alert_channel_subscription` (Block Set) An array of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your check, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedblock--enforce_alert_settings--alert_channel_subscription))
-- `alert_settings` (Block List, Max: 1) Determines the alert escalation policy for the check. (see [below for nested schema](#nestedblock--enforce_alert_settings--alert_settings))
-- `use_global_alert_settings` (Boolean) Whether to use account level alert settings instead of the group's alert settings.Default (`false`).
+- `alert_channel_subscriptions` (Attributes Set) A set of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your group, we won't be able to alert you even if a check or monitor in the group starts failing. (see [below for nested schema](#nestedatt--enforce_alert_settings--alert_channel_subscriptions))
+- `alert_settings` (Attributes) Determines the alert escalation policy for the checks and monitors in the group. (see [below for nested schema](#nestedatt--enforce_alert_settings--alert_settings))
+- `use_global_alert_settings` (Boolean) When true, the account level alert settings are used instead of the `alert_settings` of this check group. Defaults to `true` when `alert_settings` is not set, and to `false` when it is. The value is derived only while `enabled` is `true`. While the enforcement stays disabled, the stored value is kept and has no effect; disabling an enabled enforcement resets it to null.
 
-<a id="nestedblock--enforce_alert_settings--alert_channel_subscription"></a>
-### Nested Schema for `enforce_alert_settings.alert_channel_subscription`
+<a id="nestedatt--enforce_alert_settings--alert_channel_subscriptions"></a>
+### Nested Schema for `enforce_alert_settings.alert_channel_subscriptions`
 
 Required:
 
@@ -379,64 +385,54 @@ Required:
 - `channel_id` (Number) The ID of the alert channel.
 
 
-<a id="nestedblock--enforce_alert_settings--alert_settings"></a>
+<a id="nestedatt--enforce_alert_settings--alert_settings"></a>
 ### Nested Schema for `enforce_alert_settings.alert_settings`
 
 Optional:
 
-- `escalation_type` (String) Determines the type of escalation to use. Possible values are `RUN_BASED` and `TIME_BASED`. (Default `RUN_BASED`).
-- `parallel_run_failure_threshold` (Block List) Configuration for parallel run failure threshold. (see [below for nested schema](#nestedblock--enforce_alert_settings--alert_settings--parallel_run_failure_threshold))
-- `reminders` (Block List) Defines how often to send reminder notifications after initial alert. (see [below for nested schema](#nestedblock--enforce_alert_settings--alert_settings--reminders))
-- `run_based_escalation` (Block List) Configuration for run-based escalation. (see [below for nested schema](#nestedblock--enforce_alert_settings--alert_settings--run_based_escalation))
-- `ssl_certificates` (Block Set, Deprecated) (see [below for nested schema](#nestedblock--enforce_alert_settings--alert_settings--ssl_certificates))
-- `time_based_escalation` (Block List) Configuration for time-based escalation. (see [below for nested schema](#nestedblock--enforce_alert_settings--alert_settings--time_based_escalation))
+- `escalation_type` (String) Determines the type of escalation to use. Possible values are `RUN_BASED` and `TIME_BASED`. Defaults to `RUN_BASED`.
+- `parallel_run_failure_threshold` (Attributes) Configuration for parallel run failure threshold. (see [below for nested schema](#nestedatt--enforce_alert_settings--alert_settings--parallel_run_failure_threshold))
+- `reminders` (Attributes) Defines how often to send reminder notifications after the initial alert. (see [below for nested schema](#nestedatt--enforce_alert_settings--alert_settings--reminders))
+- `run_based_escalation` (Attributes) Configuration for run-based escalation. (see [below for nested schema](#nestedatt--enforce_alert_settings--alert_settings--run_based_escalation))
+- `time_based_escalation` (Attributes) Configuration for time-based escalation. (see [below for nested schema](#nestedatt--enforce_alert_settings--alert_settings--time_based_escalation))
 
-<a id="nestedblock--enforce_alert_settings--alert_settings--parallel_run_failure_threshold"></a>
+<a id="nestedatt--enforce_alert_settings--alert_settings--parallel_run_failure_threshold"></a>
 ### Nested Schema for `enforce_alert_settings.alert_settings.parallel_run_failure_threshold`
 
 Optional:
 
-- `enabled` (Boolean) Whether parallel run failure threshold is enabled. Only applies if the check is scheduled for multiple locations in parallel. (Default `false`).
-- `percentage` (Number) Percentage of runs that must fail to trigger alert. Possible values are `10`, `20`, `30`, `40`, `50`, `60`, `70`, `80`, `90`, and `100`. (Default `10`).
+- `enabled` (Boolean) Whether parallel run failure threshold is enabled. Only applies to the checks and monitors in the group that are scheduled for multiple locations in parallel. Defaults to `false`.
+- `percentage` (Number) Percentage of runs that must fail to trigger alert. Possible values are `10`, `20`, `30`, `40`, `50`, `60`, `70`, `80`, `90` and `100`. Defaults to `10`.
 
 
-<a id="nestedblock--enforce_alert_settings--alert_settings--reminders"></a>
+<a id="nestedatt--enforce_alert_settings--alert_settings--reminders"></a>
 ### Nested Schema for `enforce_alert_settings.alert_settings.reminders`
 
 Optional:
 
-- `amount` (Number) Number of reminder notifications to send. Possible values are `0`, `1`, `2`, `3`, `4`, `5`, and `100000` (`0` to disable, `100000` for unlimited). (Default `0`).
-- `interval` (Number) Interval between reminder notifications in minutes. Possible values are `5`, `10`, `15`, and `30`. (Default `5`).
+- `amount` (Number) Number of reminder notifications to send. Possible values are `0` (disabled), `1`, `2`, `3`, `4`, `5` and `100000` (unlimited). Defaults to `0`.
+- `interval` (Number) Interval between reminder notifications in minutes. Possible values are `5`, `10`, `15` and `30`. Defaults to `5`.
 
 
-<a id="nestedblock--enforce_alert_settings--alert_settings--run_based_escalation"></a>
+<a id="nestedatt--enforce_alert_settings--alert_settings--run_based_escalation"></a>
 ### Nested Schema for `enforce_alert_settings.alert_settings.run_based_escalation`
 
 Optional:
 
-- `failed_run_threshold` (Number) Send an alert notification after the given number of consecutive check runs have failed. Possible values are between `1` and `5`. (Default `1`).
+- `failed_run_threshold` (Number) Send an alert notification after the given number of consecutive runs of a check or monitor in the group have failed. Possible values are between `1` and `5`. Defaults to `1`.
 
 
-<a id="nestedblock--enforce_alert_settings--alert_settings--ssl_certificates"></a>
-### Nested Schema for `enforce_alert_settings.alert_settings.ssl_certificates`
-
-Optional:
-
-- `alert_threshold` (Number) No longer available.
-- `enabled` (Boolean) No longer available.
-
-
-<a id="nestedblock--enforce_alert_settings--alert_settings--time_based_escalation"></a>
+<a id="nestedatt--enforce_alert_settings--alert_settings--time_based_escalation"></a>
 ### Nested Schema for `enforce_alert_settings.alert_settings.time_based_escalation`
 
 Optional:
 
-- `minutes_failing_threshold` (Number) Send an alert notification after the check has been failing for the given amount of time (in minutes). Possible values are `5`, `10`, `15`, and `30`. (Default `5`).
+- `minutes_failing_threshold` (Number) Send an alert notification after a check or monitor in the group has been failing for the given amount of time (in minutes). Possible values are `5`, `10`, `15` and `30`. Defaults to `5`.
 
 
 
 
-<a id="nestedblock--enforce_locations"></a>
+<a id="nestedatt--enforce_locations"></a>
 ### Nested Schema for `enforce_locations`
 
 Required:
@@ -449,40 +445,40 @@ Optional:
 - `private_locations` (Set of String) An array of one or more private locations slugs.
 
 
-<a id="nestedblock--enforce_retry_strategy"></a>
+<a id="nestedatt--enforce_retry_strategy"></a>
 ### Nested Schema for `enforce_retry_strategy`
 
 Required:
 
 - `enabled` (Boolean) Determines whether the enforced retry strategy should be active.
-- `retry_strategy` (Block List, Min: 1, Max: 1) A strategy for retrying failed check/monitor runs. (see [below for nested schema](#nestedblock--enforce_retry_strategy--retry_strategy))
+- `retry_strategy` (Attributes) A strategy for retrying failed check/monitor runs. (see [below for nested schema](#nestedatt--enforce_retry_strategy--retry_strategy))
 
-<a id="nestedblock--enforce_retry_strategy--retry_strategy"></a>
+<a id="nestedatt--enforce_retry_strategy--retry_strategy"></a>
 ### Nested Schema for `enforce_retry_strategy.retry_strategy`
 
 Required:
 
-- `type` (String) Determines which type of retry strategy to use. Possible values are `FIXED`, `LINEAR`, `EXPONENTIAL`, `SINGLE_RETRY`, and `NO_RETRIES`.
+- `type` (String) Determines which type of retry strategy to use. Possible values are `FIXED`, `LINEAR`, `EXPONENTIAL`, `SINGLE_RETRY` and `NO_RETRIES`.
 
 Optional:
 
-- `base_backoff_seconds` (Number) The number of seconds to wait before the first retry attempt. (Default `60`).
-- `max_duration_seconds` (Number) The total amount of time to continue retrying the check/monitor (maximum 600 seconds). Available when `type` is `FIXED`, `LINEAR`, or `EXPONENTIAL`. (Default `600`).
-- `max_retries` (Number) The maximum number of times to retry the check/monitor. Value must be between `1` and `10`. Available when `type` is `FIXED`, `LINEAR`, or `EXPONENTIAL`. (Default `2`).
-- `only_on` (Block List, Max: 1) Apply the retry strategy only if the defined conditions match. (see [below for nested schema](#nestedblock--enforce_retry_strategy--retry_strategy--only_on))
-- `same_region` (Boolean) Whether retries should be run in the same region as the initial check/monitor run. (Default `true`).
+- `base_backoff_seconds` (Number) The number of seconds to wait before the first retry attempt. Must be at least `0`. Defaults to `60`. Not available when `type` is `NO_RETRIES`.
+- `max_duration_seconds` (Number) The total amount of time to continue retrying the check/monitor, in seconds. Possible values are between `0` and `600`. Defaults to `600`. Available when `type` is `FIXED`, `LINEAR` or `EXPONENTIAL`.
+- `max_retries` (Number) The maximum number of times to retry the check/monitor. Possible values are between `1` and `10`. Defaults to `2`. Available when `type` is `FIXED`, `LINEAR` or `EXPONENTIAL`.
+- `only_on` (Attributes) Apply the retry strategy only if the defined conditions match. (see [below for nested schema](#nestedatt--enforce_retry_strategy--retry_strategy--only_on))
+- `same_region` (Boolean) Whether retries should be run in the same region as the initial check/monitor run. Defaults to `true`. Not available when `type` is `NO_RETRIES`.
 
-<a id="nestedblock--enforce_retry_strategy--retry_strategy--only_on"></a>
+<a id="nestedatt--enforce_retry_strategy--retry_strategy--only_on"></a>
 ### Nested Schema for `enforce_retry_strategy.retry_strategy.only_on`
 
 Optional:
 
-- `network_error` (Boolean) When `true`, retry only if the cause of the failure is a network error. (Default `false`).
+- `network_error` (Boolean) When `true`, retry only if the cause of the failure is a network error. Defaults to `false`.
 
 
 
 
-<a id="nestedblock--enforce_scheduling_strategy"></a>
+<a id="nestedatt--enforce_scheduling_strategy"></a>
 ### Nested Schema for `enforce_scheduling_strategy`
 
 Required:
@@ -491,21 +487,21 @@ Required:
 - `run_parallel` (Boolean) Determines if the checks in the group should run in all selected locations in parallel or round-robin.
 
 
-<a id="nestedblock--environment_variable"></a>
-### Nested Schema for `environment_variable`
+<a id="nestedatt--environment_variables"></a>
+### Nested Schema for `environment_variables`
 
 Required:
 
 - `key` (String) The name of the environment variable or secret.
-- `value` (String) The value of the environment variable or secret.
+- `value` (String, Sensitive) The value of the environment variable or secret. Must be at most `64000` bytes in UTF-8, or `31744` bytes for a secret or locked variable. A secret value must be at least `3` characters.
 
 Optional:
 
-- `locked` (Boolean) If true, the value is not shown by default, but it can be accessed. (Default `false`).
-- `secret` (Boolean) If true, the value will never be visible. The API never returns secret values, so Terraform keeps the last applied value and does not detect changes made outside Terraform. (Default `false`).
+- `locked` (Boolean) If true, the value is not shown by default, but it can be accessed. Defaults to `false`.
+- `secret` (Boolean) If true, the value will never be visible. The API never returns secret values, so Terraform keeps the last applied value and does not detect changes made outside Terraform. Defaults to `false`.
 
 
-<a id="nestedblock--setup_script"></a>
+<a id="nestedatt--setup_script"></a>
 ### Nested Schema for `setup_script`
 
 Optional:
@@ -514,10 +510,22 @@ Optional:
 - `snippet_id` (Number) The ID of a code snippet. Code snippets are not available for new plans.
 
 
-<a id="nestedblock--teardown_script"></a>
+<a id="nestedatt--teardown_script"></a>
 ### Nested Schema for `teardown_script`
 
 Optional:
 
 - `inline_script` (String) A valid piece of Node.js code.
 - `snippet_id` (Number) The ID of a code snippet. Code snippets are not available for new plans.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# Import an existing check group using its numeric ID.
+# The ID is returned by the Checkly API at GET /v1/check-groups.
+terraform import checkly_check_group_v2.example 12345
+```

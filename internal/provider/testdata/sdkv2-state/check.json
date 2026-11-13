@@ -1,0 +1,89 @@
+{
+    "activated": true,
+    "alert_channel_subscription": [],
+    "alert_settings": [
+        {
+            "escalation_type": "RUN_BASED",
+            "parallel_run_failure_threshold": [
+                {
+                    "enabled": false,
+                    "percentage": 10
+                }
+            ],
+            "reminders": [
+                {
+                    "amount": 1,
+                    "interval": 5
+                }
+            ],
+            "run_based_escalation": [
+                {
+                    "failed_run_threshold": 2
+                }
+            ],
+            "ssl_certificates": [],
+            "time_based_escalation": []
+        }
+    ],
+    "degraded_response_time": 15000,
+    "description": null,
+    "double_check": true,
+    "environment_variable": [],
+    "environment_variables": {
+        "A": "b"
+    },
+    "frequency": 10,
+    "frequency_offset": null,
+    "group_id": null,
+    "group_order": null,
+    "id": "123",
+    "local_setup_script": null,
+    "local_teardown_script": null,
+    "locations": null,
+    "max_response_time": 30000,
+    "muted": null,
+    "name": "c",
+    "private_locations": null,
+    "request": [
+        {
+            "assertion": [],
+            "basic_auth": [
+                {
+                    "password": "p",
+                    "username": "u"
+                }
+            ],
+            "body": "",
+            "body_type": "NONE",
+            "follow_redirects": false,
+            "headers": {},
+            "ip_family": "IPv4",
+            "method": "GET",
+            "query_parameters": {},
+            "skip_ssl": false,
+            "url": "https://example.com"
+        }
+    ],
+    "retry_strategy": [
+        {
+            "base_backoff_seconds": 60,
+            "max_duration_seconds": 600,
+            "max_retries": 2,
+            "only_on": [],
+            "same_region": true,
+            "type": "FIXED"
+        }
+    ],
+    "run_parallel": null,
+    "runtime_id": null,
+    "script": null,
+    "setup_snippet_id": null,
+    "should_fail": null,
+    "ssl_check": false,
+    "ssl_check_domain": null,
+    "tags": null,
+    "teardown_snippet_id": null,
+    "trigger_incident": [],
+    "type": "API",
+    "use_global_alert_settings": null
+}

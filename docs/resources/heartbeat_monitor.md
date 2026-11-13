@@ -16,7 +16,7 @@ Heartbeats allows you to monitor your cron jobs and set up alerting, so you get 
 resource "checkly_heartbeat_monitor" "example-heartbeat-monitor" {
   name      = "Example heartbeat monitor"
   activated = true
-  heartbeat {
+  heartbeat = {
     period      = 7
     period_unit = "days"
     grace       = 1
@@ -31,41 +31,41 @@ resource "checkly_heartbeat_monitor" "example-heartbeat-monitor" {
 
 ### Required
 
-- `activated` (Boolean) Determines if the check is running or not. Possible values `true`, and `false`.
-- `heartbeat` (Block Set, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--heartbeat))
-- `name` (String) The name of the check.
+- `heartbeat` (Attributes) The heartbeat schedule and grace period. (see [below for nested schema](#nestedatt--heartbeat))
+- `name` (String) The name of the monitor.
 
 ### Optional
 
-- `alert_channel_subscription` (Block Set) An array of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your monitor, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedblock--alert_channel_subscription))
-- `alert_settings` (Block List, Max: 1) Determines the alert escalation policy for the monitor. (see [below for nested schema](#nestedblock--alert_settings))
+- `activated` (Boolean) Determines whether the monitor runs on its schedule. Defaults to `true`.
+- `alert_channel_subscriptions` (Attributes Set) A set of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your monitor, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedatt--alert_channel_subscriptions))
+- `alert_settings` (Attributes) Determines the alert escalation policy for the monitor. (see [below for nested schema](#nestedatt--alert_settings))
 - `description` (String) A description of the monitor.
-- `muted` (Boolean) Determines if any notifications will be sent out when a check fails/degrades/recovers.
-- `tags` (Set of String) A list of tags for organizing and filtering checks.
-- `trigger_incident` (Block Set, Max: 1) Create and resolve an incident based on the alert configuration. Useful for status page automation. (see [below for nested schema](#nestedblock--trigger_incident))
-- `use_global_alert_settings` (Boolean) When true, the account level alert settings will be used, not the alert setting defined on this check.
+- `muted` (Boolean) Determines whether notifications are sent when the monitor fails or recovers. Defaults to `false`.
+- `tags` (Set of String) Tags for organizing and filtering checks and monitors.
+- `trigger_incident` (Attributes) Create and resolve an incident based on the alert configuration. Useful for status page automation. (see [below for nested schema](#nestedatt--trigger_incident))
+- `use_global_alert_settings` (Boolean) When true, the account level alert settings are used instead of the `alert_settings` of this monitor. Defaults to `true` when `alert_settings` is not set, and to `false` when it is.
 
 ### Read-Only
 
-- `id` (String) The ID of this resource.
+- `id` (String) The ID of the monitor.
 
-<a id="nestedblock--heartbeat"></a>
+<a id="nestedatt--heartbeat"></a>
 ### Nested Schema for `heartbeat`
 
 Required:
 
-- `grace` (Number) How long Checkly should wait before triggering any alerts when a ping does not arrive within the set period.
-- `grace_unit` (String) Possible values `seconds`, `minutes`, `hours` and `days`.
-- `period` (Number) How often you expect a ping to the ping URL.
-- `period_unit` (String) Possible values `seconds`, `minutes`, `hours` and `days`.
+- `grace` (Number) How long Checkly should wait before triggering any alerts when a ping does not arrive within the set period. Must be at least `0`, and the combination of `grace` and `grace_unit` must be at most 365 days.
+- `grace_unit` (String) The unit of `grace`. Possible values are `seconds`, `minutes`, `hours` and `days`.
+- `period` (Number) How often you expect a ping to the ping URL. The combination of `period` and `period_unit` must be between 30 seconds and 365 days.
+- `period_unit` (String) The unit of `period`. Possible values are `seconds`, `minutes`, `hours` and `days`.
 
 Optional:
 
-- `ping_token` (String) Custom token to generate your ping URL. Checkly will expect a ping to `https://ping.checklyhq.com/[PING_TOKEN]`.
+- `ping_token` (String, Sensitive) A custom lowercase UUID with hyphens to generate your ping URL from, such as `22868839-8450-4010-9241-1ea83a2e425f`. Checkly will expect a ping to `https://ping.checklyhq.com/[PING_TOKEN]`. If not set, Checkly generates one.
 
 
-<a id="nestedblock--alert_channel_subscription"></a>
-### Nested Schema for `alert_channel_subscription`
+<a id="nestedatt--alert_channel_subscriptions"></a>
+### Nested Schema for `alert_channel_subscriptions`
 
 Required:
 
@@ -73,63 +73,53 @@ Required:
 - `channel_id` (Number) The ID of the alert channel.
 
 
-<a id="nestedblock--alert_settings"></a>
+<a id="nestedatt--alert_settings"></a>
 ### Nested Schema for `alert_settings`
 
 Optional:
 
-- `escalation_type` (String) Determines the type of escalation to use. Possible values are `RUN_BASED` and `TIME_BASED`. (Default `RUN_BASED`).
-- `parallel_run_failure_threshold` (Block List) Configuration for parallel run failure threshold. (see [below for nested schema](#nestedblock--alert_settings--parallel_run_failure_threshold))
-- `reminders` (Block List) Defines how often to send reminder notifications after initial alert. (see [below for nested schema](#nestedblock--alert_settings--reminders))
-- `run_based_escalation` (Block List) Configuration for run-based escalation. (see [below for nested schema](#nestedblock--alert_settings--run_based_escalation))
-- `ssl_certificates` (Block Set, Deprecated) (see [below for nested schema](#nestedblock--alert_settings--ssl_certificates))
-- `time_based_escalation` (Block List) Configuration for time-based escalation. (see [below for nested schema](#nestedblock--alert_settings--time_based_escalation))
+- `escalation_type` (String) Determines the type of escalation to use. Possible values are `RUN_BASED` and `TIME_BASED`. Defaults to `RUN_BASED`.
+- `parallel_run_failure_threshold` (Attributes) Configuration for parallel run failure threshold. (see [below for nested schema](#nestedatt--alert_settings--parallel_run_failure_threshold))
+- `reminders` (Attributes) Defines how often to send reminder notifications after the initial alert. (see [below for nested schema](#nestedatt--alert_settings--reminders))
+- `run_based_escalation` (Attributes) Configuration for run-based escalation. (see [below for nested schema](#nestedatt--alert_settings--run_based_escalation))
+- `time_based_escalation` (Attributes) Configuration for time-based escalation. (see [below for nested schema](#nestedatt--alert_settings--time_based_escalation))
 
-<a id="nestedblock--alert_settings--parallel_run_failure_threshold"></a>
+<a id="nestedatt--alert_settings--parallel_run_failure_threshold"></a>
 ### Nested Schema for `alert_settings.parallel_run_failure_threshold`
 
 Optional:
 
-- `enabled` (Boolean) Whether parallel run failure threshold is enabled. Only applies if the monitor is scheduled for multiple locations in parallel. (Default `false`).
-- `percentage` (Number) Percentage of runs that must fail to trigger alert. Possible values are `10`, `20`, `30`, `40`, `50`, `60`, `70`, `80`, `90`, and `100`. (Default `10`).
+- `enabled` (Boolean) Whether parallel run failure threshold is enabled. Only applies if the monitor is scheduled for multiple locations in parallel. Defaults to `false`.
+- `percentage` (Number) Percentage of runs that must fail to trigger alert. Possible values are `10`, `20`, `30`, `40`, `50`, `60`, `70`, `80`, `90` and `100`. Defaults to `10`.
 
 
-<a id="nestedblock--alert_settings--reminders"></a>
+<a id="nestedatt--alert_settings--reminders"></a>
 ### Nested Schema for `alert_settings.reminders`
 
 Optional:
 
-- `amount` (Number) Number of reminder notifications to send. Possible values are `0`, `1`, `2`, `3`, `4`, `5`, and `100000` (`0` to disable, `100000` for unlimited). (Default `0`).
-- `interval` (Number) Interval between reminder notifications in minutes. Possible values are `5`, `10`, `15`, and `30`. (Default `5`).
+- `amount` (Number) Number of reminder notifications to send. Possible values are `0` (disabled), `1`, `2`, `3`, `4`, `5` and `100000` (unlimited). Defaults to `0`.
+- `interval` (Number) Interval between reminder notifications in minutes. Possible values are `5`, `10`, `15` and `30`. Defaults to `5`.
 
 
-<a id="nestedblock--alert_settings--run_based_escalation"></a>
+<a id="nestedatt--alert_settings--run_based_escalation"></a>
 ### Nested Schema for `alert_settings.run_based_escalation`
 
 Optional:
 
-- `failed_run_threshold` (Number) Send an alert notification after the given number of consecutive monitor runs have failed. Possible values are between `1` and `5`. (Default `1`).
+- `failed_run_threshold` (Number) Send an alert notification after the given number of consecutive monitor runs have failed. Possible values are between `1` and `5`. Defaults to `1`.
 
 
-<a id="nestedblock--alert_settings--ssl_certificates"></a>
-### Nested Schema for `alert_settings.ssl_certificates`
-
-Optional:
-
-- `alert_threshold` (Number) No longer available.
-- `enabled` (Boolean) No longer available.
-
-
-<a id="nestedblock--alert_settings--time_based_escalation"></a>
+<a id="nestedatt--alert_settings--time_based_escalation"></a>
 ### Nested Schema for `alert_settings.time_based_escalation`
 
 Optional:
 
-- `minutes_failing_threshold` (Number) Send an alert notification after the monitor has been failing for the given amount of time (in minutes). Possible values are `5`, `10`, `15`, and `30`. (Default `5`).
+- `minutes_failing_threshold` (Number) Send an alert notification after the monitor has been failing for the given amount of time (in minutes). Possible values are `5`, `10`, `15` and `30`. Defaults to `5`.
 
 
 
-<a id="nestedblock--trigger_incident"></a>
+<a id="nestedatt--trigger_incident"></a>
 ### Nested Schema for `trigger_incident`
 
 Required:
@@ -138,4 +128,16 @@ Required:
 - `name` (String) The name of the incident.
 - `notify_subscribers` (Boolean) Whether to notify subscribers when the incident is triggered.
 - `service_id` (String) The status page service that this incident will be associated with.
-- `severity` (String) The severity level of the incident. Possible values are `MINOR`, `MEDIUM`, `MAJOR`, and `CRITICAL`.
+- `severity` (String) The severity level of the incident. Possible values are `MINOR`, `MEDIUM`, `MAJOR` and `CRITICAL`.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# Import an existing heartbeat monitor using its check ID.
+# You can find the ID in the check's URL in the Checkly dashboard.
+terraform import checkly_heartbeat_monitor.example 3ffee447-5c86-4c56-b95a-2e1b4d1a1234
+```

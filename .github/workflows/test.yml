@@ -13,6 +13,15 @@ on:
   repository_dispatch:
     types: [deploy-success]
 
+# The acceptance tests use a shared Checkly account. Runs on the same ref wait
+# for each other instead of overlapping there, and a newer pending run replaces
+# an older one. This holds back the build jobs of a new push too, while
+# cancelling a running test leg would leave its resources behind in the
+# account. The test job additionally queues behind the test jobs of every
+# other ref.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+
 jobs:
   build:
     name: Go build
@@ -52,20 +61,25 @@ jobs:
     name: Matrix test
     needs: build
     runs-on: ubuntu-latest
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}
     timeout-minutes: 15
+    # Runs on all refs share the account too, so their test legs wait for
+    # each other in one queue. Without a queue, a newer pending leg would
+    # cancel an older pending one.
+    concurrency:
+      group: checkly-acceptance-account
+      queue: max
     strategy:
-      fail-fast: true
+      # The legs share one Checkly account, so they run one at a time.
+      max-parallel: 1
+      # The shared account makes single tests flaky, which should not cancel
+      # the remaining legs.
+      fail-fast: false
       matrix:
-        # list whatever Terraform versions here you would like to support
+        # The provider supports Terraform 1.8 or later, the oldest version
+        # that can move resources between resource types.
         terraform:
-#           - '0.12.*'
-#           - '0.13.*'
-#           - '0.14.*'
-          - '0.15.*'
-#           - '1.0.*'
-          - '1.1.*'
+          - '1.8.*'
+          - '1.*'
     steps:
     - name: Set up Go
       uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
@@ -87,15 +101,52 @@ jobs:
 
     - name: Set up gotestfmt
       uses: gotesttools/gotestfmt-action@eba2ac97f623e866e7b1b117c99f18b43cd36d18 # v2.3.0
+      with:
+        # Looking up the latest release without a token shares the runner
+        # IP's GitHub API rate limit with other jobs.
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Mirror the SDK v2 provider release
+      # The upgrade tests install the last SDK v2 release of the provider in
+      # every subtest, and a single failed request to GitHub or the registry
+      # fails that subtest. Downloading it once, with retries, into a local
+      # mirror that Terraform must install it from keeps the tests off the
+      # network for it.
+      run: |
+        set -euo pipefail
+        version=$(sed -n 's/^const sdkv2ProviderVersion = "\(.*\)"$/\1/p' internal/provider/upgrade_sdkv2_test.go)
+        test -n "$version"
+        mirror="$RUNNER_TEMP/terraform-provider-mirror"
+        dir="$mirror/registry.terraform.io/checkly/checkly"
+        zip="terraform-provider-checkly_${version}_linux_amd64.zip"
+        base="https://github.com/checkly/terraform-provider-checkly/releases/download/v${version}"
+        mkdir -p "$dir"
+        curl -fsSL --retry 10 --retry-all-errors --retry-delay 10 -o "$RUNNER_TEMP/SHA256SUMS" "$base/terraform-provider-checkly_${version}_SHA256SUMS"
+        curl -fsSL --retry 10 --retry-all-errors --retry-delay 10 -o "$dir/$zip" "$base/$zip"
+        (cd "$dir" && grep " $zip\$" "$RUNNER_TEMP/SHA256SUMS" | sha256sum -c -)
+        cat > "$RUNNER_TEMP/terraform.tfrc" <<EOF
+        provider_installation {
+          filesystem_mirror {
+            path    = "$mirror"
+            include = ["registry.terraform.io/checkly/checkly"]
+          }
+          direct {
+            exclude = ["registry.terraform.io/checkly/checkly"]
+          }
+        }
+        EOF
+        echo "TF_CLI_CONFIG_FILE=$RUNNER_TEMP/terraform.tfrc" >> "$GITHUB_ENV"
 
     - name: TF acceptance tests
       timeout-minutes: 10
-      # Limit parallelism to 4 to avoid hitting Checkly API rate limits.
+      # The SDK retries rate-limited (429) requests a few times, waiting as
+      # the API asks, so a burst of requests above the rate limit only slows
+      # tests down instead of failing them.
       # Use -json piped to tee + gotestfmt for real-time streaming output
       # in CI while also saving the raw log as an artifact.
       run: |
         set -euo pipefail
-        go test -v -parallel 4 -json ./... 2>&1 | tee /tmp/gotest.log | gotestfmt
+        go test -v -parallel 16 -json ./... 2>&1 | tee /tmp/gotest.log | gotestfmt
       env:
         TF_ACC: "1"
         TF_VAR_checkly_api_key: ${{ secrets.CHECKLY_API_KEY }}

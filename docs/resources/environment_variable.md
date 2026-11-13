@@ -3,12 +3,12 @@
 page_title: "checkly_environment_variable Resource - terraform-provider-checkly"
 subcategory: ""
 description: |-
-  
+  Global environment variables that can be referenced from check scripts.
 ---
 
 # checkly_environment_variable (Resource)
 
-
+Global environment variables that can be referenced from check scripts.
 
 ## Example Usage
 
@@ -31,14 +31,25 @@ resource "checkly_environment_variable" "variable_2" {
 
 ### Required
 
-- `key` (String)
-- `value` (String)
+- `key` (String) The name of the environment variable. Changing the name forces the environment variable to be replaced.
+- `value` (String, Sensitive) The value of the environment variable, which must not be empty. Must be at most `64000` bytes in UTF-8, or `31744` bytes for a secret or locked variable. A secret value must be at least `3` characters. The API never returns the value of a secret variable, so the provider keeps the configured value: a change made outside Terraform, for example in the web app, doesn't show in the plan. An imported secret variable has a null value, so the first plan after the import shows an update, and applying it overwrites the value in Checkly with the configured one.
 
 ### Optional
 
-- `locked` (Boolean)
-- `secret` (Boolean)
+- `locked` (Boolean) If true, the value is hidden in the Checkly UI by default, but it can be revealed. Defaults to `false`.
+- `secret` (Boolean) If true, the value can never be revealed after creation, and the API never returns it; see `value`. Defaults to `false`. The API can't turn a secret variable back into a regular one, so changing `secret` from `true` to `false` forces the environment variable to be replaced.
 
 ### Read-Only
 
-- `id` (String) The ID of this resource.
+- `id` (String) The ID of the environment variable. Identical to the key.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# Import an existing environment variable using its key.
+terraform import checkly_environment_variable.example API_KEY
+```

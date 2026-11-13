@@ -1,6 +1,6 @@
 # An Email alert channel
 resource "checkly_alert_channel" "email_ac" {
-  email {
+  email = {
     address = "john@example.com"
   }
   send_recovery        = true
@@ -12,7 +12,7 @@ resource "checkly_alert_channel" "email_ac" {
 
 # A SMS alert channel
 resource "checkly_alert_channel" "sms_ac" {
-  sms {
+  sms = {
     name   = "john"
     number = "+5491100001111"
   }
@@ -22,15 +22,15 @@ resource "checkly_alert_channel" "sms_ac" {
 
 # A Slack App alert channel, using the Checkly Slack App
 resource "checkly_alert_channel" "slack_app_ac" {
-  slack_app {
+  slack_app = {
     slack_channels = ["#checkly-notifications", "@john"]
   }
 }
 
 # A legacy Slack alert channel, using a Slack webhook URL.
-# Deprecated: use the slack_app block instead.
+# Deprecated: use the slack_app attribute instead.
 resource "checkly_alert_channel" "slack_ac" {
-  slack {
+  slack = {
     channel = "#checkly-notifications"
     url     = "https://hooks.slack.com/services/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"
   }
@@ -38,17 +38,17 @@ resource "checkly_alert_channel" "slack_ac" {
 
 # An Opsgenie alert channel
 resource "checkly_alert_channel" "opsgenie_ac" {
-  opsgenie {
+  opsgenie = {
     name     = "opsalerts"
     api_key  = "fookey"
-    region   = "fooregion"
-    priority = "foopriority"
+    region   = "US"
+    priority = "P1"
   }
 }
 
 # A Pagerduty alert channel
 resource "checkly_alert_channel" "pagerduty_ac" {
-  pagerduty {
+  pagerduty = {
     account      = "checkly"
     service_key  = "key1"
     service_name = "pdalert"
@@ -57,20 +57,20 @@ resource "checkly_alert_channel" "pagerduty_ac" {
 
 # A Webhook alert channel
 resource "checkly_alert_channel" "webhook_ac" {
-  webhook {
+  webhook = {
     name           = "foo"
-    method         = "get"
+    method         = "GET"
     template       = "footemplate"
     url            = "https://example.com/foo"
     webhook_secret = "foosecret"
   }
 }
 
-# A Firehydran alert channel integration
+# A FireHydrant alert channel integration
 resource "checkly_alert_channel" "firehydrant_ac" {
-  webhook {
+  webhook = {
     name         = "firehydrant"
-    method       = "post"
+    method       = "POST"
     template     = <<EOT
 {
   "event": "{{ALERT_TITLE}}",
@@ -80,8 +80,8 @@ resource "checkly_alert_channel" "firehydrant_ac" {
   "alert_type": "{{ALERT_TYPE}}",
   "started_at": "{{STARTED_AT}}",
   "check_result_id": "{{CHECK_RESULT_ID}}"
-},
-    EOT
+}
+EOT
     url          = "https://app.firehydrant.io/integrations/alerting/webhooks/2/checkly"
     webhook_type = "WEBHOOK_FIREHYDRANT"
   }
@@ -90,7 +90,7 @@ resource "checkly_alert_channel" "firehydrant_ac" {
 # A Rootly alert channel — In-App Routing mode.
 # Alerts are sent to Rootly and routed internally via Rootly Alert Routes.
 resource "checkly_alert_channel" "rootly_inapp_ac" {
-  webhook {
+  webhook = {
     name           = "Rootly (In-App Routing)"
     method         = "POST"
     url            = "https://webhooks.rootly.com/webhooks/incoming/checkly_webhooks"
@@ -118,7 +118,7 @@ EOT
 # Type is one of: Service, Group (for Teams), EscalationPolicy, Functionality.
 # The target ID can be found in the Rootly UI for the chosen resource.
 resource "checkly_alert_channel" "rootly_direct_ac" {
-  webhook {
+  webhook = {
     name           = "Rootly (Direct Routing)"
     method         = "POST"
     url            = "https://webhooks.rootly.com/webhooks/incoming/checkly_webhooks/notify/EscalationPolicy/<rootly-escalation-policy-id>"
@@ -142,16 +142,21 @@ EOT
 }
 
 # Connecting the alert channel to a check
-resource "checkly_check" "example_check" {
+resource "checkly_api_check" "example_check" {
   name = "Example check"
 
-  alert_channel_subscription {
-    channel_id = checkly_alert_channel.email_ac.id
-    activated  = true
+  request = {
+    url = "https://api.example.com/"
   }
 
-  alert_channel_subscription {
-    channel_id = checkly_alert_channel.sms_ac.id
-    activated  = true
-  }
+  alert_channel_subscriptions = [
+    {
+      channel_id = checkly_alert_channel.email_ac.id
+      activated  = true
+    },
+    {
+      channel_id = checkly_alert_channel.sms_ac.id
+      activated  = true
+    },
+  ]
 }

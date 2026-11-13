@@ -3,12 +3,12 @@
 page_title: "checkly_traceroute_monitor Resource - terraform-provider-checkly"
 subcategory: ""
 description: |-
-  Traceroute monitors trace the network path to a host and measure per-hop latency and packet loss. Traceroute monitors do not support private locations.
+  Traceroute monitors trace the network path to a host and measure per-hop latency and packet loss.
 ---
 
 # checkly_traceroute_monitor (Resource)
 
-Traceroute monitors trace the network path to a host and measure per-hop latency and packet loss. Traceroute monitors do not support private locations.
+Traceroute monitors trace the network path to a host and measure per-hop latency and packet loss.
 
 ## Example Usage
 
@@ -17,7 +17,6 @@ Traceroute monitors trace the network path to a host and measure per-hop latency
 resource "checkly_traceroute_monitor" "example-traceroute-monitor" {
   name                      = "Example traceroute monitor"
   activated                 = true
-  should_fail               = false
   frequency                 = 1
   use_global_alert_settings = true
 
@@ -25,36 +24,35 @@ resource "checkly_traceroute_monitor" "example-traceroute-monitor" {
     "us-west-1"
   ]
 
-  request {
+  request = {
     url = "api.checklyhq.com"
   }
 }
 
 # A more complex example tuning the trace and adding assertions
 resource "checkly_traceroute_monitor" "example-traceroute-monitor-2" {
-  name        = "Example traceroute monitor 2"
-  activated   = true
-  should_fail = false
-  frequency   = 5
+  name      = "Example traceroute monitor 2"
+  activated = true
+  frequency = 5
 
   locations = [
     "us-west-1",
     "ap-northeast-1",
   ]
 
-  alert_settings {
+  alert_settings = {
     escalation_type = "RUN_BASED"
 
-    run_based_escalation {
+    run_based_escalation = {
       failed_run_threshold = 1
     }
 
-    reminders {
+    reminders = {
       amount = 1
     }
   }
 
-  request {
+  request = {
     url      = "api.checklyhq.com"
     protocol = "ICMP"
     # ICMP probes have no port; the API also derives the default port for the
@@ -66,19 +64,20 @@ resource "checkly_traceroute_monitor" "example-traceroute-monitor-2" {
     ptr_lookup       = true
     timeout          = 10
 
-    assertion {
-      source     = "PACKET_LOSS"
-      property   = ""
-      comparison = "LESS_THAN"
-      target     = "10"
-    }
-
-    assertion {
-      source     = "RESPONSE_TIME"
-      property   = "avg"
-      comparison = "LESS_THAN"
-      target     = "2000"
-    }
+    assertions = [
+      {
+        source     = "PACKET_LOSS"
+        property   = ""
+        comparison = "LESS_THAN"
+        target     = "10"
+      },
+      {
+        source     = "RESPONSE_TIME"
+        property   = "avg"
+        comparison = "LESS_THAN"
+        target     = "800"
+      },
+    ]
   }
 }
 ```
@@ -88,70 +87,70 @@ resource "checkly_traceroute_monitor" "example-traceroute-monitor-2" {
 
 ### Required
 
-- `activated` (Boolean) Determines if the monitor is running or not. Possible values `true`, and `false`.
-- `frequency` (Number) Controls how often the monitor should run. Defined in minutes. The allowed values are `0` (high frequency - use `frequency_offset` to define the actual frequency), `1` (1 minute), `2` (2 minutes), `5` (5 minutes), `10` (10 minutes), `15` (15 minutes), `30` (30 minutes), `60` (1 hour), `120` (2 hours), `180` (3 hours), `360` (6 hours), `720` (12 hours) and `1440` (24 hours).
 - `name` (String) The name of the monitor.
-- `request` (Block List, Min: 1, Max: 1) The parameters for the traceroute probe. (see [below for nested schema](#nestedblock--request))
+- `request` (Attributes) The parameters for the traceroute probe. (see [below for nested schema](#nestedatt--request))
 
 ### Optional
 
-- `alert_channel_subscription` (Block Set) An array of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your monitor, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedblock--alert_channel_subscription))
-- `alert_settings` (Block List, Max: 1) Determines the alert escalation policy for the monitor. (see [below for nested schema](#nestedblock--alert_settings))
-- `degraded_response_time` (Number) The response time in milliseconds starting from which a monitor should be considered degraded. Possible values are between 0 and 30000. (Default `10000`).
+- `activated` (Boolean) Determines whether the monitor runs on its schedule. Defaults to `true`.
+- `alert_channel_subscriptions` (Attributes Set) A set of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your monitor, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedatt--alert_channel_subscriptions))
+- `alert_settings` (Attributes) Determines the alert escalation policy for the monitor. (see [below for nested schema](#nestedatt--alert_settings))
+- `degraded_response_time` (Number) The response time in milliseconds where the monitor should be considered degraded. Possible values are between `1` and `30000`. Defaults to `500`.
 - `description` (String) A description of the monitor.
-- `frequency_offset` (Number) When `frequency` is `0` (high frequency), `frequency_offset` is required and it alone controls how often the monitor should run. Defined in seconds. The allowed values are `0` (disabled - use `frequency` to define the actual frequency), `10` (10 seconds), `20` (20 seconds) and `30` (30 seconds).
-- `group_id` (Number) The id of the check group this monitor is part of.
-- `group_order` (Number) The position of this monitor in a check group. It determines in what order checks and monitors are run when a group is triggered from the API or from CI/CD.
-- `locations` (Set of String) An array of one or more data center locations where to run this monitor. (Default ["us-east-1"])
-- `max_response_time` (Number) The response time in milliseconds starting from which a monitor should be considered failing. Possible values are between 0 and 30000. (Default `20000`).
-- `muted` (Boolean) Determines if any notifications will be sent out when a monitor fails/degrades/recovers.
-- `retry_strategy` (Block List, Max: 1) A strategy for retrying failed check/monitor runs. (see [below for nested schema](#nestedblock--retry_strategy))
-- `run_parallel` (Boolean) Determines if the monitor should run in all selected locations in parallel or round-robin.
-- `runtime_id` (String) The ID of the runtime to use for this monitor.
-- `should_fail` (Boolean) Allows to invert the behaviour of when a monitor is considered to fail.
-- `tags` (Set of String) A list of tags for organizing and filtering checks and monitors.
-- `trigger_incident` (Block Set, Max: 1) Create and resolve an incident based on the alert configuration. Useful for status page automation. (see [below for nested schema](#nestedblock--trigger_incident))
-- `use_global_alert_settings` (Boolean) When true, the account level alert settings will be used, not the alert setting defined on this monitor.
+- `frequency` (Number) Controls how often the monitor should run. Defined in minutes. Possible values are `0` (high frequency - use `frequency_offset` to define the actual frequency), `1` (1 minute), `2` (2 minutes), `5` (5 minutes), `10` (10 minutes), `15` (15 minutes), `30` (30 minutes), `60` (1 hour), `120` (2 hours), `180` (3 hours), `360` (6 hours), `720` (12 hours) and `1440` (24 hours). Defaults to `10`.
+- `frequency_offset` (Number) When `frequency` is `0` (high frequency), `frequency_offset` is required and it alone controls how often the monitor should run. Defined in seconds. Possible values are `0` (disabled - use `frequency` to define the actual frequency), `10` (10 seconds), `20` (20 seconds) and `30` (30 seconds).
+- `group_id` (Number) The ID of the check group the monitor is part of. Must be at least `1`. If not set, the monitor is not part of a group.
+- `group_order` (Number) The position of the monitor in its check group, which sets the order in which the checks and monitors of the group run when the group is triggered from the API or CI/CD. Must be at least `0`. If not set, the monitor has no position in the group.
+- `locations` (Set of String) The data center locations to run the monitor from, such as `us-east-1`. The monitor needs at least one location in `locations` or `private_locations`, unless it is part of a check group.
+- `max_response_time` (Number) The response time in milliseconds where the monitor should be considered failing. Possible values are between `0` and `30000`. `0` means the monitor never fails on response time; any other value must be greater than or equal to `degraded_response_time`. Defaults to `1000`.
+- `muted` (Boolean) Determines whether notifications are sent when the monitor fails, degrades or recovers. Defaults to `false`.
+- `private_locations` (Set of String) The slugs of the private locations to run the monitor from. A private location runs traceroute monitors with agent v8.4.0 or later and the `NET_RAW` capability.
+- `retry_strategy` (Attributes) A strategy for retrying failed check/monitor runs. (see [below for nested schema](#nestedatt--retry_strategy))
+- `run_parallel` (Boolean) Determines whether the monitor runs in all its locations in parallel instead of in one location at a time, round-robin. Defaults to `false`.
+- `runtime_id` (String) The ID of the runtime to use for the monitor.
+- `tags` (Set of String) Tags for organizing and filtering checks and monitors.
+- `trigger_incident` (Attributes) Create and resolve an incident based on the alert configuration. Useful for status page automation. (see [below for nested schema](#nestedatt--trigger_incident))
+- `use_global_alert_settings` (Boolean) When true, the account level alert settings are used instead of the `alert_settings` of this monitor. Defaults to `true` when `alert_settings` is not set, and to `false` when it is.
 
 ### Read-Only
 
-- `id` (String) The ID of this resource.
+- `id` (String) The ID of the monitor.
 
-<a id="nestedblock--request"></a>
+<a id="nestedatt--request"></a>
 ### Nested Schema for `request`
 
 Required:
 
-- `url` (String) The host to trace the network path to. Do not include a scheme or a port in this value.
+- `url` (String) The host to trace the network path to. Must be between `1` and `2048` characters. Do not include a scheme or a port in this value.
 
 Optional:
 
-- `assertion` (Block Set) A request can have multiple assertions. The allowed comparisons, properties, and target formats depend on the assertion source — see the [Assertion Reference](#assertion-reference) below. (see [below for nested schema](#nestedblock--request--assertion))
-- `ip_family` (String) The IP family to use when executing the traceroute. The value can be either `IPv4` or `IPv6`. (Default `IPv4`).
-- `max_hops` (Number) The maximum number of network hops to probe before stopping. Possible values are between 1 and 64. (Default `30`).
-- `max_unknown_hops` (Number) The maximum number of consecutive unresponsive hops to tolerate before stopping the trace. Possible values are between 1 and 30, and the value must not exceed `max_hops`. (Default `min(15, max_hops)`).
-- `port` (Number) The destination port for TCP/UDP/SCTP probes. Possible values are between 1 and 65535. Ignored (and not sent) when `protocol = "ICMP"`. The default depends on the protocol: `443` for `TCP`, `33434` for `UDP` and `SCTP`.
-- `protocol` (String) The probe protocol. `TCP` sends SYN probes (default), `UDP` sends datagrams to a high port, `ICMP` sends Echo Requests, `SCTP` sends INIT chunks. (Default `TCP`).
-- `ptr_lookup` (Boolean) Whether to perform reverse-DNS (PTR) lookups on each hop's IP address. (Default `true`).
-- `timeout` (Number) The number of seconds to wait for the traceroute to complete before timing out. Possible values are between 1 and 30. (Default `10`).
+- `assertions` (Attributes Set) A request can have multiple assertions. The allowed comparisons, properties, and target formats depend on the assertion source — see the [Assertion Reference](#assertion-reference) below. (see [below for nested schema](#nestedatt--request--assertions))
+- `ip_family` (String) The IP family to use when executing the traceroute. Possible values are `IPv4` and `IPv6`. Defaults to `IPv4`.
+- `max_hops` (Number) The maximum number of network hops to probe before stopping. Possible values are between `1` and `64`. Defaults to `30`.
+- `max_unknown_hops` (Number) The maximum number of consecutive unresponsive hops to tolerate before stopping the trace. Possible values are between `1` and `30`, and the value must not exceed `max_hops`. If not set, the smaller of `15` and `max_hops` is used.
+- `port` (Number) The destination port for TCP/UDP/SCTP probes. Possible values are between `1` and `65535`. The default depends on the protocol: `443` for `TCP`, `33434` for `UDP` and `SCTP`. Must not be set when `protocol = "ICMP"`, which has no port.
+- `protocol` (String) The probe protocol. Possible values are `TCP` (sends SYN probes), `UDP` (sends datagrams to a high port), `ICMP` (sends Echo Requests) and `SCTP` (sends INIT chunks). Defaults to `TCP`.
+- `ptr_lookup` (Boolean) Whether to perform reverse-DNS (PTR) lookups on each hop's IP address. Defaults to `true`.
+- `timeout` (Number) The number of seconds to wait for the traceroute to complete before timing out. Possible values are between `1` and `30`. Defaults to `10`.
 
-<a id="nestedblock--request--assertion"></a>
-### Nested Schema for `request.assertion`
+<a id="nestedatt--request--assertions"></a>
+### Nested Schema for `request.assertions`
 
 Required:
 
-- `comparison` (String) The type of comparison to be executed between expected and actual value of the assertion. For `RESPONSE_TIME`, possible values are `EQUALS`, `NOT_EQUALS`, `GREATER_THAN`, and `LESS_THAN`. For `HOP_COUNT` and `PACKET_LOSS`, possible values are `EQUALS`, `GREATER_THAN`, and `LESS_THAN`.
-- `source` (String) The source of the asserted value. Possible values are `RESPONSE_TIME`, `HOP_COUNT`, and `PACKET_LOSS`.
+- `comparison` (String) The type of comparison to be executed between expected and actual value of the assertion. For `RESPONSE_TIME`, possible values are `EQUALS`, `NOT_EQUALS`, `GREATER_THAN` and `LESS_THAN`. For `HOP_COUNT` and `PACKET_LOSS`, possible values are `EQUALS`, `GREATER_THAN` and `LESS_THAN`.
+- `source` (String) The source of the asserted value. Possible values are `RESPONSE_TIME`, `HOP_COUNT` and `PACKET_LOSS`.
 
 Optional:
 
-- `property` (String) The statistic to assert on. Required for `RESPONSE_TIME`, where possible values are `avg`, `min`, `max`, and `stdDev`. Must be empty for `HOP_COUNT` and `PACKET_LOSS`.
-- `target` (String) The value to compare against. Must be numeric: a non-negative number of milliseconds for `RESPONSE_TIME`, a non-negative integer for `HOP_COUNT`, or a number between 0 and 100 for `PACKET_LOSS`.
+- `property` (String) The statistic to assert on. Required for `RESPONSE_TIME`, where possible values are `avg`, `min`, `max` and `stdDev`. Not used for `HOP_COUNT` and `PACKET_LOSS`.
+- `target` (String) The value to compare against. Required, and must be numeric without surrounding whitespace: a non-negative number of milliseconds for `RESPONSE_TIME`, a non-negative integer for `HOP_COUNT` or a number between `0` and `100` for `PACKET_LOSS`.
 
 
 
-<a id="nestedblock--alert_channel_subscription"></a>
-### Nested Schema for `alert_channel_subscription`
+<a id="nestedatt--alert_channel_subscriptions"></a>
+### Nested Schema for `alert_channel_subscriptions`
 
 Required:
 
@@ -159,73 +158,68 @@ Required:
 - `channel_id` (Number) The ID of the alert channel.
 
 
-<a id="nestedblock--alert_settings"></a>
+<a id="nestedatt--alert_settings"></a>
 ### Nested Schema for `alert_settings`
 
 Optional:
 
-- `escalation_type` (String) Determines the type of escalation to use. Possible values are `RUN_BASED` and `TIME_BASED`. (Default `RUN_BASED`).
-- `parallel_run_failure_threshold` (Block List) Configuration for parallel run failure threshold. (see [below for nested schema](#nestedblock--alert_settings--parallel_run_failure_threshold))
-- `reminders` (Block List) Defines how often to send reminder notifications after initial alert. (see [below for nested schema](#nestedblock--alert_settings--reminders))
-- `run_based_escalation` (Block List) Configuration for run-based escalation. (see [below for nested schema](#nestedblock--alert_settings--run_based_escalation))
-- `time_based_escalation` (Block List) Configuration for time-based escalation. (see [below for nested schema](#nestedblock--alert_settings--time_based_escalation))
+- `escalation_type` (String) Determines the type of escalation to use. Possible values are `RUN_BASED` and `TIME_BASED`. Defaults to `RUN_BASED`.
+- `parallel_run_failure_threshold` (Attributes) Configuration for parallel run failure threshold. (see [below for nested schema](#nestedatt--alert_settings--parallel_run_failure_threshold))
+- `reminders` (Attributes) Defines how often to send reminder notifications after the initial alert. (see [below for nested schema](#nestedatt--alert_settings--reminders))
+- `run_based_escalation` (Attributes) Configuration for run-based escalation. (see [below for nested schema](#nestedatt--alert_settings--run_based_escalation))
+- `time_based_escalation` (Attributes) Configuration for time-based escalation. (see [below for nested schema](#nestedatt--alert_settings--time_based_escalation))
 
-<a id="nestedblock--alert_settings--parallel_run_failure_threshold"></a>
+<a id="nestedatt--alert_settings--parallel_run_failure_threshold"></a>
 ### Nested Schema for `alert_settings.parallel_run_failure_threshold`
 
 Optional:
 
-- `enabled` (Boolean) Whether parallel run failure threshold is enabled. Only applies if the monitor is scheduled for multiple locations in parallel. (Default `false`).
-- `percentage` (Number) Percentage of runs that must fail to trigger alert. Possible values are `10`, `20`, `30`, `40`, `50`, `60`, `70`, `80`, `90`, and `100`. (Default `10`).
+- `enabled` (Boolean) Whether parallel run failure threshold is enabled. Only applies if the monitor is scheduled for multiple locations in parallel. Defaults to `false`.
+- `percentage` (Number) Percentage of runs that must fail to trigger alert. Possible values are `10`, `20`, `30`, `40`, `50`, `60`, `70`, `80`, `90` and `100`. Defaults to `10`.
 
 
-<a id="nestedblock--alert_settings--reminders"></a>
+<a id="nestedatt--alert_settings--reminders"></a>
 ### Nested Schema for `alert_settings.reminders`
 
 Optional:
 
-- `amount` (Number) Number of reminder notifications to send. Possible values are `0`, `1`, `2`, `3`, `4`, `5`, and `100000` (`0` to disable, `100000` for unlimited). (Default `0`).
-- `interval` (Number) Interval between reminder notifications in minutes. Possible values are `5`, `10`, `15`, and `30`. (Default `5`).
+- `amount` (Number) Number of reminder notifications to send. Possible values are `0` (disabled), `1`, `2`, `3`, `4`, `5` and `100000` (unlimited). Defaults to `0`.
+- `interval` (Number) Interval between reminder notifications in minutes. Possible values are `5`, `10`, `15` and `30`. Defaults to `5`.
 
 
-<a id="nestedblock--alert_settings--run_based_escalation"></a>
+<a id="nestedatt--alert_settings--run_based_escalation"></a>
 ### Nested Schema for `alert_settings.run_based_escalation`
 
 Optional:
 
-- `failed_run_threshold` (Number) Send an alert notification after the given number of consecutive monitor runs have failed. Possible values are between `1` and `5`. (Default `1`).
+- `failed_run_threshold` (Number) Send an alert notification after the given number of consecutive monitor runs have failed. Possible values are between `1` and `5`. Defaults to `1`.
 
 
-<a id="nestedblock--alert_settings--time_based_escalation"></a>
+<a id="nestedatt--alert_settings--time_based_escalation"></a>
 ### Nested Schema for `alert_settings.time_based_escalation`
 
 Optional:
 
-- `minutes_failing_threshold` (Number) Send an alert notification after the monitor has been failing for the given amount of time (in minutes). Possible values are `5`, `10`, `15`, and `30`. (Default `5`).
+- `minutes_failing_threshold` (Number) Send an alert notification after the monitor has been failing for the given amount of time (in minutes). Possible values are `5`, `10`, `15` and `30`. Defaults to `5`.
 
 
 
-<a id="nestedblock--retry_strategy"></a>
+<a id="nestedatt--retry_strategy"></a>
 ### Nested Schema for `retry_strategy`
 
 Required:
 
-- `type` (String) Determines which type of retry strategy to use. Possible values are `FIXED`, `LINEAR`, `EXPONENTIAL`, `SINGLE_RETRY`, and `NO_RETRIES`.
+- `type` (String) Determines which type of retry strategy to use. Possible values are `FIXED`, `LINEAR`, `EXPONENTIAL`, `SINGLE_RETRY` and `NO_RETRIES`.
 
 Optional:
 
-- `base_backoff_seconds` (Number) The number of seconds to wait before the first retry attempt. (Default `60`).
-- `max_duration_seconds` (Number) The total amount of time to continue retrying the check/monitor (maximum 600 seconds). Available when `type` is `FIXED`, `LINEAR`, or `EXPONENTIAL`. (Default `600`).
-- `max_retries` (Number) The maximum number of times to retry the check/monitor. Value must be between `1` and `10`. Available when `type` is `FIXED`, `LINEAR`, or `EXPONENTIAL`. (Default `2`).
-- `only_on` (Block List, Max: 1) Apply the retry strategy only if the defined conditions match. (see [below for nested schema](#nestedblock--retry_strategy--only_on))
-- `same_region` (Boolean) Whether retries should be run in the same region as the initial check/monitor run. (Default `true`).
-
-<a id="nestedblock--retry_strategy--only_on"></a>
-### Nested Schema for `retry_strategy.only_on`
+- `base_backoff_seconds` (Number) The number of seconds to wait before the first retry attempt. Must be at least `0`. Defaults to `60`. Not available when `type` is `NO_RETRIES`.
+- `max_duration_seconds` (Number) The total amount of time to continue retrying the check/monitor, in seconds. Possible values are between `0` and `600`. Defaults to `600`. Available when `type` is `FIXED`, `LINEAR` or `EXPONENTIAL`.
+- `max_retries` (Number) The maximum number of times to retry the check/monitor. Possible values are between `1` and `10`. Defaults to `2`. Available when `type` is `FIXED`, `LINEAR` or `EXPONENTIAL`.
+- `same_region` (Boolean) Whether retries should be run in the same region as the initial check/monitor run. Defaults to `true`. Not available when `type` is `NO_RETRIES`.
 
 
-
-<a id="nestedblock--trigger_incident"></a>
+<a id="nestedatt--trigger_incident"></a>
 ### Nested Schema for `trigger_incident`
 
 Required:
@@ -234,11 +228,23 @@ Required:
 - `name` (String) The name of the incident.
 - `notify_subscribers` (Boolean) Whether to notify subscribers when the incident is triggered.
 - `service_id` (String) The status page service that this incident will be associated with.
-- `severity` (String) The severity level of the incident. Possible values are `MINOR`, `MEDIUM`, `MAJOR`, and `CRITICAL`.
+- `severity` (String) The severity level of the incident. Possible values are `MINOR`, `MEDIUM`, `MAJOR` and `CRITICAL`.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# Import an existing traceroute monitor using its check ID.
+# You can find the ID in the check's URL in the Checkly dashboard.
+terraform import checkly_traceroute_monitor.example 3ffee447-5c86-4c56-b95a-2e1b4d1a1234
+```
 
 ## Assertion Reference
 
-Each `assertion` block has the shape `{ source, property, comparison, target }`. Which comparisons are allowed, and what `target` must contain, depend on `source`. The `comparison`, `target`, and `RESPONSE_TIME` `property` rules are enforced by the Checkly API at apply time; where `property` is marked as ignored, the API accepts any value but does not use it. All traceroute assertion targets are numeric.
+Each element of `request.assertions` has the shape `{ source, property, comparison, target }`. Which comparisons are allowed, and what `target` must contain, depend on `source`. The `comparison`, `target`, and `RESPONSE_TIME` `property` rules are checked at plan time; where `property` is marked as ignored, the API accepts any value but does not use it. All traceroute assertion targets are numeric, are required, and must not have leading or trailing whitespace.
 
 | `source` | `property` | Allowed `comparison` values | `target` |
 |---|---|---|---|
@@ -248,26 +254,30 @@ Each `assertion` block has the shape `{ source, property, comparison, target }`.
 
 ### Examples
 
+The following `assertions` list, placed inside `request`, shows one assertion per source.
+
 ```terraform
-# Average round-trip time must stay under 2 seconds.
-assertion {
-  source     = "RESPONSE_TIME"
-  property   = "avg"
-  comparison = "LESS_THAN"
-  target     = "2000"
-}
+assertions = [
+  # Average round-trip time must stay under 800 ms.
+  {
+    source     = "RESPONSE_TIME"
+    property   = "avg"
+    comparison = "LESS_THAN"
+    target     = "800"
+  },
 
-# The route must resolve in fewer than 20 hops.
-assertion {
-  source     = "HOP_COUNT"
-  comparison = "LESS_THAN"
-  target     = "20"
-}
+  # The route must resolve in fewer than 20 hops.
+  {
+    source     = "HOP_COUNT"
+    comparison = "LESS_THAN"
+    target     = "20"
+  },
 
-# Packet loss must stay under 10%.
-assertion {
-  source     = "PACKET_LOSS"
-  comparison = "LESS_THAN"
-  target     = "10"
-}
+  # Packet loss must stay under 10%.
+  {
+    source     = "PACKET_LOSS"
+    comparison = "LESS_THAN"
+    target     = "10"
+  },
+]
 ```

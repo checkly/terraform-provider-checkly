@@ -8,16 +8,16 @@ resource "checkly_icmp_monitor" "example-icmp-monitor" {
     "eu-west-1"
   ]
 
-  request {
+  request = {
     hostname   = "example.com"
     ip_family  = "IPv4"
     ping_count = 10
 
-    assertion {
+    assertions = [{
       source     = "LATENCY"
       property   = "avg"
       comparison = "LESS_THAN"
       target     = "200"
-    }
+    }]
   }
 }

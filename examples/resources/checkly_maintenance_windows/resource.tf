@@ -3,7 +3,7 @@ resource "checkly_maintenance_windows" "maintenance-1" {
   starts_at       = "2014-08-24T00:00:00.000Z"
   ends_at         = "2014-08-25T00:00:00.000Z"
   repeat_unit     = "MONTH"
-  repeat_ends_at  = "2014-08-24T00:00:00.000Z"
+  repeat_ends_at  = "2014-12-31"
   repeat_interval = 1
   tags = [
     "production"
@@ -24,13 +24,17 @@ resource "checkly_status_page" "example" {
   name = "Example Application"
   url  = "my-example-status-page"
 
-  card {
-    name = "Services"
+  cards = [
+    {
+      name = "Services"
 
-    service_attachment {
-      service_id = checkly_status_page_service.api.id
-    }
-  }
+      service_attachments = [
+        {
+          service_id = checkly_status_page_service.api.id
+        },
+      ]
+    },
+  ]
 }
 
 resource "checkly_maintenance_windows" "maintenance-2" {
@@ -42,7 +46,7 @@ resource "checkly_maintenance_windows" "maintenance-2" {
   ]
   description = "We're upgrading our API servers."
 
-  status_page_visibility {
+  status_page_visibility = {
     enabled         = true
     severity        = "MINOR"
     notify_on_start = true

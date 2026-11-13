@@ -14,7 +14,7 @@ resource "checkly_check_group_v2" "production-api" {
 
   # Enforce locations: all checks in this group will run in these locations,
   # regardless of what's configured on the individual check.
-  enforce_locations {
+  enforce_locations = {
     enabled           = true
     locations         = ["us-east-1", "eu-west-1", "ap-southeast-1"]
     private_locations = ["my-datacenter"]
@@ -22,10 +22,10 @@ resource "checkly_check_group_v2" "production-api" {
 
   # Enforce retry strategy: all checks in this group will use this retry
   # strategy, overriding any retry settings on the individual check.
-  enforce_retry_strategy {
+  enforce_retry_strategy = {
     enabled = true
 
-    retry_strategy {
+    retry_strategy = {
       type                 = "LINEAR"
       base_backoff_seconds = 30
       max_retries          = 3
@@ -35,61 +35,64 @@ resource "checkly_check_group_v2" "production-api" {
   }
 
   # Enforce scheduling strategy: all checks run in parallel across locations.
-  enforce_scheduling_strategy {
+  enforce_scheduling_strategy = {
     enabled      = true
     run_parallel = true
   }
 
   # Enforce alert settings: controls when alerts fire for all checks in the group.
-  enforce_alert_settings {
+  enforce_alert_settings = {
     enabled = true
 
-    alert_settings {
+    alert_settings = {
       escalation_type = "RUN_BASED"
 
-      run_based_escalation {
+      run_based_escalation = {
         failed_run_threshold = 2
       }
 
-      reminders {
+      reminders = {
         amount   = 3
         interval = 10
       }
 
-      parallel_run_failure_threshold {
+      parallel_run_failure_threshold = {
         enabled    = true
         percentage = 50
       }
     }
 
     # Subscribe alert channels to this group.
-    alert_channel_subscription {
-      channel_id = 1234
-      activated  = true
-    }
+    alert_channel_subscriptions = [
+      {
+        channel_id = 1234
+        activated  = true
+      }
+    ]
   }
 
   # Environment variables available to all checks in the group.
-  environment_variable {
-    key    = "BASE_URL"
-    value  = "https://api.example.com"
-    locked = false
-  }
-
-  environment_variable {
-    key    = "API_TOKEN"
-    value  = "super-secret-token"
-    locked = true
-    secret = true
-  }
+  environment_variables = [
+    {
+      key    = "BASE_URL"
+      value  = "https://api.example.com"
+      locked = false
+    },
+    {
+      key    = "API_TOKEN"
+      value  = "super-secret-token"
+      locked = true
+      secret = true
+    },
+  ]
 
   # Default runtime for checks that don't specify their own.
-  default_runtime {
+  default_runtime = {
     runtime_id = "2024.02"
   }
 
   # API check defaults: shared base URL, headers, and assertions.
-  api_check_defaults {
+  api_check_defaults = {
     url = "https://api.example.com/"
 
     headers = {
@@ -101,33 +104,34 @@ resource "checkly_check_group_v2" "production-api" {
       "version" = "v2"
     }
 
-    assertion {
-      source     = "STATUS_CODE"
-      comparison = "LESS_THAN"
-      target     = "400"
-    }
+    assertions = [
+      {
+        source     = "STATUS_CODE"
+        comparison = "LESS_THAN"
+        target     = "400"
+      },
+      {
+        source     = "RESPONSE_TIME"
+        comparison = "LESS_THAN"
+        target     = "3000"
+      },
+    ]
 
-    assertion {
-      source     = "RESPONSE_TIME"
-      comparison = "LESS_THAN"
-      target     = "3000"
-    }
-
-    basic_auth {
+    basic_auth = {
       username = "admin"
       password = "pass"
     }
   }
 
   # Setup and teardown scripts run in addition to each check's own scripts.
-  setup_script {
+  setup_script = {
     inline_script = <<-EOF
       // Runs before every API check in this group
       console.log("Setting up...")
     EOF
   }
 
-  teardown_script {
+  teardown_script = {
     inline_script = <<-EOF
       // Runs after every API check in this group
       console.log("Tearing down...")
@@ -140,10 +144,10 @@ resource "checkly_check_group_v2" "production-api" {
 resource "checkly_check_group_v2" "retry-on-network-errors" {
   name = "Retry on Network Errors Only"
 
-  enforce_retry_strategy {
+  enforce_retry_strategy = {
     enabled = true
 
-    retry_strategy {
+    retry_strategy = {
       type                 = "EXPONENTIAL"
       base_backoff_seconds = 10
       max_retries          = 5
@@ -151,7 +155,7 @@ resource "checkly_check_group_v2" "retry-on-network-errors" {
       same_region          = false
 
       # Only retry when the failure is a network error, not an assertion failure.
-      only_on {
+      only_on = {
         network_error = true
       }
     }
@@ -162,17 +166,17 @@ resource "checkly_check_group_v2" "retry-on-network-errors" {
 resource "checkly_check_group_v2" "time-based-alerts" {
   name = "Time-Based Alert Escalation"
 
-  enforce_alert_settings {
+  enforce_alert_settings = {
     enabled = true
 
-    alert_settings {
+    alert_settings = {
       escalation_type = "TIME_BASED"
 
-      time_based_escalation {
+      time_based_escalation = {
         minutes_failing_threshold = 10
       }
 
-      reminders {
+      reminders = {
         amount   = 5
         interval = 15
       }
@@ -184,54 +188,56 @@ resource "checkly_check_group_v2" "time-based-alerts" {
 resource "checkly_check_group_v2" "use-global-alerts" {
   name = "Use Global Alert Settings"
 
-  enforce_alert_settings {
-    enabled                   = true
+  enforce_alert_settings = {
+    enabled = true
+    # The provider derives true anyway when the enforcement sets no
+    # alert_settings; this example only states it explicitly.
     use_global_alert_settings = true
   }
 }
 
 # Example: enforce alert channel subscriptions with custom alert settings.
 resource "checkly_alert_channel" "email" {
-  email {
+  email = {
     address = "alerts@example.com"
   }
 }
 
 resource "checkly_alert_channel" "slack" {
-  slack {
-    channel = "#alerts"
-    url     = "https://hooks.slack.com/services/TXXXXX/XXXXX/XXXXXXXXXX"
+  slack_app = {
+    slack_channels = ["#alerts"]
   }
 }
 
 resource "checkly_check_group_v2" "with-alert-channels" {
   name = "Group with Alert Channels"
 
-  enforce_alert_settings {
+  enforce_alert_settings = {
     enabled = true
 
-    alert_settings {
+    alert_settings = {
       escalation_type = "RUN_BASED"
 
-      run_based_escalation {
+      run_based_escalation = {
         failed_run_threshold = 1
       }
 
-      reminders {
+      reminders = {
         amount   = 0
         interval = 5
       }
     }
 
-    alert_channel_subscription {
-      channel_id = checkly_alert_channel.email.id
-      activated  = true
-    }
-
-    alert_channel_subscription {
-      channel_id = checkly_alert_channel.slack.id
-      activated  = true
-    }
+    alert_channel_subscriptions = [
+      {
+        channel_id = checkly_alert_channel.email.id
+        activated  = true
+      },
+      {
+        channel_id = checkly_alert_channel.slack.id
+        activated  = true
+      },
+    ]
   }
 }
 
@@ -239,10 +245,10 @@ resource "checkly_check_group_v2" "with-alert-channels" {
 resource "checkly_check_group_v2" "no-retries" {
   name = "No Retries Group"
 
-  enforce_retry_strategy {
+  enforce_retry_strategy = {
     enabled = true
 
-    retry_strategy {
+    retry_strategy = {
       type = "NO_RETRIES"
     }
   }
@@ -252,10 +258,10 @@ resource "checkly_check_group_v2" "no-retries" {
 resource "checkly_check_group_v2" "single-retry" {
   name = "Single Retry Group"
 
-  enforce_retry_strategy {
+  enforce_retry_strategy = {
     enabled = true
 
-    retry_strategy {
+    retry_strategy = {
       type                 = "SINGLE_RETRY"
       base_backoff_seconds = 10
       same_region          = true

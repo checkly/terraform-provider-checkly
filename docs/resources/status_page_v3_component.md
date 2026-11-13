@@ -41,18 +41,30 @@ resource "checkly_status_page_v3_component" "api" {
 ### Required
 
 - `display_order` (Number) The position among siblings; lower comes first.
-- `name` (String) The name shown on the status page.
+- `name` (String) The name shown on the status page. Must be between `1` and `255` characters, without leading or trailing whitespace.
 - `status_page_id` (String) The ID of the v3 status page the component belongs to. A component cannot be moved to another page.
 
 ### Optional
 
 - `description` (String) An optional description shown next to the name.
-- `expanded_by_default` (Boolean) Render the group expanded when the status page loads. Only available on a `GROUP` component. (Default `false`).
-- `hidden` (Boolean) Hide the component from the public page while keeping it available for incidents and automation. (Default `false`).
+- `expanded_by_default` (Boolean) Render the group expanded when the status page loads. Defaults to `false`. Only available on a `GROUP` component.
+- `hidden` (Boolean) Hide the component from the public page while keeping it available for incidents and automation. Defaults to `false`.
 - `parent_id` (String) The ID of the GROUP component to nest this component under. Must be on the same status page.
-- `show_historical_data` (Boolean) Show the historical status (the uptime bar) of the component on the status page. (Default `true`).
-- `type` (String) The type of the component. The allowed values are `SERVICE` (a monitored thing with its own status) and `GROUP` (a container for other components). (Default `SERVICE`).
+- `show_historical_data` (Boolean) Show the historical status (the uptime bar) of the component on the status page. Defaults to `true`.
+- `type` (String) The type of the component. Possible values are `SERVICE` (a monitored thing with its own status) and `GROUP` (a container for other components). Defaults to `SERVICE`.
 
 ### Read-Only
 
-- `id` (String) The ID of this resource.
+- `id` (String) The ID of the component.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# Import an existing status page component using "<status_page_id>/<component_id>".
+# Both IDs are returned by the Checkly API at GET /v3/status-pages/{status_page_id}/components.
+terraform import checkly_status_page_v3_component.example e35f7e14-91b2-4d24-b7b6-e0f9e2f8e51c/0e4f5a72-6a5c-42a1-9a8a-5f7d38c8a9d1
+```

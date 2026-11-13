@@ -1,0 +1,981 @@
+package provider
+
+import (
+	"context"
+	"fmt"
+	"slices"
+
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/checkly/checkly-go-sdk/v2"
+)
+
+var checkTypeValues = allowedValues[string]{
+	{Value: "API"},
+	{Value: "BROWSER"},
+	{Value: "MULTI_STEP"},
+}
+
+var (
+	_ resource.Resource                     = (*CheckResource)(nil)
+	_ resource.ResourceWithConfigure        = (*CheckResource)(nil)
+	_ resource.ResourceWithUpgradeState     = (*CheckResource)(nil)
+	_ resource.ResourceWithImportState      = (*CheckResource)(nil)
+	_ resource.ResourceWithConfigValidators = (*CheckResource)(nil)
+	_ resource.ResourceWithValidateConfig   = (*CheckResource)(nil)
+	_ resource.ResourceWithModifyPlan       = (*CheckResource)(nil)
+)
+
+// NewCheckResource returns a new checkly_check resource.
+func NewCheckResource() resource.Resource {
+	return &CheckResource{}
+}
+
+// CheckResource implements the checkly_check resource.
+type CheckResource struct {
+	client  checkly.Client
+	account *accountLookup
+}
+
+// CheckResourceModel describes the resource data model.
+type CheckResourceModel struct {
+	ID                        types.String `tfsdk:"id"`
+	Name                      types.String `tfsdk:"name"`
+	Description               types.String `tfsdk:"description"`
+	Type                      types.String `tfsdk:"type"`
+	Frequency                 types.Int64  `tfsdk:"frequency"`
+	FrequencyOffset           types.Int64  `tfsdk:"frequency_offset"`
+	Activated                 types.Bool   `tfsdk:"activated"`
+	Muted                     types.Bool   `tfsdk:"muted"`
+	ShouldFail                types.Bool   `tfsdk:"should_fail"`
+	RunParallel               types.Bool   `tfsdk:"run_parallel"`
+	Locations                 types.Set    `tfsdk:"locations"`
+	Script                    types.String `tfsdk:"script"`
+	DegradedResponseTime      types.Int64  `tfsdk:"degraded_response_time"`
+	MaxResponseTime           types.Int64  `tfsdk:"max_response_time"`
+	EnvironmentVariables      types.List   `tfsdk:"environment_variables"`
+	Tags                      types.Set    `tfsdk:"tags"`
+	SSLCheckDomain            types.String `tfsdk:"ssl_check_domain"`
+	SetupSnippetID            types.Int64  `tfsdk:"setup_snippet_id"`
+	TeardownSnippetID         types.Int64  `tfsdk:"teardown_snippet_id"`
+	LocalSetupScript          types.String `tfsdk:"local_setup_script"`
+	LocalTeardownScript       types.String `tfsdk:"local_teardown_script"`
+	RuntimeID                 types.String `tfsdk:"runtime_id"`
+	AlertChannelSubscriptions types.Set    `tfsdk:"alert_channel_subscriptions"`
+	PrivateLocations          types.Set    `tfsdk:"private_locations"`
+	AlertSettings             types.Object `tfsdk:"alert_settings"`
+	UseGlobalAlertSettings    types.Bool   `tfsdk:"use_global_alert_settings"`
+	DoubleCheck               types.Bool   `tfsdk:"double_check"`
+	Request                   types.Object `tfsdk:"request"`
+	GroupID                   types.Int64  `tfsdk:"group_id"`
+	GroupOrder                types.Int64  `tfsdk:"group_order"`
+	RetryStrategy             types.Object `tfsdk:"retry_strategy"`
+	TriggerIncident           types.Object `tfsdk:"trigger_incident"`
+	Intent                    types.Object `tfsdk:"intent"`
+	AIAutoRepairEnabled       types.Bool   `tfsdk:"ai_auto_repair_enabled"`
+}
+
+func (r *CheckResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_check"
+}
+
+func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+	resp.Schema = schema.Schema{
+		Version: sdkv2SchemaVersion + 1,
+		Description: "Checks allows you to monitor key webapp flows, backend API's and set up alerting, so you get a notification when things break or slow down." +
+			"\n\n" +
+			"The `checkly_check` resource type is deprecated in favor of `checkly_api_check`, `checkly_browser_check` " +
+			"and `checkly_multistep_check`, which only expose the attributes of their check type, and will be removed " +
+			"in a future version of the provider. An existing check can be switched over to its per-type resource " +
+			"with a `moved` block, without recreating it. Before moving a check, see " +
+			"[Deprecated resource types](https://registry.terraform.io/providers/checkly/checkly/latest/docs/guides/upgrading-to-v2#deprecated-resource-types) " +
+			"in the v2 upgrade guide for what to change: `checkly_api_check` has lower default " +
+			"`degraded_response_time` and `max_response_time` values and follows redirects by default, and the " +
+			"per-type resources have no `double_check`.",
+		DeprecationMessage: "The `checkly_check` resource is deprecated in favor of dedicated resource types for each check type: " +
+			"`checkly_api_check`, `checkly_browser_check` and `checkly_multistep_check`. " +
+			"These expose only the properties relevant to their check type. " +
+			"Use a `moved` block to migrate existing resources without recreating them. " +
+			"When migrating an API check, note that the default `degraded_response_time` and `max_response_time` " +
+			"changed from 15000/30000 to 5000/20000, and `request.follow_redirects` from `false` to `true` — " +
+			"set them explicitly to keep the previous behaviour. " +
+			"`checkly_api_check` has no `environment_variables` attribute, which never had an effect on API checks.",
+		Attributes: withCommonCheckAttributes(map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				Computed:    true,
+				Description: "The ID of the check.",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"name": schema.StringAttribute{
+				Required:    true,
+				Description: "The name of the check.",
+			},
+			"description": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Default:     stringdefault.StaticString(""),
+				Description: "A description of the check.",
+			},
+			"type": schema.StringAttribute{
+				Required:    true,
+				Description: "The type of the check. " + checkTypeValues.String(),
+				Validators: []validator.String{
+					stringvalidator.OneOf(checkTypeValues.Values()...),
+				},
+			},
+			frequencyAttributeName: makeFrequencyAttributeSchema(FrequencyAttributeSchemaOptions{
+				Subject:            subjectCheck,
+				AllowHighFrequency: true,
+			}),
+			frequencyOffsetAttributeName: makeFrequencyOffsetAttributeSchema(FrequencyOffsetAttributeSchemaOptions{
+				Subject:    subjectCheck,
+				Disclaimer: "Only relevant when `type` is `API`.",
+			}),
+			"script": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Default:     stringdefault.StaticString(""),
+				Description: "A valid piece of Node.js JavaScript code describing a browser interaction with the Puppeteer/Playwright framework or a reference to an external JavaScript file. Required when `type` is `BROWSER` or `MULTI_STEP`; has no effect when it is `API`. Updating a browser or multi-step check clears the script path and dependencies that the Checkly CLI sets for multi-file scripts.",
+			},
+			"degraded_response_time": schema.Int64Attribute{
+				Optional: true,
+				Computed: true,
+				Default:  int64default.StaticInt64(15000),
+				// https://checklyhq.com/docs/api-checks/limits/
+				Validators: []validator.Int64{
+					int64validator.Between(0, extendedResponseTimeLimit),
+				},
+				Description: "The response time in milliseconds where the check should be considered degraded. Possible values are between `0` and `30000`, or up to `45000` if extended limits have been approved for your account. Defaults to `15000`. Only relevant when `type` is `API`.",
+			},
+			"max_response_time": schema.Int64Attribute{
+				Optional: true,
+				Computed: true,
+				Default:  int64default.StaticInt64(30000),
+				// https://checklyhq.com/docs/api-checks/limits/
+				Validators: []validator.Int64{
+					int64validator.Between(0, extendedResponseTimeLimit),
+				},
+				Description: "The response time in milliseconds where the check should be considered failing. Possible values are between `0` and `30000`, or up to `45000` if extended limits have been approved for your account. Defaults to `30000`. Only relevant when `type` is `API`.",
+			},
+			"ssl_check_domain": schema.StringAttribute{
+				Optional:    true,
+				Description: "A valid fully qualified domain name (FQDN) to check its SSL certificate. Only relevant when `type` is `BROWSER`.",
+			},
+			"setup_snippet_id":    snippetIDAttributeSchema("The ID of the snippet to run in the setup phase of the API check. Must be at least `1`. If not set, no setup snippet runs. Only relevant when `type` is `API`."),
+			"teardown_snippet_id": snippetIDAttributeSchema("The ID of the snippet to run in the teardown phase of the API check. Must be at least `1`. If not set, no teardown snippet runs. Only relevant when `type` is `API`."),
+			"local_setup_script": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Default:     stringdefault.StaticString(""),
+				Description: "A valid piece of Node.js code to run in the setup phase of an API check.",
+			},
+			"local_teardown_script": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Default:     stringdefault.StaticString(""),
+				Description: "A valid piece of Node.js code to run in the teardown phase of an API check.",
+			},
+			triggerIncidentAttributeName: makeTriggerIncidentSchema(),
+			alertSettingsAttributeName:   makeAlertSettingsAttributeSchema(AlertSettingsAttributeSchemaOptions{Subject: subjectCheck}),
+			retryStrategyAttributeName: makeRetryStrategyAttributeSchema(RetryStrategyAttributeSchemaOptions{
+				SupportsOnlyOnNetworkError: true,
+				DoubleCheck:                true,
+			}),
+			doubleCheckAttributeName:         doubleCheckAttributeSchema(),
+			checkIntentAttributeName:         makeCheckIntentSchema(),
+			aiAutoRepairEnabledAttributeName: makeAIAutoRepairEnabledSchema(),
+			"request": apiCheckRequestAttributeSchema(apiCheckRequestAttributeSchemaOptions{
+				Description: "An API check might have one request config. Only relevant when `type` is `API`.",
+			}),
+			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{Subject: subjectCheck}),
+			environmentVariableAttributeName: makeEnvironmentVariableSchema(EnvironmentVariableAttributeSchemaOptions{
+				Description: "Insert environment variables into the runtime environment. Only relevant for browser checks. Use global environment variables whenever possible.",
+			}),
+		}, CommonCheckAttributeSchemaOptions{Subject: subjectCheck, ShouldFail: true, RunParallel: true, Locations: true, GroupMembership: true, RuntimeID: true, ShouldFailNote: checkShouldFailNote}),
+	}
+}
+
+func (r *CheckResource) ConfigValidators(ctx context.Context) []resource.ConfigValidator {
+	return []resource.ConfigValidator{
+		newFrequencyOffsetConfigValidator(),
+	}
+}
+
+func (r *CheckResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var checkType types.String
+	var frequency types.Int64
+	var sslCheckDomain types.String
+	var shouldFail types.Bool
+	var environmentVariables types.List
+	var request types.Object
+
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("type"), &checkType)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(frequencyAttributeName), &frequency)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("ssl_check_domain"), &sslCheckDomain)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(shouldFailAttributeName), &shouldFail)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(environmentVariableAttributeName), &environmentVariables)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("request"), &request)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if checkType.IsNull() || checkType.IsUnknown() {
+		return
+	}
+
+	// High frequency scheduling (frequency 0) is only available for API
+	// checks.
+	if checkType.ValueString() != string(checkly.CheckTypeAPI) &&
+		!frequency.IsNull() && !frequency.IsUnknown() &&
+		frequency.ValueInt64() == 0 {
+		resp.Diagnostics.AddAttributeError(
+			path.Root(frequencyAttributeName),
+			"Invalid Attribute Combination",
+			fmt.Sprintf(`"frequency" can be 0 (high frequency scheduling) only when "type" is "API"; %s checks run at most every minute. Set "frequency" to 1 or more.`, checkType.ValueString()),
+		)
+	}
+
+	// An API check without a request is rejected by the API.
+	if checkType.ValueString() == string(checkly.CheckTypeAPI) && request.IsNull() {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("request"),
+			"Missing Attribute Configuration",
+			`An API check needs a request: set "request" with at least its "url".`,
+		)
+	}
+
+	// SSL certificate checks are only available for browser checks. An
+	// empty domain passes the API, which doesn't store it either.
+	if checkType.ValueString() == string(checkly.CheckTypeAPI) &&
+		!sslCheckDomain.IsNull() && !sslCheckDomain.IsUnknown() {
+		if sslCheckDomain.ValueString() != "" {
+			resp.Diagnostics.AddAttributeError(
+				path.Root("ssl_check_domain"),
+				"Invalid Attribute Combination",
+				"ssl_check_domain is allowed only for Browser checks",
+			)
+		} else {
+			addIgnoredCheckAttributeWarning(&resp.Diagnostics, "ssl_check_domain", checkType.ValueString())
+		}
+	}
+
+	// Inverting the outcome is only supported on API checks, matching the
+	// Checkly CLI, so any value is rejected on the other types, false included.
+	if checkType.ValueString() != string(checkly.CheckTypeAPI) && !shouldFail.IsNull() && !shouldFail.IsUnknown() {
+		resp.Diagnostics.AddAttributeError(
+			path.Root(shouldFailAttributeName),
+			"Unsupported Attribute",
+			"should_fail is only supported on API checks. Remove it from browser and multi-step checks.",
+		)
+	}
+
+	// The API ignores environment variables of API checks, so they would
+	// show as a change in every plan.
+	if checkType.ValueString() == string(checkly.CheckTypeAPI) &&
+		!environmentVariables.IsUnknown() && len(environmentVariables.Elements()) > 0 {
+		resp.Diagnostics.AddAttributeWarning(
+			path.Root(environmentVariableAttributeName),
+			"Environment Variables Have No Effect",
+			"API checks do not use environment variables, so the API does not store them and every plan "+
+				"shows them as a change. Remove environment_variables from this check.",
+		)
+	}
+
+	for _, name := range checkIgnoredAttributes[checkly.CheckType(checkType.ValueString())] {
+		var value attr.Value
+		resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(name), &value)...)
+		if value == nil || value.IsNull() || value.IsUnknown() {
+			continue
+		}
+		addIgnoredCheckAttributeWarning(&resp.Diagnostics, name, checkType.ValueString())
+	}
+}
+
+// checkAPIOnlyAttributes are the checkly_check attributes that only API
+// checks use.
+var checkAPIOnlyAttributes = []string{
+	"request",
+	frequencyOffsetAttributeName,
+	"degraded_response_time",
+	"max_response_time",
+	"setup_snippet_id",
+	"teardown_snippet_id",
+	"local_setup_script",
+	"local_teardown_script",
+}
+
+// checkIgnoredAttributes lists, for each check type, the checkly_check
+// attributes that the API endpoint of that type has no field for (see
+// apiCheckModelFromCheckModel and its siblings), so a configured value only
+// changes the state. environment_variables and ssl_check_domain on API checks
+// have diagnostics of their own.
+var checkIgnoredAttributes = map[checkly.CheckType][]string{
+	checkly.CheckTypeAPI:       {"script"},
+	checkly.CheckTypeBrowser:   checkAPIOnlyAttributes,
+	checkly.CheckTypeMultiStep: append(slices.Clone(checkAPIOnlyAttributes), "ssl_check_domain"),
+}
+
+// addIgnoredCheckAttributeWarning warns that a configured attribute has no
+// effect on checks of the given type.
+func addIgnoredCheckAttributeWarning(diags *diag.Diagnostics, name string, checkType string) {
+	detail := fmt.Sprintf(`%s checks don't use %q: checkly_check doesn't send it to the API, so changing it only changes the state. `+
+		`Remove it from this check, or move the check to %s, which only has the attributes of its check type.`,
+		checkType, name, checkResourceTypeForCheckType(checkly.CheckType(checkType)))
+	if name == frequencyOffsetAttributeName {
+		detail += ` High frequency scheduling ("frequency" 0), which needs "frequency_offset", is only available for API checks.`
+	}
+	diags.AddAttributeWarning(path.Root(name), "Attribute Has No Effect", detail)
+}
+
+// UpgradeState upgrades state written by the provider's SDK v2
+// implementation; see sdkv2StateUpgraders.
+func (r *CheckResource) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
+	return sdkv2StateUpgraders(ctx, r)
+}
+
+func (r *CheckResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+	r.client = clientFromProviderData(req.ProviderData, &resp.Diagnostics)
+	r.account = accountFromProviderData(req.ProviderData)
+}
+
+// ModifyPlan applies default values to the optional+computed attributes of
+// the request assertions. Schema defaults cannot be used for attributes
+// nested in set elements (see the schema for details), so the plan is
+// adjusted here instead. Substituting static values keeps every set element
+// fully known and stable across plans, which set element correlation
+// requires.
+//
+// For API checks, it also checks the response time limits against the
+// account, which needs the configured provider and so can't be done in
+// ValidateConfig. Browser and multi-step checks don't use them.
+func (r *CheckResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	planNestedDefaults(ctx, req, resp, path.Root("request"), objectWithSetDefaults("assertions", assertionsWithPropertyAndTargetDefaults))
+
+	var checkType types.String
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("type"), &checkType)...)
+	if resp.Diagnostics.HasError() || checkType.IsNull() || checkType.IsUnknown() {
+		return
+	}
+	if checkType.ValueString() == string(checkly.CheckTypeAPI) {
+		r.account.validateResponseTimeLimits(ctx, req.Plan, httpStandardResponseTimeLimit, &resp.Diagnostics)
+		return
+	}
+
+	// An empty script is reported in the plan when it is known there.
+	// Create and Update check again for a script known only at apply time.
+	validatePlannedCheckScript(ctx, req, resp, checkType.ValueString())
+}
+
+func (r *CheckResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var plan CheckResourceModel
+
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	validateCheckScript(&plan, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	r.validateCheckRuntimeSupport(ctx, &plan, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	apiCtx, cancel := contextWithAPITimeout(ctx)
+	defer cancel()
+
+	result, err := r.createCheck(apiCtx, &plan, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if err != nil {
+		addAPIError(&resp.Diagnostics, "Unable to Create Check", err)
+		return
+	}
+
+	checkResolveComputedValues(ctx, result, &plan, &resp.Diagnostics)
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+}
+
+func (r *CheckResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	var state CheckResourceModel
+
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	apiCtx, cancel := contextWithAPITimeout(ctx)
+	defer cancel()
+
+	check, err := r.client.GetCheck(apiCtx, state.ID.ValueString())
+	if err != nil {
+		if isNotFoundError(err) {
+			resp.State.RemoveResource(ctx)
+			return
+		}
+		addAPIError(&resp.Diagnostics, "Unable to Read Check", err)
+		return
+	}
+
+	checkToModel(ctx, check, &state, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+}
+
+func (r *CheckResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var plan CheckResourceModel
+
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	validateCheckScript(&plan, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	r.validateCheckRuntimeSupport(ctx, &plan, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	apiCtx, cancel := contextWithAPITimeout(ctx)
+	defer cancel()
+
+	result, err := r.updateCheck(apiCtx, &plan, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if err != nil {
+		addAPIError(&resp.Diagnostics, "Unable to Update Check", err)
+		return
+	}
+
+	checkResolveComputedValues(ctx, result, &plan, &resp.Diagnostics)
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+}
+
+func (r *CheckResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var state CheckResourceModel
+
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	apiCtx, cancel := contextWithAPITimeout(ctx)
+	defer cancel()
+
+	err := r.client.DeleteCheck(apiCtx, state.ID.ValueString())
+	if err != nil {
+		if isNotFoundError(err) {
+			return
+		}
+		addAPIError(&resp.Diagnostics, "Unable to Delete Check", err)
+		return
+	}
+}
+
+func (r *CheckResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+}
+
+// checkStateMovers returns the state movers of the dedicated check resource
+// type targetTypeName for `moved` blocks from checkly_check. Only checks of
+// type checkType can be moved; toTarget maps the source model to the target
+// model, which is stored as the target state.
+func checkStateMovers[T any](ctx context.Context, checkType checkly.CheckType, toTarget func(source *CheckResourceModel) T) []resource.StateMover {
+	targetTypeName := checkResourceTypeForCheckType(checkType)
+	var schemaResp resource.SchemaResponse
+	(&CheckResource{}).Schema(ctx, resource.SchemaRequest{}, &schemaResp)
+	sourceSchema := schemaResp.Schema
+
+	return []resource.StateMover{
+		{
+			SourceSchema: &sourceSchema,
+			StateMover: func(ctx context.Context, req resource.MoveStateRequest, resp *resource.MoveStateResponse) {
+				sourceState := moveSourceState(ctx, req, sourceSchema, &resp.Diagnostics, "checkly_check")
+				if sourceState == nil {
+					return
+				}
+
+				var source CheckResourceModel
+				resp.Diagnostics.Append(sourceState.Get(ctx, &source)...)
+				if resp.Diagnostics.HasError() {
+					return
+				}
+
+				if sourceType := checkly.CheckType(source.Type.ValueString()); sourceType != checkType {
+					resp.Diagnostics.AddError(
+						"Unable to Move Resource State",
+						fmt.Sprintf(
+							"The source checkly_check resource has type %q and cannot "+
+								"be moved to %s, which only supports %s checks. Move the "+
+								"resource to %s instead.",
+							sourceType,
+							targetTypeName,
+							checkType,
+							checkResourceTypeForCheckType(sourceType),
+						),
+					)
+					return
+				}
+
+				// Only checkly_api_check has should_fail, so the move drops it
+				// from the state of the other types.
+				if checkType != checkly.CheckTypeAPI && source.ShouldFail.ValueBool() {
+					addUnsupportedShouldFailWarning(&resp.Diagnostics, targetTypeName)
+				}
+
+				target := toTarget(&source)
+				resp.Diagnostics.Append(resp.TargetState.Set(ctx, &target)...)
+			},
+		},
+	}
+}
+
+// checkResourceTypeForCheckType maps a checkly_check type value to the name
+// of the dedicated resource type that replaces it.
+func checkResourceTypeForCheckType(checkType checkly.CheckType) string {
+	switch checkType {
+	case checkly.CheckTypeAPI:
+		return "checkly_api_check"
+	case checkly.CheckTypeBrowser:
+		return "checkly_browser_check"
+	case checkly.CheckTypeMultiStep:
+		return "checkly_multistep_check"
+	default:
+		return "the dedicated resource type for its check type"
+	}
+}
+
+// addUnsupportedShouldFailWarning warns that a check managed by a resource
+// type without should_fail has should_fail set to true in Checkly, which the
+// resource can neither show nor change until its next update sends false.
+func addUnsupportedShouldFailWarning(diags *diag.Diagnostics, resourceType string) {
+	diags.AddWarning(
+		"should_fail Is Not Supported",
+		fmt.Sprintf("This check has should_fail set to true in Checkly, which inverts its result: it passes when its script fails "+
+			"and fails when its script passes. %s does not support should_fail, so the plan does not show it. "+
+			"The next apply that updates this check, for any change, sets it to false; change any attribute of "+
+			"the check to reset it now.", resourceType),
+	)
+}
+
+// validateCheckRuntimeSupport validates that the configured runtime supports
+// multistep checks when the check has a runtime ID set. Note that if the
+// runtime ID is coming from the account defaults or group, then it is not
+// validated. Adding validation there as well would be a nice improvement,
+// though.
+func (r *CheckResource) validateCheckRuntimeSupport(ctx context.Context, model *CheckResourceModel, diags *diag.Diagnostics) {
+	runtimeID := model.RuntimeID.ValueString()
+	if model.Type.ValueString() != string(checkly.CheckTypeMultiStep) || runtimeID == "" {
+		return
+	}
+
+	apiCtx, cancel := contextWithAPITimeout(ctx)
+	defer cancel()
+
+	checkRuntime, err := r.client.GetRuntime(apiCtx, runtimeID)
+	if err != nil {
+		diags.AddError(
+			"Unable to Validate Runtime Support",
+			fmt.Sprintf("API error while fetching runtimes: %s", err),
+		)
+		return
+	}
+
+	if !checkRuntime.MultiStepSupport {
+		diags.AddError(
+			"Unsupported Runtime",
+			fmt.Sprintf("runtime %s does not support MULTI_STEP checks", runtimeID),
+		)
+	}
+}
+
+// validateCheckScript applies requireCheckScript to a browser or multi-step
+// checkly_check; API checks have no script.
+func validateCheckScript(model *CheckResourceModel, diags *diag.Diagnostics) {
+	if model.Type.ValueString() == string(checkly.CheckTypeAPI) {
+		return
+	}
+	requireCheckScript(model.Script, model.Type.ValueString(), diags)
+}
+
+// createCheck creates the check through the endpoint of its planned type.
+// With an error in diags, it returns nil values without sending a request.
+func (r *CheckResource) createCheck(ctx context.Context, model *CheckResourceModel, diags *diag.Diagnostics) (checkly.Check, error) {
+	switch checkType := checkly.CheckType(model.Type.ValueString()); checkType {
+	case checkly.CheckTypeAPI:
+		target := apiCheckModelFromCheckModel(model)
+		check := apiCheckFromModel(ctx, &target, diags)
+		if diags.HasError() {
+			return nil, nil
+		}
+		return r.client.CreateAPICheck(ctx, check)
+	case checkly.CheckTypeBrowser:
+		target := browserCheckModelFromCheckModel(model)
+		check := browserCheckFromModel(ctx, &target, diags)
+		if diags.HasError() {
+			return nil, nil
+		}
+		return r.client.CreateBrowserCheck(ctx, check)
+	case checkly.CheckTypeMultiStep:
+		target := multistepCheckModelFromCheckModel(model)
+		check := multistepCheckFromModel(ctx, &target, diags)
+		if diags.HasError() {
+			return nil, nil
+		}
+		return r.client.CreateMultiStepCheck(ctx, check)
+	default:
+		return nil, plannedCheckTypeError(checkType)
+	}
+}
+
+// updateCheck updates the check through the endpoint of its planned type,
+// which also changes the type of a stored check of another type. The update
+// clears the script path and dependencies of browser and multi-step checks,
+// which checkly_check has no attributes for. With an error in diags, it
+// returns nil values without sending a request.
+func (r *CheckResource) updateCheck(ctx context.Context, model *CheckResourceModel, diags *diag.Diagnostics) (checkly.Check, error) {
+	id := model.ID.ValueString()
+
+	switch checkType := checkly.CheckType(model.Type.ValueString()); checkType {
+	case checkly.CheckTypeAPI:
+		target := apiCheckModelFromCheckModel(model)
+		check := apiCheckFromModel(ctx, &target, diags)
+		if diags.HasError() {
+			return nil, nil
+		}
+		return r.client.UpdateAPICheck(ctx, id, check)
+	case checkly.CheckTypeBrowser:
+		target := browserCheckModelFromCheckModel(model)
+		check := browserCheckFromModel(ctx, &target, diags)
+		if diags.HasError() {
+			return nil, nil
+		}
+		return r.client.UpdateBrowserCheck(ctx, id, check)
+	case checkly.CheckTypeMultiStep:
+		target := multistepCheckModelFromCheckModel(model)
+		check := multistepCheckFromModel(ctx, &target, diags)
+		if diags.HasError() {
+			return nil, nil
+		}
+		return r.client.UpdateMultiStepCheck(ctx, id, check)
+	default:
+		return nil, plannedCheckTypeError(checkType)
+	}
+}
+
+// plannedCheckTypeError reports a planned type that checkly_check does not
+// manage, which the schema validation normally rejects first.
+func plannedCheckTypeError(checkType checkly.CheckType) error {
+	return fmt.Errorf("checkly_check only manages API, BROWSER and MULTI_STEP checks, and this check has type %q", checkType)
+}
+
+// unmanagedCheckTypeError reports a stored check of a type that checkly_check
+// does not manage, and the resource type that does.
+func unmanagedCheckTypeError(check checkly.Check) error {
+	var checkType checkly.CheckType
+	var resourceType string
+
+	switch check.(type) {
+	case *checkly.PlaywrightCheck:
+		checkType, resourceType = checkly.CheckTypePlaywright, "checkly_playwright_check_suite"
+	case *checkly.HeartbeatMonitor:
+		checkType, resourceType = checkly.CheckTypeHeartbeat, "checkly_heartbeat_monitor"
+	case *checkly.URLMonitor:
+		checkType, resourceType = checkly.CheckTypeURL, "checkly_url_monitor"
+	case *checkly.TCPMonitor:
+		checkType, resourceType = checkly.CheckTypeTCP, "checkly_tcp_monitor"
+	case *checkly.DNSMonitor:
+		checkType, resourceType = checkly.CheckTypeDNS, "checkly_dns_monitor"
+	case *checkly.ICMPMonitor:
+		checkType, resourceType = checkly.CheckTypeICMP, "checkly_icmp_monitor"
+	case *checkly.GRPCMonitor:
+		checkType, resourceType = checkly.CheckTypeGRPC, "checkly_grpc_monitor"
+	case *checkly.SSLMonitor:
+		checkType, resourceType = checkly.CheckTypeSSL, "checkly_ssl_monitor"
+	case *checkly.TracerouteMonitor:
+		checkType, resourceType = checkly.CheckTypeTraceroute, "checkly_traceroute_monitor"
+	default:
+		// A check type added by a later version of the SDK.
+		checkType, resourceType = checkly.CheckType(fmt.Sprintf("%T", check)), "the dedicated resource type for its check type"
+	}
+
+	return fmt.Errorf("checkly_check only manages API, BROWSER and MULTI_STEP checks, and this check has type %q: use %s instead", checkType, resourceType)
+}
+
+// commonCheckFields holds the fields that the API, browser and multi-step
+// check types share, so that checkly_check reads them once.
+type commonCheckFields struct {
+	ID                        string
+	Name                      string
+	Description               *string
+	Frequency                 int
+	Activated                 bool
+	Muted                     bool
+	ShouldFail                bool
+	RunParallel               bool
+	Locations                 []string
+	Tags                      []string
+	AlertSettings             *checkly.AlertSettings
+	UseGlobalAlertSettings    bool
+	GroupID                   int64
+	GroupOrder                *int
+	AlertChannelSubscriptions []checkly.AlertChannelSubscription
+	PrivateLocations          *[]string
+	RuntimeID                 *string
+	RetryStrategy             *checkly.RetryStrategy
+	TriggerIncident           *checkly.IncidentTrigger
+	Intent                    *checkly.CheckIntent
+	AIAutoRepairEnabled       *bool
+}
+
+// commonCheckFieldsFrom returns the shared fields of an API, browser or
+// multi-step check, and an error for a check of another type.
+func commonCheckFieldsFrom(check checkly.Check) (commonCheckFields, error) {
+	switch c := check.(type) {
+	case *checkly.APICheck:
+		return commonCheckFields{
+			ID:                        c.ID,
+			Name:                      c.Name,
+			Description:               c.Description,
+			Frequency:                 c.Frequency,
+			Activated:                 c.Activated,
+			Muted:                     c.Muted,
+			ShouldFail:                c.ShouldFail,
+			RunParallel:               c.RunParallel,
+			Locations:                 c.Locations,
+			Tags:                      c.Tags,
+			AlertSettings:             c.AlertSettings,
+			UseGlobalAlertSettings:    c.UseGlobalAlertSettings,
+			GroupID:                   c.GroupID,
+			GroupOrder:                c.GroupOrder,
+			AlertChannelSubscriptions: c.AlertChannelSubscriptions,
+			PrivateLocations:          c.PrivateLocations,
+			RuntimeID:                 c.RuntimeID,
+			RetryStrategy:             c.RetryStrategy,
+			TriggerIncident:           c.TriggerIncident,
+			Intent:                    c.Intent,
+			AIAutoRepairEnabled:       c.AIAutoRepairEnabled,
+		}, nil
+	case *checkly.BrowserCheck:
+		return commonCheckFields{
+			ID:                        c.ID,
+			Name:                      c.Name,
+			Description:               c.Description,
+			Frequency:                 c.Frequency,
+			Activated:                 c.Activated,
+			Muted:                     c.Muted,
+			ShouldFail:                c.ShouldFail,
+			RunParallel:               c.RunParallel,
+			Locations:                 c.Locations,
+			Tags:                      c.Tags,
+			AlertSettings:             c.AlertSettings,
+			UseGlobalAlertSettings:    c.UseGlobalAlertSettings,
+			GroupID:                   c.GroupID,
+			GroupOrder:                c.GroupOrder,
+			AlertChannelSubscriptions: c.AlertChannelSubscriptions,
+			PrivateLocations:          c.PrivateLocations,
+			RuntimeID:                 c.RuntimeID,
+			RetryStrategy:             c.RetryStrategy,
+			TriggerIncident:           c.TriggerIncident,
+			Intent:                    c.Intent,
+			AIAutoRepairEnabled:       c.AIAutoRepairEnabled,
+		}, nil
+	case *checkly.MultiStepCheck:
+		return commonCheckFields{
+			ID:                        c.ID,
+			Name:                      c.Name,
+			Description:               c.Description,
+			Frequency:                 c.Frequency,
+			Activated:                 c.Activated,
+			Muted:                     c.Muted,
+			ShouldFail:                c.ShouldFail,
+			RunParallel:               c.RunParallel,
+			Locations:                 c.Locations,
+			Tags:                      c.Tags,
+			AlertSettings:             c.AlertSettings,
+			UseGlobalAlertSettings:    c.UseGlobalAlertSettings,
+			GroupID:                   c.GroupID,
+			GroupOrder:                c.GroupOrder,
+			AlertChannelSubscriptions: c.AlertChannelSubscriptions,
+			PrivateLocations:          c.PrivateLocations,
+			RuntimeID:                 c.RuntimeID,
+			RetryStrategy:             c.RetryStrategy,
+			TriggerIncident:           c.TriggerIncident,
+			Intent:                    c.Intent,
+			AIAutoRepairEnabled:       c.AIAutoRepairEnabled,
+		}, nil
+	default:
+		return commonCheckFields{}, unmanagedCheckTypeError(check)
+	}
+}
+
+// checkResolveComputedValues finalizes a planned model after a successful
+// create or update API call. All practitioner-configurable values are already
+// known at plan time (defaults included; the attributes nested in the request
+// assertions are defaulted in ModifyPlan) and must be kept as planned; only the
+// values that may still be unknown in the plan (the ID and the
+// optional+computed alert_settings and retry_strategy objects) are resolved
+// from the API response.
+func checkResolveComputedValues(ctx context.Context, check checkly.Check, model *CheckResourceModel, diags *diag.Diagnostics) {
+	c, err := commonCheckFieldsFrom(check)
+	if err != nil {
+		diags.AddError("Unable to Read Check", err.Error())
+		return
+	}
+
+	model.ID = types.StringValue(c.ID)
+
+	// When the API reports no alert settings, the planned value is kept;
+	// converting the absence of a value would overwrite planned values with
+	// empty ones. Unknown values cannot be stored in state and resolve to
+	// null.
+	if c.AlertSettings != nil {
+		model.AlertSettings = alertSettingsToObject(ctx, *c.AlertSettings, model.AlertSettings, diags)
+	} else if model.AlertSettings.IsUnknown() {
+		model.AlertSettings = types.ObjectNull(alertSettingsAttrTypes)
+	}
+
+	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, model.RetryStrategy, diags)
+}
+
+// checkToModel updates the model to match the API representation of the
+// check. Values already present in the model act as the prior state for the
+// prior-aware conversions.
+//
+// The per-type API representations leave out the attributes that don't apply
+// to their type, which have no effect on such a check. Those attributes keep
+// their prior value, or their schema default when there is none, as on import.
+func checkToModel(ctx context.Context, check checkly.Check, model *CheckResourceModel, diags *diag.Diagnostics) {
+	c, err := commonCheckFieldsFrom(check)
+	if err != nil {
+		diags.AddError("Unable to Read Check", err.Error())
+		return
+	}
+
+	prior := *model
+
+	model.ID = types.StringValue(c.ID)
+	model.Name = types.StringValue(c.Name)
+	model.Description = types.StringValue(valueOrZero(c.Description))
+	model.Frequency = types.Int64Value(int64(c.Frequency))
+	model.Activated = types.BoolValue(c.Activated)
+	model.Muted = types.BoolValue(c.Muted)
+	model.ShouldFail = types.BoolValue(c.ShouldFail)
+	model.RunParallel = types.BoolValue(c.RunParallel)
+	model.Locations = setFromStrings(ctx, c.Locations, diags)
+	model.Tags = setFromStrings(ctx, c.Tags, diags)
+	model.RuntimeID = stringValueOrPriorEmpty(valueOrZero(c.RuntimeID), prior.RuntimeID)
+	model.AlertChannelSubscriptions = alertChannelSubscriptionsToSet(ctx, c.AlertChannelSubscriptions, diags)
+	model.PrivateLocations = setFromStrings(ctx, valueOrZero(c.PrivateLocations), diags)
+	// When the API reports no alert settings, the prior value is kept;
+	// converting the absence of a value would overwrite the stored values
+	// with empty ones. Unknown values cannot be stored in state and resolve
+	// to null.
+	if c.AlertSettings != nil {
+		model.AlertSettings = alertSettingsToObject(ctx, *c.AlertSettings, prior.AlertSettings, diags)
+	} else if model.AlertSettings.IsUnknown() {
+		model.AlertSettings = types.ObjectNull(alertSettingsAttrTypes)
+	}
+	model.UseGlobalAlertSettings = types.BoolValue(c.UseGlobalAlertSettings)
+	// The SDK's check types have no double_check, so the value in the model
+	// stands, and a value that was never set, as on import, is false. A change
+	// made outside Terraform shows up through retry_strategy.
+	model.DoubleCheck = types.BoolValue(prior.DoubleCheck.ValueBool())
+	model.GroupID = int64ValueOrNull(c.GroupID)
+	model.GroupOrder = groupOrderFromAPI(c.GroupOrder, model.GroupOrder)
+	model.RetryStrategy = retryStrategyToObject(ctx, c.RetryStrategy, prior.RetryStrategy, diags)
+	model.TriggerIncident = triggerIncidentToObject(ctx, c.TriggerIncident, diags)
+	model.Intent = checkIntentToObject(ctx, c.Intent, diags)
+	model.AIAutoRepairEnabled = types.BoolPointerValue(c.AIAutoRepairEnabled)
+
+	switch typed := check.(type) {
+	case *checkly.APICheck:
+		model.Type = types.StringValue(string(checkly.CheckTypeAPI))
+		model.FrequencyOffset = frequencyOffsetFromAPI(typed.Frequency, typed.FrequencyOffset, prior.FrequencyOffset)
+		model.Script = stringOrDefault(prior.Script, "")
+		model.DegradedResponseTime = types.Int64Value(int64(typed.DegradedResponseTime))
+		model.MaxResponseTime = types.Int64Value(int64(typed.MaxResponseTime))
+		// The API does not store environment variables of API checks, so
+		// configured ones show as a change in every plan; ValidateConfig warns
+		// about them.
+		model.EnvironmentVariables = environmentVariablesToList(ctx, nil, prior.EnvironmentVariables, diags)
+		model.SetupSnippetID = int64ValueOrNull(typed.SetupSnippetID)
+		model.TeardownSnippetID = int64ValueOrNull(typed.TearDownSnippetID)
+		model.LocalSetupScript = types.StringValue(valueOrZero(typed.LocalSetupScript))
+		model.LocalTeardownScript = types.StringValue(valueOrZero(typed.LocalTearDownScript))
+		model.Request = apiCheckRequestToObject(ctx, typed.Request, prior.Request, diags)
+	case *checkly.BrowserCheck:
+		model.Type = types.StringValue(string(checkly.CheckTypeBrowser))
+		model.Script = types.StringValue(typed.Script)
+		model.EnvironmentVariables = environmentVariablesToList(ctx, typed.EnvironmentVariables, prior.EnvironmentVariables, diags)
+		// The prior value is preserved when the API reports no domain.
+		if typed.SSLCheckDomain != "" {
+			model.SSLCheckDomain = types.StringValue(typed.SSLCheckDomain)
+		}
+		checkKeepAPICheckAttributes(model)
+	case *checkly.MultiStepCheck:
+		model.Type = types.StringValue(string(checkly.CheckTypeMultiStep))
+		model.Script = types.StringValue(typed.Script)
+		model.EnvironmentVariables = environmentVariablesToList(ctx, typed.EnvironmentVariables, prior.EnvironmentVariables, diags)
+		checkKeepAPICheckAttributes(model)
+	}
+}
+
+// checkKeepAPICheckAttributes resolves the attributes that browser and
+// multi-step checks don't have to their schema defaults when the model has no
+// value for them. The attributes without a default (request and the snippet
+// IDs) stay as they are.
+func checkKeepAPICheckAttributes(model *CheckResourceModel) {
+	model.DegradedResponseTime = int64OrDefault(model.DegradedResponseTime, 15000)
+	model.MaxResponseTime = int64OrDefault(model.MaxResponseTime, 30000)
+	model.LocalSetupScript = stringOrDefault(model.LocalSetupScript, "")
+	model.LocalTeardownScript = stringOrDefault(model.LocalTeardownScript, "")
+}
+
+// stringOrDefault returns the given value, or the given default value when
+// the value is null or unknown. It is used to apply default values during
+// plan modification to attributes nested in set elements, where schema
+// defaults cannot be used.
+func stringOrDefault(value types.String, defaultValue string) types.String {
+	if value.IsNull() || value.IsUnknown() {
+		return types.StringValue(defaultValue)
+	}
+	return value
+}
+
+// int64OrDefault returns the given value, or the given default value when the
+// value is null or unknown.
+func int64OrDefault(value types.Int64, defaultValue int64) types.Int64 {
+	if value.IsNull() || value.IsUnknown() {
+		return types.Int64Value(defaultValue)
+	}
+	return value
+}

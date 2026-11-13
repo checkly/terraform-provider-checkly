@@ -1,11 +1,8 @@
 # Simple Browser Check with EOT script
-resource "checkly_check" "browser-check-1" {
+resource "checkly_browser_check" "browser-check-1" {
   name                      = "A simple browser check"
-  type                      = "BROWSER"
   activated                 = true
-  should_fail               = false
   frequency                 = 2
-  double_check              = true
   use_global_alert_settings = true
   locations = [
     "us-west-1"
@@ -26,13 +23,10 @@ EOT
 }
 
 # Simple Browser Check with string script
-resource "checkly_check" "browser-check-2" {
+resource "checkly_browser_check" "browser-check-2" {
   name                      = "Example check"
-  type                      = "BROWSER"
   activated                 = true
-  should_fail               = false
   frequency                 = 15
-  double_check              = true
   use_global_alert_settings = true
 
   script = "console.log(process.env.URL)"
@@ -42,9 +36,11 @@ resource "checkly_check" "browser-check-2" {
     "us-east-1"
   ]
 
-  environment_variable {
-    key    = "URL"
-    value  = "https://checklyhq.com"
-    locked = false
-  }
+  environment_variables = [
+    {
+      key    = "URL"
+      value  = "https://checklyhq.com"
+      locked = false
+    },
+  ]
 }

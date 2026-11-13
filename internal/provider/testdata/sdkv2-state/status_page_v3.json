@@ -1,0 +1,54 @@
+{
+    "allow_indexing": true,
+    "custom_domain": "",
+    "default_theme": "AUTO",
+    "description": "",
+    "favicon": "",
+    "footer_text": "",
+    "google_analytics_tag": "",
+    "id": "sp3",
+    "logo": "",
+    "logo_dark": "",
+    "name": "p",
+    "privacy_policy_link": "",
+    "redirect_to": "",
+    "support_link": "",
+    "terms_of_service_link": "",
+    "theme_colors": [
+        {
+            "dark": [
+                {
+                    "body_background_color": "#000000",
+                    "body_font_color": "#000000",
+                    "body_font_color_muted": "#000000",
+                    "border_color": "#000000",
+                    "card_background_color": "#000000",
+                    "header_background_color": "#000000",
+                    "header_font_color": "#000000",
+                    "link_font_color": "#00FF00",
+                    "navigation_font_color": "#000000",
+                    "primary_button_background_color": "#000000",
+                    "primary_button_font_color": "#000000",
+                    "title_font_color": "#000000"
+                }
+            ],
+            "light": [
+                {
+                    "body_background_color": "#FFFFFF",
+                    "body_font_color": "#FFFFFF",
+                    "body_font_color_muted": "#FFFFFF",
+                    "border_color": "#FFFFFF",
+                    "card_background_color": "#FFFFFF",
+                    "header_background_color": "#FFFFFF",
+                    "header_font_color": "#FFFFFF",
+                    "link_font_color": "#FF0000",
+                    "navigation_font_color": "#FFFFFF",
+                    "primary_button_background_color": "#FFFFFF",
+                    "primary_button_font_color": "#FFFFFF",
+                    "title_font_color": "#FFFFFF"
+                }
+            ]
+        }
+    ],
+    "url": "p"
+}

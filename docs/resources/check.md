@@ -4,11 +4,14 @@ page_title: "checkly_check Resource - terraform-provider-checkly"
 subcategory: ""
 description: |-
   Checks allows you to monitor key webapp flows, backend API's and set up alerting, so you get a notification when things break or slow down.
+  The checkly_check resource type is deprecated in favor of checkly_api_check, checkly_browser_check and checkly_multistep_check, which only expose the attributes of their check type, and will be removed in a future version of the provider. An existing check can be switched over to its per-type resource with a moved block, without recreating it. Before moving a check, see Deprecated resource types https://registry.terraform.io/providers/checkly/checkly/latest/docs/guides/upgrading-to-v2#deprecated-resource-types in the v2 upgrade guide for what to change: checkly_api_check has lower default degraded_response_time and max_response_time values and follows redirects by default, and the per-type resources have no double_check.
 ---
 
 # checkly_check (Resource)
 
 Checks allows you to monitor key webapp flows, backend API's and set up alerting, so you get a notification when things break or slow down.
+
+The `checkly_check` resource type is deprecated in favor of `checkly_api_check`, `checkly_browser_check` and `checkly_multistep_check`, which only expose the attributes of their check type, and will be removed in a future version of the provider. An existing check can be switched over to its per-type resource with a `moved` block, without recreating it. Before moving a check, see [Deprecated resource types](https://registry.terraform.io/providers/checkly/checkly/latest/docs/guides/upgrading-to-v2#deprecated-resource-types) in the v2 upgrade guide for what to change: `checkly_api_check` has lower default `degraded_response_time` and `max_response_time` values and follows redirects by default, and the per-type resources have no `double_check`.
 
 ## Example Usage
 
@@ -26,15 +29,15 @@ resource "checkly_check" "example_check" {
     "us-west-1"
   ]
 
-  request {
+  request = {
     url              = "https://api.example.com/"
     follow_redirects = true
     skip_ssl         = false
-    assertion {
+    assertions = [{
       source     = "STATUS_CODE"
       comparison = "EQUALS"
       target     = "200"
-    }
+    }]
   }
 }
 
@@ -54,19 +57,19 @@ resource "checkly_check" "example_check_2" {
     "ap-south-1",
   ]
 
-  alert_settings {
+  alert_settings = {
     escalation_type = "RUN_BASED"
 
-    run_based_escalation {
+    run_based_escalation = {
       failed_run_threshold = 1
     }
 
-    reminders {
+    reminders = {
       amount = 1
     }
   }
 
-  retry_strategy {
+  retry_strategy = {
     type                 = "FIXED"
     base_backoff_seconds = 60
     max_duration_seconds = 600
@@ -74,7 +77,7 @@ resource "checkly_check" "example_check_2" {
     same_region          = false
   }
 
-  request {
+  request = {
     follow_redirects = true
     skip_ssl         = false
     url              = "http://api.example.com/"
@@ -87,21 +90,22 @@ resource "checkly_check" "example_check_2" {
       X-Bogus = "bogus"
     }
 
-    assertion {
-      source     = "JSON_BODY"
-      property   = "code"
-      comparison = "HAS_VALUE"
-      target     = "authentication.failed"
-    }
+    assertions = [
+      {
+        source     = "JSON_BODY"
+        property   = "code"
+        comparison = "HAS_VALUE"
+        target     = "authentication.failed"
+      },
+      {
+        source     = "STATUS_CODE"
+        property   = ""
+        comparison = "EQUALS"
+        target     = "401"
+      },
+    ]
 
-    assertion {
-      source     = "STATUS_CODE"
-      property   = ""
-      comparison = "EQUALS"
-      target     = "401"
-    }
-
-    basic_auth {
+    basic_auth = {
       username = ""
       password = ""
     }
@@ -113,7 +117,6 @@ resource "checkly_check" "browser_check_1" {
   name                      = "Example check"
   type                      = "BROWSER"
   activated                 = true
-  should_fail               = false
   frequency                 = 10
   use_global_alert_settings = true
   locations = [
@@ -137,30 +140,40 @@ EOT
 
 # Connection checks with alert channels
 resource "checkly_alert_channel" "email_ac1" {
-  email {
+  email = {
     address = "info1@example.com"
   }
 }
 
 resource "checkly_alert_channel" "email_ac2" {
-  email {
+  email = {
     address = "info2@example.com"
   }
 }
 
-resource "checkly_check" "example_check" {
-  name = "Example check"
-  # ...
+resource "checkly_check" "example_check_with_alerts" {
+  name      = "Example check with alerts"
+  type      = "API"
+  frequency = 1
 
-  alert_channel_subscription {
-    channel_id = checkly_alert_channel.email_ac1.id
-    activated  = true
+  locations = [
+    "us-west-1"
+  ]
+
+  request = {
+    url = "https://api.example.com/"
   }
 
-  alert_channel_subscription {
-    channel_id = checkly_alert_channel.email_ac2.id
-    activated  = true
-  }
+  alert_channel_subscriptions = [
+    {
+      channel_id = checkly_alert_channel.email_ac1.id
+      activated  = true
+    },
+    {
+      channel_id = checkly_alert_channel.email_ac2.id
+      activated  = true
+    },
+  ]
 }
 
 # An alternative syntax for add the script is by referencing an external file
@@ -172,7 +185,6 @@ resource "checkly_check" "example_check" {
 #   name                      = "Example check"
 #   type                      = "BROWSER"
 #   activated                 = true
-#   should_fail               = false
 #   frequency                 = 10
 #   use_global_alert_settings = true
 #   locations = [
@@ -184,54 +196,93 @@ resource "checkly_check" "example_check" {
 # }
 ```
 
+## Moving to the per-type resources
+
+Terraform 1.8 or later can switch each check to the resource of its type with a `moved` block, without recreating it. Before moving a check, read [Deprecated resource types](https://registry.terraform.io/providers/checkly/checkly/latest/docs/guides/upgrading-to-v2#deprecated-resource-types) in the v2 upgrade guide.
+
+```terraform
+# Each check moves to the resource of its type. Change the resource type,
+# remove the attributes the new type doesn't have, and add a moved block.
+
+# A check with type = "API".
+resource "checkly_api_check" "api" {
+  # ...
+}
+
+moved {
+  from = checkly_check.api
+  to   = checkly_api_check.api
+}
+
+# A check with type = "BROWSER".
+resource "checkly_browser_check" "browser" {
+  # ...
+}
+
+moved {
+  from = checkly_check.browser
+  to   = checkly_browser_check.browser
+}
+
+# A check with type = "MULTI_STEP".
+resource "checkly_multistep_check" "multistep" {
+  # ...
+}
+
+moved {
+  from = checkly_check.multistep
+  to   = checkly_multistep_check.multistep
+}
+```
+
 <!-- schema generated by tfplugindocs -->
 ## Schema
 
 ### Required
 
-- `activated` (Boolean) Determines if the check is running or not. Possible values `true`, and `false`.
-- `frequency` (Number) Controls how often the check should run. Defined in minutes. The allowed values are `0` (high frequency - use `frequency_offset` to define the actual frequency), `1` (1 minute), `2` (2 minutes), `5` (5 minutes), `10` (10 minutes), `15` (15 minutes), `30` (30 minutes), `60` (1 hour), `120` (2 hours), `180` (3 hours), `360` (6 hours), `720` (12 hours) and `1440` (24 hours).
 - `name` (String) The name of the check.
-- `type` (String) The type of the check. Possible values are `API`, `BROWSER`, and `MULTI_STEP`.
+- `type` (String) The type of the check. Possible values are `API`, `BROWSER` and `MULTI_STEP`.
 
 ### Optional
 
-- `alert_channel_subscription` (Block Set) An array of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your check, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedblock--alert_channel_subscription))
-- `alert_settings` (Block List, Max: 1) Determines the alert escalation policy for the check. (see [below for nested schema](#nestedblock--alert_settings))
-- `degraded_response_time` (Number) The response time in milliseconds starting from which a check should be considered degraded. Possible values are between 0 and 30000. (Default `15000`).
+- `activated` (Boolean) Determines whether the check runs on its schedule. Defaults to `true`.
+- `ai_auto_repair_enabled` (Boolean) Overrides the account's automatic repair setting for this check. Leave it out to inherit the account setting. Automatic repair supports browser and multi-step checks only, so this setting has no effect on other check types today, and it needs an `intent` with at least one statement. A repair is saved to the check, so it shows as a change to `script`, and the next apply restores the configured script unless you copy the repaired script into the configuration or add `script` to `ignore_changes`. An override edited in the web app and absent from the configuration is removed by the next apply, every time. To leave it to the web app, add `ai_auto_repair_enabled` to `ignore_changes`.
+- `alert_channel_subscriptions` (Attributes Set) A set of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your check, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedatt--alert_channel_subscriptions))
+- `alert_settings` (Attributes) Determines the alert escalation policy for the check. (see [below for nested schema](#nestedatt--alert_settings))
+- `degraded_response_time` (Number) The response time in milliseconds where the check should be considered degraded. Possible values are between `0` and `30000`, or up to `45000` if extended limits have been approved for your account. Defaults to `15000`. Only relevant when `type` is `API`.
 - `description` (String) A description of the check.
-- `double_check` (Boolean, Deprecated) Setting this to `true` will trigger a retry when a check fails from the failing region and another, randomly selected region before marking the check as failed. (Default `false`).
-- `environment_variable` (Block List) Insert environment variables into the runtime environment. Only relevant for browser checks. Use global environment variables whenever possible. (see [below for nested schema](#nestedblock--environment_variable))
-- `environment_variables` (Map of String, Deprecated) Key/value pairs of environment variables to insert into the runtime environment.
-- `frequency_offset` (Number) Only relevant when `type` is `API`. When `frequency` is `0` (high frequency), `frequency_offset` is required and it alone controls how often the monitor should run. Defined in seconds. The allowed values are `0` (disabled - use `frequency` to define the actual frequency), `10` (10 seconds), `20` (20 seconds) and `30` (30 seconds).
-- `group_id` (Number) The id of the check group this check is part of.
-- `group_order` (Number) The position of this check in a check group. It determines in what order checks are run when a group is triggered from the API or from CI/CD.
-- `local_setup_script` (String) A valid piece of Node.js code to run in the setup phase.
-- `local_teardown_script` (String) A valid piece of Node.js code to run in the teardown phase.
-- `locations` (Set of String) An array of one or more data center locations where to run the this check. (Default ["us-east-1"])
-- `max_response_time` (Number) The response time in milliseconds starting from which a check should be considered failing. Possible values are between 0 and 30000. (Default `30000`).
-- `muted` (Boolean) Determines if any notifications will be sent out when a check fails/degrades/recovers.
-- `private_locations` (Set of String) An array of one or more private locations slugs.
-- `request` (Block Set, Max: 1) An API check might have one request config. (see [below for nested schema](#nestedblock--request))
-- `retry_strategy` (Block List, Max: 1) A strategy for retrying failed check/monitor runs. (see [below for nested schema](#nestedblock--retry_strategy))
-- `run_parallel` (Boolean) Determines if the check should run in all selected locations in parallel or round-robin.
-- `runtime_id` (String) The id of the runtime to use for this check.
-- `script` (String) A valid piece of Node.js JavaScript code describing a browser interaction with the Puppeteer/Playwright framework or a reference to an external JavaScript file.
-- `setup_snippet_id` (Number) An ID reference to a snippet to use in the setup phase of an API check.
-- `should_fail` (Boolean) Allows to invert the behaviour of when a check is considered to fail. Allows for validating error status like 404.
-- `ssl_check` (Boolean, Deprecated) Determines if the SSL certificate should be validated for expiry.
-- `ssl_check_domain` (String) A valid fully qualified domain name (FQDN) to check its SSL certificate.
-- `tags` (Set of String) A list of tags for organizing and filtering checks.
-- `teardown_snippet_id` (Number) An ID reference to a snippet to use in the teardown phase of an API check.
-- `trigger_incident` (Block Set, Max: 1) Create and resolve an incident based on the alert configuration. Useful for status page automation. (see [below for nested schema](#nestedblock--trigger_incident))
-- `use_global_alert_settings` (Boolean) When true, the account level alert settings will be used, not the alert setting defined on this check.
+- `double_check` (Boolean, Deprecated) Setting this to `true` will trigger a retry when a check fails from the failing region and another, randomly selected region before marking the check as failed. Defaults to `false`.
+- `environment_variables` (Attributes List) Insert environment variables into the runtime environment. Only relevant for browser checks. Use global environment variables whenever possible. Must contain at most `200` variables. (see [below for nested schema](#nestedatt--environment_variables))
+- `frequency` (Number) Controls how often the check should run. Defined in minutes. Possible values are `0` (high frequency - use `frequency_offset` to define the actual frequency), `1` (1 minute), `2` (2 minutes), `5` (5 minutes), `10` (10 minutes), `15` (15 minutes), `30` (30 minutes), `60` (1 hour), `120` (2 hours), `180` (3 hours), `360` (6 hours), `720` (12 hours) and `1440` (24 hours). Defaults to `10`.
+- `frequency_offset` (Number) Only relevant when `type` is `API`. When `frequency` is `0` (high frequency), `frequency_offset` is required and it alone controls how often the check should run. Defined in seconds. Possible values are `0` (disabled - use `frequency` to define the actual frequency), `10` (10 seconds), `20` (20 seconds) and `30` (30 seconds).
+- `group_id` (Number) The ID of the check group the check is part of. Must be at least `1`. If not set, the check is not part of a group.
+- `group_order` (Number) The position of the check in its check group, which sets the order in which the checks and monitors of the group run when the group is triggered from the API or CI/CD. Must be at least `0`. If not set, the check has no position in the group.
+- `intent` (Attributes) Guidance for root cause analysis and automatic repair: what this check protects, and which changes keep it meaningful. Automatic repair supports browser and multi-step checks only, and refuses an intent with no statements: a `goal` on its own is accepted here, but repair needs at least one statement in either `required_outcomes` or `must_preserve`. An intent edited in the web app and absent from the configuration is removed by the next apply, every time. To leave it to the web app, add `intent` to `ignore_changes`. (see [below for nested schema](#nestedatt--intent))
+- `local_setup_script` (String) A valid piece of Node.js code to run in the setup phase of an API check.
+- `local_teardown_script` (String) A valid piece of Node.js code to run in the teardown phase of an API check.
+- `locations` (Set of String) The data center locations to run the check from, such as `us-east-1`. The check needs at least one location in `locations` or `private_locations`, unless it is part of a check group.
+- `max_response_time` (Number) The response time in milliseconds where the check should be considered failing. Possible values are between `0` and `30000`, or up to `45000` if extended limits have been approved for your account. Defaults to `30000`. Only relevant when `type` is `API`.
+- `muted` (Boolean) Determines whether notifications are sent when the check fails, degrades or recovers. Defaults to `false`.
+- `private_locations` (Set of String) The slugs of the private locations to run the check from.
+- `request` (Attributes) An API check might have one request config. Only relevant when `type` is `API`. (see [below for nested schema](#nestedatt--request))
+- `retry_strategy` (Attributes) A strategy for retrying failed check/monitor runs. (see [below for nested schema](#nestedatt--retry_strategy))
+- `run_parallel` (Boolean) Determines whether the check runs in all its locations in parallel instead of in one location at a time, round-robin. Defaults to `false`.
+- `runtime_id` (String) The ID of the runtime to use for the check. If not set, the account's default runtime is used.
+- `script` (String) A valid piece of Node.js JavaScript code describing a browser interaction with the Puppeteer/Playwright framework or a reference to an external JavaScript file. Required when `type` is `BROWSER` or `MULTI_STEP`; has no effect when it is `API`. Updating a browser or multi-step check clears the script path and dependencies that the Checkly CLI sets for multi-file scripts.
+- `setup_snippet_id` (Number) The ID of the snippet to run in the setup phase of the API check. Must be at least `1`. If not set, no setup snippet runs. Only relevant when `type` is `API`.
+- `should_fail` (Boolean) Inverts when the check is considered to fail. Defaults to `false`. Only supported when `type` is `API`. Use it to validate an error status such as 404.
+- `ssl_check_domain` (String) A valid fully qualified domain name (FQDN) to check its SSL certificate. Only relevant when `type` is `BROWSER`.
+- `tags` (Set of String) Tags for organizing and filtering checks and monitors.
+- `teardown_snippet_id` (Number) The ID of the snippet to run in the teardown phase of the API check. Must be at least `1`. If not set, no teardown snippet runs. Only relevant when `type` is `API`.
+- `trigger_incident` (Attributes) Create and resolve an incident based on the alert configuration. Useful for status page automation. (see [below for nested schema](#nestedatt--trigger_incident))
+- `use_global_alert_settings` (Boolean) When true, the account level alert settings are used instead of the `alert_settings` of this check. Defaults to `true` when `alert_settings` is not set, and to `false` when it is.
 
 ### Read-Only
 
-- `id` (String) The ID of this resource.
+- `id` (String) The ID of the check.
 
-<a id="nestedblock--alert_channel_subscription"></a>
-### Nested Schema for `alert_channel_subscription`
+<a id="nestedatt--alert_channel_subscriptions"></a>
+### Nested Schema for `alert_channel_subscriptions`
 
 Required:
 
@@ -239,145 +290,148 @@ Required:
 - `channel_id` (Number) The ID of the alert channel.
 
 
-<a id="nestedblock--alert_settings"></a>
+<a id="nestedatt--alert_settings"></a>
 ### Nested Schema for `alert_settings`
 
 Optional:
 
-- `escalation_type` (String) Determines the type of escalation to use. Possible values are `RUN_BASED` and `TIME_BASED`. (Default `RUN_BASED`).
-- `parallel_run_failure_threshold` (Block List) Configuration for parallel run failure threshold. (see [below for nested schema](#nestedblock--alert_settings--parallel_run_failure_threshold))
-- `reminders` (Block List) Defines how often to send reminder notifications after initial alert. (see [below for nested schema](#nestedblock--alert_settings--reminders))
-- `run_based_escalation` (Block List) Configuration for run-based escalation. (see [below for nested schema](#nestedblock--alert_settings--run_based_escalation))
-- `ssl_certificates` (Block Set, Deprecated) (see [below for nested schema](#nestedblock--alert_settings--ssl_certificates))
-- `time_based_escalation` (Block List) Configuration for time-based escalation. (see [below for nested schema](#nestedblock--alert_settings--time_based_escalation))
+- `escalation_type` (String) Determines the type of escalation to use. Possible values are `RUN_BASED` and `TIME_BASED`. Defaults to `RUN_BASED`.
+- `parallel_run_failure_threshold` (Attributes) Configuration for parallel run failure threshold. (see [below for nested schema](#nestedatt--alert_settings--parallel_run_failure_threshold))
+- `reminders` (Attributes) Defines how often to send reminder notifications after the initial alert. (see [below for nested schema](#nestedatt--alert_settings--reminders))
+- `run_based_escalation` (Attributes) Configuration for run-based escalation. (see [below for nested schema](#nestedatt--alert_settings--run_based_escalation))
+- `time_based_escalation` (Attributes) Configuration for time-based escalation. (see [below for nested schema](#nestedatt--alert_settings--time_based_escalation))
 
-<a id="nestedblock--alert_settings--parallel_run_failure_threshold"></a>
+<a id="nestedatt--alert_settings--parallel_run_failure_threshold"></a>
 ### Nested Schema for `alert_settings.parallel_run_failure_threshold`
 
 Optional:
 
-- `enabled` (Boolean) Whether parallel run failure threshold is enabled. Only applies if the check is scheduled for multiple locations in parallel. (Default `false`).
-- `percentage` (Number) Percentage of runs that must fail to trigger alert. Possible values are `10`, `20`, `30`, `40`, `50`, `60`, `70`, `80`, `90`, and `100`. (Default `10`).
+- `enabled` (Boolean) Whether parallel run failure threshold is enabled. Only applies if the check is scheduled for multiple locations in parallel. Defaults to `false`.
+- `percentage` (Number) Percentage of runs that must fail to trigger alert. Possible values are `10`, `20`, `30`, `40`, `50`, `60`, `70`, `80`, `90` and `100`. Defaults to `10`.
 
 
-<a id="nestedblock--alert_settings--reminders"></a>
+<a id="nestedatt--alert_settings--reminders"></a>
 ### Nested Schema for `alert_settings.reminders`
 
 Optional:
 
-- `amount` (Number) Number of reminder notifications to send. Possible values are `0`, `1`, `2`, `3`, `4`, `5`, and `100000` (`0` to disable, `100000` for unlimited). (Default `0`).
-- `interval` (Number) Interval between reminder notifications in minutes. Possible values are `5`, `10`, `15`, and `30`. (Default `5`).
+- `amount` (Number) Number of reminder notifications to send. Possible values are `0` (disabled), `1`, `2`, `3`, `4`, `5` and `100000` (unlimited). Defaults to `0`.
+- `interval` (Number) Interval between reminder notifications in minutes. Possible values are `5`, `10`, `15` and `30`. Defaults to `5`.
 
 
-<a id="nestedblock--alert_settings--run_based_escalation"></a>
+<a id="nestedatt--alert_settings--run_based_escalation"></a>
 ### Nested Schema for `alert_settings.run_based_escalation`
 
 Optional:
 
-- `failed_run_threshold` (Number) Send an alert notification after the given number of consecutive check runs have failed. Possible values are between `1` and `5`. (Default `1`).
+- `failed_run_threshold` (Number) Send an alert notification after the given number of consecutive check runs have failed. Possible values are between `1` and `5`. Defaults to `1`.
 
 
-<a id="nestedblock--alert_settings--ssl_certificates"></a>
-### Nested Schema for `alert_settings.ssl_certificates`
-
-Optional:
-
-- `alert_threshold` (Number) No longer available.
-- `enabled` (Boolean) No longer available.
-
-
-<a id="nestedblock--alert_settings--time_based_escalation"></a>
+<a id="nestedatt--alert_settings--time_based_escalation"></a>
 ### Nested Schema for `alert_settings.time_based_escalation`
 
 Optional:
 
-- `minutes_failing_threshold` (Number) Send an alert notification after the check has been failing for the given amount of time (in minutes). Possible values are `5`, `10`, `15`, and `30`. (Default `5`).
+- `minutes_failing_threshold` (Number) Send an alert notification after the check has been failing for the given amount of time (in minutes). Possible values are `5`, `10`, `15` and `30`. Defaults to `5`.
 
 
 
-<a id="nestedblock--environment_variable"></a>
-### Nested Schema for `environment_variable`
+<a id="nestedatt--environment_variables"></a>
+### Nested Schema for `environment_variables`
 
 Required:
 
 - `key` (String) The name of the environment variable or secret.
-- `value` (String) The value of the environment variable or secret.
+- `value` (String, Sensitive) The value of the environment variable or secret. Must be at most `64000` bytes in UTF-8, or `31744` bytes for a secret or locked variable. A secret value must be at least `3` characters.
 
 Optional:
 
-- `locked` (Boolean) If true, the value is not shown by default, but it can be accessed. (Default `false`).
-- `secret` (Boolean) If true, the value will never be visible. The API never returns secret values, so Terraform keeps the last applied value and does not detect changes made outside Terraform. (Default `false`).
+- `locked` (Boolean) If true, the value is not shown by default, but it can be accessed. Defaults to `false`.
+- `secret` (Boolean) If true, the value will never be visible. The API never returns secret values, so Terraform keeps the last applied value and does not detect changes made outside Terraform. Defaults to `false`.
 
 
-<a id="nestedblock--request"></a>
+<a id="nestedatt--intent"></a>
+### Nested Schema for `intent`
+
+Required:
+
+- `goal` (String) The user or system outcome the check protects. Must be between `1` and `2000` characters, without leading or trailing whitespace.
+
+Optional:
+
+- `must_preserve` (List of String) Guardrails an automatic repair must not weaken or bypass. Must contain at most `20` statements, each between `1` and `1000` characters, without leading or trailing whitespace.
+- `required_outcomes` (List of String) Observable outcomes the check must continue to prove. Must contain at most `20` statements, each between `1` and `1000` characters, without leading or trailing whitespace.
+
+
+<a id="nestedatt--request"></a>
 ### Nested Schema for `request`
 
 Required:
 
-- `url` (String)
+- `url` (String) The URL to call. Must be between `1` and `2048` characters.
 
 Optional:
 
-- `assertion` (Block Set) A request can have multiple assertions. (see [below for nested schema](#nestedblock--request--assertion))
-- `basic_auth` (Block Set, Max: 1) Set up HTTP basic authentication (username & password). (see [below for nested schema](#nestedblock--request--basic_auth))
+- `assertions` (Attributes Set) A request can have multiple assertions. (see [below for nested schema](#nestedatt--request--assertions))
+- `basic_auth` (Attributes) Set up HTTP basic authentication (username & password). (see [below for nested schema](#nestedatt--request--basic_auth))
 - `body` (String) The body of the request.
-- `body_type` (String) The `Content-Type` header of the request. Possible values `NONE`, `JSON`, `FORM`, `RAW`, and `GRAPHQL`.
-- `follow_redirects` (Boolean)
-- `headers` (Map of String)
-- `ip_family` (String) IP Family to be used when executing the api check. The value can be either IPv4 or IPv6.
-- `method` (String) The HTTP method to use for this API check. Possible values are `GET`, `POST`, `PUT`, `HEAD`, `DELETE`, `PATCH`. (Default `GET`).
-- `query_parameters` (Map of String)
-- `skip_ssl` (Boolean)
+- `body_type` (String) The `Content-Type` header of the request. Possible values are `NONE`, `JSON`, `FORM`, `RAW` and `GRAPHQL`. Defaults to `NONE`.
+- `follow_redirects` (Boolean) Whether to follow HTTP redirects. Defaults to `false`.
+- `headers` (Map of String) HTTP headers to send with the request, as a map of header names to values. The values are not sensitive and show in plan output. To keep a credential in a header out of plan output, take it from a variable declared with `sensitive = true` or wrap it in `sensitive(...)`.
+- `ip_family` (String) IP Family to be used when executing the api check. Possible values are `IPv4` and `IPv6`. Defaults to `IPv4`.
+- `method` (String) The HTTP method to use for this API check. Possible values are `GET`, `POST`, `PUT`, `HEAD`, `DELETE` and `PATCH`. Defaults to `GET`.
+- `query_parameters` (Map of String) Query parameters to add to the request URL, as a map of parameter names to values. The values are not sensitive and show in plan output. To keep a credential in a parameter out of plan output, take it from a variable declared with `sensitive = true` or wrap it in `sensitive(...)`.
+- `skip_ssl` (Boolean) Whether to skip TLS certificate validation of the request. Defaults to `false`.
 
-<a id="nestedblock--request--assertion"></a>
-### Nested Schema for `request.assertion`
+<a id="nestedatt--request--assertions"></a>
+### Nested Schema for `request.assertions`
 
 Required:
 
-- `comparison` (String) The type of comparison to be executed between expected and actual value of the assertion. Possible values `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL`, and `NOT_NULL`.
-- `source` (String) The source of the asserted value. Possible values `STATUS_CODE`, `JSON_BODY`, `HEADERS`, `TEXT_BODY`, and `RESPONSE_TIME`.
+- `comparison` (String) The type of comparison to be executed between expected and actual value of the assertion. Possible values are `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL` and `NOT_NULL`.
+- `source` (String) The source of the asserted value. Possible values are `STATUS_CODE`, `JSON_BODY`, `HEADERS`, `TEXT_BODY` and `RESPONSE_TIME`.
 
 Optional:
 
-- `property` (String)
-- `target` (String)
+- `property` (String) The property selecting the asserted value within the source: a JSONPath expression for `JSON_BODY`, a header name for `HEADERS`, or a regular expression for `TEXT_BODY` whose first capture group is asserted instead of the whole body. Not used for `STATUS_CODE` and `RESPONSE_TIME`.
+- `target` (String) The value to compare against, e.g. `200` for `STATUS_CODE` or a number of milliseconds for `RESPONSE_TIME`. Leave empty for comparisons that take no value, such as `IS_EMPTY` and `NOT_NULL`.
 
 
-<a id="nestedblock--request--basic_auth"></a>
+<a id="nestedatt--request--basic_auth"></a>
 ### Nested Schema for `request.basic_auth`
 
 Required:
 
-- `password` (String)
-- `username` (String)
+- `password` (String, Sensitive) The basic auth password.
+- `username` (String) The basic auth username.
 
 
 
-<a id="nestedblock--retry_strategy"></a>
+<a id="nestedatt--retry_strategy"></a>
 ### Nested Schema for `retry_strategy`
 
 Required:
 
-- `type` (String) Determines which type of retry strategy to use. Possible values are `FIXED`, `LINEAR`, `EXPONENTIAL`, `SINGLE_RETRY`, and `NO_RETRIES`.
+- `type` (String) Determines which type of retry strategy to use. Possible values are `FIXED`, `LINEAR`, `EXPONENTIAL`, `SINGLE_RETRY` and `NO_RETRIES`.
 
 Optional:
 
-- `base_backoff_seconds` (Number) The number of seconds to wait before the first retry attempt. (Default `60`).
-- `max_duration_seconds` (Number) The total amount of time to continue retrying the check/monitor (maximum 600 seconds). Available when `type` is `FIXED`, `LINEAR`, or `EXPONENTIAL`. (Default `600`).
-- `max_retries` (Number) The maximum number of times to retry the check/monitor. Value must be between `1` and `10`. Available when `type` is `FIXED`, `LINEAR`, or `EXPONENTIAL`. (Default `2`).
-- `only_on` (Block List, Max: 1) Apply the retry strategy only if the defined conditions match. (see [below for nested schema](#nestedblock--retry_strategy--only_on))
-- `same_region` (Boolean) Whether retries should be run in the same region as the initial check/monitor run. (Default `true`).
+- `base_backoff_seconds` (Number) The number of seconds to wait before the first retry attempt. Must be at least `0`. Defaults to `60`. Not available when `type` is `NO_RETRIES`.
+- `max_duration_seconds` (Number) The total amount of time to continue retrying the check/monitor, in seconds. Possible values are between `0` and `600`. Defaults to `600`. Available when `type` is `FIXED`, `LINEAR` or `EXPONENTIAL`.
+- `max_retries` (Number) The maximum number of times to retry the check/monitor. Possible values are between `1` and `10`. Defaults to `2`. Available when `type` is `FIXED`, `LINEAR` or `EXPONENTIAL`.
+- `only_on` (Attributes) Apply the retry strategy only if the defined conditions match. (see [below for nested schema](#nestedatt--retry_strategy--only_on))
+- `same_region` (Boolean) Whether retries should be run in the same region as the initial check/monitor run. Defaults to `true`. Not available when `type` is `NO_RETRIES`.
 
-<a id="nestedblock--retry_strategy--only_on"></a>
+<a id="nestedatt--retry_strategy--only_on"></a>
 ### Nested Schema for `retry_strategy.only_on`
 
 Optional:
 
-- `network_error` (Boolean) When `true`, retry only if the cause of the failure is a network error. (Default `false`).
+- `network_error` (Boolean) When `true`, retry only if the cause of the failure is a network error. Defaults to `false`.
 
 
 
-<a id="nestedblock--trigger_incident"></a>
+<a id="nestedatt--trigger_incident"></a>
 ### Nested Schema for `trigger_incident`
 
 Required:
@@ -386,4 +440,17 @@ Required:
 - `name` (String) The name of the incident.
 - `notify_subscribers` (Boolean) Whether to notify subscribers when the incident is triggered.
 - `service_id` (String) The status page service that this incident will be associated with.
-- `severity` (String) The severity level of the incident. Possible values are `MINOR`, `MEDIUM`, `MAJOR`, and `CRITICAL`.
+- `severity` (String) The severity level of the incident. Possible values are `MINOR`, `MEDIUM`, `MAJOR` and `CRITICAL`.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# checkly_check is deprecated; to start managing an existing resource, import it as checkly_api_check, checkly_browser_check or checkly_multistep_check instead.
+# Import an existing check using its check ID.
+# You can find the ID in the check's URL in the Checkly dashboard.
+terraform import checkly_check.example 3ffee447-5c86-4c56-b95a-2e1b4d1a1234
+```

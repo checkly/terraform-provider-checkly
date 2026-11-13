@@ -22,7 +22,7 @@
 # included as well (recursively - repeat the process until all relevant
 # workspace packages can be resolved).
 resource "checkly_playwright_code_bundle" "playwright-bundle" {
-  prebuilt_archive {
+  prebuilt_archive = {
     file = data.archive_file.playwright-bundle.output_path
   }
 }
@@ -53,7 +53,7 @@ resource "checkly_playwright_check_suite" "example-playwright-check" {
     "eu-west-1"
   ]
 
-  bundle {
+  bundle = {
     id       = checkly_playwright_code_bundle.playwright-bundle.id
     metadata = checkly_playwright_code_bundle.playwright-bundle.metadata
   }
@@ -71,30 +71,31 @@ resource "checkly_playwright_check_suite" "example-playwright-check-custom" {
     "eu-west-1"
   ]
 
-  bundle {
+  bundle = {
     id       = checkly_playwright_code_bundle.playwright-bundle.id
     metadata = checkly_playwright_code_bundle.playwright-bundle.metadata
   }
 
-  runtime {
+  runtime = {
     working_dir = "./packages/e2e"
 
-    steps {
-      test {
+    steps = {
+      test = {
         command = "npx playwright test --config \"playwright.config.ts\""
       }
     }
 
-    playwright {
+    playwright = {
       version = "1.56.1"
 
-      device {
-        type = "chromium"
-      }
-
-      device {
-        type = "firefox"
-      }
+      devices = [
+        {
+          type = "chromium"
+        },
+        {
+          type = "firefox"
+        },
+      ]
     }
   }
 }

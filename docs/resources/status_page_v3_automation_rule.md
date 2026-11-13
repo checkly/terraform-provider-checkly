@@ -33,10 +33,12 @@ resource "checkly_status_page_v3_automation_rule" "api_outage" {
   last_update    = "The issue has been resolved."
   tags           = ["api"]
 
-  component {
-    component_id  = checkly_status_page_v3_component.api.id
-    target_impact = "MAJOR_OUTAGE"
-  }
+  components = [
+    {
+      component_id  = checkly_status_page_v3_component.api.id
+      target_impact = "MAJOR_OUTAGE"
+    },
+  ]
 }
 ```
 
@@ -45,27 +47,39 @@ resource "checkly_status_page_v3_automation_rule" "api_outage" {
 
 ### Required
 
-- `first_update` (String) Body of the status update that opens the incident.
-- `last_update` (String) Body of the status update that resolves the incident.
-- `name` (String) The name of the rule.
+- `first_update` (String) Body of the status update that opens the incident. Must not be empty.
+- `last_update` (String) Body of the status update that resolves the incident. Must not be empty.
+- `name` (String) The name of the rule. Must be between `1` and `255` characters.
 - `status_page_id` (String) The ID of the v3 status page the rule belongs to.
-- `tags` (Set of String) A failing check matches this rule when it, or its group, carries ANY of these tags. At least one tag is required.
+- `tags` (Set of String) A failing check matches this rule when it, or its group, carries ANY of these tags. At least one tag is required, and tags must not be empty.
 
 ### Optional
 
-- `component` (Block Set) The components an automated incident impacts, with the impact each gets. (see [below for nested schema](#nestedblock--component))
-- `cool_down_window_minutes` (Number) Minimum minutes after an automated incident before this rule may open the next one. `0` disables the cool down. (Default `5`).
-- `enabled` (Boolean) A disabled rule never opens incidents. (Default `true`).
-- `notify_subscribers` (Boolean) Whether subscribers are notified of the automated updates. (Default `true`).
+- `components` (Attributes Set) The components an automated incident impacts, with the impact each gets. (see [below for nested schema](#nestedatt--components))
+- `cool_down_window_minutes` (Number) Minimum minutes after an automated incident before this rule may open the next one. `0` disables the cool down. Defaults to `5`.
+- `enabled` (Boolean) A disabled rule never opens incidents. Defaults to `true`.
+- `notify_subscribers` (Boolean) Whether subscribers are notified of the automated updates. Defaults to `true`.
 
 ### Read-Only
 
-- `id` (String) The ID of this resource.
+- `id` (String) The ID of the automation rule.
 
-<a id="nestedblock--component"></a>
-### Nested Schema for `component`
+<a id="nestedatt--components"></a>
+### Nested Schema for `components`
 
 Required:
 
-- `component_id` (String) The ID of the impacted component. Must be on the same status page.
-- `target_impact` (String) The impact set on the component while the incident is open. The allowed values are `UNDER_MAINTENANCE`, `DEGRADED_PERFORMANCE`, `PARTIAL_OUTAGE` and `MAJOR_OUTAGE`.
+- `component_id` (String) The ID of the impacted component. Must be on the same status page, and listed only once.
+- `target_impact` (String) The impact set on the component while the incident is open. Possible values are `UNDER_MAINTENANCE`, `DEGRADED_PERFORMANCE`, `PARTIAL_OUTAGE` and `MAJOR_OUTAGE`.
+
+## Import
+
+Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
+```shell
+# Import an existing status page automation rule using "<status_page_id>/<rule_id>".
+# Both IDs are returned by the Checkly API at GET /v3/status-pages/{status_page_id}/automation-rules.
+terraform import checkly_status_page_v3_automation_rule.example e35f7e14-91b2-4d24-b7b6-e0f9e2f8e51c/5b0a9a1e-8e29-4b71-92e1-0db9b3b41f0a
+```

@@ -1,0 +1,382 @@
+package provider
+
+import (
+	"context"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/provider"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-go/tftypes"
+)
+
+// resourceSchemas returns the schema of every resource the provider
+// registers, keyed by resource type name.
+func resourceSchemas(t *testing.T) map[string]schema.Schema {
+	t.Helper()
+
+	ctx := context.Background()
+	p := New("test")()
+
+	var providerMetadata provider.MetadataResponse
+	p.Metadata(ctx, provider.MetadataRequest{}, &providerMetadata)
+
+	schemas := make(map[string]schema.Schema)
+	for _, newResource := range p.Resources(ctx) {
+		r := newResource()
+
+		var metadata resource.MetadataResponse
+		r.Metadata(ctx, resource.MetadataRequest{ProviderTypeName: providerMetadata.TypeName}, &metadata)
+
+		var resp resource.SchemaResponse
+		r.Schema(ctx, resource.SchemaRequest{}, &resp)
+		if resp.Diagnostics.HasError() {
+			t.Fatalf("%s: schema diagnostics: %v", metadata.TypeName, resp.Diagnostics)
+		}
+
+		schemas[metadata.TypeName] = resp.Schema
+	}
+
+	return schemas
+}
+
+func TestResourceSchemasAreValid(t *testing.T) {
+	ctx := context.Background()
+
+	for name, s := range resourceSchemas(t) {
+		if diags := s.ValidateImplementation(ctx); diags.HasError() {
+			t.Errorf("%s: invalid schema: %v", name, diags)
+		}
+	}
+}
+
+// Credentials must be marked Sensitive so Terraform redacts them in plan
+// output. Header and query parameter values must not be: they show in plan
+// output like any other configuration, and users who put a credential in one
+// redact it with a sensitive variable or sensitive(). Attributes of nested
+// objects and blocks are given as dotted paths.
+func TestSensitiveAttributes(t *testing.T) {
+	ctx := context.Background()
+
+	var providerSchema provider.SchemaResponse
+	New("test")().Schema(ctx, provider.SchemaRequest{}, &providerSchema)
+	if !providerSchema.Schema.Attributes["api_key"].IsSensitive() {
+		t.Errorf("provider attribute api_key is not Sensitive")
+	}
+
+	schemas := resourceSchemas(t)
+
+	cases := map[string][]string{
+		"checkly_client_certificate":   {"private_key", "passphrase"},
+		"checkly_environment_variable": {"value"},
+		"checkly_dashboard":            {"key"},
+		"checkly_private_location":     {"keys", "proxy_url"},
+		"checkly_alert_channel": {
+			"slack.url",
+			"webhook.url",
+			"webhook.webhook_secret",
+			"opsgenie.api_key",
+			"pagerduty.service_key",
+		},
+		"checkly_api_check":              {"request.basic_auth.password"},
+		"checkly_check":                  {"request.basic_auth.password", "environment_variables.value"},
+		"checkly_check_group":            {"api_check_defaults.basic_auth.password", "environment_variables.value"},
+		"checkly_check_group_v2":         {"api_check_defaults.basic_auth.password", "environment_variables.value"},
+		"checkly_browser_check":          {"environment_variables.value"},
+		"checkly_multistep_check":        {"environment_variables.value"},
+		"checkly_playwright_check_suite": {"environment_variables.value"},
+		"checkly_heartbeat_monitor":      {"heartbeat.ping_token"},
+		"checkly_heartbeat":              {"heartbeat.ping_token"},
+	}
+
+	notSensitive := map[string][]string{
+		"checkly_alert_channel":  {"webhook.headers", "webhook.query_parameters"},
+		"checkly_api_check":      {"request.headers", "request.query_parameters"},
+		"checkly_check":          {"request.headers", "request.query_parameters"},
+		"checkly_check_group":    {"api_check_defaults.headers", "api_check_defaults.query_parameters"},
+		"checkly_check_group_v2": {"api_check_defaults.headers", "api_check_defaults.query_parameters"},
+		"checkly_grpc_monitor":   {"request.metadata.value"},
+	}
+
+	for _, tc := range []struct {
+		attrPaths map[string][]string
+		sensitive bool
+	}{
+		{cases, true},
+		{notSensitive, false},
+	} {
+		for resourceName, attrPaths := range tc.attrPaths {
+			s, ok := schemas[resourceName]
+			if !ok {
+				t.Errorf("resource %s not found", resourceName)
+				continue
+			}
+			for _, attrPath := range attrPaths {
+				attr, ok := schemaAttributeAtPath(s, strings.Split(attrPath, "."))
+				if !ok {
+					t.Errorf("%s: attribute %s not found", resourceName, attrPath)
+					continue
+				}
+				if attr.IsSensitive() != tc.sensitive {
+					t.Errorf("%s: attribute %s has Sensitive = %t, want %t", resourceName, attrPath, attr.IsSensitive(), tc.sensitive)
+				}
+			}
+		}
+	}
+}
+
+// schemaAttributeAtPath looks up an attribute by the names of the nested
+// attributes that lead to it, skipping over list and set elements.
+func schemaAttributeAtPath(s schema.Schema, names []string) (schema.Attribute, bool) {
+	attributes := s.Attributes
+	for i, name := range names {
+		attr, ok := attributes[name]
+		if !ok {
+			return nil, false
+		}
+		if i == len(names)-1 {
+			return attr, true
+		}
+		switch attr := attr.(type) {
+		case schema.SingleNestedAttribute:
+			attributes = attr.Attributes
+		case schema.ListNestedAttribute:
+			attributes = attr.NestedObject.Attributes
+		case schema.SetNestedAttribute:
+			attributes = attr.NestedObject.Attributes
+		default:
+			return nil, false
+		}
+	}
+
+	return nil, false
+}
+
+// Every API key needs a valid account ID, an empty configured one falls back
+// to the environment, an API key must be a valid header value, and no
+// diagnostic repeats the credentials.
+func TestConfigureValidatesCredentials(t *testing.T) {
+	const (
+		apiKey         = "cu_test-api-key"
+		validAccountID = "00000000-0000-4000-8000-000000000000"
+	)
+
+	cases := map[string]struct {
+		// envAPIKey replaces apiKey in CHECKLY_API_KEY when set.
+		envAPIKey    string
+		envAccountID string
+		accountID    *string
+		apiURL       *string
+		want         string
+		// wantPath is the attribute the error is attached to, if any.
+		wantPath string
+		// wantDetail is text the error detail must contain, if any.
+		wantDetail string
+		// wantExactDetail is the whole error detail, if set.
+		wantExactDetail string
+		// secret is text the error must not repeat, if any.
+		secret string
+	}{
+		"missing":             {want: "Missing Checkly Account ID"},
+		"empty without env":   {accountID: new(""), want: "Missing Checkly Account ID"},
+		"empty falls to env":  {envAccountID: validAccountID, accountID: new("")},
+		"null falls to env":   {envAccountID: validAccountID},
+		"configured over env": {envAccountID: "not-a-uuid", accountID: new(validAccountID)},
+		"invalid env":         {envAccountID: "not-a-uuid", want: "Invalid Checkly Account ID"},
+		"invalid":             {accountID: new("not-a-uuid"), want: "Invalid Checkly Account ID"},
+		"API key in its place": {
+			accountID: new("cu_0123456789abcdef0123456789abcdef"),
+			want:      "Invalid Checkly Account ID",
+		},
+		"API key with a newline": {
+			envAPIKey: apiKey + "\n",
+			accountID: new(validAccountID),
+			want:      "Invalid Checkly API Key",
+		},
+		"invalid API URL": {
+			accountID: new(validAccountID),
+			apiURL:    new("ftp://example.com"),
+			want:      "Invalid Checkly API URL",
+			wantPath:  "api_url",
+			// The detail embeds the SDK's error without its
+			// "checkly: WithBaseURL: " prefix, so a change to the SDK's
+			// wording fails here.
+			wantExactDetail: "The Checkly API URL must be an http or https URL with a host and without a query or fragment, such as https://api.checklyhq.com: " +
+				"not an http or https URL. Check the api_url value in the provider configuration or the CHECKLY_API_URL environment variable.",
+		},
+		"API URL with a query and a password": {
+			accountID: new(validAccountID),
+			apiURL:    new("https://user:hunter2@api.example.com/?region=eu"),
+			want:      "Invalid Checkly API URL",
+			wantPath:  "api_url",
+			wantExactDetail: "The Checkly API URL must be an http or https URL with a host and without a query or fragment, such as https://api.checklyhq.com: " +
+				`"https://user:xxxxx@api.example.com/?region=eu" has a query. Check the api_url value in the provider configuration or the CHECKLY_API_URL environment variable.`,
+			secret: "hunter2",
+		},
+	}
+
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			envAPIKey := apiKey
+			if c.envAPIKey != "" {
+				envAPIKey = c.envAPIKey
+			}
+			t.Setenv("CHECKLY_API_KEY", envAPIKey)
+			t.Setenv("CHECKLY_ACCOUNT_ID", c.envAccountID)
+			t.Setenv("CHECKLY_API_URL", "")
+
+			ctx := context.Background()
+			p := New("test")()
+
+			var schemaResp provider.SchemaResponse
+			p.Schema(ctx, provider.SchemaRequest{}, &schemaResp)
+			s := schemaResp.Schema
+
+			optionalString := func(value *string) tftypes.Value {
+				if value == nil {
+					return tftypes.NewValue(tftypes.String, nil)
+				}
+				return tftypes.NewValue(tftypes.String, *value)
+			}
+
+			var resp provider.ConfigureResponse
+			p.Configure(ctx, provider.ConfigureRequest{
+				Config: tfsdk.Config{Schema: s, Raw: tftypes.NewValue(s.Type().TerraformType(ctx), map[string]tftypes.Value{
+					"api_key":    tftypes.NewValue(tftypes.String, nil),
+					"api_url":    optionalString(c.apiURL),
+					"account_id": optionalString(c.accountID),
+				})},
+			}, &resp)
+
+			if c.want == "" {
+				if resp.Diagnostics.HasError() {
+					t.Fatal(resp.Diagnostics)
+				}
+				if resp.ResourceData == nil {
+					t.Error("no client in the resource data")
+				}
+				return
+			}
+
+			if !resp.Diagnostics.HasError() {
+				t.Fatal("expected an error diagnostic")
+			}
+			got := resp.Diagnostics.Errors()[0]
+			if got.Summary() != c.want {
+				t.Errorf("summary = %q, want %q", got.Summary(), c.want)
+			}
+			if c.wantPath != "" {
+				withPath, ok := got.(diag.DiagnosticWithPath)
+				if !ok || !withPath.Path().Equal(path.Root(c.wantPath)) {
+					t.Errorf("diagnostic %v is not attached to %s", got, c.wantPath)
+				}
+			}
+			if c.wantExactDetail != "" && got.Detail() != c.wantExactDetail {
+				t.Errorf("detail = %q, want %q", got.Detail(), c.wantExactDetail)
+			}
+			if !strings.Contains(got.Detail(), c.wantDetail) {
+				t.Errorf("detail = %q, want it to contain %q", got.Detail(), c.wantDetail)
+			}
+			text := got.Summary() + " " + got.Detail()
+			if c.secret != "" && strings.Contains(text, c.secret) {
+				t.Errorf("diagnostic contains %q: %q", c.secret, text)
+			}
+			if strings.Contains(text, apiKey) {
+				t.Errorf("diagnostic contains the API key: %q", text)
+			}
+			for _, accountID := range []string{c.envAccountID, valueOrZero(c.accountID)} {
+				if accountID != "" && strings.Contains(text, accountID) {
+					t.Errorf("diagnostic contains the account ID: %q", text)
+				}
+			}
+		})
+	}
+}
+
+// An empty configured value counts as not set for every setting, and the
+// client sends the resulting credentials and source with every request.
+func TestConfigureBuildsTheClientFromEnvironment(t *testing.T) {
+	const (
+		apiKey    = "cu_test-api-key"
+		accountID = "00000000-0000-4000-8000-000000000000"
+	)
+
+	cases := map[string]struct {
+		configured tftypes.Value
+		source     string
+		wantSource string
+	}{
+		"null values and the default source": {
+			configured: tftypes.NewValue(tftypes.String, nil),
+			wantSource: "TF",
+		},
+		"empty values and a configured source": {
+			configured: tftypes.NewValue(tftypes.String, ""),
+			source:     "my-pipeline",
+			wantSource: "my-pipeline",
+		},
+	}
+
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			var headers http.Header
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				headers = r.Header.Clone()
+				w.WriteHeader(http.StatusNotFound)
+			}))
+			defer server.Close()
+
+			t.Setenv("CHECKLY_API_KEY", apiKey)
+			t.Setenv("CHECKLY_ACCOUNT_ID", accountID)
+			t.Setenv("CHECKLY_API_URL", server.URL)
+			t.Setenv("CHECKLY_API_SOURCE", c.source)
+
+			ctx := context.Background()
+			p := New("test")()
+
+			var schemaResp provider.SchemaResponse
+			p.Schema(ctx, provider.SchemaRequest{}, &schemaResp)
+			s := schemaResp.Schema
+
+			var resp provider.ConfigureResponse
+			p.Configure(ctx, provider.ConfigureRequest{
+				Config: tfsdk.Config{Schema: s, Raw: tftypes.NewValue(s.Type().TerraformType(ctx), map[string]tftypes.Value{
+					"api_key":    c.configured,
+					"api_url":    c.configured,
+					"account_id": c.configured,
+				})},
+			}, &resp)
+			if resp.Diagnostics.HasError() {
+				t.Fatal(resp.Diagnostics)
+			}
+
+			data, ok := resp.ResourceData.(*providerData)
+			if !ok {
+				t.Fatalf("resource data is a %T", resp.ResourceData)
+			}
+			if resp.DataSourceData != resp.ResourceData {
+				t.Errorf("data source data %v differs from resource data %v", resp.DataSourceData, resp.ResourceData)
+			}
+			client := data.client
+			if _, err := client.GetEnvironmentVariable(ctx, "MISSING"); !isNotFoundError(err) {
+				t.Fatalf("GetEnvironmentVariable error = %v, want a 404 from the test server", err)
+			}
+
+			if got := headers.Get("x-checkly-source"); got != c.wantSource {
+				t.Errorf("x-checkly-source = %q, want %q", got, c.wantSource)
+			}
+			if got := headers.Get("x-checkly-account"); got != accountID {
+				t.Errorf("x-checkly-account = %q, want %q", got, accountID)
+			}
+			if got := headers.Get("Authorization"); got != "Bearer "+apiKey {
+				t.Errorf("Authorization header does not carry the API key")
+			}
+		})
+	}
+}

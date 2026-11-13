@@ -19,11 +19,21 @@ You also need to set your target Account ID, which you can find under your [acco
 
 > If you don't have access to account settings, please contact your account owner/admin.
 
-Now open the terminal and expose the `API Key` and `Account ID` as environment variables:
+Now open the terminal and expose the `API Key` and `Account ID` as environment variables for the Terraform variables of the example below:
 ```bash
 $ export TF_VAR_checkly_api_key="your-api-key"
 $ export TF_VAR_checkly_account_id="your-account-id"
 ```
+
+Alternatively, leave `api_key` and `account_id` out of the provider configuration and set the `CHECKLY_API_KEY` and `CHECKLY_ACCOUNT_ID` environment variables, which the provider reads directly:
+```bash
+$ export CHECKLY_API_KEY="your-api-key"
+$ export CHECKLY_ACCOUNT_ID="your-account-id"
+```
+
+## Request timeout
+
+Each request to the Checkly API times out after 15 seconds. To change this, set the `API_CALL_TIMEOUT` environment variable to a whole number of seconds, such as `API_CALL_TIMEOUT=60`.
 
 ## Example Usage
 
