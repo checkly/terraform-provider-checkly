@@ -100,9 +100,24 @@ type assertionSourceRule struct {
 	numericTargetComparisons []string
 }
 
-// allAssertionComparisons are every assertion comparison, for the sources
+// assertionComparisonValues are every assertion comparison, for the sources
 // that allow any of them.
-var allAssertionComparisons = []string{"EQUALS", "NOT_EQUALS", "HAS_KEY", "NOT_HAS_KEY", "HAS_VALUE", "NOT_HAS_VALUE", "IS_EMPTY", "NOT_EMPTY", "GREATER_THAN", "LESS_THAN", "CONTAINS", "NOT_CONTAINS", "IS_NULL", "NOT_NULL"}
+var assertionComparisonValues = allowedValues[string]{
+	{Value: "EQUALS"},
+	{Value: "NOT_EQUALS"},
+	{Value: "HAS_KEY"},
+	{Value: "NOT_HAS_KEY"},
+	{Value: "HAS_VALUE"},
+	{Value: "NOT_HAS_VALUE"},
+	{Value: "IS_EMPTY"},
+	{Value: "NOT_EMPTY"},
+	{Value: "GREATER_THAN"},
+	{Value: "LESS_THAN"},
+	{Value: "CONTAINS"},
+	{Value: "NOT_CONTAINS"},
+	{Value: "IS_NULL"},
+	{Value: "NOT_NULL"},
+}
 
 // nonNegativeMillisecondsTarget is the target rule of a response time or
 // latency assertion.

@@ -21,6 +21,17 @@ import (
 	"github.com/checkly/checkly-go-sdk/v2"
 )
 
+var urlMonitorAssertionSourceValues = allowedValues[string]{
+	{Value: "STATUS_CODE"},
+}
+
+var urlMonitorAssertionComparisonValues = allowedValues[string]{
+	{Value: "EQUALS"},
+	{Value: "NOT_EQUALS"},
+	{Value: "GREATER_THAN"},
+	{Value: "LESS_THAN"},
+}
+
 var (
 	_ resource.Resource                     = (*URLMonitorResource)(nil)
 	_ resource.ResourceWithConfigure        = (*URLMonitorResource)(nil)
@@ -169,9 +180,9 @@ func (r *URLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 						Optional:    true,
 						Computed:    true,
 						Default:     stringdefault.StaticString("IPv4"),
-						Description: "IP family version to use for the connection. Possible values are `IPv4` and `IPv6`. Defaults to `IPv4`.",
+						Description: "IP family version to use for the connection. " + ipFamilyValues.String() + " Defaults to `IPv4`.",
 						Validators: []validator.String{
-							stringvalidator.OneOf("IPv4", "IPv6"),
+							stringvalidator.OneOf(ipFamilyValues.Values()...),
 						},
 					},
 					"assertions": schema.SetNestedAttribute{
@@ -193,9 +204,9 @@ func (r *URLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 							Attributes: map[string]schema.Attribute{
 								"source": schema.StringAttribute{
 									Required:    true,
-									Description: "The source of the asserted value. The only possible value is `STATUS_CODE`.",
+									Description: "The source of the asserted value. " + urlMonitorAssertionSourceValues.String(),
 									Validators: []validator.String{
-										stringvalidator.OneOf("STATUS_CODE"),
+										stringvalidator.OneOf(urlMonitorAssertionSourceValues.Values()...),
 									},
 								},
 								"property": schema.StringAttribute{
@@ -205,9 +216,9 @@ func (r *URLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 								},
 								"comparison": schema.StringAttribute{
 									Required:    true,
-									Description: "The type of comparison to be executed between expected and actual value of the assertion. Possible values are `EQUALS`, `NOT_EQUALS`, `GREATER_THAN` and `LESS_THAN`.",
+									Description: "The type of comparison to be executed between expected and actual value of the assertion. " + urlMonitorAssertionComparisonValues.String(),
 									Validators: []validator.String{
-										stringvalidator.OneOf("EQUALS", "NOT_EQUALS", "GREATER_THAN", "LESS_THAN"),
+										stringvalidator.OneOf(urlMonitorAssertionComparisonValues.Values()...),
 									},
 								},
 								"target": schema.StringAttribute{

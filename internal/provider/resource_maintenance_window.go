@@ -22,6 +22,12 @@ import (
 	"github.com/checkly/checkly-go-sdk/v2"
 )
 
+var maintenanceWindowRepeatUnitValues = allowedValues[string]{
+	{Value: "DAY"},
+	{Value: "WEEK"},
+	{Value: "MONTH"},
+}
+
 var (
 	_ resource.Resource                   = (*MaintenanceWindowResource)(nil)
 	_ resource.ResourceWithConfigure      = (*MaintenanceWindowResource)(nil)
@@ -104,9 +110,9 @@ func (r *MaintenanceWindowResource) Schema(ctx context.Context, req resource.Sch
 			},
 			"repeat_unit": schema.StringAttribute{
 				Optional:    true,
-				Description: "The repeat cadence for the maintenance window. Possible values are `DAY`, `WEEK` and `MONTH`.",
+				Description: "The repeat cadence for the maintenance window. " + maintenanceWindowRepeatUnitValues.String(),
 				Validators: []validator.String{
-					stringvalidator.OneOf("DAY", "WEEK", "MONTH"),
+					stringvalidator.OneOf(maintenanceWindowRepeatUnitValues.Values()...),
 				},
 			},
 			"repeat_interval": schema.Int64Attribute{

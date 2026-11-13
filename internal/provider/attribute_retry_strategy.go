@@ -19,6 +19,14 @@ import (
 	"github.com/checkly/checkly-go-sdk/v2"
 )
 
+var retryStrategyTypeValues = allowedValues[string]{
+	{Value: "FIXED"},
+	{Value: "LINEAR"},
+	{Value: "EXPONENTIAL"},
+	{Value: "SINGLE_RETRY"},
+	{Value: "NO_RETRIES"},
+}
+
 const retryStrategyAttributeName = "retry_strategy"
 
 var retryStrategyOnlyOnAttrTypes = map[string]attr.Type{
@@ -89,9 +97,9 @@ func makeRetryStrategyAttributeSchema(options RetryStrategyAttributeSchemaOption
 	attributes := map[string]schema.Attribute{
 		"type": schema.StringAttribute{
 			Required:    true,
-			Description: "Determines which type of retry strategy to use. Possible values are `FIXED`, `LINEAR`, `EXPONENTIAL`, `SINGLE_RETRY` and `NO_RETRIES`.",
+			Description: "Determines which type of retry strategy to use. " + retryStrategyTypeValues.String(),
 			Validators: []validator.String{
-				stringvalidator.OneOf("FIXED", "LINEAR", "EXPONENTIAL", "SINGLE_RETRY", "NO_RETRIES"),
+				stringvalidator.OneOf(retryStrategyTypeValues.Values()...),
 			},
 		},
 		"base_backoff_seconds": schema.Int64Attribute{

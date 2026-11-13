@@ -20,6 +20,29 @@ import (
 	"github.com/checkly/checkly-go-sdk/v2"
 )
 
+var dnsMonitorRecordTypeValues = allowedValues[string]{
+	{Value: "A"},
+	{Value: "AAAA"},
+	{Value: "CNAME"},
+	{Value: "MX"},
+	{Value: "NS"},
+	{Value: "TXT"},
+	{Value: "SOA"},
+	{Value: "HTTPS"},
+}
+
+var dnsMonitorProtocolValues = allowedValues[string]{
+	{Value: "UDP"},
+	{Value: "TCP"},
+}
+
+var dnsMonitorAssertionSourceValues = allowedValues[string]{
+	{Value: "RESPONSE_CODE"},
+	{Value: "RESPONSE_TIME"},
+	{Value: "TEXT_ANSWER"},
+	{Value: "JSON_ANSWER"},
+}
+
 var (
 	_ resource.Resource                     = (*DNSMonitorResource)(nil)
 	_ resource.ResourceWithConfigure        = (*DNSMonitorResource)(nil)
@@ -155,9 +178,9 @@ func (r *DNSMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 				Attributes: map[string]schema.Attribute{
 					"record_type": schema.StringAttribute{
 						Required:    true,
-						Description: "The DNS record type. Possible values are `A`, `AAAA`, `CNAME`, `MX`, `NS`, `TXT`, `SOA` and `HTTPS`.",
+						Description: "The DNS record type. " + dnsMonitorRecordTypeValues.String(),
 						Validators: []validator.String{
-							stringvalidator.OneOf("A", "AAAA", "CNAME", "MX", "NS", "TXT", "SOA", "HTTPS"),
+							stringvalidator.OneOf(dnsMonitorRecordTypeValues.Values()...),
 						},
 					},
 					"query": schema.StringAttribute{
@@ -171,9 +194,9 @@ func (r *DNSMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 						Optional:    true,
 						Computed:    true,
 						Default:     stringdefault.StaticString("UDP"),
-						Description: "The protocol used to communicate with the name server. Possible values are `UDP` and `TCP`. Defaults to `UDP`.",
+						Description: "The protocol used to communicate with the name server. " + dnsMonitorProtocolValues.String() + " Defaults to `UDP`.",
 						Validators: []validator.String{
-							stringvalidator.OneOf("UDP", "TCP"),
+							stringvalidator.OneOf(dnsMonitorProtocolValues.Values()...),
 						},
 					},
 					"name_server": schema.SingleNestedAttribute{
@@ -225,9 +248,9 @@ func (r *DNSMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 							Attributes: map[string]schema.Attribute{
 								"source": schema.StringAttribute{
 									Required:    true,
-									Description: "The source of the asserted value. Possible values are `RESPONSE_CODE`, `RESPONSE_TIME`, `TEXT_ANSWER` and `JSON_ANSWER`.",
+									Description: "The source of the asserted value. " + dnsMonitorAssertionSourceValues.String(),
 									Validators: []validator.String{
-										stringvalidator.OneOf("RESPONSE_CODE", "RESPONSE_TIME", "TEXT_ANSWER", "JSON_ANSWER"),
+										stringvalidator.OneOf(dnsMonitorAssertionSourceValues.Values()...),
 									},
 								},
 								"property": schema.StringAttribute{
@@ -237,9 +260,9 @@ func (r *DNSMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 								},
 								"comparison": schema.StringAttribute{
 									Required:    true,
-									Description: "The type of comparison to be executed between expected and actual value of the assertion. Possible values are `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL` and `NOT_NULL`.",
+									Description: "The type of comparison to be executed between expected and actual value of the assertion. " + assertionComparisonValues.String(),
 									Validators: []validator.String{
-										stringvalidator.OneOf(allAssertionComparisons...),
+										stringvalidator.OneOf(assertionComparisonValues.Values()...),
 									},
 								},
 								"target": schema.StringAttribute{

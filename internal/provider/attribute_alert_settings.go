@@ -23,6 +23,48 @@ import (
 	"github.com/checkly/checkly-go-sdk/v2"
 )
 
+var alertSettingsEscalationTypeValues = allowedValues[string]{
+	{Value: "RUN_BASED"},
+	{Value: "TIME_BASED"},
+}
+
+var alertSettingsMinutesFailingThresholdValues = allowedValues[int64]{
+	{Value: 5},
+	{Value: 10},
+	{Value: 15},
+	{Value: 30},
+}
+
+var alertSettingsReminderAmountValues = allowedValues[int64]{
+	{Value: 0, Description: "disabled"},
+	{Value: 1},
+	{Value: 2},
+	{Value: 3},
+	{Value: 4},
+	{Value: 5},
+	{Value: 100000, Description: "unlimited"},
+}
+
+var alertSettingsReminderIntervalValues = allowedValues[int64]{
+	{Value: 5},
+	{Value: 10},
+	{Value: 15},
+	{Value: 30},
+}
+
+var alertSettingsParallelRunFailurePercentageValues = allowedValues[int64]{
+	{Value: 10},
+	{Value: 20},
+	{Value: 30},
+	{Value: 40},
+	{Value: 50},
+	{Value: 60},
+	{Value: 70},
+	{Value: 80},
+	{Value: 90},
+	{Value: 100},
+}
+
 const alertSettingsAttributeName = "alert_settings"
 
 // AlertSettingsModel describes the alert_settings attribute data model.
@@ -122,9 +164,9 @@ func makeAlertSettingsAttributeSchema(options AlertSettingsAttributeSchemaOption
 				Optional:    true,
 				Computed:    true,
 				Default:     stringdefault.StaticString("RUN_BASED"),
-				Description: "Determines the type of escalation to use. Possible values are `RUN_BASED` and `TIME_BASED`. Defaults to `RUN_BASED`.",
+				Description: "Determines the type of escalation to use. " + alertSettingsEscalationTypeValues.String() + " Defaults to `RUN_BASED`.",
 				Validators: []validator.String{
-					stringvalidator.OneOf("RUN_BASED", "TIME_BASED"),
+					stringvalidator.OneOf(alertSettingsEscalationTypeValues.Values()...),
 				},
 			},
 			"run_based_escalation": schema.SingleNestedAttribute{
@@ -160,9 +202,9 @@ func makeAlertSettingsAttributeSchema(options AlertSettingsAttributeSchemaOption
 						Optional:    true,
 						Computed:    true,
 						Default:     int64default.StaticInt64(5),
-						Description: minutesFailingThreshold + " Possible values are `5`, `10`, `15` and `30`. Defaults to `5`.",
+						Description: minutesFailingThreshold + " " + alertSettingsMinutesFailingThresholdValues.String() + " Defaults to `5`.",
 						Validators: []validator.Int64{
-							int64validator.OneOf(5, 10, 15, 30),
+							int64validator.OneOf(alertSettingsMinutesFailingThresholdValues.Values()...),
 						},
 					},
 				},
@@ -183,18 +225,18 @@ func makeAlertSettingsAttributeSchema(options AlertSettingsAttributeSchemaOption
 						Optional:    true,
 						Computed:    true,
 						Default:     int64default.StaticInt64(0),
-						Description: "Number of reminder notifications to send. Possible values are `0`, `1`, `2`, `3`, `4`, `5` and `100000` (`0` to disable, `100000` for unlimited). Defaults to `0`.",
+						Description: "Number of reminder notifications to send. " + alertSettingsReminderAmountValues.String() + " Defaults to `0`.",
 						Validators: []validator.Int64{
-							int64validator.OneOf(0, 1, 2, 3, 4, 5, 100000),
+							int64validator.OneOf(alertSettingsReminderAmountValues.Values()...),
 						},
 					},
 					"interval": schema.Int64Attribute{
 						Optional:    true,
 						Computed:    true,
 						Default:     int64default.StaticInt64(5),
-						Description: "Interval between reminder notifications in minutes. Possible values are `5`, `10`, `15` and `30`. Defaults to `5`.",
+						Description: "Interval between reminder notifications in minutes. " + alertSettingsReminderIntervalValues.String() + " Defaults to `5`.",
 						Validators: []validator.Int64{
-							int64validator.OneOf(5, 10, 15, 30),
+							int64validator.OneOf(alertSettingsReminderIntervalValues.Values()...),
 						},
 					},
 				},
@@ -221,9 +263,9 @@ func makeAlertSettingsAttributeSchema(options AlertSettingsAttributeSchemaOption
 						Optional:    true,
 						Computed:    true,
 						Default:     int64default.StaticInt64(10),
-						Description: "Percentage of runs that must fail to trigger alert. Possible values are `10`, `20`, `30`, `40`, `50`, `60`, `70`, `80`, `90` and `100`. Defaults to `10`.",
+						Description: "Percentage of runs that must fail to trigger alert. " + alertSettingsParallelRunFailurePercentageValues.String() + " Defaults to `10`.",
 						Validators: []validator.Int64{
-							int64validator.OneOf(10, 20, 30, 40, 50, 60, 70, 80, 90, 100),
+							int64validator.OneOf(alertSettingsParallelRunFailurePercentageValues.Values()...),
 						},
 					},
 				},

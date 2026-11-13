@@ -27,6 +27,30 @@ import (
 	"github.com/checkly/checkly-go-sdk/v2"
 )
 
+var grpcMonitorModeValues = allowedValues[string]{
+	{Value: "BEHAVIOR", Description: "invokes a unary method, requires `method`"},
+	{Value: "HEALTH", Description: "queries the standard gRPC health-check service, allows `service`"},
+}
+
+var grpcMonitorEncodingValues = allowedValues[string]{
+	{Value: "PROTOBUF"},
+	{Value: "FLATBUFFERS"},
+}
+
+var grpcMonitorServiceDefinitionValues = allowedValues[string]{
+	{Value: "REFLECTION", Description: "uses server reflection"},
+	{Value: "PROTO_FILE", Description: "uses the inline `proto_content`, which it requires"},
+}
+
+var grpcMonitorAssertionSourceValues = allowedValues[string]{
+	{Value: "RESPONSE_TIME"},
+	{Value: "GRPC_RESPONSE"},
+	{Value: "TEXT_BODY"},
+	{Value: "GRPC_METADATA"},
+	{Value: "GRPC_HEALTHCHECK_STATUS"},
+	{Value: "GRPC_STATUS_CODE"},
+}
+
 var (
 	_ resource.Resource                     = (*GRPCMonitorResource)(nil)
 	_ resource.ResourceWithConfigure        = (*GRPCMonitorResource)(nil)
@@ -210,18 +234,18 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 						Optional:    true,
 						Computed:    true,
 						Default:     stringdefault.StaticString("IPv4"),
-						Description: "The IP family to use when executing the gRPC check. Possible values are `IPv4` and `IPv6`. Defaults to `IPv4`.",
+						Description: "The IP family to use when executing the gRPC check. " + ipFamilyValues.String() + " Defaults to `IPv4`.",
 						Validators: []validator.String{
-							stringvalidator.OneOf("IPv4", "IPv6"),
+							stringvalidator.OneOf(ipFamilyValues.Values()...),
 						},
 					},
 					"grpc_mode": schema.StringAttribute{
 						Optional:    true,
 						Computed:    true,
 						Default:     stringdefault.StaticString("BEHAVIOR"),
-						Description: "The gRPC monitoring mode. Possible values are `BEHAVIOR` (invokes a unary method, requires `method`) and `HEALTH` (queries the standard gRPC health-check service, allows `service`). Defaults to `BEHAVIOR`.",
+						Description: "The gRPC monitoring mode. " + grpcMonitorModeValues.String() + " Defaults to `BEHAVIOR`.",
 						Validators: []validator.String{
-							stringvalidator.OneOf("BEHAVIOR", "HEALTH"),
+							stringvalidator.OneOf(grpcMonitorModeValues.Values()...),
 						},
 					},
 					"tls": schema.BoolAttribute{
@@ -266,18 +290,18 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 						Optional:    true,
 						Computed:    true,
 						Default:     stringdefault.StaticString("PROTOBUF"),
-						Description: "The wire encoding used in `BEHAVIOR` mode. Possible values are `PROTOBUF` and `FLATBUFFERS`. Defaults to `PROTOBUF`.",
+						Description: "The wire encoding used in `BEHAVIOR` mode. " + grpcMonitorEncodingValues.String() + " Defaults to `PROTOBUF`.",
 						Validators: []validator.String{
-							stringvalidator.OneOf("PROTOBUF", "FLATBUFFERS"),
+							stringvalidator.OneOf(grpcMonitorEncodingValues.Values()...),
 						},
 					},
 					"service_definition": schema.StringAttribute{
 						Optional:    true,
 						Computed:    true,
 						Default:     stringdefault.StaticString("REFLECTION"),
-						Description: "How the service definition is resolved in `BEHAVIOR` mode. Possible values are `REFLECTION` (uses server reflection) and `PROTO_FILE` (uses the inline `proto_content`, which it requires). Defaults to `REFLECTION`. Must not be set when `encoding = \"FLATBUFFERS\"`, and must not be `PROTO_FILE` in `HEALTH` mode.",
+						Description: "How the service definition is resolved in `BEHAVIOR` mode. " + grpcMonitorServiceDefinitionValues.String() + " Defaults to `REFLECTION`. Must not be set when `encoding = \"FLATBUFFERS\"`, and must not be `PROTO_FILE` in `HEALTH` mode.",
 						Validators: []validator.String{
-							stringvalidator.OneOf("REFLECTION", "PROTO_FILE"),
+							stringvalidator.OneOf(grpcMonitorServiceDefinitionValues.Values()...),
 						},
 					},
 					"proto_content": schema.StringAttribute{
@@ -379,9 +403,9 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 							Attributes: map[string]schema.Attribute{
 								"source": schema.StringAttribute{
 									Required:    true,
-									Description: "The source of the asserted value. Possible values are `RESPONSE_TIME`, `GRPC_RESPONSE`, `TEXT_BODY`, `GRPC_METADATA`, `GRPC_HEALTHCHECK_STATUS` and `GRPC_STATUS_CODE`.",
+									Description: "The source of the asserted value. " + grpcMonitorAssertionSourceValues.String(),
 									Validators: []validator.String{
-										stringvalidator.OneOf("RESPONSE_TIME", "GRPC_RESPONSE", "TEXT_BODY", "GRPC_METADATA", "GRPC_HEALTHCHECK_STATUS", "GRPC_STATUS_CODE"),
+										stringvalidator.OneOf(grpcMonitorAssertionSourceValues.Values()...),
 									},
 								},
 								"property": schema.StringAttribute{
@@ -551,9 +575,9 @@ var grpcMonitorAssertionRules = assertionRulesValidator{rules: map[string]assert
 		comparisons:   []string{"EQUALS", "NOT_EQUALS"},
 		numericTarget: &numericAssertionTarget{pattern: nonNegativeIntegerRegex, bounded: true, min: 0, max: 3, label: "an integer between 0 and 3"},
 	},
-	"GRPC_RESPONSE": {comparisons: allAssertionComparisons},
-	"TEXT_BODY":     {comparisons: allAssertionComparisons},
-	"GRPC_METADATA": {comparisons: allAssertionComparisons},
+	"GRPC_RESPONSE": {comparisons: assertionComparisonValues.Values()},
+	"TEXT_BODY":     {comparisons: assertionComparisonValues.Values()},
+	"GRPC_METADATA": {comparisons: assertionComparisonValues.Values()},
 }}
 
 // grpcEncodingConfig holds the configured values validateGRPCEncoding needs.

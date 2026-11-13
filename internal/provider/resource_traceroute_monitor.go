@@ -21,6 +21,19 @@ import (
 	"github.com/checkly/checkly-go-sdk/v2"
 )
 
+var tracerouteMonitorProtocolValues = allowedValues[string]{
+	{Value: "TCP", Description: "sends SYN probes"},
+	{Value: "UDP", Description: "sends datagrams to a high port"},
+	{Value: "ICMP", Description: "sends Echo Requests"},
+	{Value: "SCTP", Description: "sends INIT chunks"},
+}
+
+var tracerouteMonitorAssertionSourceValues = allowedValues[string]{
+	{Value: "RESPONSE_TIME"},
+	{Value: "HOP_COUNT"},
+	{Value: "PACKET_LOSS"},
+}
+
 var (
 	_ resource.Resource                     = (*TracerouteMonitorResource)(nil)
 	_ resource.ResourceWithConfigure        = (*TracerouteMonitorResource)(nil)
@@ -169,9 +182,9 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 						Optional:    true,
 						Computed:    true,
 						Default:     stringdefault.StaticString("TCP"),
-						Description: "The probe protocol. Possible values are `TCP` (sends SYN probes), `UDP` (sends datagrams to a high port), `ICMP` (sends Echo Requests) and `SCTP` (sends INIT chunks). Defaults to `TCP`.",
+						Description: "The probe protocol. " + tracerouteMonitorProtocolValues.String() + " Defaults to `TCP`.",
 						Validators: []validator.String{
-							stringvalidator.OneOf("TCP", "ICMP", "UDP", "SCTP"),
+							stringvalidator.OneOf(tracerouteMonitorProtocolValues.Values()...),
 						},
 					},
 					// port and max_unknown_hops are derived by the server
@@ -190,9 +203,9 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 						Optional:    true,
 						Computed:    true,
 						Default:     stringdefault.StaticString("IPv4"),
-						Description: "The IP family to use when executing the traceroute. Possible values are `IPv4` and `IPv6`. Defaults to `IPv4`.",
+						Description: "The IP family to use when executing the traceroute. " + ipFamilyValues.String() + " Defaults to `IPv4`.",
 						Validators: []validator.String{
-							stringvalidator.OneOf("IPv4", "IPv6"),
+							stringvalidator.OneOf(ipFamilyValues.Values()...),
 						},
 					},
 					"max_hops": schema.Int64Attribute{
@@ -261,9 +274,9 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 							Attributes: map[string]schema.Attribute{
 								"source": schema.StringAttribute{
 									Required:    true,
-									Description: "The source of the asserted value. Possible values are `RESPONSE_TIME`, `HOP_COUNT` and `PACKET_LOSS`.",
+									Description: "The source of the asserted value. " + tracerouteMonitorAssertionSourceValues.String(),
 									Validators: []validator.String{
-										stringvalidator.OneOf("RESPONSE_TIME", "HOP_COUNT", "PACKET_LOSS"),
+										stringvalidator.OneOf(tracerouteMonitorAssertionSourceValues.Values()...),
 									},
 								},
 								"property": schema.StringAttribute{

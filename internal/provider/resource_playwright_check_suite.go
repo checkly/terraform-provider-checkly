@@ -24,6 +24,11 @@ import (
 	"github.com/checkly/checkly-go-sdk/v2"
 )
 
+var playwrightCheckSuiteEngineNameValues = allowedValues[string]{
+	{Value: "node"},
+	{Value: "bun"},
+}
+
 var playwrightCheckSuiteDefaultBrowsers = []string{"chromium", "firefox", "webkit"}
 
 // playwrightCheckSuiteDeviceTypes are the device types the check runners
@@ -338,9 +343,9 @@ func (r *PlaywrightCheckSuiteResource) Schema(ctx context.Context, req resource.
 						Attributes: map[string]schema.Attribute{
 							"name": schema.StringAttribute{
 								Required:    true,
-								Description: "The engine name. Possible values are `node` and `bun`.",
+								Description: "The engine name. " + playwrightCheckSuiteEngineNameValues.String(),
 								Validators: []validator.String{
-									stringvalidator.OneOf("node", "bun"),
+									stringvalidator.OneOf(playwrightCheckSuiteEngineNameValues.Values()...),
 								},
 							},
 							"version": schema.StringAttribute{

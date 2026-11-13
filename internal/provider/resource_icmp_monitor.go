@@ -20,6 +20,11 @@ import (
 	"github.com/checkly/checkly-go-sdk/v2"
 )
 
+var icmpMonitorAssertionSourceValues = allowedValues[string]{
+	{Value: "LATENCY"},
+	{Value: "JSON_RESPONSE"},
+}
+
 var (
 	_ resource.Resource                     = (*ICMPMonitorResource)(nil)
 	_ resource.ResourceWithConfigure        = (*ICMPMonitorResource)(nil)
@@ -155,9 +160,9 @@ func (r *ICMPMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 						Optional:    true,
 						Computed:    true,
 						Default:     stringdefault.StaticString("IPv4"),
-						Description: "The IP family to use. Possible values are `IPv4` and `IPv6`. Defaults to `IPv4`.",
+						Description: "The IP family to use. " + ipFamilyValues.String() + " Defaults to `IPv4`.",
 						Validators: []validator.String{
-							stringvalidator.OneOf("IPv4", "IPv6"),
+							stringvalidator.OneOf(ipFamilyValues.Values()...),
 						},
 					},
 					"ping_count": schema.Int64Attribute{
@@ -191,9 +196,9 @@ func (r *ICMPMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 							Attributes: map[string]schema.Attribute{
 								"source": schema.StringAttribute{
 									Required:    true,
-									Description: "The source of the asserted value. Possible values are `LATENCY` and `JSON_RESPONSE`.",
+									Description: "The source of the asserted value. " + icmpMonitorAssertionSourceValues.String(),
 									Validators: []validator.String{
-										stringvalidator.OneOf("LATENCY", "JSON_RESPONSE"),
+										stringvalidator.OneOf(icmpMonitorAssertionSourceValues.Values()...),
 									},
 								},
 								"property": schema.StringAttribute{

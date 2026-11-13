@@ -22,6 +22,12 @@ import (
 	"github.com/checkly/checkly-go-sdk/v2"
 )
 
+var checkTypeValues = allowedValues[string]{
+	{Value: "API"},
+	{Value: "BROWSER"},
+	{Value: "MULTI_STEP"},
+}
+
 var (
 	_ resource.Resource                     = (*CheckResource)(nil)
 	_ resource.ResourceWithConfigure        = (*CheckResource)(nil)
@@ -124,9 +130,9 @@ func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 			},
 			"type": schema.StringAttribute{
 				Required:    true,
-				Description: "The type of the check. Possible values are `API`, `BROWSER` and `MULTI_STEP`.",
+				Description: "The type of the check. " + checkTypeValues.String(),
 				Validators: []validator.String{
-					stringvalidator.OneOf("API", "BROWSER", "MULTI_STEP"),
+					stringvalidator.OneOf(checkTypeValues.Values()...),
 				},
 			},
 			frequencyAttributeName: makeFrequencyAttributeSchema(FrequencyAttributeSchemaOptions{

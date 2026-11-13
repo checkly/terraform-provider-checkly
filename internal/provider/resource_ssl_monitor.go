@@ -24,6 +24,31 @@ import (
 	"github.com/checkly/checkly-go-sdk/v2"
 )
 
+var sslMonitorBaselineSeverityValues = allowedValues[string]{
+	{Value: "fail", Description: "fails the monitor"},
+	{Value: "degrade", Description: "marks it degraded"},
+	{Value: "ignore", Description: "disables the rule"},
+}
+
+var sslMonitorTLSVersionValues = allowedValues[string]{
+	{Value: "TLS1.2"},
+	{Value: "TLS1.3"},
+}
+
+var sslMonitorClientCertificateModeValues = allowedValues[string]{
+	{Value: "account_default", Description: "inherits the account setting, no certificate sent"},
+	{Value: "auto", Description: "lets Checkly select a stored certificate"},
+	{Value: "explicit", Description: "uses the certificate referenced by `client_certificate_id`"},
+}
+
+var sslMonitorAssertionSourceValues = allowedValues[string]{
+	{Value: "CERTIFICATE"},
+	{Value: "CONNECTION"},
+	{Value: "RESPONSE_TIME"},
+	{Value: "JSON_RESPONSE"},
+	{Value: "TEXT_RESPONSE"},
+}
+
 var (
 	_ resource.Resource                     = (*SSLMonitorResource)(nil)
 	_ resource.ResourceWithConfigure        = (*SSLMonitorResource)(nil)
@@ -203,9 +228,9 @@ func sslMonitorBaselineSeverityAttribute(defaultSeverity checkly.SSLBaselineSeve
 		Optional:    true,
 		Computed:    true,
 		Default:     stringdefault.StaticString(string(defaultSeverity)),
-		Description: fmt.Sprintf("What happens when the rule is violated. Possible values are `fail` (fails the monitor), `degrade` (marks it degraded) and `ignore` (disables the rule). Defaults to `%s`.", defaultSeverity),
+		Description: fmt.Sprintf("What happens when the rule is violated. %s Defaults to `%s`.", sslMonitorBaselineSeverityValues.String(), defaultSeverity),
 		Validators: []validator.String{
-			stringvalidator.OneOf("fail", "degrade", "ignore"),
+			stringvalidator.OneOf(sslMonitorBaselineSeverityValues.Values()...),
 		},
 	}
 }
@@ -226,9 +251,9 @@ func sslMonitorBaselineTLSRuleAttribute(def *checkly.SSLBaselineTLSRule, descrip
 				Optional:    true,
 				Computed:    true,
 				Default:     stringdefault.StaticString(string(def.Value)),
-				Description: fmt.Sprintf("The TLS version. Possible values are `TLS1.2` and `TLS1.3`. Defaults to `%s`.", def.Value),
+				Description: fmt.Sprintf("The TLS version. %s Defaults to `%s`.", sslMonitorTLSVersionValues.String(), def.Value),
 				Validators: []validator.String{
-					stringvalidator.OneOf("TLS1.2", "TLS1.3"),
+					stringvalidator.OneOf(sslMonitorTLSVersionValues.Values()...),
 				},
 			},
 			"severity": sslMonitorBaselineSeverityAttribute(def.Severity),
@@ -367,9 +392,9 @@ func (r *SSLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 						Optional:    true,
 						Computed:    true,
 						Default:     stringdefault.StaticString("IPv4"),
-						Description: "The IP family to use when executing the check. Possible values are `IPv4` and `IPv6`. Defaults to `IPv4`.",
+						Description: "The IP family to use when executing the check. " + ipFamilyValues.String() + " Defaults to `IPv4`.",
 						Validators: []validator.String{
-							stringvalidator.OneOf("IPv4", "IPv6"),
+							stringvalidator.OneOf(ipFamilyValues.Values()...),
 						},
 					},
 					"skip_chain_validation": schema.BoolAttribute{
@@ -416,9 +441,9 @@ func (r *SSLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 								Optional:    true,
 								Computed:    true,
 								Default:     stringdefault.StaticString("account_default"),
-								Description: "The mutual-TLS client-certificate mode. Possible values are `account_default` (inherits the account setting, no certificate sent), `auto` (lets Checkly select a stored certificate) and `explicit` (uses the certificate referenced by `client_certificate_id`). Defaults to `account_default`.",
+								Description: "The mutual-TLS client-certificate mode. " + sslMonitorClientCertificateModeValues.String() + " Defaults to `account_default`.",
 								Validators: []validator.String{
-									stringvalidator.OneOf("account_default", "auto", "explicit"),
+									stringvalidator.OneOf(sslMonitorClientCertificateModeValues.Values()...),
 								},
 							},
 							"client_certificate_id": schema.StringAttribute{
@@ -479,9 +504,9 @@ func (r *SSLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 							Attributes: map[string]schema.Attribute{
 								"source": schema.StringAttribute{
 									Required:    true,
-									Description: "The source of the asserted value. Possible values are `CERTIFICATE`, `CONNECTION`, `RESPONSE_TIME`, `JSON_RESPONSE` and `TEXT_RESPONSE`.",
+									Description: "The source of the asserted value. " + sslMonitorAssertionSourceValues.String(),
 									Validators: []validator.String{
-										stringvalidator.OneOf("CERTIFICATE", "CONNECTION", "RESPONSE_TIME", "JSON_RESPONSE", "TEXT_RESPONSE"),
+										stringvalidator.OneOf(sslMonitorAssertionSourceValues.Values()...),
 									},
 								},
 								"property": schema.StringAttribute{
