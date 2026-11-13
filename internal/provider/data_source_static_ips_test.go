@@ -48,6 +48,27 @@ func TestAccStaticIPsAll(t *testing.T) {
 					"addresses.#",
 					checkResourceAttrGreaterThanOrEqualTo(1),
 				),
+				resource.TestCheckResourceAttr("data.checkly_static_ips.test", "ip_family", "all"),
+			),
+		},
+	})
+}
+
+func TestAccStaticIPsAllIPFamilies(t *testing.T) {
+	config := `data "checkly_static_ips" "test" {
+    ip_family = "all"
+  }`
+
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: config,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttrWith(
+					"data.checkly_static_ips.test",
+					"addresses.#",
+					checkResourceAttrGreaterThanOrEqualTo(2),
+				),
+				resource.TestCheckResourceAttr("data.checkly_static_ips.test", "ip_family", "all"),
 			),
 		},
 	})
@@ -245,4 +266,61 @@ func TestAccStaticIPsUnknownLocation(t *testing.T) {
 			),
 		},
 	})
+}
+
+func TestStaticIPsIPFamily(t *testing.T) {
+	ctx := context.Background()
+	d := &StaticIPsDataSource{client: &staticIPsClient{ips: []checkly.StaticIP{
+		{Region: "eu-central-1", Address: netip.MustParsePrefix("3.64.0.1/32")},
+		{Region: "eu-central-1", Address: netip.MustParsePrefix("2a05:d014::1/128")},
+	}}}
+
+	var schemaResp datasource.SchemaResponse
+	d.Schema(ctx, datasource.SchemaRequest{}, &schemaResp)
+	objectType := schemaResp.Schema.Type().TerraformType(ctx).(tftypes.Object)
+
+	stringSet := func(values ...string) types.Set {
+		elements := make([]attr.Value, 0, len(values))
+		for _, v := range values {
+			elements = append(elements, types.StringValue(v))
+		}
+		return types.SetValueMust(types.StringType, elements)
+	}
+
+	for _, tc := range []struct {
+		name          string
+		ipFamily      any
+		wantAddresses types.Set
+		wantFamily    string
+	}{
+		{"unset selects all and stores it", nil, stringSet("3.64.0.1/32", "2a05:d014::1/128"), "all"},
+		{"all", "all", stringSet("3.64.0.1/32", "2a05:d014::1/128"), "all"},
+		{"IPv4", "IPv4", stringSet("3.64.0.1/32"), "IPv4"},
+		{"IPv6", "IPv6", stringSet("2a05:d014::1/128"), "IPv6"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			config := tfsdk.Config{Schema: schemaResp.Schema, Raw: objectWith(objectType, map[string]tftypes.Value{
+				"ip_family": tftypes.NewValue(tftypes.String, tc.ipFamily),
+			})}
+			resp := datasource.ReadResponse{State: tfsdk.State{Schema: schemaResp.Schema}}
+			d.Read(ctx, datasource.ReadRequest{Config: config}, &resp)
+			if len(resp.Diagnostics) > 0 {
+				t.Fatal(resp.Diagnostics)
+			}
+
+			var addresses types.Set
+			var family types.String
+			resp.Diagnostics.Append(resp.State.GetAttribute(ctx, path.Root("addresses"), &addresses)...)
+			resp.Diagnostics.Append(resp.State.GetAttribute(ctx, path.Root("ip_family"), &family)...)
+			if resp.Diagnostics.HasError() {
+				t.Fatal(resp.Diagnostics)
+			}
+			if !addresses.Equal(tc.wantAddresses) {
+				t.Errorf("addresses = %s, want %s", addresses, tc.wantAddresses)
+			}
+			if family.ValueString() != tc.wantFamily {
+				t.Errorf("ip_family = %s, want %q", family, tc.wantFamily)
+			}
+		})
+	}
 }
