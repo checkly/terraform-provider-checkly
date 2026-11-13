@@ -40,7 +40,12 @@ type StaticIPsDataSourceModel struct {
 	IPFamily  types.String `tfsdk:"ip_family"`
 }
 
+// staticIPFamilyAll selects the addresses of both IP families. It is the
+// value of ip_family when the configuration leaves it out.
+const staticIPFamilyAll = "all"
+
 var staticIPFamilies = allowedValues[string]{
+	{Value: staticIPFamilyAll, Description: "both families"},
 	{Value: "IPv4"},
 	{Value: "IPv6"},
 }
@@ -69,7 +74,8 @@ func (d *StaticIPsDataSource) Schema(ctx context.Context, req datasource.SchemaR
 			},
 			"ip_family": schema.StringAttribute{
 				Optional:    true,
-				Description: "Specify the IP family you want to get static IPs for. " + staticIPFamilies.String() + " When not set, addresses of both families are returned.",
+				Computed:    true,
+				Description: "Specify the IP family you want to get static IPs for. " + staticIPFamilies.String() + " Defaults to `" + staticIPFamilyAll + "`.",
 				Validators: []validator.String{
 					stringvalidator.OneOf(staticIPFamilies.Values()...),
 				},
@@ -98,6 +104,10 @@ func (d *StaticIPsDataSource) Read(ctx context.Context, req datasource.ReadReque
 		}
 	}
 
+	// A data source schema has no defaults, so Read fills in the default.
+	if config.IPFamily.IsNull() {
+		config.IPFamily = types.StringValue(staticIPFamilyAll)
+	}
 	ipFamily := config.IPFamily.ValueString()
 
 	apiCtx, cancel := contextWithAPITimeout(ctx)
