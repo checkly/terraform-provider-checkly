@@ -132,6 +132,11 @@ func TestAccApiCheckResourceDefaults(t *testing.T) {
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_api_check.test",
+					"request.follow_redirects",
+					"true",
+				),
+				resource.TestCheckResourceAttr(
+					"checkly_api_check.test",
 					"request.method",
 					"GET",
 				),

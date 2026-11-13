@@ -237,7 +237,7 @@ Optional:
 - `basic_auth` (Attributes) Set up HTTP basic authentication (username & password). (see [below for nested schema](#nestedatt--request--basic_auth))
 - `body` (String) The body of the request.
 - `body_type` (String) The `Content-Type` header of the request. Possible values are `NONE`, `JSON`, `FORM`, `RAW` and `GRAPHQL`. Defaults to `NONE`.
-- `follow_redirects` (Boolean) Whether to follow HTTP redirects. Defaults to `false`.
+- `follow_redirects` (Boolean) Whether to follow HTTP redirects. Defaults to `true`.
 - `headers` (Map of String) HTTP headers to send with the request, as a map of header names to values. The values are not sensitive and show in plan output. To keep a credential in a header out of plan output, take it from a variable declared with `sensitive = true` or wrap it in `sensitive(...)`.
 - `ip_family` (String) IP Family to be used when executing the api check. Possible values are `IPv4` and `IPv6`. Defaults to `IPv4`.
 - `method` (String) The HTTP method to use for this API check. Possible values are `GET`, `POST`, `PUT`, `HEAD`, `DELETE` and `PATCH`. Defaults to `GET`.

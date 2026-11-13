@@ -102,13 +102,15 @@ func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 			"with a `moved` block, without recreating it. Before moving a check, see " +
 			"[Deprecated resource types](https://registry.terraform.io/providers/checkly/checkly/latest/docs/guides/upgrading-to-v2#deprecated-resource-types) " +
 			"in the v2 upgrade guide for what to change: `checkly_api_check` has lower default " +
-			"`degraded_response_time` and `max_response_time` values, and the per-type resources have no `double_check`.",
+			"`degraded_response_time` and `max_response_time` values and follows redirects by default, and the " +
+			"per-type resources have no `double_check`.",
 		DeprecationMessage: "The `checkly_check` resource is deprecated in favor of dedicated resource types for each check type: " +
 			"`checkly_api_check`, `checkly_browser_check` and `checkly_multistep_check`. " +
 			"These expose only the properties relevant to their check type. " +
 			"Use a `moved` block to migrate existing resources without recreating them. " +
 			"When migrating an API check, note that the default `degraded_response_time` and `max_response_time` " +
-			"changed from 15000/30000 to 5000/20000 — set them explicitly to keep the previous thresholds. " +
+			"changed from 15000/30000 to 5000/20000, and `request.follow_redirects` from `false` to `true` — " +
+			"set them explicitly to keep the previous behaviour. " +
 			"`checkly_api_check` has no `environment_variables` attribute, which never had an effect on API checks.",
 		Attributes: withCommonCheckAttributes(map[string]schema.Attribute{
 			"id": schema.StringAttribute{

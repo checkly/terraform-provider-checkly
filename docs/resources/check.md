@@ -4,14 +4,14 @@ page_title: "checkly_check Resource - terraform-provider-checkly"
 subcategory: ""
 description: |-
   Checks allows you to monitor key webapp flows, backend API's and set up alerting, so you get a notification when things break or slow down.
-  The checkly_check resource type is deprecated in favor of checkly_api_check, checkly_browser_check and checkly_multistep_check, which only expose the attributes of their check type, and will be removed in a future version of the provider. An existing check can be switched over to its per-type resource with a moved block, without recreating it. Before moving a check, see Deprecated resource types https://registry.terraform.io/providers/checkly/checkly/latest/docs/guides/upgrading-to-v2#deprecated-resource-types in the v2 upgrade guide for what to change: checkly_api_check has lower default degraded_response_time and max_response_time values, and the per-type resources have no double_check.
+  The checkly_check resource type is deprecated in favor of checkly_api_check, checkly_browser_check and checkly_multistep_check, which only expose the attributes of their check type, and will be removed in a future version of the provider. An existing check can be switched over to its per-type resource with a moved block, without recreating it. Before moving a check, see Deprecated resource types https://registry.terraform.io/providers/checkly/checkly/latest/docs/guides/upgrading-to-v2#deprecated-resource-types in the v2 upgrade guide for what to change: checkly_api_check has lower default degraded_response_time and max_response_time values and follows redirects by default, and the per-type resources have no double_check.
 ---
 
 # checkly_check (Resource)
 
 Checks allows you to monitor key webapp flows, backend API's and set up alerting, so you get a notification when things break or slow down.
 
-The `checkly_check` resource type is deprecated in favor of `checkly_api_check`, `checkly_browser_check` and `checkly_multistep_check`, which only expose the attributes of their check type, and will be removed in a future version of the provider. An existing check can be switched over to its per-type resource with a `moved` block, without recreating it. Before moving a check, see [Deprecated resource types](https://registry.terraform.io/providers/checkly/checkly/latest/docs/guides/upgrading-to-v2#deprecated-resource-types) in the v2 upgrade guide for what to change: `checkly_api_check` has lower default `degraded_response_time` and `max_response_time` values, and the per-type resources have no `double_check`.
+The `checkly_check` resource type is deprecated in favor of `checkly_api_check`, `checkly_browser_check` and `checkly_multistep_check`, which only expose the attributes of their check type, and will be removed in a future version of the provider. An existing check can be switched over to its per-type resource with a `moved` block, without recreating it. Before moving a check, see [Deprecated resource types](https://registry.terraform.io/providers/checkly/checkly/latest/docs/guides/upgrading-to-v2#deprecated-resource-types) in the v2 upgrade guide for what to change: `checkly_api_check` has lower default `degraded_response_time` and `max_response_time` values and follows redirects by default, and the per-type resources have no `double_check`.
 
 ## Example Usage
 
