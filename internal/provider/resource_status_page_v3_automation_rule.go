@@ -104,7 +104,7 @@ func (r *StatusPageV3AutomationRuleResource) Schema(ctx context.Context, req res
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
-				Description: "The name of the rule (1 to 255 characters).",
+				Description: "The name of the rule. Must be between `1` and `255` characters.",
 				Validators: []validator.String{
 					utf16LengthBetween(1, 255),
 				},
@@ -113,7 +113,7 @@ func (r *StatusPageV3AutomationRuleResource) Schema(ctx context.Context, req res
 				Optional:    true,
 				Computed:    true,
 				Default:     booldefault.StaticBool(true),
-				Description: "A disabled rule never opens incidents. (Default `true`).",
+				Description: "A disabled rule never opens incidents. Defaults to `true`.",
 			},
 			"first_update": schema.StringAttribute{
 				Required:    true,
@@ -133,13 +133,13 @@ func (r *StatusPageV3AutomationRuleResource) Schema(ctx context.Context, req res
 				Optional:    true,
 				Computed:    true,
 				Default:     booldefault.StaticBool(true),
-				Description: "Whether subscribers are notified of the automated updates. (Default `true`).",
+				Description: "Whether subscribers are notified of the automated updates. Defaults to `true`.",
 			},
 			"cool_down_window_minutes": schema.Int64Attribute{
 				Optional:    true,
 				Computed:    true,
 				Default:     int64default.StaticInt64(5),
-				Description: "Minimum minutes after an automated incident before this rule may open the next one. `0` disables the cool down. (Default `5`).",
+				Description: "Minimum minutes after an automated incident before this rule may open the next one. `0` disables the cool down. Defaults to `5`.",
 				Validators: []validator.Int64{
 					int64validator.Between(0, 1440),
 				},

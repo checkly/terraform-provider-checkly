@@ -82,7 +82,7 @@ func TestResourcesFrequencyDefault(t *testing.T) {
 		if def := attributeDefault(t, ctx, frequency); def == nil || !def.Equal(types.Int64Value(defaultFrequency)) {
 			t.Errorf("%s: default %v, want %d", metadata.TypeName, def, defaultFrequency)
 		}
-		if !strings.HasSuffix(frequency.Description, "(Default `10`).") {
+		if !strings.HasSuffix(frequency.Description, "Defaults to `10`.") {
 			t.Errorf("%s: description %q does not state the default", metadata.TypeName, frequency.Description)
 		}
 	}

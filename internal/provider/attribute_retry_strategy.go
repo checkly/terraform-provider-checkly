@@ -89,7 +89,7 @@ func makeRetryStrategyAttributeSchema(options RetryStrategyAttributeSchemaOption
 	attributes := map[string]schema.Attribute{
 		"type": schema.StringAttribute{
 			Required:    true,
-			Description: "Determines which type of retry strategy to use. Possible values are `FIXED`, `LINEAR`, `EXPONENTIAL`, `SINGLE_RETRY`, and `NO_RETRIES`.",
+			Description: "Determines which type of retry strategy to use. Possible values are `FIXED`, `LINEAR`, `EXPONENTIAL`, `SINGLE_RETRY` and `NO_RETRIES`.",
 			Validators: []validator.String{
 				stringvalidator.OneOf("FIXED", "LINEAR", "EXPONENTIAL", "SINGLE_RETRY", "NO_RETRIES"),
 			},
@@ -98,7 +98,7 @@ func makeRetryStrategyAttributeSchema(options RetryStrategyAttributeSchemaOption
 			Optional:    true,
 			Computed:    true,
 			Default:     int64default.StaticInt64(60),
-			Description: "The number of seconds to wait before the first retry attempt (at least `0`). Not available when `type` is `NO_RETRIES`. (Default `60`).",
+			Description: "The number of seconds to wait before the first retry attempt. Must be at least `0`. Defaults to `60`. Not available when `type` is `NO_RETRIES`.",
 			// The API accepts a negative value, but a retry can't wait a
 			// negative time: the queue that delays retries on public
 			// locations rejects it, so the retry is never scheduled.
@@ -110,7 +110,7 @@ func makeRetryStrategyAttributeSchema(options RetryStrategyAttributeSchemaOption
 			Optional:    true,
 			Computed:    true,
 			Default:     int64default.StaticInt64(2),
-			Description: "The maximum number of times to retry the check/monitor. Value must be between `1` and `10`. Available when `type` is `FIXED`, `LINEAR`, or `EXPONENTIAL`. (Default `2`).",
+			Description: "The maximum number of times to retry the check/monitor. Possible values are between `1` and `10`. Defaults to `2`. Available when `type` is `FIXED`, `LINEAR` or `EXPONENTIAL`.",
 			Validators: []validator.Int64{
 				int64validator.Between(1, 10),
 			},
@@ -119,7 +119,7 @@ func makeRetryStrategyAttributeSchema(options RetryStrategyAttributeSchemaOption
 			Optional:    true,
 			Computed:    true,
 			Default:     int64default.StaticInt64(600),
-			Description: "The total amount of time to continue retrying the check/monitor (maximum 600 seconds). Available when `type` is `FIXED`, `LINEAR`, or `EXPONENTIAL`. (Default `600`).",
+			Description: "The total amount of time to continue retrying the check/monitor, in seconds. Possible values are between `0` and `600`. Defaults to `600`. Available when `type` is `FIXED`, `LINEAR` or `EXPONENTIAL`.",
 			Validators: []validator.Int64{
 				int64validator.Between(0, 600),
 			},
@@ -128,7 +128,7 @@ func makeRetryStrategyAttributeSchema(options RetryStrategyAttributeSchemaOption
 			Optional:    true,
 			Computed:    true,
 			Default:     booldefault.StaticBool(true),
-			Description: "Whether retries should be run in the same region as the initial check/monitor run. Not available when `type` is `NO_RETRIES`. (Default `true`).",
+			Description: "Whether retries should be run in the same region as the initial check/monitor run. Defaults to `true`. Not available when `type` is `NO_RETRIES`.",
 		},
 	}
 
@@ -141,7 +141,7 @@ func makeRetryStrategyAttributeSchema(options RetryStrategyAttributeSchemaOption
 					Optional:    true,
 					Computed:    true,
 					Default:     booldefault.StaticBool(false),
-					Description: "When `true`, retry only if the cause of the failure is a network error. (Default `false`).",
+					Description: "When `true`, retry only if the cause of the failure is a network error. Defaults to `false`.",
 				},
 			},
 		}

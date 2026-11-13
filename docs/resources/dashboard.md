@@ -34,34 +34,34 @@ resource "checkly_dashboard" "dashboard_1" {
 
 ### Required
 
-- `custom_url` (String) A subdomain name under 'checklyhq.com'. Needs to be unique across all users. Letters, digits and dashes, no leading or trailing dash, at most 63 characters.
+- `custom_url` (String) A subdomain name under 'checklyhq.com'. Needs to be unique across all users. Must be at most `63` characters. Must contain only letters, digits and dashes, with no leading or trailing dash.
 - `header` (String) A piece of text displayed at the top of your dashboard.
 
 ### Optional
 
-- `checks_per_page` (Number) Determines how many checks to show per page. Possible values are between 1 and 20. (Default `15`).
+- `checks_per_page` (Number) Determines how many checks to show per page. Possible values are between `1` and `20`. Defaults to `15`.
 - `custom_css` (String) Custom CSS to be applied to the dashboard.
 - `custom_domain` (String) A custom user domain, e.g. 'status.example.com'. See the docs on updating your DNS and SSL usage.
 - `description` (String) HTML <meta> description for the dashboard.
-- `enable_incidents` (Boolean) Enable incident support for the dashboard. (Default `false`).
-- `expand_checks` (Boolean) Expand or collapse checks on the dashboard. (Default `false`).
+- `enable_incidents` (Boolean) Enable incident support for the dashboard. Defaults to `false`.
+- `expand_checks` (Boolean) Expand or collapse checks on the dashboard. Defaults to `false`.
 - `favicon` (String) An http or https URL pointing to an image file to use as browser favicon.
-- `hide_tags` (Boolean) Show or hide the tags on the dashboard. (Default `false`).
-- `is_private` (Boolean) Set your dashboard as private. An access key is only issued when the dashboard is created private. Making an existing dashboard private through an update leaves it without a key; recreate the dashboard to get one. An update that leaves the dashboard public revokes its key. (Default `false`).
+- `hide_tags` (Boolean) Show or hide the tags on the dashboard. Defaults to `false`.
+- `is_private` (Boolean) Set your dashboard as private. An access key is only issued when the dashboard is created private. Making an existing dashboard private through an update leaves it without a key; recreate the dashboard to get one. An update that leaves the dashboard public revokes its key. Defaults to `false`.
 - `link` (String) The http or https URL that clicking the dashboard logo leads to.
 - `logo` (String) An http or https URL pointing to an image file to use for the dashboard logo.
-- `paginate` (Boolean) Determines if pagination is on or off. (Default `true`).
-- `pagination_rate` (Number) How often to trigger pagination in seconds. Possible values `30`, `60` and `300`. (Default `60`).
-- `refresh_rate` (Number) How often to refresh the dashboard in seconds. Possible values `60`, '300' and `600`. (Default `60`).
-- `show_check_run_links` (Boolean) Show or hide check run links on the dashboard. (Default `false`).
-- `show_group_names` (Boolean) Show or hide the names of the groups of the checks on the dashboard. (Default `true`).
-- `show_header` (Boolean) Show or hide header and description on the dashboard. (Default `true`).
-- `show_p95` (Boolean) Show or hide the P95 stats on the dashboard. (Default `true`).
-- `show_p99` (Boolean) Show or hide the P99 stats on the dashboard. (Default `true`).
-- `sort_by_status` (Boolean) List failing checks first. (Default `false`).
+- `paginate` (Boolean) Determines if pagination is on or off. Defaults to `true`.
+- `pagination_rate` (Number) How often to trigger pagination in seconds. Possible values are `30`, `60` and `300`. Defaults to `60`.
+- `refresh_rate` (Number) How often to refresh the dashboard in seconds. Possible values are `60`, `300` and `600`. Defaults to `60`.
+- `show_check_run_links` (Boolean) Show or hide check run links on the dashboard. Defaults to `false`.
+- `show_group_names` (Boolean) Show or hide the names of the groups of the checks on the dashboard. Defaults to `true`.
+- `show_header` (Boolean) Show or hide header and description on the dashboard. Defaults to `true`.
+- `show_p95` (Boolean) Show or hide the P95 stats on the dashboard. Defaults to `true`.
+- `show_p99` (Boolean) Show or hide the P99 stats on the dashboard. Defaults to `true`.
+- `sort_by_status` (Boolean) List failing checks first. Defaults to `false`.
 - `tags` (Set of String) A list of one or more tags that filter which checks to display on the dashboard.
-- `use_tags_and_operator` (Boolean) Set when to use AND operator for fetching dashboard tags. (Default `false`).
-- `width` (String) Determines whether to use the full screen or focus in the center. Possible values are `FULL` and `960PX`. (Default `FULL`).
+- `use_tags_and_operator` (Boolean) Set when to use AND operator for fetching dashboard tags. Defaults to `false`.
+- `width` (String) Determines whether to use the full screen or focus in the center. Possible values are `FULL` and `960PX`. Defaults to `FULL`.
 
 ### Read-Only
 

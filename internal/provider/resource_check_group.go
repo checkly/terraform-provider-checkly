@@ -92,8 +92,8 @@ func (r *CheckGroupResource) Schema(ctx context.Context, req resource.SchemaRequ
 				Required:    true,
 				Description: "Determines how many checks are run concurrently when triggering a check group from CI/CD or through the API.",
 			},
-			"setup_snippet_id":    snippetIDAttributeSchema("The ID of the snippet to run in the setup phase of the group's API checks (at least `1`). When unset, no setup snippet runs."),
-			"teardown_snippet_id": snippetIDAttributeSchema("The ID of the snippet to run in the teardown phase of the group's API checks (at least `1`). When unset, no teardown snippet runs."),
+			"setup_snippet_id":    snippetIDAttributeSchema("The ID of the snippet to run in the setup phase of the group's API checks. Must be at least `1`. If not set, no setup snippet runs."),
+			"teardown_snippet_id": snippetIDAttributeSchema("The ID of the snippet to run in the teardown phase of the group's API checks. Must be at least `1`. If not set, no teardown snippet runs."),
 			"local_setup_script": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,

@@ -112,7 +112,7 @@ func withCommonCheckAttributes(attrs map[string]schema.Attribute, o CommonCheckA
 }
 
 // describe joins the sentences of a description, leaving out empty ones. A
-// default marker such as "(Default `false`)." goes last.
+// default marker such as "Defaults to `false`." goes last.
 func describe(sentences ...string) string {
 	var description string
 	for _, sentence := range sentences {
@@ -139,7 +139,7 @@ func activatedAttributeSchema(o CommonCheckAttributeSchemaOptions) schema.BoolAt
 		Optional:    true,
 		Computed:    true,
 		Default:     booldefault.StaticBool(true),
-		Description: describe(description, "(Default `true`)."),
+		Description: describe(description, "Defaults to `true`."),
 	}
 }
 
@@ -157,7 +157,7 @@ func mutedAttributeSchema(o CommonCheckAttributeSchemaOptions) schema.BoolAttrib
 		Optional:    true,
 		Computed:    true,
 		Default:     booldefault.StaticBool(false),
-		Description: describe(description, "(Default `false`)."),
+		Description: describe(description, "Defaults to `false`."),
 	}
 }
 
@@ -166,7 +166,7 @@ func shouldFailAttributeSchema(subject CheckSubject, note string) schema.BoolAtt
 		Optional:    true,
 		Computed:    true,
 		Default:     booldefault.StaticBool(false),
-		Description: describe(fmt.Sprintf("Inverts when the %s is considered to fail.", subject), note, "(Default `false`)."),
+		Description: describe(fmt.Sprintf("Inverts when the %s is considered to fail.", subject), "Defaults to `false`.", note),
 	}
 }
 
@@ -182,7 +182,7 @@ func runParallelAttributeSchema(subject CheckSubject) schema.BoolAttribute {
 		Optional:    true,
 		Computed:    true,
 		Default:     booldefault.StaticBool(false),
-		Description: describe(description, "(Default `false`)."),
+		Description: describe(description, "Defaults to `false`."),
 	}
 }
 
@@ -248,7 +248,7 @@ func groupIDAttributeSchema(subject CheckSubject) schema.Int64Attribute {
 		Validators: []validator.Int64{
 			int64validator.AtLeast(1),
 		},
-		Description: fmt.Sprintf("The ID of the check group the %[1]s is part of (at least `1`). When unset, "+
+		Description: fmt.Sprintf("The ID of the check group the %[1]s is part of. Must be at least `1`. If not set, "+
 			"the %[1]s is not part of a group.", subject),
 	}
 }
@@ -262,9 +262,9 @@ func groupOrderAttributeSchema(subject CheckSubject) schema.Int64Attribute {
 		Validators: []validator.Int64{
 			int64validator.AtLeast(0),
 		},
-		Description: fmt.Sprintf("The position of the %s in its check group (at least `0`), which sets the "+
+		Description: fmt.Sprintf("The position of the %s in its check group, which sets the "+
 			"order in which the checks and monitors of the group run when the group is triggered from the API "+
-			"or CI/CD. When unset, the %s has no position in the group.", subject, subject),
+			"or CI/CD. Must be at least `0`. If not set, the %s has no position in the group.", subject, subject),
 	}
 }
 
@@ -278,7 +278,7 @@ func runtimeIDAttributeSchema(subject CheckSubject, note string) schema.StringAt
 	// what an unset runtime means for a monitor is not documented.
 	var fallback string
 	if subject != subjectMonitor {
-		fallback = "When unset, the account's default runtime is used."
+		fallback = "If not set, the account's default runtime is used."
 	}
 
 	return schema.StringAttribute{

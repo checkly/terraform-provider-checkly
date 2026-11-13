@@ -183,16 +183,16 @@ func (v *allowedValues[T]) String() string {
 	l := len(*v)
 	switch l {
 	case 0:
-		return "There are no allowed values."
+		return "There are no possible values."
 	case 1:
-		return fmt.Sprintf("The only allowed value is %s.", (*v)[0].String())
+		return fmt.Sprintf("The only possible value is %s.", (*v)[0].String())
 	default:
 		head := (*v)[:l-1]
 		last := (*v)[l-1]
 
 		var buf strings.Builder
 
-		buf.WriteString("The allowed values are ")
+		buf.WriteString("Possible values are ")
 
 		for i, value := range head {
 			if i > 0 {

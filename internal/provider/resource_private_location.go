@@ -73,8 +73,8 @@ func (r *PrivateLocationResource) Schema(ctx context.Context, req resource.Schem
 			},
 			"slug_name": schema.StringAttribute{
 				Required: true,
-				Description: "The slug name of the private location: 1 to 30 letters, digits and dashes, not starting with the ID of a public location such as `eu-central-1`. " +
-					"Checks and monitors refer to the location by it. The slug can't be changed after creation: a plan that changes it fails, also with `terraform apply -replace` or `replace_triggered_by`. " +
+				Description: "The slug name of the private location, which checks and monitors refer to the location by. " +
+					"Must be between `1` and `30` characters. Must contain only letters, digits and dashes, and must not start with the ID of a public location such as `eu-central-1`. The slug can't be changed after creation: a plan that changes it fails, also with `terraform apply -replace` or `replace_triggered_by`. " +
 					"To use a different slug, add a new `checkly_private_location` resource block with it, move your checks and agents to the new location, then remove the old block.",
 				Validators: privateLocationSlugValidators,
 				PlanModifiers: []planmodifier.String{
@@ -85,7 +85,7 @@ func (r *PrivateLocationResource) Schema(ctx context.Context, req resource.Schem
 				Optional:    true,
 				Computed:    true,
 				Default:     stringdefault.StaticString("location"),
-				Description: "Icon assigned to the private location. (Default `location`).",
+				Description: "Icon assigned to the private location. Defaults to `location`.",
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
 				},

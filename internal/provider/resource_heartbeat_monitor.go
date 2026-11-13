@@ -114,7 +114,7 @@ func (r *HeartbeatMonitorResource) Schema(ctx context.Context, req resource.Sche
 					},
 					"period_unit": schema.StringAttribute{
 						Required:    true,
-						Description: "The unit of `period`. Possible values `seconds`, `minutes`, `hours` and `days`.",
+						Description: "The unit of `period`. Possible values are `seconds`, `minutes`, `hours` and `days`.",
 						Validators: []validator.String{
 							stringvalidator.OneOf("seconds", "minutes", "hours", "days"),
 						},
@@ -128,7 +128,7 @@ func (r *HeartbeatMonitorResource) Schema(ctx context.Context, req resource.Sche
 					},
 					"grace_unit": schema.StringAttribute{
 						Required:    true,
-						Description: "The unit of `grace`. Possible values `seconds`, `minutes`, `hours` and `days`.",
+						Description: "The unit of `grace`. Possible values are `seconds`, `minutes`, `hours` and `days`.",
 						Validators: []validator.String{
 							stringvalidator.OneOf("seconds", "minutes", "hours", "days"),
 						},
@@ -137,7 +137,7 @@ func (r *HeartbeatMonitorResource) Schema(ctx context.Context, req resource.Sche
 						Optional:    true,
 						Sensitive:   true,
 						Computed:    true,
-						Description: "A custom lowercase UUID with hyphens to generate your ping URL from, such as `22868839-8450-4010-9241-1ea83a2e425f`. Checkly will expect a ping to `https://ping.checklyhq.com/[PING_TOKEN]`. When not set, Checkly generates one.",
+						Description: "A custom lowercase UUID with hyphens to generate your ping URL from, such as `22868839-8450-4010-9241-1ea83a2e425f`. Checkly will expect a ping to `https://ping.checklyhq.com/[PING_TOKEN]`. If not set, Checkly generates one.",
 						Validators: []validator.String{
 							uuidValidator{},
 						},

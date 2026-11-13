@@ -70,12 +70,12 @@ func (d *StaticIPsDataSource) Schema(ctx context.Context, req datasource.SchemaR
 			"locations": schema.SetAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
-				Description: "Specify the locations you want to get static IPs for, such as `eu-central-1`. A location that has no static IPs, such as a misspelled or private one, adds no addresses and gives a warning. When not set, the addresses of every location are returned.",
+				Description: "Specify the locations you want to get static IPs for, such as `eu-central-1`. A location that has no static IPs, such as a misspelled or private one, adds no addresses and gives a warning. If not set, the addresses of every location are returned.",
 			},
 			"ip_family": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "Specify the IP family you want to get static IPs for. " + staticIPFamilies.String() + " (Default `" + staticIPFamilyAll + "`).",
+				Description: "Specify the IP family you want to get static IPs for. " + staticIPFamilies.String() + " Defaults to `" + staticIPFamilyAll + "`.",
 				Validators: []validator.String{
 					stringvalidator.OneOf(staticIPFamilies.Values()...),
 				},

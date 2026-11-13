@@ -49,16 +49,16 @@ resource "checkly_status_page_v3_automation_rule" "api_outage" {
 
 - `first_update` (String) Body of the status update that opens the incident. Must not be empty.
 - `last_update` (String) Body of the status update that resolves the incident. Must not be empty.
-- `name` (String) The name of the rule (1 to 255 characters).
+- `name` (String) The name of the rule. Must be between `1` and `255` characters.
 - `status_page_id` (String) The ID of the v3 status page the rule belongs to.
 - `tags` (Set of String) A failing check matches this rule when it, or its group, carries ANY of these tags. At least one tag is required, and tags must not be empty.
 
 ### Optional
 
 - `components` (Attributes Set) The components an automated incident impacts, with the impact each gets. (see [below for nested schema](#nestedatt--components))
-- `cool_down_window_minutes` (Number) Minimum minutes after an automated incident before this rule may open the next one. `0` disables the cool down. (Default `5`).
-- `enabled` (Boolean) A disabled rule never opens incidents. (Default `true`).
-- `notify_subscribers` (Boolean) Whether subscribers are notified of the automated updates. (Default `true`).
+- `cool_down_window_minutes` (Number) Minimum minutes after an automated incident before this rule may open the next one. `0` disables the cool down. Defaults to `5`.
+- `enabled` (Boolean) A disabled rule never opens incidents. Defaults to `true`.
+- `notify_subscribers` (Boolean) Whether subscribers are notified of the automated updates. Defaults to `true`.
 
 ### Read-Only
 
@@ -70,7 +70,7 @@ resource "checkly_status_page_v3_automation_rule" "api_outage" {
 Required:
 
 - `component_id` (String) The ID of the impacted component. Must be on the same status page, and listed only once.
-- `target_impact` (String) The impact set on the component while the incident is open. The allowed values are `UNDER_MAINTENANCE`, `DEGRADED_PERFORMANCE`, `PARTIAL_OUTAGE` and `MAJOR_OUTAGE`.
+- `target_impact` (String) The impact set on the component while the incident is open. Possible values are `UNDER_MAINTENANCE`, `DEGRADED_PERFORMANCE`, `PARTIAL_OUTAGE` and `MAJOR_OUTAGE`.
 
 ## Import
 

@@ -122,7 +122,7 @@ func (r *TCPMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 				Optional:    true,
 				Computed:    true,
 				Default:     int64default.StaticInt64(4000),
-				Description: "The response time in milliseconds where the monitor should be considered degraded. Possible values are between `0` and `5000`, or up to `45000` if extended limits have been approved for your account. (Default `4000`).",
+				Description: "The response time in milliseconds where the monitor should be considered degraded. Possible values are between `0` and `5000`, or up to `45000` if extended limits have been approved for your account. Defaults to `4000`.",
 				Validators: []validator.Int64{
 					int64validator.Between(0, extendedResponseTimeLimit),
 				},
@@ -131,7 +131,7 @@ func (r *TCPMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 				Optional:    true,
 				Computed:    true,
 				Default:     int64default.StaticInt64(5000),
-				Description: "The response time in milliseconds where the monitor should be considered failing. Possible values are between `0` and `5000`, or up to `45000` if extended limits have been approved for your account. (Default `5000`).",
+				Description: "The response time in milliseconds where the monitor should be considered failing. Possible values are between `0` and `5000`, or up to `45000` if extended limits have been approved for your account. Defaults to `5000`.",
 				Validators: []validator.Int64{
 					int64validator.Between(0, extendedResponseTimeLimit),
 				},
@@ -149,7 +149,7 @@ func (r *TCPMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 				Attributes: map[string]schema.Attribute{
 					"hostname": schema.StringAttribute{
 						Required:    true,
-						Description: "The hostname or IP to connect to (1 to 2048 characters). Do not include a scheme or a port in this value.",
+						Description: "The hostname or IP to connect to. Must be between `1` and `2048` characters. Do not include a scheme or a port in this value.",
 						Validators: []validator.String{
 							utf16LengthBetween(1, 2048),
 							hostWithoutSchemeOrPortValidator{},
@@ -157,7 +157,7 @@ func (r *TCPMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 					},
 					"port": schema.Int64Attribute{
 						Required:    true,
-						Description: "The port number to connect to. Possible values are between 1 and 65535.",
+						Description: "The port number to connect to. Possible values are between `1` and `65535`.",
 						Validators: []validator.Int64{
 							int64validator.Between(1, 65535),
 						},
@@ -172,7 +172,7 @@ func (r *TCPMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 						Optional:    true,
 						Computed:    true,
 						Default:     stringdefault.StaticString("IPv4"),
-						Description: "The IP family to use when executing the TCP check. The value can be either `IPv4` or `IPv6`. (Default `IPv4`).",
+						Description: "The IP family to use when executing the TCP check. Possible values are `IPv4` and `IPv6`. Defaults to `IPv4`.",
 						Validators: []validator.String{
 							stringvalidator.OneOf("IPv4", "IPv6"),
 						},
@@ -211,7 +211,7 @@ func (r *TCPMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 								},
 								"comparison": schema.StringAttribute{
 									Required:    true,
-									Description: "The type of comparison to be executed between expected and actual value of the assertion. For `RESPONSE_DATA`, possible values are `EQUALS`, `NOT_EQUALS`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, and `NOT_CONTAINS`. For `RESPONSE_TIME`, possible values are `EQUALS`, `NOT_EQUALS`, `GREATER_THAN`, and `LESS_THAN`.",
+									Description: "The type of comparison to be executed between expected and actual value of the assertion. For `RESPONSE_DATA`, possible values are `EQUALS`, `NOT_EQUALS`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS` and `NOT_CONTAINS`. For `RESPONSE_TIME`, possible values are `EQUALS`, `NOT_EQUALS`, `GREATER_THAN` and `LESS_THAN`.",
 								},
 								"target": schema.StringAttribute{
 									Optional:    true,

@@ -182,19 +182,19 @@ resource "checkly_api_check" "example_check" {
 
 ### Optional
 
-- `auto_subscribe` (Boolean) Whether new checks are subscribed to this alert channel automatically. Only the web app, which preselects the channel when you create a check there, and the Vercel integration, for the checks it creates, act on it. Checks created through the API, the Checkly CLI or Terraform are not subscribed, and neither are existing checks; subscribe them with `alert_channel_subscriptions`. (Default `false`).
+- `auto_subscribe` (Boolean) Whether new checks are subscribed to this alert channel automatically. Only the web app, which preselects the channel when you create a check there, and the Vercel integration, for the checks it creates, act on it. Checks created through the API, the Checkly CLI or Terraform are not subscribed, and neither are existing checks; subscribe them with `alert_channel_subscriptions`. Defaults to `false`.
 - `call` (Attributes) Sends alerts as phone calls. (see [below for nested schema](#nestedatt--call))
 - `email` (Attributes) Sends alerts by email. (see [below for nested schema](#nestedatt--email))
 - `opsgenie` (Attributes) Creates alerts in Opsgenie. (see [below for nested schema](#nestedatt--opsgenie))
 - `pagerduty` (Attributes) Sends alerts to a PagerDuty service. (see [below for nested schema](#nestedatt--pagerduty))
-- `send_degraded` (Boolean) Whether to send an alert when a check is degraded. (Default `false`).
-- `send_failure` (Boolean) Whether to send an alert when a check fails. (Default `true`).
-- `send_recovery` (Boolean) Whether to send an alert when a check recovers. (Default `true`).
+- `send_degraded` (Boolean) Whether to send an alert when a check is degraded. Defaults to `false`.
+- `send_failure` (Boolean) Whether to send an alert when a check fails. Defaults to `true`.
+- `send_recovery` (Boolean) Whether to send an alert when a check recovers. Defaults to `true`.
 - `slack` (Attributes, Deprecated) Sends alerts to a Slack channel through a legacy Slack incoming webhook. (see [below for nested schema](#nestedatt--slack))
 - `slack_app` (Attributes) Sends alerts to Slack channels or users through the Checkly Slack app. (see [below for nested schema](#nestedatt--slack_app))
 - `sms` (Attributes) Sends alerts as SMS messages. (see [below for nested schema](#nestedatt--sms))
-- `ssl_expiry` (Boolean) Whether to send an alert for expiring SSL certificates. (Default `false`).
-- `ssl_expiry_threshold` (Number) How many days before an SSL certificate expires to start sending alerts, when `ssl_expiry` is enabled. Value must be between 1 and 30. (Default `30`).
+- `ssl_expiry` (Boolean) Whether to send an alert for expiring SSL certificates. Defaults to `false`.
+- `ssl_expiry_threshold` (Number) How many days before an SSL certificate expires to start sending alerts, when `ssl_expiry` is enabled. Possible values are between `1` and `30`. Defaults to `30`.
 - `webhook` (Attributes) Sends alerts as HTTP requests to a webhook. (see [below for nested schema](#nestedatt--webhook))
 
 ### Read-Only
@@ -225,8 +225,8 @@ Required:
 
 - `api_key` (String, Sensitive) The API key of the Opsgenie integration to create alerts with.
 - `name` (String) The name of this alert channel.
-- `priority` (String) The priority of the alerts created in Opsgenie. The allowed values are `P1`, `P2`, `P3`, `P4` and `P5`.
-- `region` (String) The region of the Opsgenie account, which selects the Opsgenie API to call. The allowed values are `EU` and `US`.
+- `priority` (String) The priority of the alerts created in Opsgenie. Possible values are `P1`, `P2`, `P3`, `P4` and `P5`.
+- `region` (String) The region of the Opsgenie account, which selects the Opsgenie API to call. Possible values are `EU` and `US`.
 
 
 <a id="nestedatt--pagerduty"></a>
@@ -279,11 +279,11 @@ Required:
 Optional:
 
 - `headers` (Map of String) HTTP headers to send with the webhook request, as a map of header names to values. The values are not sensitive and show in plan output. To keep a credential in a header out of plan output, take it from a variable declared with `sensitive = true` or wrap it in `sensitive(...)`.
-- `method` (String) The HTTP method of the webhook request, such as `GET`, `POST`, `PUT`, `HEAD`, `DELETE` or `PATCH`. Must not be empty. (Default `POST`).
+- `method` (String) The HTTP method of the webhook request, such as `GET`, `POST`, `PUT`, `HEAD`, `DELETE` or `PATCH`. Must not be empty. Defaults to `POST`.
 - `query_parameters` (Map of String) Query parameters to add to the webhook URL, as a map of parameter names to values. The values are not sensitive and show in plan output. To keep a credential in a parameter out of plan output, take it from a variable declared with `sensitive = true` or wrap it in `sensitive(...)`.
-- `template` (String) The body of the webhook request, which can contain template variables such as `{{ALERT_TITLE}}` and `{{RESULT_LINK}}`. When not set, Checkly sends its default JSON payload.
+- `template` (String) The body of the webhook request, which can contain template variables such as `{{ALERT_TITLE}}` and `{{RESULT_LINK}}`. If not set, Checkly sends its default JSON payload.
 - `webhook_secret` (String, Sensitive) A secret to sign webhook requests with. When set, Checkly sends an HMAC-SHA256 signature of the request body, keyed with this secret, in the `x-checkly-signature` header.
-- `webhook_type` (String) Type of the webhook. The allowed values are `WEBHOOK_CORALOGIX`, `WEBHOOK_DISCORD`, `WEBHOOK_FIREHYDRANT`, `WEBHOOK_GITLAB_ALERT`, `WEBHOOK_ILERT`, `WEBHOOK_INCIDENTIO`, `WEBHOOK_MSTEAMS`, `WEBHOOK_ROOTLY`, `WEBHOOK_SPIKESH`, `WEBHOOK_SPLUNK` and `WEBHOOK_TELEGRAM`.
+- `webhook_type` (String) Type of the webhook. Possible values are `WEBHOOK_CORALOGIX`, `WEBHOOK_DISCORD`, `WEBHOOK_FIREHYDRANT`, `WEBHOOK_GITLAB_ALERT`, `WEBHOOK_ILERT`, `WEBHOOK_INCIDENTIO`, `WEBHOOK_MSTEAMS`, `WEBHOOK_ROOTLY`, `WEBHOOK_SPIKESH`, `WEBHOOK_SPLUNK` and `WEBHOOK_TELEGRAM`.
 
 ## Import
 

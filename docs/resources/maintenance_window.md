@@ -122,16 +122,16 @@ resource "checkly_maintenance_window" "maintenance-3" {
 ### Required
 
 - `ends_at` (String) The end of the maintenance window: an RFC 3339 date-time such as `2099-06-01T11:00:00Z` or `2099-06-01T11:00:00+02:00`, or a date such as `2099-06-02`, which means midnight UTC.
-- `name` (String) The maintenance window name (1 to 200 characters).
+- `name` (String) The maintenance window name. Must be between `1` and `200` characters.
 - `starts_at` (String) The start of the maintenance window: an RFC 3339 date-time such as `2099-06-01T09:00:00Z` or `2099-06-01T09:00:00+02:00`, or a date such as `2099-06-01`, which means midnight UTC.
 
 ### Optional
 
-- `description` (String) A description of the maintenance window (at most 2000 characters). When the window is visible on status pages, the description is shown there too.
+- `description` (String) A description of the maintenance window. Must be at most `2000` characters. When the window is visible on status pages, the description is shown there too.
 - `pause_all_checks` (Boolean) Pause every check in the account during the maintenance window, regardless of `tags`. Defaults to `false`.
-- `repeat_ends_at` (String) The last calendar date, in `timezone` (UTC when unset), on which an occurrence may start. Use a date such as `2099-12-31`. An RFC 3339 date-time is accepted too and counts as its UTC date: `2099-06-01T23:00:00-05:00` means `2099-06-02`. Requires a `repeat_interval` of 1 or more. An empty string, like leaving it out, means the window repeats indefinitely.
-- `repeat_interval` (Number) How many `repeat_unit`s apart the occurrences of the maintenance window are, counted from the first occurrence: 1 to 365. `0`, like leaving it out, means the window does not repeat. A value of 1 or more requires `repeat_unit`.
-- `repeat_unit` (String) The repeat cadence for the maintenance window. Possible values `DAY`, `WEEK` and `MONTH`.
+- `repeat_ends_at` (String) The last calendar date, in `timezone` (UTC if not set), on which an occurrence may start. Use a date such as `2099-12-31`. An RFC 3339 date-time is accepted too and counts as its UTC date: `2099-06-01T23:00:00-05:00` means `2099-06-02`. Requires a `repeat_interval` of 1 or more. An empty string, like leaving it out, means the window repeats indefinitely.
+- `repeat_interval` (Number) How many `repeat_unit`s apart the occurrences of the maintenance window are, counted from the first occurrence. Possible values are between `0` and `365`. `0`, like leaving it out, means the window does not repeat. A value of `1` or more requires `repeat_unit`.
+- `repeat_unit` (String) The repeat cadence for the maintenance window. Possible values are `DAY`, `WEEK` and `MONTH`.
 - `silence_alerts_tags` (Set of String) The tags of the checks and groups whose alerts are silenced during the maintenance window. Ignored when `silence_all_alerts` is `true`.
 - `silence_all_alerts` (Boolean) Silence alerts for every check in the account during the maintenance window, regardless of `silence_alerts_tags`. Defaults to `false`.
 - `status_page_visibility` (Attributes) Whether and how the maintenance window appears on status pages. Omitting the attribute hides the window and unlinks it from all status pages and services. An account without the status page maintenance windows entitlement can only change `enabled` to `false`: keep the rest of the attribute as it is, because removing it also changes the other settings, which is rejected. For the same reason, such an account must copy the window's existing component links into `component_configs`, since removing them is a change it can't make. (see [below for nested schema](#nestedatt--status_page_visibility))
@@ -147,19 +147,19 @@ resource "checkly_maintenance_window" "maintenance-3" {
 
 Optional:
 
-- `affect_all_services` (Boolean) Mark every service on the linked v2 status pages (`checkly_status_page`) as affected. Can't be combined with `service_ids`. v3 status pages use `component_configs` instead. (Default `false`).
-- `auto_end` (Boolean) Complete the maintenance automatically at the scheduled end time. (Default `true`).
-- `auto_start` (Boolean) Start the maintenance automatically at the scheduled time. (Default `true`).
+- `affect_all_services` (Boolean) Mark every service on the linked v2 status pages (`checkly_status_page`) as affected. Defaults to `false`. Can't be combined with `service_ids`. v3 status pages use `component_configs` instead.
+- `auto_end` (Boolean) Complete the maintenance automatically at the scheduled end time. Defaults to `true`.
+- `auto_start` (Boolean) Start the maintenance automatically at the scheduled time. Defaults to `true`.
 - `component_configs` (Attributes Set) The affected components of each linked v3 status page (`checkly_status_page_v3`), at most one entry per page. Omitting the attribute removes the window's component links. (see [below for nested schema](#nestedatt--status_page_visibility--component_configs))
-- `enabled` (Boolean) Show the maintenance window on the linked status pages. All other settings in this attribute only take effect when this is `true`. (Default `false`).
-- `notify_on_end` (Boolean) Email status page subscribers when the maintenance ends. (Default `false`).
-- `notify_on_start` (Boolean) Email status page subscribers when the maintenance starts. (Default `false`).
-- `reminder_minutes_before` (Set of Number) Up to three reminders, in minutes before the maintenance starts (60 to 10080), sent to status page subscribers.
+- `enabled` (Boolean) Show the maintenance window on the linked status pages. Defaults to `false`. All other settings in this attribute only take effect when this is `true`.
+- `notify_on_end` (Boolean) Email status page subscribers when the maintenance ends. Defaults to `false`.
+- `notify_on_start` (Boolean) Email status page subscribers when the maintenance starts. Defaults to `false`.
+- `reminder_minutes_before` (Set of Number) Up to three reminders, in minutes before the maintenance starts, sent to status page subscribers. Possible values are between `60` and `10080`.
 - `service_ids` (Set of String) The IDs of the affected status page services (`checkly_status_page_service`). Each service must be on one of the linked v2 status pages.
 - `severity` (String) The severity shown on the status page. Possible values are `MINOR`, `MEDIUM`, `MAJOR` and `CRITICAL`.
-- `show_affected_services` (Boolean) Show which services the maintenance affects. When `false`, downtime during the maintenance counts against the services' uptime. (Default `true`).
+- `show_affected_services` (Boolean) Show which services the maintenance affects. When `false`, downtime during the maintenance counts against the services' uptime. Defaults to `true`.
 - `status_page_ids` (Set of String) The IDs of the status pages to show the maintenance window on. A v2 status page (`checkly_status_page`) requires `service_ids` or `affect_all_services`, and a v3 status page (`checkly_status_page_v3`) requires an entry in `component_configs`.
-- `suppress_auto_incidents` (Boolean) Suppress automatically created incidents for the linked services during the maintenance. (Default `false`).
+- `suppress_auto_incidents` (Boolean) Suppress automatically created incidents for the linked services during the maintenance. Defaults to `false`.
 
 <a id="nestedatt--status_page_visibility--component_configs"></a>
 ### Nested Schema for `status_page_visibility.component_configs`
@@ -170,7 +170,7 @@ Required:
 
 Optional:
 
-- `affect_all_components` (Boolean) Mark every component of the status page as affected, including components added later. Can't be combined with `components`. (Default `false`).
+- `affect_all_components` (Boolean) Mark every component of the status page as affected, including components added later. Defaults to `false`. Can't be combined with `components`.
 - `components` (Attributes Set) The affected components of the status page, each with the status it shows while the maintenance is in progress. Required unless `affect_all_components` is `true`; an empty set means the same as leaving it out. (see [below for nested schema](#nestedatt--status_page_visibility--component_configs--components))
 
 <a id="nestedatt--status_page_visibility--component_configs--components"></a>
@@ -182,7 +182,7 @@ Required:
 
 Optional:
 
-- `status` (String) The status the component shows while the maintenance is in progress. Possible values are `OPERATIONAL`, `UNDER_MAINTENANCE`, `DEGRADED_PERFORMANCE`, `PARTIAL_OUTAGE` and `MAJOR_OUTAGE`. (Default `UNDER_MAINTENANCE`).
+- `status` (String) The status the component shows while the maintenance is in progress. Possible values are `OPERATIONAL`, `UNDER_MAINTENANCE`, `DEGRADED_PERFORMANCE`, `PARTIAL_OUTAGE` and `MAJOR_OUTAGE`. Defaults to `UNDER_MAINTENANCE`.
 
 ## Import
 

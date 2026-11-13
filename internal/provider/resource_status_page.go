@@ -108,7 +108,7 @@ func (r *StatusPageResource) Schema(ctx context.Context, req resource.SchemaRequ
 			},
 			"url": schema.StringAttribute{
 				Required:    true,
-				Description: "The unique subdomain of the status page: lowercase alphanumeric characters and dashes, no leading or trailing dash, at most 63 characters.",
+				Description: "The unique subdomain of the status page. Must be at most `63` characters. Must contain only lowercase alphanumeric characters and dashes, with no leading or trailing dash.",
 				Validators: []validator.String{
 					statusPageURLValidator,
 				},
@@ -155,7 +155,7 @@ func (r *StatusPageResource) Schema(ctx context.Context, req resource.SchemaRequ
 				Optional:    true,
 				Computed:    true,
 				Default:     stringdefault.StaticString("AUTO"),
-				Description: "The color theme the status page is shown in. `AUTO` follows the visitor's system preference. Possible values are `AUTO`, `DARK`, and `LIGHT`. (Default `AUTO`).",
+				Description: "The color theme the status page is shown in. `AUTO` follows the visitor's system preference. Possible values are `AUTO`, `DARK` and `LIGHT`. Defaults to `AUTO`.",
 				Validators: []validator.String{
 					stringvalidator.OneOf("AUTO", "DARK", "LIGHT"),
 				},

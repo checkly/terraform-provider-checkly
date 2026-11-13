@@ -93,7 +93,7 @@ func (r *DashboardResource) Schema(ctx context.Context, req resource.SchemaReque
 			"custom_url": schema.StringAttribute{
 				Required: true,
 				Description: "A subdomain name under 'checklyhq.com'. Needs to be unique across all users. " +
-					"Letters, digits and dashes, no leading or trailing dash, at most 63 characters.",
+					"Must be at most `63` characters. Must contain only letters, digits and dashes, with no leading or trailing dash.",
 				Validators: []validator.String{
 					predicateStringValidator{
 						check:       dashboardCustomURLRegex.MatchString,
@@ -147,13 +147,13 @@ func (r *DashboardResource) Schema(ctx context.Context, req resource.SchemaReque
 				Optional:    true,
 				Computed:    true,
 				Default:     booldefault.StaticBool(true),
-				Description: "Show or hide header and description on the dashboard. (Default `true`).",
+				Description: "Show or hide header and description on the dashboard. Defaults to `true`.",
 			},
 			"width": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
 				Default:     stringdefault.StaticString("FULL"),
-				Description: "Determines whether to use the full screen or focus in the center. Possible values are `FULL` and `960PX`. (Default `FULL`).",
+				Description: "Determines whether to use the full screen or focus in the center. Possible values are `FULL` and `960PX`. Defaults to `FULL`.",
 				Validators: []validator.String{
 					stringvalidator.OneOf("FULL", "960PX"),
 				},
@@ -162,7 +162,7 @@ func (r *DashboardResource) Schema(ctx context.Context, req resource.SchemaReque
 				Optional:    true,
 				Computed:    true,
 				Default:     int64default.StaticInt64(60),
-				Description: "How often to refresh the dashboard in seconds. Possible values `60`, '300' and `600`. (Default `60`).",
+				Description: "How often to refresh the dashboard in seconds. Possible values are `60`, `300` and `600`. Defaults to `60`.",
 				Validators: []validator.Int64{
 					int64validator.OneOf(60, 300, 600),
 				},
@@ -171,13 +171,13 @@ func (r *DashboardResource) Schema(ctx context.Context, req resource.SchemaReque
 				Optional:    true,
 				Computed:    true,
 				Default:     booldefault.StaticBool(true),
-				Description: "Determines if pagination is on or off. (Default `true`).",
+				Description: "Determines if pagination is on or off. Defaults to `true`.",
 			},
 			"checks_per_page": schema.Int64Attribute{
 				Optional:    true,
 				Computed:    true,
 				Default:     int64default.StaticInt64(15),
-				Description: "Determines how many checks to show per page. Possible values are between 1 and 20. (Default `15`).",
+				Description: "Determines how many checks to show per page. Possible values are between `1` and `20`. Defaults to `15`.",
 				Validators: []validator.Int64{
 					int64validator.Between(1, 20),
 				},
@@ -186,7 +186,7 @@ func (r *DashboardResource) Schema(ctx context.Context, req resource.SchemaReque
 				Optional:    true,
 				Computed:    true,
 				Default:     int64default.StaticInt64(60),
-				Description: "How often to trigger pagination in seconds. Possible values `30`, `60` and `300`. (Default `60`).",
+				Description: "How often to trigger pagination in seconds. Possible values are `30`, `60` and `300`. Defaults to `60`.",
 				Validators: []validator.Int64{
 					int64validator.OneOf(30, 60, 300),
 				},
@@ -195,13 +195,13 @@ func (r *DashboardResource) Schema(ctx context.Context, req resource.SchemaReque
 				Optional:    true,
 				Computed:    true,
 				Default:     booldefault.StaticBool(false),
-				Description: "List failing checks first. (Default `false`).",
+				Description: "List failing checks first. Defaults to `false`.",
 			},
 			"show_group_names": schema.BoolAttribute{
 				Optional:    true,
 				Computed:    true,
 				Default:     booldefault.StaticBool(true),
-				Description: "Show or hide the names of the groups of the checks on the dashboard. (Default `true`).",
+				Description: "Show or hide the names of the groups of the checks on the dashboard. Defaults to `true`.",
 			},
 			"tags": schema.SetAttribute{
 				Optional:    true,
@@ -214,25 +214,25 @@ func (r *DashboardResource) Schema(ctx context.Context, req resource.SchemaReque
 				Optional:    true,
 				Computed:    true,
 				Default:     booldefault.StaticBool(false),
-				Description: "Show or hide the tags on the dashboard. (Default `false`).",
+				Description: "Show or hide the tags on the dashboard. Defaults to `false`.",
 			},
 			"use_tags_and_operator": schema.BoolAttribute{
 				Optional:    true,
 				Computed:    true,
 				Default:     booldefault.StaticBool(false),
-				Description: "Set when to use AND operator for fetching dashboard tags. (Default `false`).",
+				Description: "Set when to use AND operator for fetching dashboard tags. Defaults to `false`.",
 			},
 			"enable_incidents": schema.BoolAttribute{
 				Optional:    true,
 				Computed:    true,
 				Default:     booldefault.StaticBool(false),
-				Description: "Enable incident support for the dashboard. (Default `false`).",
+				Description: "Enable incident support for the dashboard. Defaults to `false`.",
 			},
 			"is_private": schema.BoolAttribute{
 				Optional:    true,
 				Computed:    true,
 				Default:     booldefault.StaticBool(false),
-				Description: "Set your dashboard as private. An access key is only issued when the dashboard is created private. Making an existing dashboard private through an update leaves it without a key; recreate the dashboard to get one. An update that leaves the dashboard public revokes its key. (Default `false`).",
+				Description: "Set your dashboard as private. An access key is only issued when the dashboard is created private. Making an existing dashboard private through an update leaves it without a key; recreate the dashboard to get one. An update that leaves the dashboard public revokes its key. Defaults to `false`.",
 			},
 			"key": schema.StringAttribute{
 				Computed:    true,
@@ -246,13 +246,13 @@ func (r *DashboardResource) Schema(ctx context.Context, req resource.SchemaReque
 				Optional:    true,
 				Computed:    true,
 				Default:     booldefault.StaticBool(false),
-				Description: "Expand or collapse checks on the dashboard. (Default `false`).",
+				Description: "Expand or collapse checks on the dashboard. Defaults to `false`.",
 			},
 			"show_check_run_links": schema.BoolAttribute{
 				Optional:    true,
 				Computed:    true,
 				Default:     booldefault.StaticBool(false),
-				Description: "Show or hide check run links on the dashboard. (Default `false`).",
+				Description: "Show or hide check run links on the dashboard. Defaults to `false`.",
 			},
 			"custom_css": schema.StringAttribute{
 				Optional:    true,
@@ -264,13 +264,13 @@ func (r *DashboardResource) Schema(ctx context.Context, req resource.SchemaReque
 				Optional:    true,
 				Computed:    true,
 				Default:     booldefault.StaticBool(true),
-				Description: "Show or hide the P95 stats on the dashboard. (Default `true`).",
+				Description: "Show or hide the P95 stats on the dashboard. Defaults to `true`.",
 			},
 			"show_p99": schema.BoolAttribute{
 				Optional:    true,
 				Computed:    true,
 				Default:     booldefault.StaticBool(true),
-				Description: "Show or hide the P99 stats on the dashboard. (Default `true`).",
+				Description: "Show or hide the P99 stats on the dashboard. Defaults to `true`.",
 			},
 		},
 	}

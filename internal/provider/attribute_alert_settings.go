@@ -122,7 +122,7 @@ func makeAlertSettingsAttributeSchema(options AlertSettingsAttributeSchemaOption
 				Optional:    true,
 				Computed:    true,
 				Default:     stringdefault.StaticString("RUN_BASED"),
-				Description: "Determines the type of escalation to use. Possible values are `RUN_BASED` and `TIME_BASED`. (Default `RUN_BASED`).",
+				Description: "Determines the type of escalation to use. Possible values are `RUN_BASED` and `TIME_BASED`. Defaults to `RUN_BASED`.",
 				Validators: []validator.String{
 					stringvalidator.OneOf("RUN_BASED", "TIME_BASED"),
 				},
@@ -140,7 +140,7 @@ func makeAlertSettingsAttributeSchema(options AlertSettingsAttributeSchemaOption
 						Optional:    true,
 						Computed:    true,
 						Default:     int64default.StaticInt64(1),
-						Description: failedRunThreshold + " Possible values are between `1` and `5`. (Default `1`).",
+						Description: failedRunThreshold + " Possible values are between `1` and `5`. Defaults to `1`.",
 						Validators: []validator.Int64{
 							int64validator.Between(1, 5),
 						},
@@ -160,7 +160,7 @@ func makeAlertSettingsAttributeSchema(options AlertSettingsAttributeSchemaOption
 						Optional:    true,
 						Computed:    true,
 						Default:     int64default.StaticInt64(5),
-						Description: minutesFailingThreshold + " Possible values are `5`, `10`, `15`, and `30`. (Default `5`).",
+						Description: minutesFailingThreshold + " Possible values are `5`, `10`, `15` and `30`. Defaults to `5`.",
 						Validators: []validator.Int64{
 							int64validator.OneOf(5, 10, 15, 30),
 						},
@@ -183,7 +183,7 @@ func makeAlertSettingsAttributeSchema(options AlertSettingsAttributeSchemaOption
 						Optional:    true,
 						Computed:    true,
 						Default:     int64default.StaticInt64(0),
-						Description: "Number of reminder notifications to send. Possible values are `0`, `1`, `2`, `3`, `4`, `5`, and `100000` (`0` to disable, `100000` for unlimited). (Default `0`).",
+						Description: "Number of reminder notifications to send. Possible values are `0`, `1`, `2`, `3`, `4`, `5` and `100000` (`0` to disable, `100000` for unlimited). Defaults to `0`.",
 						Validators: []validator.Int64{
 							int64validator.OneOf(0, 1, 2, 3, 4, 5, 100000),
 						},
@@ -192,7 +192,7 @@ func makeAlertSettingsAttributeSchema(options AlertSettingsAttributeSchemaOption
 						Optional:    true,
 						Computed:    true,
 						Default:     int64default.StaticInt64(5),
-						Description: "Interval between reminder notifications in minutes. Possible values are `5`, `10`, `15`, and `30`. (Default `5`).",
+						Description: "Interval between reminder notifications in minutes. Possible values are `5`, `10`, `15` and `30`. Defaults to `5`.",
 						Validators: []validator.Int64{
 							int64validator.OneOf(5, 10, 15, 30),
 						},
@@ -215,13 +215,13 @@ func makeAlertSettingsAttributeSchema(options AlertSettingsAttributeSchemaOption
 						Optional:    true,
 						Computed:    true,
 						Default:     booldefault.StaticBool(false),
-						Description: parallelRunFailureThreshold + " (Default `false`).",
+						Description: parallelRunFailureThreshold + " Defaults to `false`.",
 					},
 					"percentage": schema.Int64Attribute{
 						Optional:    true,
 						Computed:    true,
 						Default:     int64default.StaticInt64(10),
-						Description: "Percentage of runs that must fail to trigger alert. Possible values are `10`, `20`, `30`, `40`, `50`, `60`, `70`, `80`, `90`, and `100`. (Default `10`).",
+						Description: "Percentage of runs that must fail to trigger alert. Possible values are `10`, `20`, `30`, `40`, `50`, `60`, `70`, `80`, `90` and `100`. Defaults to `10`.",
 						Validators: []validator.Int64{
 							int64validator.OneOf(10, 20, 30, 40, 50, 60, 70, 80, 90, 100),
 						},

@@ -98,7 +98,7 @@ func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 			"in the v2 upgrade guide for what to change: `checkly_api_check` has lower default " +
 			"`degraded_response_time` and `max_response_time` values, and the per-type resources have no `double_check`.",
 		DeprecationMessage: "The `checkly_check` resource is deprecated in favor of dedicated resource types for each check type: " +
-			"`checkly_api_check`, `checkly_browser_check`, and `checkly_multistep_check`. " +
+			"`checkly_api_check`, `checkly_browser_check` and `checkly_multistep_check`. " +
 			"These expose only the properties relevant to their check type. " +
 			"Use a `moved` block to migrate existing resources without recreating them. " +
 			"When migrating an API check, note that the default `degraded_response_time` and `max_response_time` " +
@@ -124,7 +124,7 @@ func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 			},
 			"type": schema.StringAttribute{
 				Required:    true,
-				Description: "The type of the check. Possible values are `API`, `BROWSER`, and `MULTI_STEP`.",
+				Description: "The type of the check. Possible values are `API`, `BROWSER` and `MULTI_STEP`.",
 				Validators: []validator.String{
 					stringvalidator.OneOf("API", "BROWSER", "MULTI_STEP"),
 				},
@@ -151,7 +151,7 @@ func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 				Validators: []validator.Int64{
 					int64validator.Between(0, extendedResponseTimeLimit),
 				},
-				Description: "The response time in milliseconds where the check should be considered degraded. Possible values are between `0` and `30000`, or up to `45000` if extended limits have been approved for your account. Only relevant when `type` is `API`. (Default `15000`).",
+				Description: "The response time in milliseconds where the check should be considered degraded. Possible values are between `0` and `30000`, or up to `45000` if extended limits have been approved for your account. Defaults to `15000`. Only relevant when `type` is `API`.",
 			},
 			"max_response_time": schema.Int64Attribute{
 				Optional: true,
@@ -161,14 +161,14 @@ func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 				Validators: []validator.Int64{
 					int64validator.Between(0, extendedResponseTimeLimit),
 				},
-				Description: "The response time in milliseconds where the check should be considered failing. Possible values are between `0` and `30000`, or up to `45000` if extended limits have been approved for your account. Only relevant when `type` is `API`. (Default `30000`).",
+				Description: "The response time in milliseconds where the check should be considered failing. Possible values are between `0` and `30000`, or up to `45000` if extended limits have been approved for your account. Defaults to `30000`. Only relevant when `type` is `API`.",
 			},
 			"ssl_check_domain": schema.StringAttribute{
 				Optional:    true,
 				Description: "A valid fully qualified domain name (FQDN) to check its SSL certificate. Only relevant when `type` is `BROWSER`.",
 			},
-			"setup_snippet_id":    snippetIDAttributeSchema("The ID of the snippet to run in the setup phase of the API check (at least `1`). When unset, no setup snippet runs. Only relevant when `type` is `API`."),
-			"teardown_snippet_id": snippetIDAttributeSchema("The ID of the snippet to run in the teardown phase of the API check (at least `1`). When unset, no teardown snippet runs. Only relevant when `type` is `API`."),
+			"setup_snippet_id":    snippetIDAttributeSchema("The ID of the snippet to run in the setup phase of the API check. Must be at least `1`. If not set, no setup snippet runs. Only relevant when `type` is `API`."),
+			"teardown_snippet_id": snippetIDAttributeSchema("The ID of the snippet to run in the teardown phase of the API check. Must be at least `1`. If not set, no teardown snippet runs. Only relevant when `type` is `API`."),
 			"local_setup_script": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,

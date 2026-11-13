@@ -169,7 +169,7 @@ func (r *CheckGroupV2Resource) Schema(ctx context.Context, req resource.SchemaRe
 				Default:  int64default.StaticInt64(1),
 				Description: "Determines the number of checks to run concurrently when triggering the check group " +
 					"via CI/CD or the API. " +
-					"(Default `1`).",
+					"Defaults to `1`.",
 			},
 			activatedAttributeName: activatedAttributeSchema(CommonCheckAttributeSchemaOptions{Subject: subjectCheckGroup}),
 			mutedAttributeName:     mutedAttributeSchema(CommonCheckAttributeSchemaOptions{Subject: subjectCheckGroup}),

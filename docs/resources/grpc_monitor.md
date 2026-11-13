@@ -127,21 +127,21 @@ resource "checkly_grpc_monitor" "example-flatbuffers-monitor" {
 
 ### Optional
 
-- `activated` (Boolean) Determines whether the monitor runs on its schedule. (Default `true`).
+- `activated` (Boolean) Determines whether the monitor runs on its schedule. Defaults to `true`.
 - `alert_channel_subscriptions` (Attributes Set) A set of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your monitor, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedatt--alert_channel_subscriptions))
 - `alert_settings` (Attributes) Determines the alert escalation policy for the monitor. (see [below for nested schema](#nestedatt--alert_settings))
-- `degraded_response_time` (Number) The response time in milliseconds where the monitor should be considered degraded. Possible values are between `1` and `180000`. (Default `10000`).
+- `degraded_response_time` (Number) The response time in milliseconds where the monitor should be considered degraded. Possible values are between `1` and `180000`. Defaults to `10000`.
 - `description` (String) A description of the monitor.
-- `frequency` (Number) Controls how often the monitor should run. Defined in minutes. The allowed values are `0` (high frequency - use `frequency_offset` to define the actual frequency), `1` (1 minute), `2` (2 minutes), `5` (5 minutes), `10` (10 minutes), `15` (15 minutes), `30` (30 minutes), `60` (1 hour), `120` (2 hours), `180` (3 hours), `360` (6 hours), `720` (12 hours) and `1440` (24 hours). (Default `10`).
-- `frequency_offset` (Number) When `frequency` is `0` (high frequency), `frequency_offset` is required and it alone controls how often the monitor should run. Defined in seconds. The allowed values are `0` (disabled - use `frequency` to define the actual frequency), `10` (10 seconds), `20` (20 seconds) and `30` (30 seconds).
-- `group_id` (Number) The ID of the check group the monitor is part of (at least `1`). When unset, the monitor is not part of a group.
-- `group_order` (Number) The position of the monitor in its check group (at least `0`), which sets the order in which the checks and monitors of the group run when the group is triggered from the API or CI/CD. When unset, the monitor has no position in the group.
+- `frequency` (Number) Controls how often the monitor should run. Defined in minutes. Possible values are `0` (high frequency - use `frequency_offset` to define the actual frequency), `1` (1 minute), `2` (2 minutes), `5` (5 minutes), `10` (10 minutes), `15` (15 minutes), `30` (30 minutes), `60` (1 hour), `120` (2 hours), `180` (3 hours), `360` (6 hours), `720` (12 hours) and `1440` (24 hours). Defaults to `10`.
+- `frequency_offset` (Number) When `frequency` is `0` (high frequency), `frequency_offset` is required and it alone controls how often the monitor should run. Defined in seconds. Possible values are `0` (disabled - use `frequency` to define the actual frequency), `10` (10 seconds), `20` (20 seconds) and `30` (30 seconds).
+- `group_id` (Number) The ID of the check group the monitor is part of. Must be at least `1`. If not set, the monitor is not part of a group.
+- `group_order` (Number) The position of the monitor in its check group, which sets the order in which the checks and monitors of the group run when the group is triggered from the API or CI/CD. Must be at least `0`. If not set, the monitor has no position in the group.
 - `locations` (Set of String) The data center locations to run the monitor from, such as `us-east-1`. The monitor needs at least one location in `locations` or `private_locations`, unless it is part of a check group.
-- `max_response_time` (Number) The response time in milliseconds where the monitor should be considered failing. Possible values are between `1` and `180000`. (Default `20000`).
-- `muted` (Boolean) Determines whether notifications are sent when the monitor fails, degrades or recovers. (Default `false`).
+- `max_response_time` (Number) The response time in milliseconds where the monitor should be considered failing. Possible values are between `1` and `180000`. Defaults to `20000`.
+- `muted` (Boolean) Determines whether notifications are sent when the monitor fails, degrades or recovers. Defaults to `false`.
 - `private_locations` (Set of String) The slugs of the private locations to run the monitor from.
 - `retry_strategy` (Attributes) A strategy for retrying failed check/monitor runs. (see [below for nested schema](#nestedatt--retry_strategy))
-- `run_parallel` (Boolean) Determines whether the monitor runs in all its locations in parallel instead of in one location at a time, round-robin. (Default `false`).
+- `run_parallel` (Boolean) Determines whether the monitor runs in all its locations in parallel instead of in one location at a time, round-robin. Defaults to `false`.
 - `runtime_id` (String) The ID of the runtime to use for the monitor.
 - `tags` (Set of String) Tags for organizing and filtering checks and monitors.
 - `trigger_incident` (Attributes) Create and resolve an incident based on the alert configuration. Useful for status page automation. (see [below for nested schema](#nestedatt--trigger_incident))
@@ -156,38 +156,38 @@ resource "checkly_grpc_monitor" "example-flatbuffers-monitor" {
 
 Required:
 
-- `host` (String) The host to connect to (1 to 2048 characters). Do not include a scheme or a port in this value.
-- `port` (Number) The port number to connect to. Possible values are between 1 and 65535.
+- `host` (String) The host to connect to. Must be between `1` and `2048` characters. Do not include a scheme or a port in this value.
+- `port` (Number) The port number to connect to. Possible values are between `1` and `65535`.
 
 Optional:
 
 - `assertions` (Attributes Set) A request can have multiple assertions. The allowed comparisons, properties, and target formats depend on the assertion source — see the [Assertion Reference](#assertion-reference) below. (see [below for nested schema](#nestedatt--request--assertions))
-- `bfbs_content` (String) A base64-encoded binary FlatBuffers schema (`.bfbs`), at most 100 KiB once encoded. Required when `encoding = "FLATBUFFERS"` and forbidden otherwise. Generate it with `flatc -b --schema --bfbs-builtins schema.fbs` and load it with Terraform's `filebase64()` function.
-- `encoding` (String) The wire encoding used in `BEHAVIOR` mode. Possible values are `PROTOBUF` and `FLATBUFFERS`. (Default `PROTOBUF`).
-- `grpc_mode` (String) The gRPC monitoring mode. `BEHAVIOR` invokes a unary method (requires `method`); `HEALTH` queries the standard gRPC health-check service (allows `service`). (Default `BEHAVIOR`).
-- `ip_family` (String) The IP family to use when executing the gRPC check. The value can be either `IPv4` or `IPv6`. (Default `IPv4`).
-- `message` (String) The JSON request message (at most 65536 characters) sent as the gRPC call payload in `BEHAVIOR` mode. Must not be set in `HEALTH` mode.
-- `metadata` (Attributes Set) gRPC metadata (request headers) sent with the call. At most 50 elements. (see [below for nested schema](#nestedatt--request--metadata))
+- `bfbs_content` (String) A base64-encoded binary FlatBuffers schema (`.bfbs`). Must be at most `100` KiB once encoded. Required when `encoding = "FLATBUFFERS"` and forbidden otherwise. Generate it with `flatc -b --schema --bfbs-builtins schema.fbs` and load it with Terraform's `filebase64()` function.
+- `encoding` (String) The wire encoding used in `BEHAVIOR` mode. Possible values are `PROTOBUF` and `FLATBUFFERS`. Defaults to `PROTOBUF`.
+- `grpc_mode` (String) The gRPC monitoring mode. Possible values are `BEHAVIOR` (invokes a unary method, requires `method`) and `HEALTH` (queries the standard gRPC health-check service, allows `service`). Defaults to `BEHAVIOR`.
+- `ip_family` (String) The IP family to use when executing the gRPC check. Possible values are `IPv4` and `IPv6`. Defaults to `IPv4`.
+- `message` (String) The JSON request message sent as the gRPC call payload in `BEHAVIOR` mode. Must be at most `65536` characters. Must not be set in `HEALTH` mode.
+- `metadata` (Attributes Set) gRPC metadata (request headers) sent with the call. Must contain at most `50` elements. (see [below for nested schema](#nestedatt--request--metadata))
 - `method` (String) The fully-qualified gRPC method to invoke in `BEHAVIOR` mode (e.g. `package.Service/Method`). Required in `BEHAVIOR` mode; must not be set in `HEALTH` mode.
-- `proto_content` (String) The inline `.proto` file source (at most 102400 characters) used when `service_definition = "PROTO_FILE"` in `BEHAVIOR` mode, where it is required. Must not be set in `HEALTH` mode or when `encoding = "FLATBUFFERS"`.
+- `proto_content` (String) The inline `.proto` file source used when `service_definition = "PROTO_FILE"` in `BEHAVIOR` mode, where it is required. Must be at most `102400` characters. Must not be set in `HEALTH` mode or when `encoding = "FLATBUFFERS"`.
 - `service` (String) The service name to query in `HEALTH` mode. An empty value queries overall server health. Must not be set in `BEHAVIOR` mode.
-- `service_definition` (String) How the service definition is resolved in `BEHAVIOR` mode: `REFLECTION` uses server reflection; `PROTO_FILE` uses the inline `proto_content`, which it requires. Must not be set when `encoding = "FLATBUFFERS"`, and must not be `PROTO_FILE` in `HEALTH` mode. (Default `REFLECTION`).
-- `skip_ssl` (Boolean) Whether to skip SSL certificate validation when `tls` is enabled. (Default `false`).
-- `timeout` (Number) The number of seconds to wait for the gRPC call to complete before timing out. Possible values are between 1 and 180. (Default `60`).
-- `tls` (Boolean) Whether to use a TLS-encrypted connection to the gRPC server. (Default `true`).
+- `service_definition` (String) How the service definition is resolved in `BEHAVIOR` mode. Possible values are `REFLECTION` (uses server reflection) and `PROTO_FILE` (uses the inline `proto_content`, which it requires). Defaults to `REFLECTION`. Must not be set when `encoding = "FLATBUFFERS"`, and must not be `PROTO_FILE` in `HEALTH` mode.
+- `skip_ssl` (Boolean) Whether to skip SSL certificate validation when `tls` is enabled. Defaults to `false`.
+- `timeout` (Number) The number of seconds to wait for the gRPC call to complete before timing out. Possible values are between `1` and `180`. Defaults to `60`.
+- `tls` (Boolean) Whether to use a TLS-encrypted connection to the gRPC server. Defaults to `true`.
 
 <a id="nestedatt--request--assertions"></a>
 ### Nested Schema for `request.assertions`
 
 Required:
 
-- `comparison` (String) The type of comparison to be executed between expected and actual value of the assertion. For `GRPC_RESPONSE`, `TEXT_BODY` and `GRPC_METADATA`, possible values are `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL`, and `NOT_NULL`. For `RESPONSE_TIME` and `GRPC_STATUS_CODE`, possible values are `EQUALS`, `NOT_EQUALS`, `GREATER_THAN`, and `LESS_THAN`. For `GRPC_HEALTHCHECK_STATUS`, possible values are `EQUALS` and `NOT_EQUALS`.
-- `source` (String) The source of the asserted value. Possible values are `RESPONSE_TIME`, `GRPC_RESPONSE`, `TEXT_BODY`, `GRPC_METADATA`, `GRPC_HEALTHCHECK_STATUS`, and `GRPC_STATUS_CODE`.
+- `comparison` (String) The type of comparison to be executed between expected and actual value of the assertion. For `GRPC_RESPONSE`, `TEXT_BODY` and `GRPC_METADATA`, possible values are `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL` and `NOT_NULL`. For `RESPONSE_TIME` and `GRPC_STATUS_CODE`, possible values are `EQUALS`, `NOT_EQUALS`, `GREATER_THAN` and `LESS_THAN`. For `GRPC_HEALTHCHECK_STATUS`, possible values are `EQUALS` and `NOT_EQUALS`.
+- `source` (String) The source of the asserted value. Possible values are `RESPONSE_TIME`, `GRPC_RESPONSE`, `TEXT_BODY`, `GRPC_METADATA`, `GRPC_HEALTHCHECK_STATUS` and `GRPC_STATUS_CODE`.
 
 Optional:
 
 - `property` (String) The property selecting the asserted value within the source, e.g. a JSONPath expression for `GRPC_RESPONSE` or a metadata key for `GRPC_METADATA`.
-- `target` (String) The value to compare against. Required, and must be numeric without surrounding whitespace, for `RESPONSE_TIME` (milliseconds), `GRPC_STATUS_CODE` (0-16), and `GRPC_HEALTHCHECK_STATUS` (0-3, where 0=UNKNOWN, 1=SERVING, 2=NOT_SERVING, 3=SERVICE_UNKNOWN).
+- `target` (String) The value to compare against. Required, and must be numeric without surrounding whitespace, for `RESPONSE_TIME`, `GRPC_STATUS_CODE` and `GRPC_HEALTHCHECK_STATUS`. For `RESPONSE_TIME`, a number of milliseconds. For `GRPC_STATUS_CODE`, possible values are between `0` and `16`. For `GRPC_HEALTHCHECK_STATUS`, possible values are between `0` and `3`, where `0` is `UNKNOWN`, `1` is `SERVING`, `2` is `NOT_SERVING` and `3` is `SERVICE_UNKNOWN`.
 
 
 <a id="nestedatt--request--metadata"></a>
@@ -195,11 +195,11 @@ Optional:
 
 Required:
 
-- `key` (String) The gRPC metadata (header) key (1 to 256 characters).
+- `key` (String) The gRPC metadata (header) key. Must be between `1` and `256` characters.
 
 Optional:
 
-- `value` (String) The gRPC metadata (header) value (at most 8192 characters). The value is not sensitive and shows in plan output. To keep a credential out of plan output, take it from a variable declared with `sensitive = true` or wrap it in `sensitive(...)`.
+- `value` (String) The gRPC metadata (header) value. Must be at most `8192` characters. The value is not sensitive and shows in plan output. To keep a credential out of plan output, take it from a variable declared with `sensitive = true` or wrap it in `sensitive(...)`.
 
 
 
@@ -217,7 +217,7 @@ Required:
 
 Optional:
 
-- `escalation_type` (String) Determines the type of escalation to use. Possible values are `RUN_BASED` and `TIME_BASED`. (Default `RUN_BASED`).
+- `escalation_type` (String) Determines the type of escalation to use. Possible values are `RUN_BASED` and `TIME_BASED`. Defaults to `RUN_BASED`.
 - `parallel_run_failure_threshold` (Attributes) Configuration for parallel run failure threshold. (see [below for nested schema](#nestedatt--alert_settings--parallel_run_failure_threshold))
 - `reminders` (Attributes) Defines how often to send reminder notifications after the initial alert. (see [below for nested schema](#nestedatt--alert_settings--reminders))
 - `run_based_escalation` (Attributes) Configuration for run-based escalation. (see [below for nested schema](#nestedatt--alert_settings--run_based_escalation))
@@ -228,8 +228,8 @@ Optional:
 
 Optional:
 
-- `enabled` (Boolean) Whether parallel run failure threshold is enabled. Only applies if the monitor is scheduled for multiple locations in parallel. (Default `false`).
-- `percentage` (Number) Percentage of runs that must fail to trigger alert. Possible values are `10`, `20`, `30`, `40`, `50`, `60`, `70`, `80`, `90`, and `100`. (Default `10`).
+- `enabled` (Boolean) Whether parallel run failure threshold is enabled. Only applies if the monitor is scheduled for multiple locations in parallel. Defaults to `false`.
+- `percentage` (Number) Percentage of runs that must fail to trigger alert. Possible values are `10`, `20`, `30`, `40`, `50`, `60`, `70`, `80`, `90` and `100`. Defaults to `10`.
 
 
 <a id="nestedatt--alert_settings--reminders"></a>
@@ -237,8 +237,8 @@ Optional:
 
 Optional:
 
-- `amount` (Number) Number of reminder notifications to send. Possible values are `0`, `1`, `2`, `3`, `4`, `5`, and `100000` (`0` to disable, `100000` for unlimited). (Default `0`).
-- `interval` (Number) Interval between reminder notifications in minutes. Possible values are `5`, `10`, `15`, and `30`. (Default `5`).
+- `amount` (Number) Number of reminder notifications to send. Possible values are `0`, `1`, `2`, `3`, `4`, `5` and `100000` (`0` to disable, `100000` for unlimited). Defaults to `0`.
+- `interval` (Number) Interval between reminder notifications in minutes. Possible values are `5`, `10`, `15` and `30`. Defaults to `5`.
 
 
 <a id="nestedatt--alert_settings--run_based_escalation"></a>
@@ -246,7 +246,7 @@ Optional:
 
 Optional:
 
-- `failed_run_threshold` (Number) Send an alert notification after the given number of consecutive monitor runs have failed. Possible values are between `1` and `5`. (Default `1`).
+- `failed_run_threshold` (Number) Send an alert notification after the given number of consecutive monitor runs have failed. Possible values are between `1` and `5`. Defaults to `1`.
 
 
 <a id="nestedatt--alert_settings--time_based_escalation"></a>
@@ -254,7 +254,7 @@ Optional:
 
 Optional:
 
-- `minutes_failing_threshold` (Number) Send an alert notification after the monitor has been failing for the given amount of time (in minutes). Possible values are `5`, `10`, `15`, and `30`. (Default `5`).
+- `minutes_failing_threshold` (Number) Send an alert notification after the monitor has been failing for the given amount of time (in minutes). Possible values are `5`, `10`, `15` and `30`. Defaults to `5`.
 
 
 
@@ -263,14 +263,14 @@ Optional:
 
 Required:
 
-- `type` (String) Determines which type of retry strategy to use. Possible values are `FIXED`, `LINEAR`, `EXPONENTIAL`, `SINGLE_RETRY`, and `NO_RETRIES`.
+- `type` (String) Determines which type of retry strategy to use. Possible values are `FIXED`, `LINEAR`, `EXPONENTIAL`, `SINGLE_RETRY` and `NO_RETRIES`.
 
 Optional:
 
-- `base_backoff_seconds` (Number) The number of seconds to wait before the first retry attempt (at least `0`). Not available when `type` is `NO_RETRIES`. (Default `60`).
-- `max_duration_seconds` (Number) The total amount of time to continue retrying the check/monitor (maximum 600 seconds). Available when `type` is `FIXED`, `LINEAR`, or `EXPONENTIAL`. (Default `600`).
-- `max_retries` (Number) The maximum number of times to retry the check/monitor. Value must be between `1` and `10`. Available when `type` is `FIXED`, `LINEAR`, or `EXPONENTIAL`. (Default `2`).
-- `same_region` (Boolean) Whether retries should be run in the same region as the initial check/monitor run. Not available when `type` is `NO_RETRIES`. (Default `true`).
+- `base_backoff_seconds` (Number) The number of seconds to wait before the first retry attempt. Must be at least `0`. Defaults to `60`. Not available when `type` is `NO_RETRIES`.
+- `max_duration_seconds` (Number) The total amount of time to continue retrying the check/monitor, in seconds. Possible values are between `0` and `600`. Defaults to `600`. Available when `type` is `FIXED`, `LINEAR` or `EXPONENTIAL`.
+- `max_retries` (Number) The maximum number of times to retry the check/monitor. Possible values are between `1` and `10`. Defaults to `2`. Available when `type` is `FIXED`, `LINEAR` or `EXPONENTIAL`.
+- `same_region` (Boolean) Whether retries should be run in the same region as the initial check/monitor run. Defaults to `true`. Not available when `type` is `NO_RETRIES`.
 
 
 <a id="nestedatt--trigger_incident"></a>
@@ -282,7 +282,7 @@ Required:
 - `name` (String) The name of the incident.
 - `notify_subscribers` (Boolean) Whether to notify subscribers when the incident is triggered.
 - `service_id` (String) The status page service that this incident will be associated with.
-- `severity` (String) The severity level of the incident. Possible values are `MINOR`, `MEDIUM`, `MAJOR`, and `CRITICAL`.
+- `severity` (String) The severity level of the incident. Possible values are `MINOR`, `MEDIUM`, `MAJOR` and `CRITICAL`.
 
 ## Import
 

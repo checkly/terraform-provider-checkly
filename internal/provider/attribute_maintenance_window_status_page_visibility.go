@@ -100,7 +100,7 @@ func maintenanceWindowStatusPageVisibilitySchema() schema.SingleNestedAttribute 
 				Optional:    true,
 				Computed:    true,
 				Default:     booldefault.StaticBool(false),
-				Description: "Show the maintenance window on the linked status pages. All other settings in this attribute only take effect when this is `true`. (Default `false`).",
+				Description: "Show the maintenance window on the linked status pages. Defaults to `false`. All other settings in this attribute only take effect when this is `true`.",
 			},
 			"severity": schema.StringAttribute{
 				Optional:    true,
@@ -113,32 +113,32 @@ func maintenanceWindowStatusPageVisibilitySchema() schema.SingleNestedAttribute 
 				Optional:    true,
 				Computed:    true,
 				Default:     booldefault.StaticBool(false),
-				Description: "Mark every service on the linked v2 status pages (`checkly_status_page`) as affected. Can't be combined with `service_ids`. v3 status pages use `component_configs` instead. (Default `false`).",
+				Description: "Mark every service on the linked v2 status pages (`checkly_status_page`) as affected. Defaults to `false`. Can't be combined with `service_ids`. v3 status pages use `component_configs` instead.",
 			},
 			"notify_on_start": schema.BoolAttribute{
 				Optional:    true,
 				Computed:    true,
 				Default:     booldefault.StaticBool(false),
-				Description: "Email status page subscribers when the maintenance starts. (Default `false`).",
+				Description: "Email status page subscribers when the maintenance starts. Defaults to `false`.",
 			},
 			"notify_on_end": schema.BoolAttribute{
 				Optional:    true,
 				Computed:    true,
 				Default:     booldefault.StaticBool(false),
-				Description: "Email status page subscribers when the maintenance ends. (Default `false`).",
+				Description: "Email status page subscribers when the maintenance ends. Defaults to `false`.",
 			},
 			"suppress_auto_incidents": schema.BoolAttribute{
 				Optional:    true,
 				Computed:    true,
 				Default:     booldefault.StaticBool(false),
-				Description: "Suppress automatically created incidents for the linked services during the maintenance. (Default `false`).",
+				Description: "Suppress automatically created incidents for the linked services during the maintenance. Defaults to `false`.",
 			},
 			"reminder_minutes_before": schema.SetAttribute{
 				Optional:    true,
 				Computed:    true,
 				Default:     emptySetDefault(types.Int64Type),
 				ElementType: types.Int64Type,
-				Description: "Up to three reminders, in minutes before the maintenance starts (60 to 10080), sent to status page subscribers.",
+				Description: "Up to three reminders, in minutes before the maintenance starts, sent to status page subscribers. Possible values are between `60` and `10080`.",
 				Validators: []validator.Set{
 					setvalidator.SizeAtMost(3),
 					setvalidator.ValueInt64sAre(int64validator.Between(60, 10080)),
@@ -148,19 +148,19 @@ func maintenanceWindowStatusPageVisibilitySchema() schema.SingleNestedAttribute 
 				Optional:    true,
 				Computed:    true,
 				Default:     booldefault.StaticBool(true),
-				Description: "Start the maintenance automatically at the scheduled time. (Default `true`).",
+				Description: "Start the maintenance automatically at the scheduled time. Defaults to `true`.",
 			},
 			"auto_end": schema.BoolAttribute{
 				Optional:    true,
 				Computed:    true,
 				Default:     booldefault.StaticBool(true),
-				Description: "Complete the maintenance automatically at the scheduled end time. (Default `true`).",
+				Description: "Complete the maintenance automatically at the scheduled end time. Defaults to `true`.",
 			},
 			"show_affected_services": schema.BoolAttribute{
 				Optional:    true,
 				Computed:    true,
 				Default:     booldefault.StaticBool(true),
-				Description: "Show which services the maintenance affects. When `false`, downtime during the maintenance counts against the services' uptime. (Default `true`).",
+				Description: "Show which services the maintenance affects. When `false`, downtime during the maintenance counts against the services' uptime. Defaults to `true`.",
 			},
 			"status_page_ids": schema.SetAttribute{
 				Optional:    true,
@@ -193,7 +193,7 @@ func maintenanceWindowStatusPageVisibilitySchema() schema.SingleNestedAttribute 
 						"affect_all_components": schema.BoolAttribute{
 							Optional:    true,
 							Computed:    true,
-							Description: "Mark every component of the status page as affected, including components added later. Can't be combined with `components`. (Default `false`).",
+							Description: "Mark every component of the status page as affected, including components added later. Defaults to `false`. Can't be combined with `components`.",
 						},
 						// The empty default is applied in ModifyPlan (see
 						// maintenanceWindowComponentConfigsWithDefaults), as
@@ -211,7 +211,7 @@ func maintenanceWindowStatusPageVisibilitySchema() schema.SingleNestedAttribute 
 									"status": schema.StringAttribute{
 										Optional:    true,
 										Computed:    true,
-										Description: "The status the component shows while the maintenance is in progress. Possible values are `OPERATIONAL`, `UNDER_MAINTENANCE`, `DEGRADED_PERFORMANCE`, `PARTIAL_OUTAGE` and `MAJOR_OUTAGE`. (Default `UNDER_MAINTENANCE`).",
+										Description: "The status the component shows while the maintenance is in progress. Possible values are `OPERATIONAL`, `UNDER_MAINTENANCE`, `DEGRADED_PERFORMANCE`, `PARTIAL_OUTAGE` and `MAJOR_OUTAGE`. Defaults to `UNDER_MAINTENANCE`.",
 										Validators: []validator.String{
 											stringvalidator.OneOf(
 												string(checkly.StatusPageComponentStatusV3Operational),
