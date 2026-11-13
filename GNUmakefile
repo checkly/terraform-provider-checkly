@@ -15,7 +15,7 @@ endif
 # Run acceptance tests
 .PHONY: testacc
 testacc:
-	TF_ACC=1 go test ./... -v $(TESTARGS) -timeout 120m -parallel 4
+	TF_ACC=1 go test ./... -v $(TESTARGS) -timeout 120m -parallel 16
 
 local-sdk:
 	go mod edit -replace github.com/checkly/checkly-go-sdk/v2=../checkly-go-sdk

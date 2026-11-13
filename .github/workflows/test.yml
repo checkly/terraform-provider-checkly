@@ -139,12 +139,14 @@ jobs:
 
     - name: TF acceptance tests
       timeout-minutes: 10
-      # Limit parallelism to 4 to avoid hitting Checkly API rate limits.
+      # The SDK retries rate-limited (429) requests a few times, waiting as
+      # the API asks, so a burst of requests above the rate limit only slows
+      # tests down instead of failing them.
       # Use -json piped to tee + gotestfmt for real-time streaming output
       # in CI while also saving the raw log as an artifact.
       run: |
         set -euo pipefail
-        go test -v -parallel 4 -json ./... 2>&1 | tee /tmp/gotest.log | gotestfmt
+        go test -v -parallel 16 -json ./... 2>&1 | tee /tmp/gotest.log | gotestfmt
       env:
         TF_ACC: "1"
         TF_VAR_checkly_api_key: ${{ secrets.CHECKLY_API_KEY }}
