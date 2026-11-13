@@ -130,14 +130,14 @@ resource "checkly_grpc_monitor" "example-flatbuffers-monitor" {
 - `activated` (Boolean) Determines whether the monitor runs on its schedule. (Default `true`).
 - `alert_channel_subscriptions` (Attributes Set) A set of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your monitor, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedatt--alert_channel_subscriptions))
 - `alert_settings` (Attributes) Determines the alert escalation policy for the monitor. (see [below for nested schema](#nestedatt--alert_settings))
-- `degraded_response_time` (Number) The response time in milliseconds where the monitor should be considered degraded. Possible values are between `0` and `180000`. (Default `10000`).
+- `degraded_response_time` (Number) The response time in milliseconds where the monitor should be considered degraded. Possible values are between `1` and `180000`. (Default `10000`).
 - `description` (String) A description of the monitor.
 - `frequency` (Number) Controls how often the monitor should run. Defined in minutes. The allowed values are `0` (high frequency - use `frequency_offset` to define the actual frequency), `1` (1 minute), `2` (2 minutes), `5` (5 minutes), `10` (10 minutes), `15` (15 minutes), `30` (30 minutes), `60` (1 hour), `120` (2 hours), `180` (3 hours), `360` (6 hours), `720` (12 hours) and `1440` (24 hours). (Default `10`).
 - `frequency_offset` (Number) When `frequency` is `0` (high frequency), `frequency_offset` is required and it alone controls how often the monitor should run. Defined in seconds. The allowed values are `0` (disabled - use `frequency` to define the actual frequency), `10` (10 seconds), `20` (20 seconds) and `30` (30 seconds).
 - `group_id` (Number) The ID of the check group the monitor is part of (at least `1`). When unset, the monitor is not part of a group.
 - `group_order` (Number) The position of the monitor in its check group (at least `0`), which sets the order in which the checks and monitors of the group run when the group is triggered from the API or CI/CD. When unset, the monitor has no position in the group.
 - `locations` (Set of String) The data center locations to run the monitor from, such as `us-east-1`. The monitor needs at least one location in `locations` or `private_locations`, unless it is part of a check group.
-- `max_response_time` (Number) The response time in milliseconds where the monitor should be considered failing. Possible values are between `0` and `180000`. (Default `20000`).
+- `max_response_time` (Number) The response time in milliseconds where the monitor should be considered failing. Possible values are between `1` and `180000`. (Default `20000`).
 - `muted` (Boolean) Determines whether notifications are sent when the monitor fails, degrades or recovers. (Default `false`).
 - `private_locations` (Set of String) The slugs of the private locations to run the monitor from.
 - `retry_strategy` (Attributes) A strategy for retrying failed check/monitor runs. (see [below for nested schema](#nestedatt--retry_strategy))
@@ -166,12 +166,12 @@ Optional:
 - `encoding` (String) The wire encoding used in `BEHAVIOR` mode. Possible values are `PROTOBUF` and `FLATBUFFERS`. (Default `PROTOBUF`).
 - `grpc_mode` (String) The gRPC monitoring mode. `BEHAVIOR` invokes a unary method (requires `method`); `HEALTH` queries the standard gRPC health-check service (allows `service`). (Default `BEHAVIOR`).
 - `ip_family` (String) The IP family to use when executing the gRPC check. The value can be either `IPv4` or `IPv6`. (Default `IPv4`).
-- `message` (String) The JSON request message (at most 65536 characters) sent as the gRPC call payload in `BEHAVIOR` mode.
+- `message` (String) The JSON request message (at most 65536 characters) sent as the gRPC call payload in `BEHAVIOR` mode. Must not be set in `HEALTH` mode.
 - `metadata` (Attributes Set) gRPC metadata (request headers) sent with the call. At most 50 elements. (see [below for nested schema](#nestedatt--request--metadata))
-- `method` (String) The fully-qualified gRPC method to invoke in `BEHAVIOR` mode (e.g. `package.Service/Method`). Required in `BEHAVIOR` mode; forbidden in `HEALTH` mode.
-- `proto_content` (String) The inline `.proto` file source (at most 102400 characters) used when `service_definition = "PROTO_FILE"` in `BEHAVIOR` mode. Forbidden when `encoding = "FLATBUFFERS"`.
-- `service` (String) The service name to query in `HEALTH` mode. An empty value queries overall server health. Forbidden in `BEHAVIOR` mode.
-- `service_definition` (String) How the service definition is resolved in `BEHAVIOR` mode: `REFLECTION` uses server reflection; `PROTO_FILE` uses the inline `proto_content`. Forbidden when `encoding = "FLATBUFFERS"`. (Default `REFLECTION`).
+- `method` (String) The fully-qualified gRPC method to invoke in `BEHAVIOR` mode (e.g. `package.Service/Method`). Required in `BEHAVIOR` mode; must not be set in `HEALTH` mode.
+- `proto_content` (String) The inline `.proto` file source (at most 102400 characters) used when `service_definition = "PROTO_FILE"` in `BEHAVIOR` mode, where it is required. Must not be set in `HEALTH` mode or when `encoding = "FLATBUFFERS"`.
+- `service` (String) The service name to query in `HEALTH` mode. An empty value queries overall server health. Must not be set in `BEHAVIOR` mode.
+- `service_definition` (String) How the service definition is resolved in `BEHAVIOR` mode: `REFLECTION` uses server reflection; `PROTO_FILE` uses the inline `proto_content`, which it requires. Must not be set when `encoding = "FLATBUFFERS"`, and must not be `PROTO_FILE` in `HEALTH` mode. (Default `REFLECTION`).
 - `skip_ssl` (Boolean) Whether to skip SSL certificate validation when `tls` is enabled. (Default `false`).
 - `timeout` (Number) The number of seconds to wait for the gRPC call to complete before timing out. Possible values are between 1 and 180. (Default `60`).
 - `tls` (Boolean) Whether to use a TLS-encrypted connection to the gRPC server. (Default `true`).
@@ -187,7 +187,7 @@ Required:
 Optional:
 
 - `property` (String) The property selecting the asserted value within the source, e.g. a JSONPath expression for `GRPC_RESPONSE` or a metadata key for `GRPC_METADATA`.
-- `target` (String) The value to compare against. Must be numeric for `RESPONSE_TIME` (milliseconds), `GRPC_STATUS_CODE` (0-16), and `GRPC_HEALTHCHECK_STATUS` (0-3, where 0=UNKNOWN, 1=SERVING, 2=NOT_SERVING, 3=SERVICE_UNKNOWN).
+- `target` (String) The value to compare against. Required, and must be numeric without surrounding whitespace, for `RESPONSE_TIME` (milliseconds), `GRPC_STATUS_CODE` (0-16), and `GRPC_HEALTHCHECK_STATUS` (0-3, where 0=UNKNOWN, 1=SERVING, 2=NOT_SERVING, 3=SERVICE_UNKNOWN).
 
 
 <a id="nestedatt--request--metadata"></a>
@@ -298,7 +298,7 @@ terraform import checkly_grpc_monitor.example 3ffee447-5c86-4c56-b95a-2e1b4d1a12
 
 ## Assertion Reference
 
-Each element of `request.assertions` has the shape `{ source, property, comparison, target }`. Which comparisons are allowed, and what `target` must contain, depend on `source`. The `comparison` and `target` rules are enforced by the Checkly API at apply time; where `property` is marked as ignored, the API accepts any value but does not use it.
+Each element of `request.assertions` has the shape `{ source, property, comparison, target }`. Which comparisons are allowed, and what `target` must contain, depend on `source`. The `comparison` and `target` rules are checked at plan time; where `property` is marked as ignored, the API accepts any value but does not use it. The numeric targets of `RESPONSE_TIME`, `GRPC_STATUS_CODE` and `GRPC_HEALTHCHECK_STATUS` are required and must not have leading or trailing whitespace.
 
 | `source` | `property` | Allowed `comparison` values | `target` |
 |---|---|---|---|

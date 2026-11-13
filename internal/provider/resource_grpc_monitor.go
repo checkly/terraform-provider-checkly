@@ -157,22 +157,26 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 			frequencyOffsetAttributeName: makeFrequencyOffsetAttributeSchema(FrequencyOffsetAttributeSchemaOptions{
 				Subject: subjectMonitor,
 			}),
+			// The SDK leaves a zero response time out of the request, so a 0
+			// never reached the API, which kept its default or the stored
+			// value. A 0 would only make the monitor always degraded or
+			// always failing, so the minimum is 1.
 			"degraded_response_time": schema.Int64Attribute{
 				Optional:    true,
 				Computed:    true,
 				Default:     int64default.StaticInt64(10000),
-				Description: "The response time in milliseconds where the monitor should be considered degraded. Possible values are between `0` and `180000`. (Default `10000`).",
+				Description: "The response time in milliseconds where the monitor should be considered degraded. Possible values are between `1` and `180000`. (Default `10000`).",
 				Validators: []validator.Int64{
-					int64validator.Between(0, 180000),
+					int64validator.Between(1, 180000),
 				},
 			},
 			"max_response_time": schema.Int64Attribute{
 				Optional:    true,
 				Computed:    true,
 				Default:     int64default.StaticInt64(20000),
-				Description: "The response time in milliseconds where the monitor should be considered failing. Possible values are between `0` and `180000`. (Default `20000`).",
+				Description: "The response time in milliseconds where the monitor should be considered failing. Possible values are between `1` and `180000`. (Default `20000`).",
 				Validators: []validator.Int64{
-					int64validator.Between(0, 180000),
+					int64validator.Between(1, 180000),
 				},
 			},
 			triggerIncidentAttributeName: makeTriggerIncidentSchema(),
@@ -192,6 +196,7 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 						Validators: []validator.String{
 							utf16LengthBetween(1, 2048),
 							noControlCharacters(),
+							hostWithoutSchemeOrPortValidator{},
 						},
 					},
 					"port": schema.Int64Attribute{
@@ -249,7 +254,7 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 						Optional:    true,
 						Computed:    true,
 						Default:     stringdefault.StaticString(""),
-						Description: "The service name to query in `HEALTH` mode. An empty value queries overall server health. Forbidden in `BEHAVIOR` mode.",
+						Description: "The service name to query in `HEALTH` mode. An empty value queries overall server health. Must not be set in `BEHAVIOR` mode.",
 					},
 					// encoding and service_definition have schema
 					// defaults rather than keeping their prior state
@@ -270,7 +275,7 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 						Optional:    true,
 						Computed:    true,
 						Default:     stringdefault.StaticString("REFLECTION"),
-						Description: "How the service definition is resolved in `BEHAVIOR` mode: `REFLECTION` uses server reflection; `PROTO_FILE` uses the inline `proto_content`. Forbidden when `encoding = \"FLATBUFFERS\"`. (Default `REFLECTION`).",
+						Description: "How the service definition is resolved in `BEHAVIOR` mode: `REFLECTION` uses server reflection; `PROTO_FILE` uses the inline `proto_content`, which it requires. Must not be set when `encoding = \"FLATBUFFERS\"`, and must not be `PROTO_FILE` in `HEALTH` mode. (Default `REFLECTION`).",
 						Validators: []validator.String{
 							stringvalidator.OneOf("REFLECTION", "PROTO_FILE"),
 						},
@@ -279,7 +284,7 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 						Optional:    true,
 						Computed:    true,
 						Default:     stringdefault.StaticString(""),
-						Description: "The inline `.proto` file source (at most 102400 characters) used when `service_definition = \"PROTO_FILE\"` in `BEHAVIOR` mode. Forbidden when `encoding = \"FLATBUFFERS\"`.",
+						Description: "The inline `.proto` file source (at most 102400 characters) used when `service_definition = \"PROTO_FILE\"` in `BEHAVIOR` mode, where it is required. Must not be set in `HEALTH` mode or when `encoding = \"FLATBUFFERS\"`.",
 						Validators: []validator.String{
 							utf16LengthBetween(0, 102400),
 							noNULCharacterValidator{},
@@ -298,13 +303,13 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 						Optional:    true,
 						Computed:    true,
 						Default:     stringdefault.StaticString(""),
-						Description: "The fully-qualified gRPC method to invoke in `BEHAVIOR` mode (e.g. `package.Service/Method`). Required in `BEHAVIOR` mode; forbidden in `HEALTH` mode.",
+						Description: "The fully-qualified gRPC method to invoke in `BEHAVIOR` mode (e.g. `package.Service/Method`). Required in `BEHAVIOR` mode; must not be set in `HEALTH` mode.",
 					},
 					"message": schema.StringAttribute{
 						Optional:    true,
 						Computed:    true,
 						Default:     stringdefault.StaticString(""),
-						Description: "The JSON request message (at most 65536 characters) sent as the gRPC call payload in `BEHAVIOR` mode.",
+						Description: "The JSON request message (at most 65536 characters) sent as the gRPC call payload in `BEHAVIOR` mode. Must not be set in `HEALTH` mode.",
 						Validators: []validator.String{
 							utf16LengthBetween(0, 65536),
 							noNULCharacterValidator{},
@@ -364,6 +369,9 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 						Default:     emptySetDefault(types.ObjectType{AttrTypes: assertionAttrTypes}),
 						Description: "A request can have multiple assertions. The allowed comparisons, properties, and target formats depend on the assertion source — see the [Assertion Reference](#assertion-reference) below.",
 						NestedObject: schema.NestedAttributeObject{
+							Validators: []validator.Object{
+								grpcMonitorAssertionRules,
+							},
 							// Attributes nested in this set attribute must
 							// not use schema defaults (see metadata).
 							// Default values are instead applied in
@@ -388,7 +396,7 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 								"target": schema.StringAttribute{
 									Optional:    true,
 									Computed:    true,
-									Description: "The value to compare against. Must be numeric for `RESPONSE_TIME` (milliseconds), `GRPC_STATUS_CODE` (0-16), and `GRPC_HEALTHCHECK_STATUS` (0-3, where 0=UNKNOWN, 1=SERVING, 2=NOT_SERVING, 3=SERVICE_UNKNOWN).",
+									Description: "The value to compare against. Required, and must be numeric without surrounding whitespace, for `RESPONSE_TIME` (milliseconds), `GRPC_STATUS_CODE` (0-16), and `GRPC_HEALTHCHECK_STATUS` (0-3, where 0=UNKNOWN, 1=SERVING, 2=NOT_SERVING, 3=SERVICE_UNKNOWN).",
 								},
 							},
 						},
@@ -408,11 +416,11 @@ func (r *GRPCMonitorResource) ConfigValidators(ctx context.Context) []resource.C
 	}
 }
 
-// ValidateConfig rejects encoding/schema combinations that the API would
-// otherwise silently discard or reject on apply. It reads the configuration
-// rather than the planned values: service_definition holds its default
-// `REFLECTION` even on FLATBUFFERS monitors, so only an explicitly configured
-// value is a conflict.
+// ValidateConfig rejects mode and encoding/schema combinations that the API
+// would otherwise silently discard or reject on apply. It reads the
+// configuration rather than the planned values: service_definition holds its
+// default `REFLECTION` even on FLATBUFFERS monitors, so only an explicitly
+// configured value is a conflict.
 func (r *GRPCMonitorResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
 	var obj types.Object
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("request"), &obj)...)
@@ -439,7 +447,114 @@ func (r *GRPCMonitorResource) ValidateConfig(ctx context.Context, req resource.V
 			err.Error(),
 		)
 	}
+
+	err = validateGRPCMode(grpcModeConfig{
+		mode:              configuredString(request.GRPCMode, "BEHAVIOR"),
+		encoding:          configuredString(request.Encoding, "PROTOBUF"),
+		serviceDefinition: configuredString(request.ServiceDefinition, "REFLECTION"),
+		service:           configuredState(request.Service),
+		method:            configuredState(request.Method),
+		message:           configuredState(request.Message),
+		protoContent:      configuredState(request.ProtoContent),
+	})
+	if err != nil {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("request"),
+			"Invalid gRPC Mode Configuration",
+			err.Error(),
+		)
+	}
 }
+
+// valueState says whether a string attribute is set in the configuration.
+type valueState int
+
+const (
+	// valueUnset is a null or empty value, which converts to the same API
+	// representation as an omitted attribute.
+	valueUnset valueState = iota
+	// valueUnknown is a value that is not known yet. It may still turn out
+	// empty.
+	valueUnknown
+	// valueSet is a known, non-empty value.
+	valueSet
+)
+
+// configuredState returns the valueState of a configured string attribute.
+func configuredState(v types.String) valueState {
+	switch {
+	case v.IsUnknown():
+		return valueUnknown
+	case v.IsNull() || v.ValueString() == "":
+		return valueUnset
+	}
+	return valueSet
+}
+
+// grpcModeConfig holds the configured values validateGRPCMode needs. String
+// values are "" when unknown at validation time, as in grpcEncodingConfig.
+type grpcModeConfig struct {
+	mode              string
+	encoding          string
+	serviceDefinition string
+	service           valueState
+	method            valueState
+	message           valueState
+	protoContent      valueState
+}
+
+// validateGRPCMode rejects attributes that don't apply to the mode, which the
+// API drops from the request, so they would read back empty, and attributes
+// that the mode or service definition requires, which the API rejects.
+// FLATBUFFERS combinations are left to validateGRPCEncoding. A value that is
+// not known yet may turn out empty, so it only fails a requirement, which it
+// may meet, when it is not set at all: an unknown value is not rejected as
+// an attribute that doesn't apply, and it counts as set for a required one.
+func validateGRPCMode(c grpcModeConfig) error {
+	switch c.mode {
+	case "HEALTH":
+		switch {
+		case c.method == valueSet:
+			return errors.New("method cannot be used when grpc_mode is HEALTH")
+		case c.message == valueSet:
+			return errors.New("message cannot be used when grpc_mode is HEALTH")
+		case c.protoContent == valueSet:
+			return errors.New("proto_content cannot be used when grpc_mode is HEALTH")
+		case c.serviceDefinition == "PROTO_FILE":
+			return errors.New("service_definition = \"PROTO_FILE\" cannot be used when grpc_mode is HEALTH")
+		}
+	case "BEHAVIOR":
+		switch {
+		case c.service == valueSet:
+			return errors.New("service can only be used when grpc_mode is HEALTH")
+		case c.method == valueUnset:
+			return errors.New("method is required when grpc_mode is BEHAVIOR")
+		case c.encoding == "PROTOBUF" && c.serviceDefinition == "PROTO_FILE" && c.protoContent == valueUnset:
+			return errors.New("proto_content is required when service_definition is PROTO_FILE")
+		}
+	}
+	return nil
+}
+
+// grpcMonitorAssertionRules are the API's rules for the comparisons and
+// targets of each assertion source.
+var grpcMonitorAssertionRules = assertionRulesValidator{rules: map[string]assertionSourceRule{
+	"RESPONSE_TIME": {
+		comparisons:   []string{"EQUALS", "NOT_EQUALS", "GREATER_THAN", "LESS_THAN"},
+		numericTarget: nonNegativeMillisecondsTarget,
+	},
+	"GRPC_STATUS_CODE": {
+		comparisons:   []string{"EQUALS", "NOT_EQUALS", "GREATER_THAN", "LESS_THAN"},
+		numericTarget: &numericAssertionTarget{pattern: nonNegativeIntegerRegex, bounded: true, min: 0, max: 16, label: "an integer between 0 and 16"},
+	},
+	"GRPC_HEALTHCHECK_STATUS": {
+		comparisons:   []string{"EQUALS", "NOT_EQUALS"},
+		numericTarget: &numericAssertionTarget{pattern: nonNegativeIntegerRegex, bounded: true, min: 0, max: 3, label: "an integer between 0 and 3"},
+	},
+	"GRPC_RESPONSE": {comparisons: allAssertionComparisons},
+	"TEXT_BODY":     {comparisons: allAssertionComparisons},
+	"GRPC_METADATA": {comparisons: allAssertionComparisons},
+}}
 
 // grpcEncodingConfig holds the configured values validateGRPCEncoding needs.
 // String values are "" when unknown at validation time; presence values are

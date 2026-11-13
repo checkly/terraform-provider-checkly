@@ -54,14 +54,14 @@ resource "checkly_heartbeat_monitor" "example-heartbeat-monitor" {
 
 Required:
 
-- `grace` (Number) How long Checkly should wait before triggering any alerts when a ping does not arrive within the set period. The combination of `grace` and `grace_unit` must be at most 365 days.
+- `grace` (Number) How long Checkly should wait before triggering any alerts when a ping does not arrive within the set period. Must be at least `0`, and the combination of `grace` and `grace_unit` must be at most 365 days.
 - `grace_unit` (String) The unit of `grace`. Possible values `seconds`, `minutes`, `hours` and `days`.
 - `period` (Number) How often you expect a ping to the ping URL. The combination of `period` and `period_unit` must be between 30 seconds and 365 days.
 - `period_unit` (String) The unit of `period`. Possible values `seconds`, `minutes`, `hours` and `days`.
 
 Optional:
 
-- `ping_token` (String, Sensitive) Custom token to generate your ping URL. Checkly will expect a ping to `https://ping.checklyhq.com/[PING_TOKEN]`.
+- `ping_token` (String, Sensitive) A custom lowercase UUID with hyphens to generate your ping URL from, such as `22868839-8450-4010-9241-1ea83a2e425f`. Checkly will expect a ping to `https://ping.checklyhq.com/[PING_TOKEN]`. When not set, Checkly generates one.
 
 
 <a id="nestedatt--alert_channel_subscriptions"></a>

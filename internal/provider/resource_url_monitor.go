@@ -120,18 +120,18 @@ func (r *URLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 				Optional:    true,
 				Computed:    true,
 				Default:     int64default.StaticInt64(3000),
-				Description: "The response time in milliseconds where the monitor should be considered degraded. Possible values are between `0` and `30000`. (Default `3000`).",
+				Description: "The response time in milliseconds where the monitor should be considered degraded. Possible values are between `0` and `45000`. Values above `30000` only take effect on accounts with extended response time limits; on other accounts the monitor times out after 30 seconds. (Default `3000`).",
 				Validators: []validator.Int64{
-					int64validator.Between(0, 30000),
+					int64validator.Between(0, 45000),
 				},
 			},
 			"max_response_time": schema.Int64Attribute{
 				Optional:    true,
 				Computed:    true,
 				Default:     int64default.StaticInt64(5000),
-				Description: "The response time in milliseconds where the monitor should be considered failing. Possible values are between `0` and `30000`. (Default `5000`).",
+				Description: "The response time in milliseconds where the monitor should be considered failing. Possible values are between `0` and `45000`. Values above `30000` only take effect on accounts with extended response time limits; on other accounts the monitor times out after 30 seconds. (Default `5000`).",
 				Validators: []validator.Int64{
-					int64validator.Between(0, 30000),
+					int64validator.Between(0, 45000),
 				},
 			},
 			triggerIncidentAttributeName: makeTriggerIncidentSchema(),

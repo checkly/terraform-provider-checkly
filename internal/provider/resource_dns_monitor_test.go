@@ -1903,3 +1903,38 @@ func TestAccDNSMonitorPrivateLocations(t *testing.T) {
 		},
 	})
 }
+
+// TestAccDNSMonitorHTTPSRecordAndValuelessAssertion asserts that the HTTPS
+// record type and an assertion without a target apply and plan cleanly.
+func TestAccDNSMonitorHTTPSRecordAndValuelessAssertion(t *testing.T) {
+	config := `
+		resource "checkly_dns_monitor" "test" {
+		  name      = "dnsMonitorHTTPSRecordAndValuelessAssertion"
+		  activated = false
+		  frequency = 60
+		  locations = ["us-east-1"]
+		  request = {
+			record_type = "HTTPS"
+			query       = "welcome.checklyhq.com"
+			assertions = [{
+			  source     = "JSON_ANSWER"
+			  property   = "$.Answer"
+			  comparison = "NOT_NULL"
+			}]
+		  }
+		}
+	`
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: config,
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_dns_monitor.test", "request.record_type", "HTTPS"),
+				resource.TestCheckResourceAttr("checkly_dns_monitor.test", "request.assertions.0.target", ""),
+			),
+		},
+		{
+			Config:   config,
+			PlanOnly: true,
+		},
+	})
+}

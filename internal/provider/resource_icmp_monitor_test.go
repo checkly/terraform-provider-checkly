@@ -1421,3 +1421,34 @@ func TestAccICMPMonitorPrivateLocations(t *testing.T) {
 		},
 	})
 }
+
+// TestAccICMPMonitorValuelessAssertion asserts that an assertion without a
+// target applies and plans cleanly.
+func TestAccICMPMonitorValuelessAssertion(t *testing.T) {
+	config := `
+		resource "checkly_icmp_monitor" "test" {
+		  name      = "icmpMonitorValuelessAssertion"
+		  activated = false
+		  frequency = 60
+		  locations = ["us-east-1"]
+		  request = {
+			hostname = "api.checklyhq.com"
+			assertions = [{
+			  source     = "JSON_RESPONSE"
+			  property   = "$.packetLoss"
+			  comparison = "NOT_NULL"
+			}]
+		  }
+		}
+	`
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: config,
+			Check:  resource.TestCheckResourceAttr("checkly_icmp_monitor.test", "request.assertions.0.target", ""),
+		},
+		{
+			Config:   config,
+			PlanOnly: true,
+		},
+	})
+}

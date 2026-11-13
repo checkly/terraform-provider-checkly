@@ -98,7 +98,7 @@ resource "checkly_dns_monitor" "example-dns-monitor-private-location" {
 Required:
 
 - `query` (String) The DNS record to query (1 to 100 characters).
-- `record_type` (String) The DNS record type. Possible values are `A`, `AAAA`, `CNAME`, `MX`, `NS`, `TXT` and `SOA`.
+- `record_type` (String) The DNS record type. Possible values are `A`, `AAAA`, `CNAME`, `MX`, `NS`, `TXT`, `SOA` and `HTTPS`.
 
 Optional:
 
@@ -111,13 +111,13 @@ Optional:
 
 Required:
 
-- `comparison` (String) The type of comparison to be executed between expected and actual value of the assertion. Possible values are `EQUALS`, `NOT_EQUALS`, `GREATER_THAN` and `LESS_THAN`.
+- `comparison` (String) The type of comparison to be executed between expected and actual value of the assertion. Possible values are `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL` and `NOT_NULL`.
 - `source` (String) The source of the asserted value. Possible values are `RESPONSE_CODE`, `RESPONSE_TIME`, `TEXT_ANSWER` and `JSON_ANSWER`.
-- `target` (String) The target value. Typically `NOERROR` when the source is `RESPONSE_CODE`.
 
 Optional:
 
 - `property` (String) The property selecting the asserted value within the source: a regular expression for `TEXT_ANSWER` whose first capture group is asserted instead of the whole answer, or a JSONPath expression for `JSON_ANSWER`. Not used for `RESPONSE_CODE` and `RESPONSE_TIME`.
+- `target` (String) The target value, typically `NOERROR` when the source is `RESPONSE_CODE`. For `RESPONSE_TIME` with `EQUALS`, `NOT_EQUALS`, `GREATER_THAN` or `LESS_THAN`, it is required and must be a non-negative number of milliseconds without surrounding whitespace. Leave it out for comparisons that take no value, such as `IS_EMPTY` and `NOT_NULL`.
 
 
 <a id="nestedatt--request--name_server"></a>
@@ -125,8 +125,8 @@ Optional:
 
 Optional:
 
-- `host` (String) The name server host (at most 100 characters).
-- `port` (Number) The name server port.
+- `host` (String) The name server host (1 to 100 characters).
+- `port` (Number) The name server port. Possible values are between 1 and 65535.
 
 
 

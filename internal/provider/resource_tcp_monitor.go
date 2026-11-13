@@ -121,18 +121,18 @@ func (r *TCPMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 				Optional:    true,
 				Computed:    true,
 				Default:     int64default.StaticInt64(4000),
-				Description: "The response time in milliseconds where the monitor should be considered degraded. Possible values are between `0` and `5000`. (Default `4000`).",
+				Description: "The response time in milliseconds where the monitor should be considered degraded. Possible values are between `0` and `45000`. Values above `5000` only take effect on accounts with extended response time limits; on other accounts the monitor times out after 5 seconds. (Default `4000`).",
 				Validators: []validator.Int64{
-					int64validator.Between(0, 5000),
+					int64validator.Between(0, 45000),
 				},
 			},
 			"max_response_time": schema.Int64Attribute{
 				Optional:    true,
 				Computed:    true,
 				Default:     int64default.StaticInt64(5000),
-				Description: "The response time in milliseconds where the monitor should be considered failing. Possible values are between `0` and `5000`. (Default `5000`).",
+				Description: "The response time in milliseconds where the monitor should be considered failing. Possible values are between `0` and `45000`. Values above `5000` only take effect on accounts with extended response time limits; on other accounts the monitor times out after 5 seconds. (Default `5000`).",
 				Validators: []validator.Int64{
-					int64validator.Between(0, 5000),
+					int64validator.Between(0, 45000),
 				},
 			},
 			triggerIncidentAttributeName: makeTriggerIncidentSchema(),
@@ -151,11 +151,15 @@ func (r *TCPMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 						Description: "The hostname or IP to connect to (1 to 2048 characters). Do not include a scheme or a port in this value.",
 						Validators: []validator.String{
 							utf16LengthBetween(1, 2048),
+							hostWithoutSchemeOrPortValidator{},
 						},
 					},
 					"port": schema.Int64Attribute{
 						Required:    true,
-						Description: "The port number to connect to.",
+						Description: "The port number to connect to. Possible values are between 1 and 65535.",
+						Validators: []validator.Int64{
+							int64validator.Between(1, 65535),
+						},
 					},
 					"data": schema.StringAttribute{
 						Optional:    true,
@@ -178,6 +182,9 @@ func (r *TCPMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 						Default:     emptySetDefault(types.ObjectType{AttrTypes: assertionAttrTypes}),
 						Description: "A request can have multiple assertions.",
 						NestedObject: schema.NestedAttributeObject{
+							Validators: []validator.Object{
+								tcpMonitorAssertionRules,
+							},
 							// Attributes nested in this set attribute must
 							// not use schema defaults. The framework looks
 							// up configuration values for set elements by
@@ -192,6 +199,9 @@ func (r *TCPMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 								"source": schema.StringAttribute{
 									Required:    true,
 									Description: "The source of the asserted value. Possible values are `RESPONSE_DATA` and `RESPONSE_TIME`.",
+									Validators: []validator.String{
+										stringvalidator.OneOf("RESPONSE_DATA", "RESPONSE_TIME"),
+									},
 								},
 								"property": schema.StringAttribute{
 									Optional:    true,
@@ -200,12 +210,12 @@ func (r *TCPMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 								},
 								"comparison": schema.StringAttribute{
 									Required:    true,
-									Description: "The type of comparison to be executed between expected and actual value of the assertion. Possible values are `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL`, and `NOT_NULL`.",
+									Description: "The type of comparison to be executed between expected and actual value of the assertion. For `RESPONSE_DATA`, possible values are `EQUALS`, `NOT_EQUALS`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, and `NOT_CONTAINS`. For `RESPONSE_TIME`, possible values are `EQUALS`, `NOT_EQUALS`, `GREATER_THAN`, and `LESS_THAN`.",
 								},
 								"target": schema.StringAttribute{
 									Optional:    true,
 									Computed:    true,
-									Description: "The value to compare against, e.g. a number of milliseconds for `RESPONSE_TIME`. Leave empty for comparisons that take no value, such as `IS_EMPTY` and `NOT_NULL`.",
+									Description: "The value to compare against. Required for `RESPONSE_TIME`, where it must be a non-negative number of milliseconds without surrounding whitespace. Leave it out for comparisons that take no value, `IS_EMPTY` and `NOT_EMPTY`.",
 								},
 							},
 						},
@@ -234,6 +244,18 @@ func (r *TCPMonitorResource) UpgradeState(ctx context.Context) map[int64]resourc
 func (r *TCPMonitorResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	r.client = clientFromProviderData(req.ProviderData, &resp.Diagnostics)
 }
+
+// tcpMonitorAssertionRules are the API's rules for the comparisons of each
+// assertion source. RESPONSE_TIME also requires a numeric target: the runner
+// compares the response time with the target as a number, so an assertion
+// with any other target fails, or passes for NOT_EQUALS.
+var tcpMonitorAssertionRules = assertionRulesValidator{rules: map[string]assertionSourceRule{
+	"RESPONSE_DATA": {comparisons: []string{"EQUALS", "NOT_EQUALS", "IS_EMPTY", "NOT_EMPTY", "GREATER_THAN", "LESS_THAN", "CONTAINS", "NOT_CONTAINS"}},
+	"RESPONSE_TIME": {
+		comparisons:   []string{"EQUALS", "NOT_EQUALS", "GREATER_THAN", "LESS_THAN"},
+		numericTarget: nonNegativeMillisecondsTarget,
+	},
+}}
 
 // ModifyPlan applies default values to the optional+computed attributes of
 // the request assertions. Schema defaults cannot be used for attributes

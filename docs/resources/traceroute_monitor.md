@@ -95,14 +95,14 @@ resource "checkly_traceroute_monitor" "example-traceroute-monitor-2" {
 - `activated` (Boolean) Determines whether the monitor runs on its schedule. (Default `true`).
 - `alert_channel_subscriptions` (Attributes Set) A set of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your monitor, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedatt--alert_channel_subscriptions))
 - `alert_settings` (Attributes) Determines the alert escalation policy for the monitor. (see [below for nested schema](#nestedatt--alert_settings))
-- `degraded_response_time` (Number) The response time in milliseconds where the monitor should be considered degraded. Possible values are between `0` and `30000`. (Default `10000`).
+- `degraded_response_time` (Number) The response time in milliseconds where the monitor should be considered degraded. Possible values are between `1` and `30000`. (Default `10000`).
 - `description` (String) A description of the monitor.
 - `frequency` (Number) Controls how often the monitor should run. Defined in minutes. The allowed values are `0` (high frequency - use `frequency_offset` to define the actual frequency), `1` (1 minute), `2` (2 minutes), `5` (5 minutes), `10` (10 minutes), `15` (15 minutes), `30` (30 minutes), `60` (1 hour), `120` (2 hours), `180` (3 hours), `360` (6 hours), `720` (12 hours) and `1440` (24 hours). (Default `10`).
 - `frequency_offset` (Number) When `frequency` is `0` (high frequency), `frequency_offset` is required and it alone controls how often the monitor should run. Defined in seconds. The allowed values are `0` (disabled - use `frequency` to define the actual frequency), `10` (10 seconds), `20` (20 seconds) and `30` (30 seconds).
 - `group_id` (Number) The ID of the check group the monitor is part of (at least `1`). When unset, the monitor is not part of a group.
 - `group_order` (Number) The position of the monitor in its check group (at least `0`), which sets the order in which the checks and monitors of the group run when the group is triggered from the API or CI/CD. When unset, the monitor has no position in the group.
 - `locations` (Set of String) The data center locations to run the monitor from, such as `us-east-1`. The monitor needs at least one location in `locations` or `private_locations`, unless it is part of a check group.
-- `max_response_time` (Number) The response time in milliseconds where the monitor should be considered failing. Possible values are between `0` and `30000`. (Default `20000`).
+- `max_response_time` (Number) The response time in milliseconds where the monitor should be considered failing. Possible values are between `0` and `30000`. `0` means the monitor never fails on response time; any other value must be greater than or equal to `degraded_response_time`. (Default `20000`).
 - `muted` (Boolean) Determines whether notifications are sent when the monitor fails, degrades or recovers. (Default `false`).
 - `private_locations` (Set of String) The slugs of the private locations to run the monitor from. A private location runs traceroute monitors with agent v8.4.0 or later and the `NET_RAW` capability.
 - `retry_strategy` (Attributes) A strategy for retrying failed check/monitor runs. (see [below for nested schema](#nestedatt--retry_strategy))
@@ -129,7 +129,7 @@ Optional:
 - `ip_family` (String) The IP family to use when executing the traceroute. The value can be either `IPv4` or `IPv6`. (Default `IPv4`).
 - `max_hops` (Number) The maximum number of network hops to probe before stopping. Possible values are between 1 and 64. (Default `30`).
 - `max_unknown_hops` (Number) The maximum number of consecutive unresponsive hops to tolerate before stopping the trace. Possible values are between 1 and 30, and the value must not exceed `max_hops`. (Default `min(15, max_hops)`).
-- `port` (Number) The destination port for TCP/UDP/SCTP probes. Possible values are between 1 and 65535. Ignored (and not sent) when `protocol = "ICMP"`. The default depends on the protocol: `443` for `TCP`, `33434` for `UDP` and `SCTP`.
+- `port` (Number) The destination port for TCP/UDP/SCTP probes. Possible values are between 1 and 65535. Must not be set when `protocol = "ICMP"`, which has no port. The default depends on the protocol: `443` for `TCP`, `33434` for `UDP` and `SCTP`.
 - `protocol` (String) The probe protocol. `TCP` sends SYN probes (default), `UDP` sends datagrams to a high port, `ICMP` sends Echo Requests, `SCTP` sends INIT chunks. (Default `TCP`).
 - `ptr_lookup` (Boolean) Whether to perform reverse-DNS (PTR) lookups on each hop's IP address. (Default `true`).
 - `timeout` (Number) The number of seconds to wait for the traceroute to complete before timing out. Possible values are between 1 and 30. (Default `10`).
@@ -144,8 +144,8 @@ Required:
 
 Optional:
 
-- `property` (String) The statistic to assert on. Required for `RESPONSE_TIME`, where possible values are `avg`, `min`, `max`, and `stdDev`. Must be empty for `HOP_COUNT` and `PACKET_LOSS`.
-- `target` (String) The value to compare against. Must be numeric: a non-negative number of milliseconds for `RESPONSE_TIME`, a non-negative integer for `HOP_COUNT`, or a number between 0 and 100 for `PACKET_LOSS`.
+- `property` (String) The statistic to assert on. Required for `RESPONSE_TIME`, where possible values are `avg`, `min`, `max`, and `stdDev`. Not used for `HOP_COUNT` and `PACKET_LOSS`.
+- `target` (String) The value to compare against. Required, and must be numeric without surrounding whitespace: a non-negative number of milliseconds for `RESPONSE_TIME`, a non-negative integer for `HOP_COUNT`, or a number between 0 and 100 for `PACKET_LOSS`.
 
 
 
@@ -244,7 +244,7 @@ terraform import checkly_traceroute_monitor.example 3ffee447-5c86-4c56-b95a-2e1b
 
 ## Assertion Reference
 
-Each element of `request.assertions` has the shape `{ source, property, comparison, target }`. Which comparisons are allowed, and what `target` must contain, depend on `source`. The `comparison`, `target`, and `RESPONSE_TIME` `property` rules are enforced by the Checkly API at apply time; where `property` is marked as ignored, the API accepts any value but does not use it. All traceroute assertion targets are numeric.
+Each element of `request.assertions` has the shape `{ source, property, comparison, target }`. Which comparisons are allowed, and what `target` must contain, depend on `source`. The `comparison`, `target`, and `RESPONSE_TIME` `property` rules are checked at plan time; where `property` is marked as ignored, the API accepts any value but does not use it. All traceroute assertion targets are numeric, are required, and must not have leading or trailing whitespace.
 
 | `source` | `property` | Allowed `comparison` values | `target` |
 |---|---|---|---|

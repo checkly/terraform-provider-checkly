@@ -302,22 +302,26 @@ func (r *SSLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 			frequencyOffsetAttributeName: makeFrequencyOffsetAttributeSchema(FrequencyOffsetAttributeSchemaOptions{
 				Subject: subjectMonitor,
 			}),
+			// The SDK leaves a zero response time out of the request, so a 0
+			// never reached the API, which kept its default or the stored
+			// value. A 0 would only make the monitor always degraded or
+			// always failing, so the minimum is 1.
 			"degraded_response_time": schema.Int64Attribute{
 				Optional:    true,
 				Computed:    true,
 				Default:     int64default.StaticInt64(10000),
-				Description: "The handshake time in milliseconds above which the monitor is considered degraded. Possible values are between 0 and 30000. (Default `10000`).",
+				Description: "The handshake time in milliseconds above which the monitor is considered degraded. Possible values are between 1 and 30000. (Default `10000`).",
 				Validators: []validator.Int64{
-					int64validator.Between(0, 30000),
+					int64validator.Between(1, 30000),
 				},
 			},
 			"max_response_time": schema.Int64Attribute{
 				Optional:    true,
 				Computed:    true,
 				Default:     int64default.StaticInt64(20000),
-				Description: "The handshake time in milliseconds above which the monitor is considered failing. Must be greater than or equal to `degraded_response_time`. Possible values are between 0 and 30000. (Default `20000`).",
+				Description: "The handshake time in milliseconds above which the monitor is considered failing. Must be greater than or equal to `degraded_response_time`. Possible values are between 1 and 30000. (Default `20000`).",
 				Validators: []validator.Int64{
-					int64validator.Between(0, 30000),
+					int64validator.Between(1, 30000),
 				},
 			},
 			triggerIncidentAttributeName: makeTriggerIncidentSchema(),
@@ -337,6 +341,7 @@ func (r *SSLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 						Validators: []validator.String{
 							utf16LengthBetween(1, 2048),
 							noControlCharacters(),
+							hostWithoutSchemeOrPortValidator{},
 						},
 					},
 					"port": schema.Int64Attribute{
@@ -399,6 +404,9 @@ func (r *SSLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 						Optional:    true,
 						Computed:    true,
 						Description: "The mutual-TLS client certificate configuration.",
+						Validators: []validator.Object{
+							sslMonitorClientCertificateValidator{},
+						},
 						Default: objectdefault.StaticValue(types.ObjectValueMust(sslMonitorClientCertificateAttrTypes, map[string]attr.Value{
 							"mode":                  types.StringValue("account_default"),
 							"client_certificate_id": types.StringNull(),
@@ -505,6 +513,43 @@ func (r *SSLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 func (r *SSLMonitorResource) ConfigValidators(ctx context.Context) []resource.ConfigValidator {
 	return []resource.ConfigValidator{
 		newFrequencyOffsetConfigValidator(),
+		orderedThresholdsConfigValidator{
+			lower:        path.Root("degraded_response_time"),
+			lowerDefault: types.Int64Value(10000),
+			upper:        path.Root("max_response_time"),
+			upperDefault: types.Int64Value(20000),
+		},
+	}
+}
+
+var _ validator.Object = sslMonitorClientCertificateValidator{}
+
+// sslMonitorClientCertificateValidator requires client_certificate_id when
+// the mode is "explicit", as the API does.
+type sslMonitorClientCertificateValidator struct{}
+
+func (v sslMonitorClientCertificateValidator) Description(ctx context.Context) string {
+	return `client_certificate_id is required when mode is "explicit"`
+}
+
+func (v sslMonitorClientCertificateValidator) MarkdownDescription(ctx context.Context) string {
+	return v.Description(ctx)
+}
+
+func (v sslMonitorClientCertificateValidator) ValidateObject(ctx context.Context, req validator.ObjectRequest, resp *validator.ObjectResponse) {
+	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
+		return
+	}
+
+	attrs := req.ConfigValue.Attributes()
+	mode, _ := attrs["mode"].(types.String)
+	id, _ := attrs["client_certificate_id"].(types.String)
+	if mode.ValueString() == "explicit" && !id.IsUnknown() && id.ValueString() == "" {
+		resp.Diagnostics.AddAttributeError(
+			req.Path.AtName("client_certificate_id"),
+			"Missing Client Certificate ID",
+			`request.client_certificate.client_certificate_id is required when request.client_certificate.mode is "explicit".`,
+		)
 	}
 }
 

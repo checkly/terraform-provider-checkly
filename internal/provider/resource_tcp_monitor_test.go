@@ -1496,14 +1496,9 @@ func TestAccTCPMonitorUnsetSweepRequest(t *testing.T) {
 			),
 		},
 		// Removing ip_family must reset it to the IPv4 default, and removing
-		// all assertions must clear the assertions server-side.
-		//
-		// data is NOT removed here: the backend cannot clear it. It rejects
-		// an empty string ("request.data is not allowed to be empty") and
-		// silently keeps the previous value when the key is null or omitted,
-		// so removing data from the configuration fails the apply with an
-		// inconsistent result error. A set data value can only be changed to
-		// another non-empty value, which this step also verifies.
+		// all assertions must clear the assertions server-side. Changing
+		// data is checked here; removing it is covered by
+		// TestAccTCPMonitorDataRemoval.
 		{
 			Config: `
 				resource "checkly_tcp_monitor" "test" {
@@ -1884,6 +1879,49 @@ func TestAccTCPMonitorAlertChannelSubscriptions(t *testing.T) {
 			ConfigStateChecks: []statecheck.StateCheck{
 				statecheck.ExpectKnownValue("checkly_tcp_monitor.test", tfjsonpath.New("alert_channel_subscriptions"), emptySet),
 			},
+		},
+	})
+}
+
+// TestAccTCPMonitorDataRemoval asserts that removing request.data from an
+// existing monitor, or setting it to an empty string, clears the data in
+// Checkly, and that the next plan is empty.
+func TestAccTCPMonitorDataRemoval(t *testing.T) {
+	config := func(data string) string {
+		return fmt.Sprintf(`
+			resource "checkly_tcp_monitor" "test" {
+			  name      = "tcpMonitorDataRemoval"
+			  activated = false
+			  frequency = 60
+			  locations = ["us-east-1"]
+			  request = {
+				hostname = "api.checklyhq.com"
+				port     = 80
+				%s
+			  }
+			}
+		`, data)
+	}
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: config(`data = "hello"`),
+			Check:  resource.TestCheckResourceAttr("checkly_tcp_monitor.test", "request.data", "hello"),
+		},
+		{
+			Config: config(""),
+			Check:  resource.TestCheckResourceAttr("checkly_tcp_monitor.test", "request.data", ""),
+		},
+		{
+			Config: config(`data = "changed"`),
+			Check:  resource.TestCheckResourceAttr("checkly_tcp_monitor.test", "request.data", "changed"),
+		},
+		{
+			Config: config(`data = ""`),
+			Check:  resource.TestCheckResourceAttr("checkly_tcp_monitor.test", "request.data", ""),
+		},
+		{
+			Config:   config(""),
+			PlanOnly: true,
 		},
 	})
 }

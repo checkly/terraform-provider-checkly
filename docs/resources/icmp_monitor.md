@@ -58,7 +58,7 @@ resource "checkly_icmp_monitor" "example-icmp-monitor" {
 - `group_id` (Number) The ID of the check group the monitor is part of (at least `1`). When unset, the monitor is not part of a group.
 - `group_order` (Number) The position of the monitor in its check group (at least `0`), which sets the order in which the checks and monitors of the group run when the group is triggered from the API or CI/CD. When unset, the monitor has no position in the group.
 - `locations` (Set of String) The data center locations to run the monitor from, such as `us-east-1`. The monitor needs at least one location in `locations` or `private_locations`, unless it is part of a check group.
-- `max_packet_loss_threshold` (Number) The packet loss percentage where the monitor should be considered failing. Possible values are between `1` and `100`. (Default `20`).
+- `max_packet_loss_threshold` (Number) The packet loss percentage where the monitor should be considered failing. Possible values are between `1` and `100`, and the value must be greater than or equal to `degraded_packet_loss_threshold`. (Default `20`).
 - `muted` (Boolean) Determines whether notifications are sent when the monitor fails, degrades or recovers. (Default `false`).
 - `private_locations` (Set of String) The slugs of the private locations to run the monitor from. A private location runs ICMP monitors with agent v7.0.0 or later and the `NET_RAW` capability.
 - `retry_strategy` (Attributes) A strategy for retrying failed check/monitor runs. (see [below for nested schema](#nestedatt--retry_strategy))
@@ -76,7 +76,7 @@ resource "checkly_icmp_monitor" "example-icmp-monitor" {
 
 Required:
 
-- `hostname` (String) The hostname to ping (1 to 2048 characters).
+- `hostname` (String) The hostname to ping (1 to 2048 characters), without a scheme or a port.
 
 Optional:
 
@@ -89,13 +89,13 @@ Optional:
 
 Required:
 
-- `comparison` (String) The type of comparison to be executed between expected and actual value of the assertion. Possible values are `EQUALS`, `NOT_EQUALS`, `GREATER_THAN` and `LESS_THAN`.
+- `comparison` (String) The type of comparison to be executed between expected and actual value of the assertion. For `LATENCY`, possible values are `EQUALS`, `NOT_EQUALS`, `GREATER_THAN` and `LESS_THAN`. For `JSON_RESPONSE`, possible values are `EQUALS`, `NOT_EQUALS`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL` and `NOT_NULL`.
 - `source` (String) The source of the asserted value. Possible values are `LATENCY` and `JSON_RESPONSE`.
-- `target` (String) The target value for the assertion.
 
 Optional:
 
-- `property` (String) The property of the source to assert. For `LATENCY` source, possible values are `avg`, `min`, `max` and `stdDev`.
+- `property` (String) The property of the source to assert. Required for `LATENCY`, where possible values are `avg`, `min`, `max` and `stdDev`. For `JSON_RESPONSE`, a JSONPath expression selecting the asserted value.
+- `target` (String) The target value for the assertion. Required for `LATENCY`, where it must be a non-negative number of milliseconds without surrounding whitespace. Leave it out for comparisons that take no value, such as `IS_EMPTY` and `NOT_NULL`.
 
 
 

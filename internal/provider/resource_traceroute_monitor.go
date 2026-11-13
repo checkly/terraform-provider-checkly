@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -27,6 +26,7 @@ var (
 	_ resource.ResourceWithConfigure        = (*TracerouteMonitorResource)(nil)
 	_ resource.ResourceWithUpgradeState     = (*TracerouteMonitorResource)(nil)
 	_ resource.ResourceWithConfigValidators = (*TracerouteMonitorResource)(nil)
+	_ resource.ResourceWithValidateConfig   = (*TracerouteMonitorResource)(nil)
 	_ resource.ResourceWithImportState      = (*TracerouteMonitorResource)(nil)
 	_ resource.ResourceWithModifyPlan       = (*TracerouteMonitorResource)(nil)
 )
@@ -131,16 +131,16 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 				Optional:    true,
 				Computed:    true,
 				Default:     int64default.StaticInt64(10000),
-				Description: "The response time in milliseconds where the monitor should be considered degraded. Possible values are between `0` and `30000`. (Default `10000`).",
+				Description: "The response time in milliseconds where the monitor should be considered degraded. Possible values are between `1` and `30000`. (Default `10000`).",
 				Validators: []validator.Int64{
-					int64validator.Between(0, 30000),
+					int64validator.Between(1, 30000),
 				},
 			},
 			"max_response_time": schema.Int64Attribute{
 				Optional:    true,
 				Computed:    true,
 				Default:     int64default.StaticInt64(20000),
-				Description: "The response time in milliseconds where the monitor should be considered failing. Possible values are between `0` and `30000`. (Default `20000`).",
+				Description: "The response time in milliseconds where the monitor should be considered failing. Possible values are between `0` and `30000`. `0` means the monitor never fails on response time; any other value must be greater than or equal to `degraded_response_time`. (Default `20000`).",
 				Validators: []validator.Int64{
 					int64validator.Between(0, 30000),
 				},
@@ -162,6 +162,7 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 						Validators: []validator.String{
 							utf16LengthBetween(1, 2048),
 							noControlCharacters(),
+							hostWithoutSchemeOrPortValidator{},
 						},
 					},
 					"protocol": schema.StringAttribute{
@@ -180,7 +181,7 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 					"port": schema.Int64Attribute{
 						Optional:    true,
 						Computed:    true,
-						Description: "The destination port for TCP/UDP/SCTP probes. Possible values are between 1 and 65535. Ignored (and not sent) when `protocol = \"ICMP\"`. The default depends on the protocol: `443` for `TCP`, `33434` for `UDP` and `SCTP`.",
+						Description: "The destination port for TCP/UDP/SCTP probes. Possible values are between 1 and 65535. Must not be set when `protocol = \"ICMP\"`, which has no port. The default depends on the protocol: `443` for `TCP`, `33434` for `UDP` and `SCTP`.",
 						Validators: []validator.Int64{
 							int64validator.Between(1, 65535),
 						},
@@ -217,15 +218,18 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 						Default:     booldefault.StaticBool(true),
 						Description: "Whether to perform reverse-DNS (PTR) lookups on each hop's IP address. (Default `true`).",
 					},
+					// timeout has the API's default rather than keeping
+					// its prior state value: the update endpoint keeps the
+					// stored value of an omitted field, so removing
+					// timeout from the configuration must send the
+					// default explicitly.
 					"timeout": schema.Int64Attribute{
 						Optional:    true,
 						Computed:    true,
+						Default:     int64default.StaticInt64(10),
 						Description: "The number of seconds to wait for the traceroute to complete before timing out. Possible values are between 1 and 30. (Default `10`).",
 						Validators: []validator.Int64{
 							int64validator.Between(1, 30),
-						},
-						PlanModifiers: []planmodifier.Int64{
-							int64planmodifier.UseStateForUnknown(),
 						},
 					},
 					// The full per-source assertion rules (allowed
@@ -241,6 +245,9 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 						Default:     emptySetDefault(types.ObjectType{AttrTypes: assertionAttrTypes}),
 						Description: "A request can have multiple assertions. The allowed comparisons, properties, and target formats depend on the assertion source — see the [Assertion Reference](#assertion-reference) below.",
 						NestedObject: schema.NestedAttributeObject{
+							Validators: []validator.Object{
+								tracerouteMonitorAssertionRules,
+							},
 							// Attributes nested in this set attribute must
 							// not use schema defaults. The framework looks
 							// up configuration values for set elements by
@@ -262,7 +269,7 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 								"property": schema.StringAttribute{
 									Optional:    true,
 									Computed:    true,
-									Description: "The statistic to assert on. Required for `RESPONSE_TIME`, where possible values are `avg`, `min`, `max`, and `stdDev`. Must be empty for `HOP_COUNT` and `PACKET_LOSS`.",
+									Description: "The statistic to assert on. Required for `RESPONSE_TIME`, where possible values are `avg`, `min`, `max`, and `stdDev`. Not used for `HOP_COUNT` and `PACKET_LOSS`.",
 								},
 								"comparison": schema.StringAttribute{
 									Required:    true,
@@ -271,7 +278,7 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 								"target": schema.StringAttribute{
 									Optional:    true,
 									Computed:    true,
-									Description: "The value to compare against. Must be numeric: a non-negative number of milliseconds for `RESPONSE_TIME`, a non-negative integer for `HOP_COUNT`, or a number between 0 and 100 for `PACKET_LOSS`.",
+									Description: "The value to compare against. Required, and must be numeric without surrounding whitespace: a non-negative number of milliseconds for `RESPONSE_TIME`, a non-negative integer for `HOP_COUNT`, or a number between 0 and 100 for `PACKET_LOSS`.",
 								},
 							},
 						},
@@ -288,8 +295,62 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 func (r *TracerouteMonitorResource) ConfigValidators(ctx context.Context) []resource.ConfigValidator {
 	return []resource.ConfigValidator{
 		newFrequencyOffsetConfigValidator(),
+		// A max_response_time of 0 is no failing limit, so any
+		// degraded_response_time is within it.
+		orderedThresholdsConfigValidator{
+			lower:              path.Root("degraded_response_time"),
+			lowerDefault:       types.Int64Value(10000),
+			upper:              path.Root("max_response_time"),
+			upperDefault:       types.Int64Value(20000),
+			zeroUpperUnbounded: true,
+		},
+		// An unset max_unknown_hops is derived from max_hops, within it.
+		orderedThresholdsConfigValidator{
+			lower:        path.Root("request").AtName("max_unknown_hops"),
+			lowerDefault: types.Int64Null(),
+			upper:        path.Root("request").AtName("max_hops"),
+			upperDefault: types.Int64Value(30),
+		},
 	}
 }
+
+// ValidateConfig rejects a port on ICMP probes. The API drops the port of an
+// ICMP request, so a configured one would read back as unset.
+func (r *TracerouteMonitorResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var protocol types.String
+	var port types.Int64
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("request").AtName("protocol"), &protocol)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("request").AtName("port"), &port)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if protocol.ValueString() == "ICMP" && !port.IsNull() && !port.IsUnknown() {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("request").AtName("port"),
+			"Invalid Attribute Combination",
+			`request.port cannot be set when request.protocol is "ICMP": ICMP probes have no port. Remove request.port.`,
+		)
+	}
+}
+
+// tracerouteMonitorAssertionRules are the API's rules for the comparisons,
+// properties and targets of each assertion source.
+var tracerouteMonitorAssertionRules = assertionRulesValidator{rules: map[string]assertionSourceRule{
+	"RESPONSE_TIME": {
+		comparisons:   []string{"EQUALS", "NOT_EQUALS", "GREATER_THAN", "LESS_THAN"},
+		properties:    []string{"avg", "min", "max", "stdDev"},
+		numericTarget: nonNegativeMillisecondsTarget,
+	},
+	"HOP_COUNT": {
+		comparisons:   []string{"EQUALS", "GREATER_THAN", "LESS_THAN"},
+		numericTarget: &numericAssertionTarget{pattern: nonNegativeIntegerRegex, label: "a non-negative integer"},
+	},
+	"PACKET_LOSS": {
+		comparisons:   []string{"EQUALS", "GREATER_THAN", "LESS_THAN"},
+		numericTarget: &numericAssertionTarget{pattern: nonNegativeNumberRegex, bounded: true, min: 0, max: 100, label: "a number between 0 and 100"},
+	},
+}}
 
 // UpgradeState upgrades state written by the provider's SDK v2
 // implementation; see sdkv2StateUpgraders.
@@ -444,7 +505,6 @@ func tracerouteMonitorFromModel(ctx context.Context, model *TracerouteMonitorRes
 		RunParallel:               model.RunParallel.ValueBool(),
 		Locations:                 locations,
 		DegradedResponseTime:      int(model.DegradedResponseTime.ValueInt64()),
-		MaxResponseTime:           int(model.MaxResponseTime.ValueInt64()),
 		Tags:                      stringsFromSet(ctx, model.Tags, diags),
 		PrivateLocations:          &privateLocations,
 		UseGlobalAlertSettings:    model.UseGlobalAlertSettings.ValueBool(),
@@ -464,6 +524,15 @@ func tracerouteMonitorFromModel(ctx context.Context, model *TracerouteMonitorRes
 
 	if runtimeID := model.RuntimeID.ValueString(); runtimeID != "" {
 		monitor.RuntimeID = &runtimeID
+	}
+
+	// A max_response_time of 0 means no failing response time limit, which
+	// the SDK stores with a separate flag, as its zero MaxResponseTime
+	// means the API's default.
+	if maxResponseTime := model.MaxResponseTime.ValueInt64(); maxResponseTime == 0 {
+		monitor.NoMaxResponseTime = true
+	} else {
+		monitor.MaxResponseTime = int(maxResponseTime)
 	}
 
 	alertSettings := alertSettingsFromObject(ctx, model.AlertSettings, diags)
@@ -494,7 +563,13 @@ func tracerouteMonitorToModel(ctx context.Context, c *checkly.TracerouteMonitor,
 	model.RunParallel = types.BoolValue(c.RunParallel)
 	model.Locations = setFromStrings(ctx, c.Locations, diags)
 	model.DegradedResponseTime = types.Int64Value(int64(c.DegradedResponseTime))
-	model.MaxResponseTime = types.Int64Value(int64(c.MaxResponseTime))
+	// A monitor without a failing response time limit reads back as 0, the
+	// value that configures it.
+	if c.NoMaxResponseTime {
+		model.MaxResponseTime = types.Int64Value(0)
+	} else {
+		model.MaxResponseTime = types.Int64Value(int64(c.MaxResponseTime))
+	}
 	model.Tags = setFromStrings(ctx, c.Tags, diags)
 
 	var privateLocations []string
