@@ -256,7 +256,7 @@ Required:
 
 Required:
 
-- `slack_channels` (List of String) The Slack channels or users to notify, e.g. `["#ops", "@John"]`. Each element starts with `#` for a channel or `@` for a user, and has no trailing whitespace.
+- `slack_channels` (List of String) The Slack channels or users to notify, e.g. `["#ops", "@John", "C0123456789"]`. Each element starts with `#` for a channel or `@` for a user, or is a Slack channel ID, such as `C0123456789`, and has no trailing whitespace. A private channel can be given by its ID.
 
 
 <a id="nestedatt--sms"></a>

@@ -185,9 +185,13 @@ var alertChannelWebhookTypes = allowedValues[string]{
 	{Value: "WEBHOOK_TELEGRAM"},
 }
 
-// alertChannelSlackDestinationRegex is the API's rule for a slack_app
-// destination: a channel that starts with "#" or a user that starts with "@".
-var alertChannelSlackDestinationRegex = regexp.MustCompile(`^[#@]`)
+// alertChannelSlackDestinationRegex mirrors the API's rule for a slack_app
+// destination: a channel name that starts with "#", a user that starts with
+// "@", or a whole Slack channel ID ("C" or "G" followed by at least eight
+// uppercase letters or digits). The API drops an element that fails the rule
+// without an error, so the provider refuses it instead. User and direct message
+// IDs ("U…", "D…") are not destinations; a user is addressed by "@" handle.
+var alertChannelSlackDestinationRegex = regexp.MustCompile(`^(?:[#@]|[CG][A-Z0-9]{8,}$)`)
 
 func (r *AlertChannelResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_alert_channel"
@@ -280,11 +284,11 @@ func (r *AlertChannelResource) Schema(ctx context.Context, req resource.SchemaRe
 					"slack_channels": schema.ListAttribute{
 						Required:    true,
 						ElementType: types.StringType,
-						Description: "The Slack channels or users to notify, e.g. `[\"#ops\", \"@John\"]`. Each element starts with `#` for a channel or `@` for a user, and has no trailing whitespace.",
+						Description: "The Slack channels or users to notify, e.g. `[\"#ops\", \"@John\", \"C0123456789\"]`. Each element starts with `#` for a channel or `@` for a user, or is a Slack channel ID, such as `C0123456789`, and has no trailing whitespace. A private channel can be given by its ID.",
 						Validators: []validator.List{
 							listvalidator.SizeAtLeast(1),
 							listvalidator.ValueStringsAre(
-								stringvalidator.RegexMatches(alertChannelSlackDestinationRegex, "must start with # for a channel, such as #operations, or @ for a user, such as @john"),
+								stringvalidator.RegexMatches(alertChannelSlackDestinationRegex, "must start with # for a channel, such as #operations, or @ for a user, such as @john, or be a channel ID, such as C0123456789"),
 								trimmedStringValidator{},
 							),
 						},
