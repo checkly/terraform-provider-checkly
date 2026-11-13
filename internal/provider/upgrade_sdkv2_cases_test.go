@@ -2888,7 +2888,7 @@ resource "checkly_ssl_monitor" "test" {
     hostname = "api.checklyhq.com"
   }
 }
-`).withUpdate("checkly_ssl_monitor.test", "use_global_alert_settings: false -> true"),
+`).withUpdate("checkly_ssl_monitor.test", "degraded_response_time: 10000 -> 3000\nmax_response_time: 20000 -> 10000\nuse_global_alert_settings: false -> true"),
 
 	"playwright_check_suite": newSDKv2UpgradeCase(upgradeCodeBundleSDKv2+`
 resource "checkly_playwright_check_suite" "test" {
@@ -3166,7 +3166,7 @@ moved {
   from = checkly_tcp_check.test
   to   = checkly_tcp_monitor.test
 }
-`),
+`).withUpdate("checkly_tcp_monitor.test", "degraded_response_time: 4000 -> 3000"),
 
 	"moved_check_to_api_check": newSDKv2UpgradeCase(`
 resource "checkly_check" "test" {
