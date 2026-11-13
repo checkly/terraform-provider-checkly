@@ -201,10 +201,10 @@ func TestAccSlackApp(t *testing.T) {
 		},
 	}, func(err error) error {
 		// A SLACK_APP alert channel can only be created on accounts that have
-		// connected the Checkly Slack App. Without it the API responds with a
-		// slack_integration_not_connected error, which is account setup rather
+		// connected a Slack workspace. Without one the provider reports a
+		// "Slack Workspace Not Connected" error, which is account setup rather
 		// than a provider defect, so skip instead of failing.
-		if err != nil && strings.Contains(err.Error(), "slack_integration_not_connected") {
+		if err != nil && strings.Contains(err.Error(), "Slack Workspace Not Connected") {
 			t.Skipf("Slack App integration is not connected on this account; skipping: %v", err)
 		}
 		return err
@@ -553,4 +553,51 @@ func TestAccAlertChannelAutoSubscribe(t *testing.T) {
 			},
 		},
 	})
+}
+
+// TestAddAlertChannelWriteError asserts that the Slack App errors of a
+// create or update are reported on slack_app with the SDK's text, which
+// says how to fix them, and that other errors keep the generic diagnostic.
+func TestAddAlertChannelWriteError(t *testing.T) {
+	t.Parallel()
+
+	apiErr := &checkly.APIError{Method: "POST", Path: "/v1/alert-channels", StatusCode: 400, Message: "bad request"}
+	notConnected := &checkly.SlackIntegrationNotConnectedError{APIError: apiErr}
+	unresolvable := &checkly.UnresolvableSlackHandlesError{
+		APIError: apiErr,
+		Handles:  []checkly.UnresolvedSlackHandle{{Handle: "@nobody", Reason: "handle_not_found"}},
+	}
+
+	tests := map[string]struct {
+		err         error
+		wantPath    path.Path
+		wantSummary string
+		wantDetail  string
+	}{
+		"not connected":         {notConnected, path.Root("slack_app"), "Slack Workspace Not Connected", notConnected.Error()},
+		"wrapped not connected": {fmt.Errorf("creating: %w", notConnected), path.Root("slack_app"), "Slack Workspace Not Connected", notConnected.Error()},
+		"unresolvable handles":  {unresolvable, path.Root("slack_app").AtName("slack_channels"), "Unresolvable Slack Handles", unresolvable.Error()},
+		"other":                 {apiErr, path.Empty(), "Unable to Create Alert Channel", "Checkly API error: " + apiErr.Error()},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			var diags diag.Diagnostics
+			addAlertChannelWriteError(&diags, "Unable to Create Alert Channel", test.err)
+			if len(diags) != 1 {
+				t.Fatalf("want one diagnostic, got: %v", diags)
+			}
+			d := diags[0]
+			if d.Summary() != test.wantSummary || d.Detail() != test.wantDetail {
+				t.Errorf("diagnostic = %q: %q, want %q: %q", d.Summary(), d.Detail(), test.wantSummary, test.wantDetail)
+			}
+			var gotPath path.Path
+			if withPath, ok := d.(diag.DiagnosticWithPath); ok {
+				gotPath = withPath.Path()
+			}
+			if gotPath.String() != test.wantPath.String() {
+				t.Errorf("path = %s, want %s", gotPath, test.wantPath)
+			}
+		})
+	}
 }

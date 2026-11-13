@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -120,7 +121,10 @@ func (r *HeartbeatMonitorResource) Schema(ctx context.Context, req resource.Sche
 					},
 					"grace": schema.Int64Attribute{
 						Required:    true,
-						Description: "How long Checkly should wait before triggering any alerts when a ping does not arrive within the set period. The combination of `grace` and `grace_unit` must be at most 365 days.",
+						Description: "How long Checkly should wait before triggering any alerts when a ping does not arrive within the set period. Must be at least `0`, and the combination of `grace` and `grace_unit` must be at most 365 days.",
+						Validators: []validator.Int64{
+							int64validator.AtLeast(0),
+						},
 					},
 					"grace_unit": schema.StringAttribute{
 						Required:    true,
@@ -133,7 +137,10 @@ func (r *HeartbeatMonitorResource) Schema(ctx context.Context, req resource.Sche
 						Optional:    true,
 						Sensitive:   true,
 						Computed:    true,
-						Description: "Custom token to generate your ping URL. Checkly will expect a ping to `https://ping.checklyhq.com/[PING_TOKEN]`.",
+						Description: "A custom lowercase UUID with hyphens to generate your ping URL from, such as `22868839-8450-4010-9241-1ea83a2e425f`. Checkly will expect a ping to `https://ping.checklyhq.com/[PING_TOKEN]`. When not set, Checkly generates one.",
+						Validators: []validator.String{
+							uuidValidator{},
+						},
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.UseStateForUnknown(),
 						},

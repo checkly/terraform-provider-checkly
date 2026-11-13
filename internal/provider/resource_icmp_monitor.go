@@ -127,7 +127,7 @@ func (r *ICMPMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 				Optional:    true,
 				Computed:    true,
 				Default:     int64default.StaticInt64(20),
-				Description: "The packet loss percentage where the monitor should be considered failing. Possible values are between `1` and `100`. (Default `20`).",
+				Description: "The packet loss percentage where the monitor should be considered failing. Possible values are between `1` and `100`, and the value must be greater than or equal to `degraded_packet_loss_threshold`. (Default `20`).",
 				// The API rejects an explicit 0 even though its public schema
 				// documents it as valid.
 				Validators: []validator.Int64{
@@ -145,9 +145,10 @@ func (r *ICMPMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 				Attributes: map[string]schema.Attribute{
 					"hostname": schema.StringAttribute{
 						Required:    true,
-						Description: "The hostname to ping (1 to 2048 characters).",
+						Description: "The hostname to ping (1 to 2048 characters), without a scheme or a port.",
 						Validators: []validator.String{
 							utf16LengthBetween(1, 2048),
+							hostWithoutSchemeOrPortValidator{noPortAttribute: true},
 						},
 					},
 					"ip_family": schema.StringAttribute{
@@ -174,6 +175,9 @@ func (r *ICMPMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 						Default:     emptySetDefault(types.ObjectType{AttrTypes: assertionAttrTypes}),
 						Description: "Assertions to validate the ICMP response.",
 						NestedObject: schema.NestedAttributeObject{
+							Validators: []validator.Object{
+								icmpMonitorAssertionRules,
+							},
 							// Attributes nested in this set attribute must
 							// not use schema defaults. The framework looks
 							// up configuration values for set elements by
@@ -195,18 +199,19 @@ func (r *ICMPMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 								"property": schema.StringAttribute{
 									Optional:    true,
 									Computed:    true,
-									Description: "The property of the source to assert. For `LATENCY` source, possible values are `avg`, `min`, `max` and `stdDev`.",
+									Description: "The property of the source to assert. Required for `LATENCY`, where possible values are `avg`, `min`, `max` and `stdDev`. For `JSON_RESPONSE`, a JSONPath expression selecting the asserted value.",
 								},
 								"comparison": schema.StringAttribute{
 									Required:    true,
-									Description: "The type of comparison to be executed between expected and actual value of the assertion. Possible values are `EQUALS`, `NOT_EQUALS`, `GREATER_THAN` and `LESS_THAN`.",
+									Description: "The type of comparison to be executed between expected and actual value of the assertion. For `LATENCY`, possible values are `EQUALS`, `NOT_EQUALS`, `GREATER_THAN` and `LESS_THAN`. For `JSON_RESPONSE`, possible values are `EQUALS`, `NOT_EQUALS`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL` and `NOT_NULL`.",
 									Validators: []validator.String{
-										stringvalidator.OneOf("EQUALS", "NOT_EQUALS", "GREATER_THAN", "LESS_THAN"),
+										stringvalidator.OneOf("EQUALS", "NOT_EQUALS", "IS_EMPTY", "NOT_EMPTY", "GREATER_THAN", "LESS_THAN", "CONTAINS", "NOT_CONTAINS", "IS_NULL", "NOT_NULL"),
 									},
 								},
 								"target": schema.StringAttribute{
-									Required:    true,
-									Description: "The target value for the assertion.",
+									Optional:    true,
+									Computed:    true,
+									Description: "The target value for the assertion. Required for `LATENCY`, where it must be a non-negative number of milliseconds without surrounding whitespace. Leave it out for comparisons that take no value, such as `IS_EMPTY` and `NOT_NULL`.",
 								},
 							},
 						},
@@ -223,8 +228,27 @@ func (r *ICMPMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 func (r *ICMPMonitorResource) ConfigValidators(ctx context.Context) []resource.ConfigValidator {
 	return []resource.ConfigValidator{
 		newFrequencyOffsetConfigValidator(),
+		orderedThresholdsConfigValidator{
+			lower:        path.Root("degraded_packet_loss_threshold"),
+			lowerDefault: types.Int64Value(10),
+			upper:        path.Root("max_packet_loss_threshold"),
+			upperDefault: types.Int64Value(20),
+		},
 	}
 }
+
+// icmpMonitorAssertionRules are the API's rules for the comparisons and
+// property of LATENCY assertions, which also require a numeric target: the
+// runner compares the latency with the target as a number, so an assertion
+// with any other target fails, or passes for NOT_EQUALS. JSON_RESPONSE
+// assertions allow every comparison of the comparison attribute.
+var icmpMonitorAssertionRules = assertionRulesValidator{rules: map[string]assertionSourceRule{
+	"LATENCY": {
+		comparisons:   []string{"EQUALS", "NOT_EQUALS", "GREATER_THAN", "LESS_THAN"},
+		properties:    []string{"avg", "min", "max", "stdDev"},
+		numericTarget: nonNegativeMillisecondsTarget,
+	},
+}}
 
 // UpgradeState upgrades state written by the provider's SDK v2
 // implementation; see sdkv2StateUpgraders.
@@ -243,7 +267,7 @@ func (r *ICMPMonitorResource) Configure(ctx context.Context, req resource.Config
 // fully known and stable across plans, which set element correlation
 // requires.
 func (r *ICMPMonitorResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	planNestedDefaults(ctx, req, resp, path.Root("request"), objectWithSetDefaults("assertions", assertionsWithPropertyDefault))
+	planNestedDefaults(ctx, req, resp, path.Root("request"), objectWithSetDefaults("assertions", assertionsWithPropertyAndTargetDefaults))
 }
 
 func (r *ICMPMonitorResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {

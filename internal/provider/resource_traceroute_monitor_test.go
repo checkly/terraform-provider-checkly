@@ -428,3 +428,121 @@ func TestAccTracerouteMonitorPrivateLocations(t *testing.T) {
 		},
 	})
 }
+
+// TestAccTracerouteMonitorTimeoutDefault asserts that removing
+// request.timeout from the configuration resets it to its default.
+func TestAccTracerouteMonitorTimeoutDefault(t *testing.T) {
+	config := func(timeout string) string {
+		return fmt.Sprintf(`
+			resource "checkly_traceroute_monitor" "test" {
+			  name      = "tracerouteMonitorTimeoutDefault"
+			  activated = false
+			  frequency = 60
+			  locations = ["us-east-1"]
+			  request = {
+				url = "api.checklyhq.com"
+				%s
+			  }
+			}
+		`, timeout)
+	}
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: config(`timeout = 20`),
+			Check:  resource.TestCheckResourceAttr("checkly_traceroute_monitor.test", "request.timeout", "20"),
+		},
+		{
+			Config: config(""),
+			Check:  resource.TestCheckResourceAttr("checkly_traceroute_monitor.test", "request.timeout", "10"),
+		},
+		{
+			Config:   config(""),
+			PlanOnly: true,
+		},
+	})
+}
+
+// TestTracerouteMonitorMaxResponseTimeZero asserts that a max_response_time
+// of 0, which means the monitor never fails on response time, round-trips
+// through the SDK's separate flag for no failing limit, and that other values
+// are sent as the limit.
+func TestTracerouteMonitorMaxResponseTimeZero(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		monitor checkly.TracerouteMonitor
+		want    int64
+	}{
+		{"no limit", checkly.TracerouteMonitor{ID: "abc", DegradedResponseTime: 25000, NoMaxResponseTime: true}, 0},
+		{"limit", checkly.TracerouteMonitor{ID: "abc", DegradedResponseTime: 10000, MaxResponseTime: 20000}, 20000},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := context.Background()
+			var diags diag.Diagnostics
+
+			model := TracerouteMonitorResourceModel{
+				RetryStrategy: types.ObjectNull(retryStrategyAttrTypes(false)),
+				AlertSettings: types.ObjectNull(alertSettingsAttrTypes),
+			}
+			tracerouteMonitorToModel(ctx, &test.monitor, &model, &diags)
+			if diags.HasError() {
+				t.Fatal(diags)
+			}
+			if got := model.MaxResponseTime.ValueInt64(); got != test.want {
+				t.Errorf("max_response_time = %d, want %d", got, test.want)
+			}
+
+			got := tracerouteMonitorFromModel(ctx, &model, &diags)
+			if diags.HasError() {
+				t.Fatal(diags)
+			}
+			if got.NoMaxResponseTime != test.monitor.NoMaxResponseTime || got.MaxResponseTime != test.monitor.MaxResponseTime {
+				t.Errorf("NoMaxResponseTime, MaxResponseTime = %v, %d, want %v, %d", got.NoMaxResponseTime, got.MaxResponseTime, test.monitor.NoMaxResponseTime, test.monitor.MaxResponseTime)
+			}
+		})
+	}
+}
+
+// TestAccTracerouteMonitorNoMaxResponseTime asserts that updating a monitor
+// to max_response_time = 0, which means it never fails on response time,
+// stores no limit together with a degraded_response_time above the default
+// limit, and that the next plan is empty.
+func TestAccTracerouteMonitorNoMaxResponseTime(t *testing.T) {
+	config := func(responseTimes string) string {
+		return fmt.Sprintf(`
+			resource "checkly_traceroute_monitor" "test" {
+			  name      = "tracerouteMonitorNoMaxResponseTime"
+			  activated = false
+			  frequency = 60
+			  locations = ["us-east-1"]
+			  %s
+			  request = {
+				url = "api.checklyhq.com"
+			  }
+			}
+		`, responseTimes)
+	}
+	noMax := `
+			  degraded_response_time = 25000
+			  max_response_time      = 0`
+	accTestCase(t, []resource.TestStep{
+		{
+			Config: config(""),
+			Check:  resource.TestCheckResourceAttr("checkly_traceroute_monitor.test", "max_response_time", "20000"),
+		},
+		{
+			Config: config(noMax),
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_traceroute_monitor.test", "max_response_time", "0"),
+				resource.TestCheckResourceAttr("checkly_traceroute_monitor.test", "degraded_response_time", "25000"),
+			),
+		},
+		{
+			Config:   config(noMax),
+			PlanOnly: true,
+		},
+	})
+}

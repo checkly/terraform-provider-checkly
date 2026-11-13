@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"regexp"
 
@@ -488,7 +489,7 @@ func (r *AlertChannelResource) Create(ctx context.Context, req resource.CreateRe
 
 	result, err := r.client.CreateAlertChannel(apiCtx, ac)
 	if err != nil {
-		addAPIError(&resp.Diagnostics, "Unable to Create Alert Channel", err)
+		addAlertChannelWriteError(&resp.Diagnostics, "Unable to Create Alert Channel", err)
 		return
 	}
 
@@ -498,6 +499,24 @@ func (r *AlertChannelResource) Create(ctx context.Context, req resource.CreateRe
 	plan.ID = types.StringValue(encodeNumericID(result.ID))
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+}
+
+// addAlertChannelWriteError adds the diagnostic for a failed create or
+// update. A Slack App channel that the account's Slack workspace cannot
+// serve gets an error on slack_app that says how to fix it; the SDK's text
+// for these errors is meant for users and leaves out the request. Other
+// errors get the generic API error under summary.
+func addAlertChannelWriteError(diags *diag.Diagnostics, summary string, err error) {
+	var notConnected *checkly.SlackIntegrationNotConnectedError
+	var unresolvable *checkly.UnresolvableSlackHandlesError
+	switch {
+	case errors.As(err, &notConnected):
+		diags.AddAttributeError(path.Root("slack_app"), "Slack Workspace Not Connected", notConnected.Error())
+	case errors.As(err, &unresolvable):
+		diags.AddAttributeError(path.Root("slack_app").AtName("slack_channels"), "Unresolvable Slack Handles", unresolvable.Error())
+	default:
+		addAPIError(diags, summary, err)
+	}
 }
 
 func (r *AlertChannelResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -566,7 +585,7 @@ func (r *AlertChannelResource) Update(ctx context.Context, req resource.UpdateRe
 
 	_, err = r.client.UpdateAlertChannel(apiCtx, id, ac)
 	if err != nil {
-		addAPIError(&resp.Diagnostics, "Unable to Update Alert Channel", err)
+		addAlertChannelWriteError(&resp.Diagnostics, "Unable to Update Alert Channel", err)
 		return
 	}
 

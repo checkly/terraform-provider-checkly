@@ -50,7 +50,7 @@ The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/c
 
 ## Assertion Reference
 
-Each element of `request.assertions` has the shape `{ source, property, comparison, target }`. Which comparisons are allowed, and what `target` must contain, depend on `source`. The `comparison` and `target` rules are enforced by the Checkly API at apply time; where `property` is marked as ignored, the API accepts any value but does not use it.
+Each element of `request.assertions` has the shape `{ source, property, comparison, target }`. Which comparisons are allowed, and what `target` must contain, depend on `source`. The `comparison` and `target` rules are checked at plan time; where `property` is marked as ignored, the API accepts any value but does not use it. The numeric targets of `RESPONSE_TIME`, `GRPC_STATUS_CODE` and `GRPC_HEALTHCHECK_STATUS` are required and must not have leading or trailing whitespace.
 
 | `source` | `property` | Allowed `comparison` values | `target` |
 |---|---|---|---|

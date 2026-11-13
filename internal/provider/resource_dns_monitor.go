@@ -155,9 +155,9 @@ func (r *DNSMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 				Attributes: map[string]schema.Attribute{
 					"record_type": schema.StringAttribute{
 						Required:    true,
-						Description: "The DNS record type. Possible values are `A`, `AAAA`, `CNAME`, `MX`, `NS`, `TXT` and `SOA`.",
+						Description: "The DNS record type. Possible values are `A`, `AAAA`, `CNAME`, `MX`, `NS`, `TXT`, `SOA` and `HTTPS`.",
 						Validators: []validator.String{
-							stringvalidator.OneOf("A", "AAAA", "CNAME", "MX", "NS", "TXT", "SOA"),
+							stringvalidator.OneOf("A", "AAAA", "CNAME", "MX", "NS", "TXT", "SOA", "HTTPS"),
 						},
 					},
 					"query": schema.StringAttribute{
@@ -185,9 +185,9 @@ func (r *DNSMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 						Attributes: map[string]schema.Attribute{
 							"host": schema.StringAttribute{
 								Optional:    true,
-								Description: "The name server host (at most 100 characters).",
+								Description: "The name server host (1 to 100 characters).",
 								Validators: []validator.String{
-									utf16LengthBetween(0, 100),
+									utf16LengthBetween(1, 100),
 									stringvalidator.AlsoRequires(
 										path.MatchRelative().AtParent().AtName("port"),
 									),
@@ -195,8 +195,9 @@ func (r *DNSMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 							},
 							"port": schema.Int64Attribute{
 								Optional:    true,
-								Description: "The name server port.",
+								Description: "The name server port. Possible values are between 1 and 65535.",
 								Validators: []validator.Int64{
+									int64validator.Between(1, 65535),
 									int64validator.AlsoRequires(
 										path.MatchRelative().AtParent().AtName("host"),
 									),
@@ -210,6 +211,9 @@ func (r *DNSMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 						Default:     emptySetDefault(types.ObjectType{AttrTypes: assertionAttrTypes}),
 						Description: "Assertions to validate the DNS response.",
 						NestedObject: schema.NestedAttributeObject{
+							Validators: []validator.Object{
+								dnsMonitorAssertionRules,
+							},
 							// Attributes nested in this set attribute must not use
 							// schema defaults. The framework looks up configuration
 							// values for set elements by full element value; once
@@ -233,14 +237,15 @@ func (r *DNSMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 								},
 								"comparison": schema.StringAttribute{
 									Required:    true,
-									Description: "The type of comparison to be executed between expected and actual value of the assertion. Possible values are `EQUALS`, `NOT_EQUALS`, `GREATER_THAN` and `LESS_THAN`.",
+									Description: "The type of comparison to be executed between expected and actual value of the assertion. Possible values are `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL` and `NOT_NULL`.",
 									Validators: []validator.String{
-										stringvalidator.OneOf("EQUALS", "NOT_EQUALS", "GREATER_THAN", "LESS_THAN"),
+										stringvalidator.OneOf(allAssertionComparisons...),
 									},
 								},
 								"target": schema.StringAttribute{
-									Required:    true,
-									Description: "The target value. Typically `NOERROR` when the source is `RESPONSE_CODE`.",
+									Optional:    true,
+									Computed:    true,
+									Description: "The target value, typically `NOERROR` when the source is `RESPONSE_CODE`. For `RESPONSE_TIME` with `EQUALS`, `NOT_EQUALS`, `GREATER_THAN` or `LESS_THAN`, it is required and must be a non-negative number of milliseconds without surrounding whitespace. Leave it out for comparisons that take no value, such as `IS_EMPTY` and `NOT_NULL`.",
 								},
 							},
 						},
@@ -260,6 +265,18 @@ func (r *DNSMonitorResource) ConfigValidators(ctx context.Context) []resource.Co
 	}
 }
 
+// dnsMonitorAssertionRules are the rules for the targets of each assertion
+// source. The runner compares a RESPONSE_TIME with the target as a number for
+// EQUALS, NOT_EQUALS, GREATER_THAN and LESS_THAN, so such an assertion with
+// any other target fails, or passes for NOT_EQUALS. The API accepts every
+// comparison for every source.
+var dnsMonitorAssertionRules = assertionRulesValidator{rules: map[string]assertionSourceRule{
+	"RESPONSE_TIME": {
+		numericTarget:            nonNegativeMillisecondsTarget,
+		numericTargetComparisons: []string{"EQUALS", "NOT_EQUALS", "GREATER_THAN", "LESS_THAN"},
+	},
+}}
+
 // UpgradeState upgrades state written by the provider's SDK v2
 // implementation; see sdkv2StateUpgraders.
 func (r *DNSMonitorResource) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
@@ -277,7 +294,7 @@ func (r *DNSMonitorResource) Configure(ctx context.Context, req resource.Configu
 // fully known and stable across plans, which set element correlation
 // requires.
 func (r *DNSMonitorResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	planNestedDefaults(ctx, req, resp, path.Root("request"), objectWithSetDefaults("assertions", assertionsWithPropertyDefault))
+	planNestedDefaults(ctx, req, resp, path.Root("request"), objectWithSetDefaults("assertions", assertionsWithPropertyAndTargetDefaults))
 }
 
 func (r *DNSMonitorResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {

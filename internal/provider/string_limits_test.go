@@ -95,7 +95,7 @@ func TestAttributeStringLimits(t *testing.T) {
 		{NewTracerouteMonitorResource(), "checkly_traceroute_monitor", []string{"request", "url"}, nil, 1, 2048, true},
 		{NewDNSMonitorResource(), "checkly_dns_monitor", []string{"request", "query"}, nil, 1, 100, false},
 		// The name server host requires its port.
-		{NewDNSMonitorResource(), "checkly_dns_monitor", []string{"request", "name_server", "host"}, map[string]tftypes.Value{"port": tftypes.NewValue(tftypes.Number, 53)}, 0, 100, false},
+		{NewDNSMonitorResource(), "checkly_dns_monitor", []string{"request", "name_server", "host"}, map[string]tftypes.Value{"port": tftypes.NewValue(tftypes.Number, 53)}, 1, 100, false},
 		{NewGRPCMonitorResource(), "checkly_grpc_monitor", []string{"request", "metadata", "key"}, nil, 1, 256, false},
 		{NewGRPCMonitorResource(), "checkly_grpc_monitor", []string{"request", "metadata", "value"}, map[string]tftypes.Value{"key": tftypes.NewValue(tftypes.String, "key")}, 0, 8192, false},
 		{NewGRPCMonitorResource(), "checkly_grpc_monitor", []string{"request", "proto_content"}, nil, 0, 102400, false},
