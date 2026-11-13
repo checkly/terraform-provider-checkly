@@ -75,7 +75,7 @@ func (d *StaticIPsDataSource) Schema(ctx context.Context, req datasource.SchemaR
 			"ip_family": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "Specify the IP family you want to get static IPs for. " + staticIPFamilies.String() + " Defaults to `" + staticIPFamilyAll + "`.",
+				Description: "Specify the IP family you want to get static IPs for. " + staticIPFamilies.String() + " (Default `" + staticIPFamilyAll + "`).",
 				Validators: []validator.String{
 					stringvalidator.OneOf(staticIPFamilies.Values()...),
 				},
