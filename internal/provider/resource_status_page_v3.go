@@ -29,7 +29,7 @@ var (
 	_ resource.ResourceWithImportState  = (*StatusPageV3Resource)(nil)
 )
 
-var statusPageV3ThemeValues = allowedValues[string]{
+var statusPageThemeValues = allowedValues[string]{
 	{Value: "AUTO"},
 	{Value: "DARK"},
 	{Value: "LIGHT"},
@@ -282,9 +282,9 @@ func (r *StatusPageV3Resource) Schema(ctx context.Context, req resource.SchemaRe
 				Optional:    true,
 				Computed:    true,
 				Default:     stringdefault.StaticString("AUTO"),
-				Description: "The default theme of the status page. " + statusPageV3ThemeValues.String() + " Defaults to `AUTO`.",
+				Description: "The default theme of the status page. " + statusPageThemeValues.String() + " Defaults to `AUTO`.",
 				Validators: []validator.String{
-					stringvalidator.OneOf(statusPageV3ThemeValues.Values()...),
+					stringvalidator.OneOf(statusPageThemeValues.Values()...),
 				},
 			},
 			"privacy_policy_link": statusPageV3OptionalString("An http or https link to your privacy policy, shown in the page footer. Must be at most `255` characters.",

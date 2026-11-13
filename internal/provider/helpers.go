@@ -210,6 +210,12 @@ func (v *allowedValues[T]) String() string {
 	}
 }
 
+// ipFamilyValues are the IP families a check or monitor can run over.
+var ipFamilyValues = allowedValues[string]{
+	{Value: "IPv4"},
+	{Value: "IPv6"},
+}
+
 // planNestedDefaults replaces the planned value at p with withDefaults
 // applied to it. It implements ModifyPlan for resources whose nested
 // optional+computed attributes cannot use schema defaults, typically because

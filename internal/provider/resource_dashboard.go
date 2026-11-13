@@ -21,6 +21,23 @@ import (
 	"github.com/checkly/checkly-go-sdk/v2"
 )
 
+var dashboardWidthValues = allowedValues[string]{
+	{Value: "FULL"},
+	{Value: "960PX"},
+}
+
+var dashboardRefreshRateValues = allowedValues[int64]{
+	{Value: 60},
+	{Value: 300},
+	{Value: 600},
+}
+
+var dashboardPaginationRateValues = allowedValues[int64]{
+	{Value: 30},
+	{Value: 60},
+	{Value: 300},
+}
+
 var (
 	_ resource.Resource                 = (*DashboardResource)(nil)
 	_ resource.ResourceWithConfigure    = (*DashboardResource)(nil)
@@ -153,18 +170,18 @@ func (r *DashboardResource) Schema(ctx context.Context, req resource.SchemaReque
 				Optional:    true,
 				Computed:    true,
 				Default:     stringdefault.StaticString("FULL"),
-				Description: "Determines whether to use the full screen or focus in the center. Possible values are `FULL` and `960PX`. Defaults to `FULL`.",
+				Description: "Determines whether to use the full screen or focus in the center. " + dashboardWidthValues.String() + " Defaults to `FULL`.",
 				Validators: []validator.String{
-					stringvalidator.OneOf("FULL", "960PX"),
+					stringvalidator.OneOf(dashboardWidthValues.Values()...),
 				},
 			},
 			"refresh_rate": schema.Int64Attribute{
 				Optional:    true,
 				Computed:    true,
 				Default:     int64default.StaticInt64(60),
-				Description: "How often to refresh the dashboard in seconds. Possible values are `60`, `300` and `600`. Defaults to `60`.",
+				Description: "How often to refresh the dashboard in seconds. " + dashboardRefreshRateValues.String() + " Defaults to `60`.",
 				Validators: []validator.Int64{
-					int64validator.OneOf(60, 300, 600),
+					int64validator.OneOf(dashboardRefreshRateValues.Values()...),
 				},
 			},
 			"paginate": schema.BoolAttribute{
@@ -186,9 +203,9 @@ func (r *DashboardResource) Schema(ctx context.Context, req resource.SchemaReque
 				Optional:    true,
 				Computed:    true,
 				Default:     int64default.StaticInt64(60),
-				Description: "How often to trigger pagination in seconds. Possible values are `30`, `60` and `300`. Defaults to `60`.",
+				Description: "How often to trigger pagination in seconds. " + dashboardPaginationRateValues.String() + " Defaults to `60`.",
 				Validators: []validator.Int64{
-					int64validator.OneOf(30, 60, 300),
+					int64validator.OneOf(dashboardPaginationRateValues.Values()...),
 				},
 			},
 			"sort_by_status": schema.BoolAttribute{

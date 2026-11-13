@@ -20,6 +20,13 @@ import (
 	"github.com/checkly/checkly-go-sdk/v2"
 )
 
+var heartbeatMonitorTimeUnitValues = allowedValues[string]{
+	{Value: "seconds"},
+	{Value: "minutes"},
+	{Value: "hours"},
+	{Value: "days"},
+}
+
 var (
 	_ resource.Resource                 = (*HeartbeatMonitorResource)(nil)
 	_ resource.ResourceWithConfigure    = (*HeartbeatMonitorResource)(nil)
@@ -114,9 +121,9 @@ func (r *HeartbeatMonitorResource) Schema(ctx context.Context, req resource.Sche
 					},
 					"period_unit": schema.StringAttribute{
 						Required:    true,
-						Description: "The unit of `period`. Possible values are `seconds`, `minutes`, `hours` and `days`.",
+						Description: "The unit of `period`. " + heartbeatMonitorTimeUnitValues.String(),
 						Validators: []validator.String{
-							stringvalidator.OneOf("seconds", "minutes", "hours", "days"),
+							stringvalidator.OneOf(heartbeatMonitorTimeUnitValues.Values()...),
 						},
 					},
 					"grace": schema.Int64Attribute{
@@ -128,9 +135,9 @@ func (r *HeartbeatMonitorResource) Schema(ctx context.Context, req resource.Sche
 					},
 					"grace_unit": schema.StringAttribute{
 						Required:    true,
-						Description: "The unit of `grace`. Possible values are `seconds`, `minutes`, `hours` and `days`.",
+						Description: "The unit of `grace`. " + heartbeatMonitorTimeUnitValues.String(),
 						Validators: []validator.String{
-							stringvalidator.OneOf("seconds", "minutes", "hours", "days"),
+							stringvalidator.OneOf(heartbeatMonitorTimeUnitValues.Values()...),
 						},
 					},
 					"ping_token": schema.StringAttribute{

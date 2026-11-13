@@ -20,6 +20,11 @@ import (
 	"github.com/checkly/checkly-go-sdk/v2"
 )
 
+var tcpMonitorAssertionSourceValues = allowedValues[string]{
+	{Value: "RESPONSE_DATA"},
+	{Value: "RESPONSE_TIME"},
+}
+
 var (
 	_ resource.Resource                     = (*TCPMonitorResource)(nil)
 	_ resource.ResourceWithConfigure        = (*TCPMonitorResource)(nil)
@@ -172,9 +177,9 @@ func (r *TCPMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 						Optional:    true,
 						Computed:    true,
 						Default:     stringdefault.StaticString("IPv4"),
-						Description: "The IP family to use when executing the TCP check. Possible values are `IPv4` and `IPv6`. Defaults to `IPv4`.",
+						Description: "The IP family to use when executing the TCP check. " + ipFamilyValues.String() + " Defaults to `IPv4`.",
 						Validators: []validator.String{
-							stringvalidator.OneOf("IPv4", "IPv6"),
+							stringvalidator.OneOf(ipFamilyValues.Values()...),
 						},
 					},
 					"assertions": schema.SetNestedAttribute{
@@ -199,9 +204,9 @@ func (r *TCPMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 							Attributes: map[string]schema.Attribute{
 								"source": schema.StringAttribute{
 									Required:    true,
-									Description: "The source of the asserted value. Possible values are `RESPONSE_DATA` and `RESPONSE_TIME`.",
+									Description: "The source of the asserted value. " + tcpMonitorAssertionSourceValues.String(),
 									Validators: []validator.String{
-										stringvalidator.OneOf("RESPONSE_DATA", "RESPONSE_TIME"),
+										stringvalidator.OneOf(tcpMonitorAssertionSourceValues.Values()...),
 									},
 								},
 								"property": schema.StringAttribute{

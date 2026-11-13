@@ -18,6 +18,14 @@ import (
 	"github.com/checkly/checkly-go-sdk/v2"
 )
 
+var maintenanceWindowComponentStatusValues = allowedValues[string]{
+	{Value: string(checkly.StatusPageComponentStatusV3Operational)},
+	{Value: string(checkly.StatusPageComponentStatusV3UnderMaintenance)},
+	{Value: string(checkly.StatusPageComponentStatusV3DegradedPerformance)},
+	{Value: string(checkly.StatusPageComponentStatusV3PartialOutage)},
+	{Value: string(checkly.StatusPageComponentStatusV3MajorOutage)},
+}
+
 // MaintenanceWindowStatusPageVisibilityModel describes the
 // status_page_visibility attribute data model.
 type MaintenanceWindowStatusPageVisibilityModel struct {
@@ -104,9 +112,9 @@ func maintenanceWindowStatusPageVisibilitySchema() schema.SingleNestedAttribute 
 			},
 			"severity": schema.StringAttribute{
 				Optional:    true,
-				Description: "The severity shown on the status page. Possible values are `MINOR`, `MEDIUM`, `MAJOR` and `CRITICAL`.",
+				Description: "The severity shown on the status page. " + incidentSeverityValues.String(),
 				Validators: []validator.String{
-					stringvalidator.OneOf("MINOR", "MEDIUM", "MAJOR", "CRITICAL"),
+					stringvalidator.OneOf(incidentSeverityValues.Values()...),
 				},
 			},
 			"affect_all_services": schema.BoolAttribute{
@@ -211,15 +219,9 @@ func maintenanceWindowStatusPageVisibilitySchema() schema.SingleNestedAttribute 
 									"status": schema.StringAttribute{
 										Optional:    true,
 										Computed:    true,
-										Description: "The status the component shows while the maintenance is in progress. Possible values are `OPERATIONAL`, `UNDER_MAINTENANCE`, `DEGRADED_PERFORMANCE`, `PARTIAL_OUTAGE` and `MAJOR_OUTAGE`. Defaults to `UNDER_MAINTENANCE`.",
+										Description: "The status the component shows while the maintenance is in progress. " + maintenanceWindowComponentStatusValues.String() + " Defaults to `UNDER_MAINTENANCE`.",
 										Validators: []validator.String{
-											stringvalidator.OneOf(
-												string(checkly.StatusPageComponentStatusV3Operational),
-												string(checkly.StatusPageComponentStatusV3UnderMaintenance),
-												string(checkly.StatusPageComponentStatusV3DegradedPerformance),
-												string(checkly.StatusPageComponentStatusV3PartialOutage),
-												string(checkly.StatusPageComponentStatusV3MajorOutage),
-											),
+											stringvalidator.OneOf(maintenanceWindowComponentStatusValues.Values()...),
 										},
 									},
 								},

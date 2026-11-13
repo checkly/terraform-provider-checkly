@@ -15,6 +15,23 @@ import (
 	"github.com/checkly/checkly-go-sdk/v2"
 )
 
+var apiCheckRequestMethodValues = allowedValues[string]{
+	{Value: "GET"},
+	{Value: "POST"},
+	{Value: "PUT"},
+	{Value: "HEAD"},
+	{Value: "DELETE"},
+	{Value: "PATCH"},
+}
+
+var apiCheckRequestBodyTypeValues = allowedValues[string]{
+	{Value: "NONE"},
+	{Value: "JSON"},
+	{Value: "FORM"},
+	{Value: "RAW"},
+	{Value: "GRAPHQL"},
+}
+
 // apiCheckRequestModel describes the request attribute data model.
 type apiCheckRequestModel struct {
 	Method          types.String `tfsdk:"method"`
@@ -77,9 +94,9 @@ func apiCheckRequestAttributeSchema(opts apiCheckRequestAttributeSchemaOptions) 
 				Optional:    true,
 				Computed:    true,
 				Default:     stringdefault.StaticString("GET"),
-				Description: "The HTTP method to use for this API check. Possible values are `GET`, `POST`, `PUT`, `HEAD`, `DELETE` and `PATCH`. Defaults to `GET`.",
+				Description: "The HTTP method to use for this API check. " + apiCheckRequestMethodValues.String() + " Defaults to `GET`.",
 				Validators: []validator.String{
-					stringvalidator.OneOf("GET", "POST", "PUT", "HEAD", "DELETE", "PATCH"),
+					stringvalidator.OneOf(apiCheckRequestMethodValues.Values()...),
 				},
 			},
 			"url": schema.StringAttribute{
@@ -125,9 +142,9 @@ func apiCheckRequestAttributeSchema(opts apiCheckRequestAttributeSchemaOptions) 
 				Optional:    true,
 				Computed:    true,
 				Default:     stringdefault.StaticString("NONE"),
-				Description: "The `Content-Type` header of the request. Possible values are `NONE`, `JSON`, `FORM`, `RAW` and `GRAPHQL`. Defaults to `NONE`.",
+				Description: "The `Content-Type` header of the request. " + apiCheckRequestBodyTypeValues.String() + " Defaults to `NONE`.",
 				Validators: []validator.String{
-					stringvalidator.OneOf("NONE", "JSON", "FORM", "RAW", "GRAPHQL"),
+					stringvalidator.OneOf(apiCheckRequestBodyTypeValues.Values()...),
 				},
 			},
 			"assertions": schema.SetNestedAttribute{
@@ -185,9 +202,9 @@ func apiCheckRequestAttributeSchema(opts apiCheckRequestAttributeSchemaOptions) 
 				Optional:    true,
 				Computed:    true,
 				Default:     stringdefault.StaticString("IPv4"),
-				Description: "IP Family to be used when executing the api check. Possible values are `IPv4` and `IPv6`. Defaults to `IPv4`.",
+				Description: "IP Family to be used when executing the api check. " + ipFamilyValues.String() + " Defaults to `IPv4`.",
 				Validators: []validator.String{
-					stringvalidator.OneOf("IPv4", "IPv6"),
+					stringvalidator.OneOf(ipFamilyValues.Values()...),
 				},
 			},
 		},

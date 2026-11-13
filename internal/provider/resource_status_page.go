@@ -155,9 +155,9 @@ func (r *StatusPageResource) Schema(ctx context.Context, req resource.SchemaRequ
 				Optional:    true,
 				Computed:    true,
 				Default:     stringdefault.StaticString("AUTO"),
-				Description: "The color theme the status page is shown in. `AUTO` follows the visitor's system preference. Possible values are `AUTO`, `DARK` and `LIGHT`. Defaults to `AUTO`.",
+				Description: "The color theme the status page is shown in. `AUTO` follows the visitor's system preference. " + statusPageThemeValues.String() + " Defaults to `AUTO`.",
 				Validators: []validator.String{
-					stringvalidator.OneOf("AUTO", "DARK", "LIGHT"),
+					stringvalidator.OneOf(statusPageThemeValues.Values()...),
 				},
 			},
 			"cards": schema.ListNestedAttribute{

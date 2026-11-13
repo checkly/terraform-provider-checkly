@@ -13,6 +13,15 @@ import (
 	"github.com/checkly/checkly-go-sdk/v2"
 )
 
+// incidentSeverityValues are the severities of an incident, also shown on
+// status pages during maintenance.
+var incidentSeverityValues = allowedValues[string]{
+	{Value: "MINOR"},
+	{Value: "MEDIUM"},
+	{Value: "MAJOR"},
+	{Value: "CRITICAL"},
+}
+
 const triggerIncidentAttributeName = "trigger_incident"
 
 // TriggerIncidentModel describes the trigger_incident attribute data model.
@@ -45,9 +54,9 @@ func makeTriggerIncidentSchema() schema.SingleNestedAttribute {
 			},
 			"severity": schema.StringAttribute{
 				Required:    true,
-				Description: "The severity level of the incident. Possible values are `MINOR`, `MEDIUM`, `MAJOR` and `CRITICAL`.",
+				Description: "The severity level of the incident. " + incidentSeverityValues.String(),
 				Validators: []validator.String{
-					stringvalidator.OneOf("MINOR", "MEDIUM", "MAJOR", "CRITICAL"),
+					stringvalidator.OneOf(incidentSeverityValues.Values()...),
 				},
 			},
 			"name": schema.StringAttribute{
