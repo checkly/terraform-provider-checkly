@@ -1349,7 +1349,7 @@ func TestAccTCPMonitorUnsetSweepResponseTimes(t *testing.T) {
 				resource.TestCheckResourceAttr(
 					"checkly_tcp_monitor.test",
 					"degraded_response_time",
-					"4000",
+					"3000",
 				),
 				resource.TestCheckResourceAttr(
 					"checkly_tcp_monitor.test",

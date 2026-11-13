@@ -78,6 +78,11 @@ need changes. Follow the [upgrade guide](docs/guides/upgrading-to-v2.md).
   - `request.client_certificate.mode = "explicit"` of `checkly_ssl_monitor` requires `request.client_certificate.client_certificate_id`.
   - `request.name_server.host` of `checkly_dns_monitor` must not be empty, and `request.name_server.port` must be between 1 and 65535.
   - `heartbeat.ping_token` of `checkly_heartbeat_monitor` and `checkly_heartbeat` must be a lowercase UUID with hyphens, such as `22868839-8450-4010-9241-1ea83a2e425f`, and `heartbeat.grace` must be at least `0`.
+- **Breaking:** response time defaults that didn't match the API's now do:
+  - `degraded_response_time` and `max_response_time` of `checkly_ssl_monitor` default to `3000` and `10000`, instead of `10000` and `20000`. With the default `request.handshake_timeout_ms` of `10000`, the old failing limit could never be reached.
+  - `degraded_response_time` of `checkly_tcp_monitor` and `checkly_tcp_check` defaults to `3000`, instead of `4000`.
+
+  A monitor that leaves them out plans an update to the new values. On `checkly_ssl_monitor`, a configuration that sets only `degraded_response_time`, to a value above `10000`, fails the plan; set `max_response_time` as well. See [Expected one-time changes](docs/guides/upgrading-to-v2.md#expected-one-time-changes) in the upgrade guide.
 - **Breaking:** `max_response_time = 0` on `checkly_traceroute_monitor` means the monitor never fails on response time. v1.x did not send the `0`, so the monitor kept its default of `20000` or the previous value. See [Expected one-time changes](docs/guides/upgrading-to-v2.md#expected-one-time-changes) in the upgrade guide.
 - `degraded_response_time` and `max_response_time` of `checkly_tcp_monitor`, `checkly_tcp_check`, `checkly_url_monitor`, `checkly_api_check` and `checkly_check` accept values up to `45000` if extended limits have been approved for your account; `checkly_check` used to accept up to `30000`. On other accounts, a value above `5000` on TCP monitors, or above `30000` on URL monitors and API checks, fails the plan.
 

@@ -126,8 +126,8 @@ func (r *TCPMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 			"degraded_response_time": schema.Int64Attribute{
 				Optional:    true,
 				Computed:    true,
-				Default:     int64default.StaticInt64(4000),
-				Description: "The response time in milliseconds where the monitor should be considered degraded. Possible values are between `0` and `5000`, or up to `45000` if extended limits have been approved for your account. Defaults to `4000`.",
+				Default:     int64default.StaticInt64(3000),
+				Description: "The response time in milliseconds where the monitor should be considered degraded. Possible values are between `0` and `5000`, or up to `45000` if extended limits have been approved for your account. Defaults to `3000`.",
 				Validators: []validator.Int64{
 					int64validator.Between(0, extendedResponseTimeLimit),
 				},
