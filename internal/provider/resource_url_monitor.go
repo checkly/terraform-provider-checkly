@@ -37,7 +37,8 @@ func NewURLMonitorResource() resource.Resource {
 
 // URLMonitorResource implements the checkly_url_monitor resource.
 type URLMonitorResource struct {
-	client checkly.Client
+	client  checkly.Client
+	account *accountLookup
 }
 
 // URLMonitorResourceModel describes the resource data model.
@@ -120,18 +121,18 @@ func (r *URLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 				Optional:    true,
 				Computed:    true,
 				Default:     int64default.StaticInt64(3000),
-				Description: "The response time in milliseconds where the monitor should be considered degraded. Possible values are between `0` and `45000`. Values above `30000` only take effect on accounts with extended response time limits; on other accounts the monitor times out after 30 seconds. (Default `3000`).",
+				Description: "The response time in milliseconds where the monitor should be considered degraded. Possible values are between `0` and `30000`, or up to `45000` if extended limits have been approved for your account. (Default `3000`).",
 				Validators: []validator.Int64{
-					int64validator.Between(0, 45000),
+					int64validator.Between(0, extendedResponseTimeLimit),
 				},
 			},
 			"max_response_time": schema.Int64Attribute{
 				Optional:    true,
 				Computed:    true,
 				Default:     int64default.StaticInt64(5000),
-				Description: "The response time in milliseconds where the monitor should be considered failing. Possible values are between `0` and `45000`. Values above `30000` only take effect on accounts with extended response time limits; on other accounts the monitor times out after 30 seconds. (Default `5000`).",
+				Description: "The response time in milliseconds where the monitor should be considered failing. Possible values are between `0` and `30000`, or up to `45000` if extended limits have been approved for your account. (Default `5000`).",
 				Validators: []validator.Int64{
-					int64validator.Between(0, 45000),
+					int64validator.Between(0, extendedResponseTimeLimit),
 				},
 			},
 			triggerIncidentAttributeName: makeTriggerIncidentSchema(),
@@ -239,6 +240,7 @@ func (r *URLMonitorResource) UpgradeState(ctx context.Context) map[int64]resourc
 
 func (r *URLMonitorResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	r.client = clientFromProviderData(req.ProviderData, &resp.Diagnostics)
+	r.account = accountFromProviderData(req.ProviderData)
 }
 
 // ModifyPlan applies default values to the optional+computed attributes of
@@ -247,8 +249,16 @@ func (r *URLMonitorResource) Configure(ctx context.Context, req resource.Configu
 // adjusted here instead. Substituting static values keeps every set element
 // fully known and stable across plans, which set element correlation
 // requires.
+//
+// It also checks the response time limits against the account, which needs
+// the configured provider and so can't be done in ValidateConfig.
 func (r *URLMonitorResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
 	planNestedDefaults(ctx, req, resp, path.Root("request"), objectWithSetDefaults("assertions", assertionsWithPropertyDefault))
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	r.account.validateResponseTimeLimits(ctx, req.Plan, httpStandardResponseTimeLimit, &resp.Diagnostics)
 }
 
 func (r *URLMonitorResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {

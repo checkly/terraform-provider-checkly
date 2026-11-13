@@ -37,7 +37,8 @@ func NewTCPMonitorResource() resource.Resource {
 
 // TCPMonitorResource implements the checkly_tcp_monitor resource.
 type TCPMonitorResource struct {
-	client checkly.Client
+	client  checkly.Client
+	account *accountLookup
 }
 
 // TCPMonitorResourceModel describes the resource data model.
@@ -121,18 +122,18 @@ func (r *TCPMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 				Optional:    true,
 				Computed:    true,
 				Default:     int64default.StaticInt64(4000),
-				Description: "The response time in milliseconds where the monitor should be considered degraded. Possible values are between `0` and `45000`. Values above `5000` only take effect on accounts with extended response time limits; on other accounts the monitor times out after 5 seconds. (Default `4000`).",
+				Description: "The response time in milliseconds where the monitor should be considered degraded. Possible values are between `0` and `5000`, or up to `45000` if extended limits have been approved for your account. (Default `4000`).",
 				Validators: []validator.Int64{
-					int64validator.Between(0, 45000),
+					int64validator.Between(0, extendedResponseTimeLimit),
 				},
 			},
 			"max_response_time": schema.Int64Attribute{
 				Optional:    true,
 				Computed:    true,
 				Default:     int64default.StaticInt64(5000),
-				Description: "The response time in milliseconds where the monitor should be considered failing. Possible values are between `0` and `45000`. Values above `5000` only take effect on accounts with extended response time limits; on other accounts the monitor times out after 5 seconds. (Default `5000`).",
+				Description: "The response time in milliseconds where the monitor should be considered failing. Possible values are between `0` and `5000`, or up to `45000` if extended limits have been approved for your account. (Default `5000`).",
 				Validators: []validator.Int64{
-					int64validator.Between(0, 45000),
+					int64validator.Between(0, extendedResponseTimeLimit),
 				},
 			},
 			triggerIncidentAttributeName: makeTriggerIncidentSchema(),
@@ -243,6 +244,7 @@ func (r *TCPMonitorResource) UpgradeState(ctx context.Context) map[int64]resourc
 
 func (r *TCPMonitorResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	r.client = clientFromProviderData(req.ProviderData, &resp.Diagnostics)
+	r.account = accountFromProviderData(req.ProviderData)
 }
 
 // tcpMonitorAssertionRules are the API's rules for the comparisons of each
@@ -263,8 +265,16 @@ var tcpMonitorAssertionRules = assertionRulesValidator{rules: map[string]asserti
 // adjusted here instead. Substituting static values keeps every set element
 // fully known and stable across plans, which set element correlation
 // requires.
+//
+// It also checks the response time limits against the account, which needs
+// the configured provider and so can't be done in ValidateConfig.
 func (r *TCPMonitorResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
 	planNestedDefaults(ctx, req, resp, path.Root("request"), objectWithSetDefaults("assertions", assertionsWithPropertyAndTargetDefaults))
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	r.account.validateResponseTimeLimits(ctx, req.Plan, tcpStandardResponseTimeLimit, &resp.Diagnostics)
 }
 
 func (r *TCPMonitorResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {

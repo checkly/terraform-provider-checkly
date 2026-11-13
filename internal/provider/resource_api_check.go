@@ -34,7 +34,8 @@ func NewAPICheckResource() resource.Resource {
 
 // APICheckResource implements the checkly_api_check resource.
 type APICheckResource struct {
-	client checkly.Client
+	client  checkly.Client
+	account *accountLookup
 }
 
 // APICheckResourceModel describes the resource data model.
@@ -104,9 +105,9 @@ func (r *APICheckResource) Schema(ctx context.Context, req resource.SchemaReques
 				Default:  int64default.StaticInt64(5000),
 				// https://checklyhq.com/docs/api-checks/limits/
 				Validators: []validator.Int64{
-					int64validator.Between(0, 30000),
+					int64validator.Between(0, extendedResponseTimeLimit),
 				},
-				Description: "The response time in milliseconds where the check should be considered degraded. Possible values are between `0` and `30000`. (Default `5000`).",
+				Description: "The response time in milliseconds where the check should be considered degraded. Possible values are between `0` and `30000`, or up to `45000` if extended limits have been approved for your account. (Default `5000`).",
 			},
 			"max_response_time": schema.Int64Attribute{
 				Optional: true,
@@ -114,9 +115,9 @@ func (r *APICheckResource) Schema(ctx context.Context, req resource.SchemaReques
 				Default:  int64default.StaticInt64(20000),
 				// https://checklyhq.com/docs/api-checks/limits/
 				Validators: []validator.Int64{
-					int64validator.Between(0, 30000),
+					int64validator.Between(0, extendedResponseTimeLimit),
 				},
-				Description: "The response time in milliseconds where the check should be considered failing. Possible values are between `0` and `30000`. (Default `20000`).",
+				Description: "The response time in milliseconds where the check should be considered failing. Possible values are between `0` and `30000`, or up to `45000` if extended limits have been approved for your account. (Default `20000`).",
 			},
 			"setup_snippet_id":    snippetIDAttributeSchema("The ID of the snippet to run in the setup phase of the API check (at least `1`). When unset, no setup snippet runs."),
 			"teardown_snippet_id": snippetIDAttributeSchema("The ID of the snippet to run in the teardown phase of the API check (at least `1`). When unset, no teardown snippet runs."),
@@ -156,6 +157,7 @@ func (r *APICheckResource) ConfigValidators(ctx context.Context) []resource.Conf
 
 func (r *APICheckResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	r.client = clientFromProviderData(req.ProviderData, &resp.Diagnostics)
+	r.account = accountFromProviderData(req.ProviderData)
 }
 
 // ModifyPlan applies default values to the optional+computed attributes of
@@ -164,8 +166,16 @@ func (r *APICheckResource) Configure(ctx context.Context, req resource.Configure
 // adjusted here instead. Substituting static values keeps every set element
 // fully known and stable across plans, which set element correlation
 // requires.
+//
+// It also checks the response time limits against the account, which needs
+// the configured provider and so can't be done in ValidateConfig.
 func (r *APICheckResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
 	planNestedDefaults(ctx, req, resp, path.Root("request"), objectWithSetDefaults("assertions", assertionsWithPropertyAndTargetDefaults))
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	r.account.validateResponseTimeLimits(ctx, req.Plan, httpStandardResponseTimeLimit, &resp.Diagnostics)
 }
 
 func (r *APICheckResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
