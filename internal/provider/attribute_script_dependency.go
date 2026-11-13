@@ -39,7 +39,7 @@ func makeScriptDependenciesSchema() schema.ListNestedAttribute {
 			Attributes: map[string]schema.Attribute{
 				"path": schema.StringAttribute{
 					Required:    true,
-					Description: "The path of the dependency file (1 to 1000 characters).",
+					Description: "The path of the dependency file. Must be between `1` and `1000` characters.",
 					Validators: []validator.String{
 						utf16LengthBetween(1, 1000),
 					},

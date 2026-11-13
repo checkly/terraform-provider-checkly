@@ -126,20 +126,20 @@ resource "checkly_playwright_check_suite" "example-playwright-check-custom" {
 
 ### Optional
 
-- `activated` (Boolean) Determines whether the check runs on its schedule. (Default `true`).
+- `activated` (Boolean) Determines whether the check runs on its schedule. Defaults to `true`.
 - `ai_auto_repair_enabled` (Boolean) Overrides the account's automatic repair setting for this check. Leave it out to inherit the account setting. Automatic repair supports browser and multi-step checks only, so this setting has no effect on other check types today, and it needs an `intent` with at least one statement. A repair is saved to the check, so it shows as a change to `script`, and the next apply restores the configured script unless you copy the repaired script into the configuration or add `script` to `ignore_changes`. An override edited in the web app and absent from the configuration is removed by the next apply, every time. To leave it to the web app, add `ai_auto_repair_enabled` to `ignore_changes`.
 - `alert_channel_subscriptions` (Attributes Set) A set of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your check, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedatt--alert_channel_subscriptions))
 - `alert_settings` (Attributes) Determines the alert escalation policy for the check. (see [below for nested schema](#nestedatt--alert_settings))
 - `description` (String) A description of the check.
-- `environment_variables` (Attributes List) Insert environment variables into the execution environment. At most 200 variables. (see [below for nested schema](#nestedatt--environment_variables))
-- `frequency` (Number) Controls how often the check should run. Defined in minutes. The allowed values are `1` (1 minute), `2` (2 minutes), `5` (5 minutes), `10` (10 minutes), `15` (15 minutes), `30` (30 minutes), `60` (1 hour), `120` (2 hours), `180` (3 hours), `360` (6 hours), `720` (12 hours) and `1440` (24 hours). (Default `10`).
-- `group_id` (Number) The ID of the check group the check is part of (at least `1`). When unset, the check is not part of a group.
-- `group_order` (Number) The position of the check in its check group (at least `0`), which sets the order in which the checks and monitors of the group run when the group is triggered from the API or CI/CD. When unset, the check has no position in the group.
+- `environment_variables` (Attributes List) Insert environment variables into the execution environment. Must contain at most `200` variables. (see [below for nested schema](#nestedatt--environment_variables))
+- `frequency` (Number) Controls how often the check should run. Defined in minutes. Possible values are `1` (1 minute), `2` (2 minutes), `5` (5 minutes), `10` (10 minutes), `15` (15 minutes), `30` (30 minutes), `60` (1 hour), `120` (2 hours), `180` (3 hours), `360` (6 hours), `720` (12 hours) and `1440` (24 hours). Defaults to `10`.
+- `group_id` (Number) The ID of the check group the check is part of. Must be at least `1`. If not set, the check is not part of a group.
+- `group_order` (Number) The position of the check in its check group, which sets the order in which the checks and monitors of the group run when the group is triggered from the API or CI/CD. Must be at least `0`. If not set, the check has no position in the group.
 - `intent` (Attributes) Guidance for root cause analysis and automatic repair: what this check protects, and which changes keep it meaningful. Automatic repair supports browser and multi-step checks only, and refuses an intent with no statements: a `goal` on its own is accepted here, but repair needs at least one statement in either `required_outcomes` or `must_preserve`. An intent edited in the web app and absent from the configuration is removed by the next apply, every time. To leave it to the web app, add `intent` to `ignore_changes`. (see [below for nested schema](#nestedatt--intent))
 - `locations` (Set of String) The data center locations to run the check from, such as `us-east-1`. The check needs at least one location in `locations` or `private_locations`, unless it is part of a check group.
-- `muted` (Boolean) Determines whether notifications are sent when the check fails or recovers. (Default `false`).
+- `muted` (Boolean) Determines whether notifications are sent when the check fails or recovers. Defaults to `false`.
 - `private_locations` (Set of String) The slugs of the private locations to run the check from.
-- `run_parallel` (Boolean) Determines whether the check runs in all its locations in parallel instead of in one location at a time, round-robin. (Default `false`).
+- `run_parallel` (Boolean) Determines whether the check runs in all its locations in parallel instead of in one location at a time, round-robin. Defaults to `false`.
 - `runtime` (Attributes) Configure the runtime environment of the Playwright check. (see [below for nested schema](#nestedatt--runtime))
 - `tags` (Set of String) Tags for organizing and filtering checks and monitors.
 - `trigger_incident` (Attributes) Create and resolve an incident based on the alert configuration. Useful for status page automation. (see [below for nested schema](#nestedatt--trigger_incident))
@@ -172,7 +172,7 @@ Required:
 
 Optional:
 
-- `escalation_type` (String) Determines the type of escalation to use. Possible values are `RUN_BASED` and `TIME_BASED`. (Default `RUN_BASED`).
+- `escalation_type` (String) Determines the type of escalation to use. Possible values are `RUN_BASED` and `TIME_BASED`. Defaults to `RUN_BASED`.
 - `parallel_run_failure_threshold` (Attributes) Configuration for parallel run failure threshold. (see [below for nested schema](#nestedatt--alert_settings--parallel_run_failure_threshold))
 - `reminders` (Attributes) Defines how often to send reminder notifications after the initial alert. (see [below for nested schema](#nestedatt--alert_settings--reminders))
 - `run_based_escalation` (Attributes) Configuration for run-based escalation. (see [below for nested schema](#nestedatt--alert_settings--run_based_escalation))
@@ -183,8 +183,8 @@ Optional:
 
 Optional:
 
-- `enabled` (Boolean) Whether parallel run failure threshold is enabled. Only applies if the check is scheduled for multiple locations in parallel. (Default `false`).
-- `percentage` (Number) Percentage of runs that must fail to trigger alert. Possible values are `10`, `20`, `30`, `40`, `50`, `60`, `70`, `80`, `90`, and `100`. (Default `10`).
+- `enabled` (Boolean) Whether parallel run failure threshold is enabled. Only applies if the check is scheduled for multiple locations in parallel. Defaults to `false`.
+- `percentage` (Number) Percentage of runs that must fail to trigger alert. Possible values are `10`, `20`, `30`, `40`, `50`, `60`, `70`, `80`, `90` and `100`. Defaults to `10`.
 
 
 <a id="nestedatt--alert_settings--reminders"></a>
@@ -192,8 +192,8 @@ Optional:
 
 Optional:
 
-- `amount` (Number) Number of reminder notifications to send. Possible values are `0`, `1`, `2`, `3`, `4`, `5`, and `100000` (`0` to disable, `100000` for unlimited). (Default `0`).
-- `interval` (Number) Interval between reminder notifications in minutes. Possible values are `5`, `10`, `15`, and `30`. (Default `5`).
+- `amount` (Number) Number of reminder notifications to send. Possible values are `0`, `1`, `2`, `3`, `4`, `5` and `100000` (`0` to disable, `100000` for unlimited). Defaults to `0`.
+- `interval` (Number) Interval between reminder notifications in minutes. Possible values are `5`, `10`, `15` and `30`. Defaults to `5`.
 
 
 <a id="nestedatt--alert_settings--run_based_escalation"></a>
@@ -201,7 +201,7 @@ Optional:
 
 Optional:
 
-- `failed_run_threshold` (Number) Send an alert notification after the given number of consecutive check runs have failed. Possible values are between `1` and `5`. (Default `1`).
+- `failed_run_threshold` (Number) Send an alert notification after the given number of consecutive check runs have failed. Possible values are between `1` and `5`. Defaults to `1`.
 
 
 <a id="nestedatt--alert_settings--time_based_escalation"></a>
@@ -209,7 +209,7 @@ Optional:
 
 Optional:
 
-- `minutes_failing_threshold` (Number) Send an alert notification after the check has been failing for the given amount of time (in minutes). Possible values are `5`, `10`, `15`, and `30`. (Default `5`).
+- `minutes_failing_threshold` (Number) Send an alert notification after the check has been failing for the given amount of time (in minutes). Possible values are `5`, `10`, `15` and `30`. Defaults to `5`.
 
 
 
@@ -219,12 +219,12 @@ Optional:
 Required:
 
 - `key` (String) The name of the environment variable or secret.
-- `value` (String, Sensitive) The value of the environment variable or secret. At most 64000 bytes in UTF-8, or 31744 bytes for a secret or locked variable. A secret value must have at least 3 characters.
+- `value` (String, Sensitive) The value of the environment variable or secret. Must be at most `64000` bytes in UTF-8, or `31744` bytes for a secret or locked variable. A secret value must be at least `3` characters.
 
 Optional:
 
-- `locked` (Boolean) If true, the value is not shown by default, but it can be accessed. (Default `false`).
-- `secret` (Boolean) If true, the value will never be visible. The API never returns secret values, so Terraform keeps the last applied value and does not detect changes made outside Terraform. (Default `false`).
+- `locked` (Boolean) If true, the value is not shown by default, but it can be accessed. Defaults to `false`.
+- `secret` (Boolean) If true, the value will never be visible. The API never returns secret values, so Terraform keeps the last applied value and does not detect changes made outside Terraform. Defaults to `false`.
 
 
 <a id="nestedatt--intent"></a>
@@ -232,12 +232,12 @@ Optional:
 
 Required:
 
-- `goal` (String) The user or system outcome the check protects (1 to 2000 characters, without leading or trailing whitespace).
+- `goal` (String) The user or system outcome the check protects. Must be between `1` and `2000` characters, without leading or trailing whitespace.
 
 Optional:
 
-- `must_preserve` (List of String) Guardrails an automatic repair must not weaken or bypass. At most 20 statements (1 to 1000 characters each, without leading or trailing whitespace).
-- `required_outcomes` (List of String) Observable outcomes the check must continue to prove. At most 20 statements (1 to 1000 characters each, without leading or trailing whitespace).
+- `must_preserve` (List of String) Guardrails an automatic repair must not weaken or bypass. Must contain at most `20` statements, each between `1` and `1000` characters, without leading or trailing whitespace.
+- `required_outcomes` (List of String) Observable outcomes the check must continue to prove. Must contain at most `20` statements, each between `1` and `1000` characters, without leading or trailing whitespace.
 
 
 <a id="nestedatt--runtime"></a>
@@ -245,7 +245,7 @@ Optional:
 
 Optional:
 
-- `auto_detect` (Boolean) Whether to automatically detect appropriate runtime environment configuration from the bundle. (Default `true`).
+- `auto_detect` (Boolean) Whether to automatically detect appropriate runtime environment configuration from the bundle. Defaults to `true`.
 - `engine` (Attributes) The JavaScript engine used to run the Playwright tests. When `auto_detect` is enabled, no engine is set, and the code bundle has a lockfile at its root, the engine is detected from files at the bundle root. Node is taken from the first of `.node-version`, `.nvmrc`, `.tool-versions`, the `volta.node` pin in `package.json`, then `engines.node` in `package.json`; Bun from the first of `.tool-versions`, `.bun-version`, then `engines.bun`. When both are found, the engine matching the lockfile's package manager wins. `volta.extends` is not followed. (see [below for nested schema](#nestedatt--runtime--engine))
 - `playwright` (Attributes) Configure the Playwright capabilities that should be made available to the runtime environment. (see [below for nested schema](#nestedatt--runtime--playwright))
 - `steps` (Attributes) Customize the actions taken during test execution. (see [below for nested schema](#nestedatt--runtime--steps))
@@ -256,7 +256,7 @@ Optional:
 
 Required:
 
-- `name` (String) The engine name. Valid values are "node" or "bun".
+- `name` (String) The engine name. Possible values are `node` and `bun`.
 - `version` (String) The engine version (e.g. "22", "24", "26" for node; "1.3", "1.4" for bun). Use "1" for bun to run the newest Bun 1.x available.
 
 
@@ -265,8 +265,8 @@ Required:
 
 Optional:
 
-- `devices` (Attributes Set) The list of devices that should be made available for Playwright. Defaults to chromium, firefox, and webkit, whether or not `auto_detect` is enabled. Can't be empty: leave it out to use the default devices. (see [below for nested schema](#nestedatt--runtime--playwright--devices))
-- `version` (String) The Playwright version to use. Defaults to the version detected from the code bundle's lockfile.
+- `devices` (Attributes Set) The list of devices that should be made available for Playwright. Can't be empty. If not set, `chromium`, `firefox` and `webkit` are used, whether or not `auto_detect` is enabled. (see [below for nested schema](#nestedatt--runtime--playwright--devices))
+- `version` (String) The Playwright version to use. If not set, the version detected from the code bundle's lockfile is used.
 
 <a id="nestedatt--runtime--playwright--devices"></a>
 ### Nested Schema for `runtime.playwright.devices`
@@ -290,7 +290,7 @@ Optional:
 
 Optional:
 
-- `command` (String) The command used to install dependencies prior to running Playwright. The default value is the appropriate install command for your package manager (e.g. `npm install` for `npm`). Can't be empty: leave it out to use the default command.
+- `command` (String) The command used to install dependencies prior to running Playwright. Can't be empty. If not set, the install command of your package manager is used, for example `npm install` for `npm`.
 
 
 <a id="nestedatt--runtime--steps--test"></a>
@@ -298,7 +298,7 @@ Optional:
 
 Optional:
 
-- `command` (String) The command used to run Playwright. The default value is the appropriate exec command for your package manager (e.g. `npx playwright test` for `npm`). Can't be empty: leave it out to use the default command.
+- `command` (String) The command used to run Playwright. Can't be empty. If not set, the exec command of your package manager is used, for example `npx playwright test` for `npm`.
 
 
 
@@ -312,7 +312,7 @@ Required:
 - `name` (String) The name of the incident.
 - `notify_subscribers` (Boolean) Whether to notify subscribers when the incident is triggered.
 - `service_id` (String) The status page service that this incident will be associated with.
-- `severity` (String) The severity level of the incident. Possible values are `MINOR`, `MEDIUM`, `MAJOR`, and `CRITICAL`.
+- `severity` (String) The severity level of the incident. Possible values are `MINOR`, `MEDIUM`, `MAJOR` and `CRITICAL`.
 
 ## Import
 

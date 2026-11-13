@@ -193,30 +193,30 @@ moved {
 
 ### Optional
 
-- `activated` (Boolean) Determines whether the check runs on its schedule. (Default `true`).
+- `activated` (Boolean) Determines whether the check runs on its schedule. Defaults to `true`.
 - `ai_auto_repair_enabled` (Boolean) Overrides the account's automatic repair setting for this check. Leave it out to inherit the account setting. Automatic repair supports browser and multi-step checks only, so this setting has no effect on other check types today, and it needs an `intent` with at least one statement. A repair is saved to the check, so it shows as a change to `script`, and the next apply restores the configured script unless you copy the repaired script into the configuration or add `script` to `ignore_changes`. An override edited in the web app and absent from the configuration is removed by the next apply, every time. To leave it to the web app, add `ai_auto_repair_enabled` to `ignore_changes`.
 - `alert_channel_subscriptions` (Attributes Set) A set of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your check, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedatt--alert_channel_subscriptions))
 - `alert_settings` (Attributes) Determines the alert escalation policy for the check. (see [below for nested schema](#nestedatt--alert_settings))
-- `degraded_response_time` (Number) The response time in milliseconds where the check should be considered degraded. Possible values are between `0` and `30000`, or up to `45000` if extended limits have been approved for your account. (Default `5000`).
+- `degraded_response_time` (Number) The response time in milliseconds where the check should be considered degraded. Possible values are between `0` and `30000`, or up to `45000` if extended limits have been approved for your account. Defaults to `5000`.
 - `description` (String) A description of the check.
-- `frequency` (Number) Controls how often the check should run. Defined in minutes. The allowed values are `0` (high frequency - use `frequency_offset` to define the actual frequency), `1` (1 minute), `2` (2 minutes), `5` (5 minutes), `10` (10 minutes), `15` (15 minutes), `30` (30 minutes), `60` (1 hour), `120` (2 hours), `180` (3 hours), `360` (6 hours), `720` (12 hours) and `1440` (24 hours). (Default `10`).
-- `frequency_offset` (Number) When `frequency` is `0` (high frequency), `frequency_offset` is required and it alone controls how often the check should run. Defined in seconds. The allowed values are `0` (disabled - use `frequency` to define the actual frequency), `10` (10 seconds), `20` (20 seconds) and `30` (30 seconds).
-- `group_id` (Number) The ID of the check group the check is part of (at least `1`). When unset, the check is not part of a group.
-- `group_order` (Number) The position of the check in its check group (at least `0`), which sets the order in which the checks and monitors of the group run when the group is triggered from the API or CI/CD. When unset, the check has no position in the group.
+- `frequency` (Number) Controls how often the check should run. Defined in minutes. Possible values are `0` (high frequency - use `frequency_offset` to define the actual frequency), `1` (1 minute), `2` (2 minutes), `5` (5 minutes), `10` (10 minutes), `15` (15 minutes), `30` (30 minutes), `60` (1 hour), `120` (2 hours), `180` (3 hours), `360` (6 hours), `720` (12 hours) and `1440` (24 hours). Defaults to `10`.
+- `frequency_offset` (Number) When `frequency` is `0` (high frequency), `frequency_offset` is required and it alone controls how often the check should run. Defined in seconds. Possible values are `0` (disabled - use `frequency` to define the actual frequency), `10` (10 seconds), `20` (20 seconds) and `30` (30 seconds).
+- `group_id` (Number) The ID of the check group the check is part of. Must be at least `1`. If not set, the check is not part of a group.
+- `group_order` (Number) The position of the check in its check group, which sets the order in which the checks and monitors of the group run when the group is triggered from the API or CI/CD. Must be at least `0`. If not set, the check has no position in the group.
 - `intent` (Attributes) Guidance for root cause analysis and automatic repair: what this check protects, and which changes keep it meaningful. Automatic repair supports browser and multi-step checks only, and refuses an intent with no statements: a `goal` on its own is accepted here, but repair needs at least one statement in either `required_outcomes` or `must_preserve`. An intent edited in the web app and absent from the configuration is removed by the next apply, every time. To leave it to the web app, add `intent` to `ignore_changes`. (see [below for nested schema](#nestedatt--intent))
 - `local_setup_script` (String) A valid piece of Node.js code to run in the setup phase.
 - `local_teardown_script` (String) A valid piece of Node.js code to run in the teardown phase.
 - `locations` (Set of String) The data center locations to run the check from, such as `us-east-1`. The check needs at least one location in `locations` or `private_locations`, unless it is part of a check group.
-- `max_response_time` (Number) The response time in milliseconds where the check should be considered failing. Possible values are between `0` and `30000`, or up to `45000` if extended limits have been approved for your account. (Default `20000`).
-- `muted` (Boolean) Determines whether notifications are sent when the check fails, degrades or recovers. (Default `false`).
+- `max_response_time` (Number) The response time in milliseconds where the check should be considered failing. Possible values are between `0` and `30000`, or up to `45000` if extended limits have been approved for your account. Defaults to `20000`.
+- `muted` (Boolean) Determines whether notifications are sent when the check fails, degrades or recovers. Defaults to `false`.
 - `private_locations` (Set of String) The slugs of the private locations to run the check from.
 - `retry_strategy` (Attributes) A strategy for retrying failed check/monitor runs. (see [below for nested schema](#nestedatt--retry_strategy))
-- `run_parallel` (Boolean) Determines whether the check runs in all its locations in parallel instead of in one location at a time, round-robin. (Default `false`).
-- `runtime_id` (String) The ID of the runtime to use for the check. When unset, the account's default runtime is used.
-- `setup_snippet_id` (Number) The ID of the snippet to run in the setup phase of the API check (at least `1`). When unset, no setup snippet runs.
-- `should_fail` (Boolean) Inverts when the check is considered to fail. Use it to validate an error status such as 404. (Default `false`).
+- `run_parallel` (Boolean) Determines whether the check runs in all its locations in parallel instead of in one location at a time, round-robin. Defaults to `false`.
+- `runtime_id` (String) The ID of the runtime to use for the check. If not set, the account's default runtime is used.
+- `setup_snippet_id` (Number) The ID of the snippet to run in the setup phase of the API check. Must be at least `1`. If not set, no setup snippet runs.
+- `should_fail` (Boolean) Inverts when the check is considered to fail. Defaults to `false`. Use it to validate an error status such as 404.
 - `tags` (Set of String) Tags for organizing and filtering checks and monitors.
-- `teardown_snippet_id` (Number) The ID of the snippet to run in the teardown phase of the API check (at least `1`). When unset, no teardown snippet runs.
+- `teardown_snippet_id` (Number) The ID of the snippet to run in the teardown phase of the API check. Must be at least `1`. If not set, no teardown snippet runs.
 - `trigger_incident` (Attributes) Create and resolve an incident based on the alert configuration. Useful for status page automation. (see [below for nested schema](#nestedatt--trigger_incident))
 - `use_global_alert_settings` (Boolean) When true, the account level alert settings are used instead of the `alert_settings` of this check. Defaults to `true` when `alert_settings` is not set, and to `false` when it is.
 
@@ -229,28 +229,28 @@ moved {
 
 Required:
 
-- `url` (String) The URL to call (1 to 2048 characters).
+- `url` (String) The URL to call. Must be between `1` and `2048` characters.
 
 Optional:
 
 - `assertions` (Attributes Set) A request can have multiple assertions. (see [below for nested schema](#nestedatt--request--assertions))
 - `basic_auth` (Attributes) Set up HTTP basic authentication (username & password). (see [below for nested schema](#nestedatt--request--basic_auth))
 - `body` (String) The body of the request.
-- `body_type` (String) The `Content-Type` header of the request. Possible values `NONE`, `JSON`, `FORM`, `RAW`, and `GRAPHQL`. (Default `NONE`).
-- `follow_redirects` (Boolean) Whether to follow HTTP redirects. (Default `false`).
+- `body_type` (String) The `Content-Type` header of the request. Possible values are `NONE`, `JSON`, `FORM`, `RAW` and `GRAPHQL`. Defaults to `NONE`.
+- `follow_redirects` (Boolean) Whether to follow HTTP redirects. Defaults to `false`.
 - `headers` (Map of String) HTTP headers to send with the request, as a map of header names to values. The values are not sensitive and show in plan output. To keep a credential in a header out of plan output, take it from a variable declared with `sensitive = true` or wrap it in `sensitive(...)`.
-- `ip_family` (String) IP Family to be used when executing the api check. The value can be either IPv4 or IPv6. (Default `IPv4`).
-- `method` (String) The HTTP method to use for this API check. Possible values are `GET`, `POST`, `PUT`, `HEAD`, `DELETE`, `PATCH`. (Default `GET`).
+- `ip_family` (String) IP Family to be used when executing the api check. Possible values are `IPv4` and `IPv6`. Defaults to `IPv4`.
+- `method` (String) The HTTP method to use for this API check. Possible values are `GET`, `POST`, `PUT`, `HEAD`, `DELETE` and `PATCH`. Defaults to `GET`.
 - `query_parameters` (Map of String) Query parameters to add to the request URL, as a map of parameter names to values. The values are not sensitive and show in plan output. To keep a credential in a parameter out of plan output, take it from a variable declared with `sensitive = true` or wrap it in `sensitive(...)`.
-- `skip_ssl` (Boolean) Whether to skip TLS certificate validation of the request. (Default `false`).
+- `skip_ssl` (Boolean) Whether to skip TLS certificate validation of the request. Defaults to `false`.
 
 <a id="nestedatt--request--assertions"></a>
 ### Nested Schema for `request.assertions`
 
 Required:
 
-- `comparison` (String) The type of comparison to be executed between expected and actual value of the assertion. Possible values `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL`, and `NOT_NULL`.
-- `source` (String) The source of the asserted value. Possible values `STATUS_CODE`, `JSON_BODY`, `HEADERS`, `TEXT_BODY`, and `RESPONSE_TIME`.
+- `comparison` (String) The type of comparison to be executed between expected and actual value of the assertion. Possible values are `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL` and `NOT_NULL`.
+- `source` (String) The source of the asserted value. Possible values are `STATUS_CODE`, `JSON_BODY`, `HEADERS`, `TEXT_BODY` and `RESPONSE_TIME`.
 
 Optional:
 
@@ -282,7 +282,7 @@ Required:
 
 Optional:
 
-- `escalation_type` (String) Determines the type of escalation to use. Possible values are `RUN_BASED` and `TIME_BASED`. (Default `RUN_BASED`).
+- `escalation_type` (String) Determines the type of escalation to use. Possible values are `RUN_BASED` and `TIME_BASED`. Defaults to `RUN_BASED`.
 - `parallel_run_failure_threshold` (Attributes) Configuration for parallel run failure threshold. (see [below for nested schema](#nestedatt--alert_settings--parallel_run_failure_threshold))
 - `reminders` (Attributes) Defines how often to send reminder notifications after the initial alert. (see [below for nested schema](#nestedatt--alert_settings--reminders))
 - `run_based_escalation` (Attributes) Configuration for run-based escalation. (see [below for nested schema](#nestedatt--alert_settings--run_based_escalation))
@@ -293,8 +293,8 @@ Optional:
 
 Optional:
 
-- `enabled` (Boolean) Whether parallel run failure threshold is enabled. Only applies if the check is scheduled for multiple locations in parallel. (Default `false`).
-- `percentage` (Number) Percentage of runs that must fail to trigger alert. Possible values are `10`, `20`, `30`, `40`, `50`, `60`, `70`, `80`, `90`, and `100`. (Default `10`).
+- `enabled` (Boolean) Whether parallel run failure threshold is enabled. Only applies if the check is scheduled for multiple locations in parallel. Defaults to `false`.
+- `percentage` (Number) Percentage of runs that must fail to trigger alert. Possible values are `10`, `20`, `30`, `40`, `50`, `60`, `70`, `80`, `90` and `100`. Defaults to `10`.
 
 
 <a id="nestedatt--alert_settings--reminders"></a>
@@ -302,8 +302,8 @@ Optional:
 
 Optional:
 
-- `amount` (Number) Number of reminder notifications to send. Possible values are `0`, `1`, `2`, `3`, `4`, `5`, and `100000` (`0` to disable, `100000` for unlimited). (Default `0`).
-- `interval` (Number) Interval between reminder notifications in minutes. Possible values are `5`, `10`, `15`, and `30`. (Default `5`).
+- `amount` (Number) Number of reminder notifications to send. Possible values are `0`, `1`, `2`, `3`, `4`, `5` and `100000` (`0` to disable, `100000` for unlimited). Defaults to `0`.
+- `interval` (Number) Interval between reminder notifications in minutes. Possible values are `5`, `10`, `15` and `30`. Defaults to `5`.
 
 
 <a id="nestedatt--alert_settings--run_based_escalation"></a>
@@ -311,7 +311,7 @@ Optional:
 
 Optional:
 
-- `failed_run_threshold` (Number) Send an alert notification after the given number of consecutive check runs have failed. Possible values are between `1` and `5`. (Default `1`).
+- `failed_run_threshold` (Number) Send an alert notification after the given number of consecutive check runs have failed. Possible values are between `1` and `5`. Defaults to `1`.
 
 
 <a id="nestedatt--alert_settings--time_based_escalation"></a>
@@ -319,7 +319,7 @@ Optional:
 
 Optional:
 
-- `minutes_failing_threshold` (Number) Send an alert notification after the check has been failing for the given amount of time (in minutes). Possible values are `5`, `10`, `15`, and `30`. (Default `5`).
+- `minutes_failing_threshold` (Number) Send an alert notification after the check has been failing for the given amount of time (in minutes). Possible values are `5`, `10`, `15` and `30`. Defaults to `5`.
 
 
 
@@ -328,12 +328,12 @@ Optional:
 
 Required:
 
-- `goal` (String) The user or system outcome the check protects (1 to 2000 characters, without leading or trailing whitespace).
+- `goal` (String) The user or system outcome the check protects. Must be between `1` and `2000` characters, without leading or trailing whitespace.
 
 Optional:
 
-- `must_preserve` (List of String) Guardrails an automatic repair must not weaken or bypass. At most 20 statements (1 to 1000 characters each, without leading or trailing whitespace).
-- `required_outcomes` (List of String) Observable outcomes the check must continue to prove. At most 20 statements (1 to 1000 characters each, without leading or trailing whitespace).
+- `must_preserve` (List of String) Guardrails an automatic repair must not weaken or bypass. Must contain at most `20` statements, each between `1` and `1000` characters, without leading or trailing whitespace.
+- `required_outcomes` (List of String) Observable outcomes the check must continue to prove. Must contain at most `20` statements, each between `1` and `1000` characters, without leading or trailing whitespace.
 
 
 <a id="nestedatt--retry_strategy"></a>
@@ -341,22 +341,22 @@ Optional:
 
 Required:
 
-- `type` (String) Determines which type of retry strategy to use. Possible values are `FIXED`, `LINEAR`, `EXPONENTIAL`, `SINGLE_RETRY`, and `NO_RETRIES`.
+- `type` (String) Determines which type of retry strategy to use. Possible values are `FIXED`, `LINEAR`, `EXPONENTIAL`, `SINGLE_RETRY` and `NO_RETRIES`.
 
 Optional:
 
-- `base_backoff_seconds` (Number) The number of seconds to wait before the first retry attempt (at least `0`). Not available when `type` is `NO_RETRIES`. (Default `60`).
-- `max_duration_seconds` (Number) The total amount of time to continue retrying the check/monitor (maximum 600 seconds). Available when `type` is `FIXED`, `LINEAR`, or `EXPONENTIAL`. (Default `600`).
-- `max_retries` (Number) The maximum number of times to retry the check/monitor. Value must be between `1` and `10`. Available when `type` is `FIXED`, `LINEAR`, or `EXPONENTIAL`. (Default `2`).
+- `base_backoff_seconds` (Number) The number of seconds to wait before the first retry attempt. Must be at least `0`. Defaults to `60`. Not available when `type` is `NO_RETRIES`.
+- `max_duration_seconds` (Number) The total amount of time to continue retrying the check/monitor, in seconds. Possible values are between `0` and `600`. Defaults to `600`. Available when `type` is `FIXED`, `LINEAR` or `EXPONENTIAL`.
+- `max_retries` (Number) The maximum number of times to retry the check/monitor. Possible values are between `1` and `10`. Defaults to `2`. Available when `type` is `FIXED`, `LINEAR` or `EXPONENTIAL`.
 - `only_on` (Attributes) Apply the retry strategy only if the defined conditions match. (see [below for nested schema](#nestedatt--retry_strategy--only_on))
-- `same_region` (Boolean) Whether retries should be run in the same region as the initial check/monitor run. Not available when `type` is `NO_RETRIES`. (Default `true`).
+- `same_region` (Boolean) Whether retries should be run in the same region as the initial check/monitor run. Defaults to `true`. Not available when `type` is `NO_RETRIES`.
 
 <a id="nestedatt--retry_strategy--only_on"></a>
 ### Nested Schema for `retry_strategy.only_on`
 
 Optional:
 
-- `network_error` (Boolean) When `true`, retry only if the cause of the failure is a network error. (Default `false`).
+- `network_error` (Boolean) When `true`, retry only if the cause of the failure is a network error. Defaults to `false`.
 
 
 
@@ -369,7 +369,7 @@ Required:
 - `name` (String) The name of the incident.
 - `notify_subscribers` (Boolean) Whether to notify subscribers when the incident is triggered.
 - `service_id` (String) The status page service that this incident will be associated with.
-- `severity` (String) The severity level of the incident. Possible values are `MINOR`, `MEDIUM`, `MAJOR`, and `CRITICAL`.
+- `severity` (String) The severity level of the incident. Possible values are `MINOR`, `MEDIUM`, `MAJOR` and `CRITICAL`.
 
 ## Import
 

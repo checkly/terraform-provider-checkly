@@ -86,7 +86,7 @@ func (r *ClientCertificateResource) Schema(ctx context.Context, req resource.Sch
 			},
 			"host": schema.StringAttribute{
 				Required:    true,
-				Description: "The host domain that the certificate should be used for (at most 255 characters). Wildcards are supported, e.g. `*.acme.com`.",
+				Description: "The host domain that the certificate should be used for. Wildcards are supported, e.g. `*.acme.com`. Must be at most `255` characters.",
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthAtMost(255),
 				},
@@ -102,7 +102,7 @@ func (r *ClientCertificateResource) Schema(ctx context.Context, req resource.Sch
 					"trailing `/` is ignored. The path must already be in the form the API stores: segments " +
 					"separated by single slashes, with no `.` or `..` segments, no whitespace, control characters, " +
 					"`?`, `#` or `\\`, and with non-ASCII characters and the characters `` \"<>^`{} `` " +
-					"percent-encoded, e.g. `%7B` for `{` (at most " + strconv.Itoa(clientCertificatePathMaxLength) + " characters). " +
+					"percent-encoded, e.g. `%7B` for `{`. Must be at most `" + strconv.Itoa(clientCertificatePathMaxLength) + "` characters. " +
 					"API checks and Multistep checks match on path; gRPC, SSL and TCP " +
 					"monitors only use certificates without a path. Omit it to use the " +
 					"certificate for every path on the host.",
@@ -159,7 +159,7 @@ func (r *ClientCertificateResource) Schema(ctx context.Context, req resource.Sch
 			"passphrase": schema.StringAttribute{
 				Optional:    true,
 				Sensitive:   true,
-				Description: "Passphrase for the private key (at most 95 bytes).",
+				Description: "Passphrase for the private key. Must be at most `95` bytes.",
 				Validators: []validator.String{
 					stringvalidator.LengthAtMost(95),
 				},

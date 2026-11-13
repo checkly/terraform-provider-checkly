@@ -209,31 +209,31 @@ func (r *AlertChannelResource) Schema(ctx context.Context, req resource.SchemaRe
 				Optional:    true,
 				Computed:    true,
 				Default:     booldefault.StaticBool(true),
-				Description: "Whether to send an alert when a check recovers. (Default `true`).",
+				Description: "Whether to send an alert when a check recovers. Defaults to `true`.",
 			},
 			"send_failure": schema.BoolAttribute{
 				Optional:    true,
 				Computed:    true,
 				Default:     booldefault.StaticBool(true),
-				Description: "Whether to send an alert when a check fails. (Default `true`).",
+				Description: "Whether to send an alert when a check fails. Defaults to `true`.",
 			},
 			"send_degraded": schema.BoolAttribute{
 				Optional:    true,
 				Computed:    true,
 				Default:     booldefault.StaticBool(false),
-				Description: "Whether to send an alert when a check is degraded. (Default `false`).",
+				Description: "Whether to send an alert when a check is degraded. Defaults to `false`.",
 			},
 			"ssl_expiry": schema.BoolAttribute{
 				Optional:    true,
 				Computed:    true,
 				Default:     booldefault.StaticBool(false),
-				Description: "Whether to send an alert for expiring SSL certificates. (Default `false`).",
+				Description: "Whether to send an alert for expiring SSL certificates. Defaults to `false`.",
 			},
 			"ssl_expiry_threshold": schema.Int64Attribute{
 				Optional:    true,
 				Computed:    true,
 				Default:     int64default.StaticInt64(30),
-				Description: "How many days before an SSL certificate expires to start sending alerts, when `ssl_expiry` is enabled. Value must be between 1 and 30. (Default `30`).",
+				Description: "How many days before an SSL certificate expires to start sending alerts, when `ssl_expiry` is enabled. Possible values are between `1` and `30`. Defaults to `30`.",
 				Validators: []validator.Int64{
 					int64validator.Between(1, 30),
 				},
@@ -242,7 +242,7 @@ func (r *AlertChannelResource) Schema(ctx context.Context, req resource.SchemaRe
 				Optional:    true,
 				Computed:    true,
 				Default:     booldefault.StaticBool(false),
-				Description: "Whether new checks are subscribed to this alert channel automatically. Only the web app, which preselects the channel when you create a check there, and the Vercel integration, for the checks it creates, act on it. Checks created through the API, the Checkly CLI or Terraform are not subscribed, and neither are existing checks; subscribe them with `alert_channel_subscriptions`. (Default `false`).",
+				Description: "Whether new checks are subscribed to this alert channel automatically. Only the web app, which preselects the channel when you create a check there, and the Vercel integration, for the checks it creates, act on it. Checks created through the API, the Checkly CLI or Terraform are not subscribed, and neither are existing checks; subscribe them with `alert_channel_subscriptions`. Defaults to `false`.",
 			},
 			"email": schema.SingleNestedAttribute{
 				Optional:    true,
@@ -334,7 +334,7 @@ func (r *AlertChannelResource) Schema(ctx context.Context, req resource.SchemaRe
 						Optional:    true,
 						Computed:    true,
 						Default:     stringdefault.StaticString("POST"),
-						Description: "The HTTP method of the webhook request, such as `GET`, `POST`, `PUT`, `HEAD`, `DELETE` or `PATCH`. Must not be empty. (Default `POST`).",
+						Description: "The HTTP method of the webhook request, such as `GET`, `POST`, `PUT`, `HEAD`, `DELETE` or `PATCH`. Must not be empty. Defaults to `POST`.",
 						Validators: []validator.String{
 							// The API stores any method as given and the
 							// webhook sender passes it on, so only an empty
@@ -359,7 +359,7 @@ func (r *AlertChannelResource) Schema(ctx context.Context, req resource.SchemaRe
 					},
 					"template": schema.StringAttribute{
 						Optional:    true,
-						Description: "The body of the webhook request, which can contain template variables such as `{{ALERT_TITLE}}` and `{{RESULT_LINK}}`. When not set, Checkly sends its default JSON payload.",
+						Description: "The body of the webhook request, which can contain template variables such as `{{ALERT_TITLE}}` and `{{RESULT_LINK}}`. If not set, Checkly sends its default JSON payload.",
 					},
 					"url": schema.StringAttribute{
 						Required:    true,

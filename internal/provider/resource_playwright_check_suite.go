@@ -221,7 +221,7 @@ func (r *PlaywrightCheckSuiteResource) Schema(ctx context.Context, req resource.
 						Default:  booldefault.StaticBool(true),
 						Description: "Whether to automatically detect appropriate runtime environment " +
 							"configuration from the bundle. " +
-							"(Default `true`).",
+							"Defaults to `true`.",
 					},
 					"working_dir": schema.StringAttribute{
 						Optional: true,
@@ -246,10 +246,9 @@ func (r *PlaywrightCheckSuiteResource) Schema(ctx context.Context, req resource.
 									"command": schema.StringAttribute{
 										Optional: true,
 										Description: "The command used to install dependencies prior to " +
-											"running Playwright. The default value is the appropriate " +
-											"install command for your package manager (e.g. " +
-											"`npm install` for `npm`). Can't be empty: leave it out to " +
-											"use the default command.",
+											"running Playwright. Can't be empty. If not set, the " +
+											"install command of your package manager is used, for " +
+											"example `npm install` for `npm`.",
 										// The API stores an empty command as no command, so
 										// an empty one would show as a change in every plan.
 										Validators: []validator.String{
@@ -266,10 +265,9 @@ func (r *PlaywrightCheckSuiteResource) Schema(ctx context.Context, req resource.
 									"command": schema.StringAttribute{
 										Optional: true,
 										Computed: true,
-										Description: "The command used to run Playwright. The default " +
-											"value is the appropriate exec command for your package " +
-											"manager (e.g. `npx playwright test` for `npm`). Can't be " +
-											"empty: leave it out to use the default command.",
+										Description: "The command used to run Playwright. Can't be empty. " +
+											"If not set, the exec command of your package manager is " +
+											"used, for example `npx playwright test` for `npm`.",
 										// An empty command is not sent, so the API applies its
 										// default command, which differs from the planned value.
 										Validators: []validator.String{
@@ -289,15 +287,15 @@ func (r *PlaywrightCheckSuiteResource) Schema(ctx context.Context, req resource.
 							"version": schema.StringAttribute{
 								Optional: true,
 								Computed: true,
-								Description: "The Playwright version to use. Defaults to the " +
-									"version detected from the code bundle's lockfile.",
+								Description: "The Playwright version to use. If not set, the " +
+									"version detected from the code bundle's lockfile is used.",
 							},
 							"devices": schema.SetNestedAttribute{
 								Optional: true,
 								Computed: true,
 								Description: "The list of devices that should be made available for Playwright. " +
-									"Defaults to chromium, firefox, and webkit, whether or not `auto_detect` is enabled. " +
-									"Can't be empty: leave it out to use the default devices.",
+									"Can't be empty. If not set, `chromium`, `firefox` and `webkit` are used, " +
+									"whether or not `auto_detect` is enabled.",
 								// An empty set can't be planned as the default devices,
 								// since Terraform requires the planned value of a
 								// configured attribute to match the configuration, and it
@@ -340,7 +338,7 @@ func (r *PlaywrightCheckSuiteResource) Schema(ctx context.Context, req resource.
 						Attributes: map[string]schema.Attribute{
 							"name": schema.StringAttribute{
 								Required:    true,
-								Description: `The engine name. Valid values are "node" or "bun".`,
+								Description: "The engine name. Possible values are `node` and `bun`.",
 								Validators: []validator.String{
 									stringvalidator.OneOf("node", "bun"),
 								},

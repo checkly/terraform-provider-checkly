@@ -299,16 +299,16 @@ resource "checkly_check_group_v2" "single-retry" {
 
 ### Optional
 
-- `activated` (Boolean) Determines whether the checks and monitors in the group run on their schedule. Deactivating the group stops all of them, regardless of their own `activated`. (Default `true`).
+- `activated` (Boolean) Determines whether the checks and monitors in the group run on their schedule. Deactivating the group stops all of them, regardless of their own `activated`. Defaults to `true`.
 - `api_check_defaults` (Attributes) Default settings for API checks in this group. (see [below for nested schema](#nestedatt--api_check_defaults))
-- `concurrency` (Number) Determines the number of checks to run concurrently when triggering the check group via CI/CD or the API. (Default `1`).
+- `concurrency` (Number) Determines the number of checks to run concurrently when triggering the check group via CI/CD or the API. Defaults to `1`.
 - `default_runtime` (Attributes) Sets a default runtime for the group. Used as a fallback when a check belonging to the group has no runtime set. Takes precedence over the account default runtime. (see [below for nested schema](#nestedatt--default_runtime))
 - `enforce_alert_settings` (Attributes) Enforces alert settings for the whole group. Overrides check configuration. (see [below for nested schema](#nestedatt--enforce_alert_settings))
 - `enforce_locations` (Attributes) Enforces public and private locations for the whole group. Overrides check configuration. (see [below for nested schema](#nestedatt--enforce_locations))
 - `enforce_retry_strategy` (Attributes) Enforces a retry strategy for the whole group. Overrides check configuration. (see [below for nested schema](#nestedatt--enforce_retry_strategy))
 - `enforce_scheduling_strategy` (Attributes) Enforces a scheduling strategy for the whole group. Overrides check configuration. (see [below for nested schema](#nestedatt--enforce_scheduling_strategy))
-- `environment_variables` (Attributes List) Insert environment variables into the runtime environment of checks in the group. Only relevant for check types that support environment variables. Use global environment variables whenever possible. At most 200 variables. (see [below for nested schema](#nestedatt--environment_variables))
-- `muted` (Boolean) Determines whether notifications are sent when a check or monitor in the group fails or recovers. Muting the group mutes all of them, regardless of their own `muted`. (Default `false`).
+- `environment_variables` (Attributes List) Insert environment variables into the runtime environment of checks in the group. Only relevant for check types that support environment variables. Use global environment variables whenever possible. Must contain at most `200` variables. (see [below for nested schema](#nestedatt--environment_variables))
+- `muted` (Boolean) Determines whether notifications are sent when a check or monitor in the group fails or recovers. Muting the group mutes all of them, regardless of their own `muted`. Defaults to `false`.
 - `setup_script` (Attributes) A script to run in the setup phase of an API check. Runs in addition to the check's own setup script. (see [below for nested schema](#nestedatt--setup_script))
 - `tags` (Set of String) Tags for organizing and filtering checks and monitors. The checks and monitors in the group also carry these tags, for example when maintenance windows and status page automation rules select checks by tag.
 - `teardown_script` (Attributes) A script to run in the teardown phase of an API check. Runs in addition to the check's own teardown script. (see [below for nested schema](#nestedatt--teardown_script))
@@ -336,8 +336,8 @@ Optional:
 
 Required:
 
-- `comparison` (String) The type of comparison to be executed between expected and actual value of the assertion. Possible values `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL`, and `NOT_NULL`.
-- `source` (String) The source of the asserted value. Possible values `STATUS_CODE`, `JSON_BODY`, `HEADERS`, `TEXT_BODY`, and `RESPONSE_TIME`.
+- `comparison` (String) The type of comparison to be executed between expected and actual value of the assertion. Possible values are `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL` and `NOT_NULL`.
+- `source` (String) The source of the asserted value. Possible values are `STATUS_CODE`, `JSON_BODY`, `HEADERS`, `TEXT_BODY` and `RESPONSE_TIME`.
 - `target` (String) The value to compare against.
 
 Optional:
@@ -390,7 +390,7 @@ Required:
 
 Optional:
 
-- `escalation_type` (String) Determines the type of escalation to use. Possible values are `RUN_BASED` and `TIME_BASED`. (Default `RUN_BASED`).
+- `escalation_type` (String) Determines the type of escalation to use. Possible values are `RUN_BASED` and `TIME_BASED`. Defaults to `RUN_BASED`.
 - `parallel_run_failure_threshold` (Attributes) Configuration for parallel run failure threshold. (see [below for nested schema](#nestedatt--enforce_alert_settings--alert_settings--parallel_run_failure_threshold))
 - `reminders` (Attributes) Defines how often to send reminder notifications after the initial alert. (see [below for nested schema](#nestedatt--enforce_alert_settings--alert_settings--reminders))
 - `run_based_escalation` (Attributes) Configuration for run-based escalation. (see [below for nested schema](#nestedatt--enforce_alert_settings--alert_settings--run_based_escalation))
@@ -401,8 +401,8 @@ Optional:
 
 Optional:
 
-- `enabled` (Boolean) Whether parallel run failure threshold is enabled. Only applies to the checks and monitors in the group that are scheduled for multiple locations in parallel. (Default `false`).
-- `percentage` (Number) Percentage of runs that must fail to trigger alert. Possible values are `10`, `20`, `30`, `40`, `50`, `60`, `70`, `80`, `90`, and `100`. (Default `10`).
+- `enabled` (Boolean) Whether parallel run failure threshold is enabled. Only applies to the checks and monitors in the group that are scheduled for multiple locations in parallel. Defaults to `false`.
+- `percentage` (Number) Percentage of runs that must fail to trigger alert. Possible values are `10`, `20`, `30`, `40`, `50`, `60`, `70`, `80`, `90` and `100`. Defaults to `10`.
 
 
 <a id="nestedatt--enforce_alert_settings--alert_settings--reminders"></a>
@@ -410,8 +410,8 @@ Optional:
 
 Optional:
 
-- `amount` (Number) Number of reminder notifications to send. Possible values are `0`, `1`, `2`, `3`, `4`, `5`, and `100000` (`0` to disable, `100000` for unlimited). (Default `0`).
-- `interval` (Number) Interval between reminder notifications in minutes. Possible values are `5`, `10`, `15`, and `30`. (Default `5`).
+- `amount` (Number) Number of reminder notifications to send. Possible values are `0`, `1`, `2`, `3`, `4`, `5` and `100000` (`0` to disable, `100000` for unlimited). Defaults to `0`.
+- `interval` (Number) Interval between reminder notifications in minutes. Possible values are `5`, `10`, `15` and `30`. Defaults to `5`.
 
 
 <a id="nestedatt--enforce_alert_settings--alert_settings--run_based_escalation"></a>
@@ -419,7 +419,7 @@ Optional:
 
 Optional:
 
-- `failed_run_threshold` (Number) Send an alert notification after the given number of consecutive runs of a check or monitor in the group have failed. Possible values are between `1` and `5`. (Default `1`).
+- `failed_run_threshold` (Number) Send an alert notification after the given number of consecutive runs of a check or monitor in the group have failed. Possible values are between `1` and `5`. Defaults to `1`.
 
 
 <a id="nestedatt--enforce_alert_settings--alert_settings--time_based_escalation"></a>
@@ -427,7 +427,7 @@ Optional:
 
 Optional:
 
-- `minutes_failing_threshold` (Number) Send an alert notification after a check or monitor in the group has been failing for the given amount of time (in minutes). Possible values are `5`, `10`, `15`, and `30`. (Default `5`).
+- `minutes_failing_threshold` (Number) Send an alert notification after a check or monitor in the group has been failing for the given amount of time (in minutes). Possible values are `5`, `10`, `15` and `30`. Defaults to `5`.
 
 
 
@@ -458,22 +458,22 @@ Required:
 
 Required:
 
-- `type` (String) Determines which type of retry strategy to use. Possible values are `FIXED`, `LINEAR`, `EXPONENTIAL`, `SINGLE_RETRY`, and `NO_RETRIES`.
+- `type` (String) Determines which type of retry strategy to use. Possible values are `FIXED`, `LINEAR`, `EXPONENTIAL`, `SINGLE_RETRY` and `NO_RETRIES`.
 
 Optional:
 
-- `base_backoff_seconds` (Number) The number of seconds to wait before the first retry attempt (at least `0`). Not available when `type` is `NO_RETRIES`. (Default `60`).
-- `max_duration_seconds` (Number) The total amount of time to continue retrying the check/monitor (maximum 600 seconds). Available when `type` is `FIXED`, `LINEAR`, or `EXPONENTIAL`. (Default `600`).
-- `max_retries` (Number) The maximum number of times to retry the check/monitor. Value must be between `1` and `10`. Available when `type` is `FIXED`, `LINEAR`, or `EXPONENTIAL`. (Default `2`).
+- `base_backoff_seconds` (Number) The number of seconds to wait before the first retry attempt. Must be at least `0`. Defaults to `60`. Not available when `type` is `NO_RETRIES`.
+- `max_duration_seconds` (Number) The total amount of time to continue retrying the check/monitor, in seconds. Possible values are between `0` and `600`. Defaults to `600`. Available when `type` is `FIXED`, `LINEAR` or `EXPONENTIAL`.
+- `max_retries` (Number) The maximum number of times to retry the check/monitor. Possible values are between `1` and `10`. Defaults to `2`. Available when `type` is `FIXED`, `LINEAR` or `EXPONENTIAL`.
 - `only_on` (Attributes) Apply the retry strategy only if the defined conditions match. (see [below for nested schema](#nestedatt--enforce_retry_strategy--retry_strategy--only_on))
-- `same_region` (Boolean) Whether retries should be run in the same region as the initial check/monitor run. Not available when `type` is `NO_RETRIES`. (Default `true`).
+- `same_region` (Boolean) Whether retries should be run in the same region as the initial check/monitor run. Defaults to `true`. Not available when `type` is `NO_RETRIES`.
 
 <a id="nestedatt--enforce_retry_strategy--retry_strategy--only_on"></a>
 ### Nested Schema for `enforce_retry_strategy.retry_strategy.only_on`
 
 Optional:
 
-- `network_error` (Boolean) When `true`, retry only if the cause of the failure is a network error. (Default `false`).
+- `network_error` (Boolean) When `true`, retry only if the cause of the failure is a network error. Defaults to `false`.
 
 
 
@@ -493,12 +493,12 @@ Required:
 Required:
 
 - `key` (String) The name of the environment variable or secret.
-- `value` (String, Sensitive) The value of the environment variable or secret. At most 64000 bytes in UTF-8, or 31744 bytes for a secret or locked variable. A secret value must have at least 3 characters.
+- `value` (String, Sensitive) The value of the environment variable or secret. Must be at most `64000` bytes in UTF-8, or `31744` bytes for a secret or locked variable. A secret value must be at least `3` characters.
 
 Optional:
 
-- `locked` (Boolean) If true, the value is not shown by default, but it can be accessed. (Default `false`).
-- `secret` (Boolean) If true, the value will never be visible. The API never returns secret values, so Terraform keeps the last applied value and does not detect changes made outside Terraform. (Default `false`).
+- `locked` (Boolean) If true, the value is not shown by default, but it can be accessed. Defaults to `false`.
+- `secret` (Boolean) If true, the value will never be visible. The API never returns secret values, so Terraform keeps the last applied value and does not detect changes made outside Terraform. Defaults to `false`.
 
 
 <a id="nestedatt--setup_script"></a>

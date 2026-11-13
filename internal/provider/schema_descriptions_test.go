@@ -13,7 +13,7 @@ import (
 // descriptionMarker matches the clauses that state a constraint on an
 // attribute's value rather than what the attribute is: a default, a range,
 // or a list of possible values.
-var descriptionMarker = regexp.MustCompile("(?i)\\(default [^)]*\\)|value must be (between|one of) [^.(]*|(the )?(possible|allowed) values( are| is)?:? [^.(]*")
+var descriptionMarker = regexp.MustCompile("(?i)defaults to `[^`]*`|must be (at least|at most|between) [^.(]*|(the only )?possible values?( are| is)?:? [^.(]*")
 
 // hasDescription reports whether description says what an attribute or
 // block is, beyond the constraint markers that descriptionMarker matches.
@@ -55,6 +55,11 @@ func walkAttributeDescriptions(t *testing.T, path string, a *tfprotov6.SchemaAtt
 	if gap := missingWord.FindString(a.Description); gap != "" {
 		t.Errorf("%s: description has a gap (%q), as left by an empty interpolated word: %q", path, gap, a.Description)
 	}
+	for _, s := range descriptionStyleViolations {
+		if s.pattern.MatchString(a.Description) {
+			t.Errorf("%s: description %s (see Attribute descriptions in CONTRIBUTING.md): %q", path, s.problem, a.Description)
+		}
+	}
 
 	if a.NestedType == nil {
 		return
@@ -63,6 +68,22 @@ func walkAttributeDescriptions(t *testing.T, path string, a *tfprotov6.SchemaAtt
 	for _, nested := range a.NestedType.Attributes {
 		walkAttributeDescriptions(t, path+"."+nested.Name, nested)
 	}
+}
+
+// descriptionStyleViolations match wording that the attribute description
+// convention in CONTRIBUTING.md replaces, so that new descriptions follow it.
+var descriptionStyleViolations = []struct {
+	pattern *regexp.Regexp
+	problem string
+}{
+	{regexp.MustCompile("\\(Default `"), "states a default as \"(Default `X`)\" instead of \"Defaults to `X`.\""},
+	{regexp.MustCompile("The allowed values are|The only allowed value is"), "lists values as \"allowed values\" instead of \"Possible values are\""},
+	{regexp.MustCompile("(?i)possible values `"), "lists values without \"are\" after \"Possible values\""},
+	{regexp.MustCompile("(?i)value must be (between|one of)"), "states a range or values as \"Value must be\" instead of \"Possible values are\""},
+	{regexp.MustCompile("(?i)the value can be either"), "lists values as \"The value can be either\" instead of \"Possible values are\""},
+	{regexp.MustCompile("`, (and|or) `"), "has a comma before the last element of a list"},
+	{regexp.MustCompile("Defaults to .*([Pp]ossible values? (are|is)|[Mm]ust be (at least|at most|between))"), "states a restriction after the default"},
+	{regexp.MustCompile("When unset|When not set"), "states a conditional default as \"When unset\" instead of \"If not set\""},
 }
 
 // TestEveryAttributeHasDescription keeps the generated documentation

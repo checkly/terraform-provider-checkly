@@ -24,7 +24,7 @@ Hi! We are really excited that you are interested in contributing to Checkly Ter
 
 - Add accompanying documentation, usage samples & test cases
 - Add/update demo files to showcase your changes.
-- Use existing resources as templates and ensure that each property has a corresponding `description` field.
+- Use existing resources as templates and ensure that each property has a corresponding `description` field, written as described in [Attribute descriptions](#attribute-descriptions).
 - Each PR should be linked with an issue, use [GitHub keywords](https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/using-keywords-in-issues-and-pull-requests) for that.
 - Be sure to follow up project code styles (`$ make fmt`)
 
@@ -40,6 +40,21 @@ Hi! We are really excited that you are interested in contributing to Checkly Ter
 - Make sure tests pass!
 
 - Commit messages must follow the [semantic commit messages](https://gist.github.com/joshbuchea/6f47e86d2510bce28f8e7f42ae84c716) so that changelogs can be automatically generated.
+
+### Attribute descriptions
+
+Attribute descriptions are the source of the generated documentation. Start with what the attribute is, then state its restrictions and default in this order:
+
+1. Allowed values: "Possible values are `A`, `B` and `C`." (no Oxford comma), "Possible values are `A` and `B`." or "The only possible value is `X`." Hand-written lists use the same wording as the lists the `allowedValues` helper renders, including per-value descriptions such as "`all` (both families)".
+2. Ranges: "Possible values are between `1` and `65535`."
+3. Single bounds: "Must be at least `0`." or "Must be at most `600`."
+4. Lengths: "Must be at most `255` characters." or "Must be between `1` and `2048` characters."
+5. Formats, in plain prose: "Must be a UUID."
+6. Static defaults, after the restrictions: "Defaults to `IPv4`." Keep the value's own form inside the backticks, such as `true` or `10`. Empty-string defaults of free-text attributes, and empty collections, are not documented.
+7. Conditional or API-side defaults, in prose: "If not set, the account's default runtime is used."
+8. Other notes, after the default: conditional and cross-attribute restrictions such as "Can't be combined with …", "Must not be set when …", "Required when …" and "Not available when …", applicability notes such as "Only relevant when `type` is `API`.", replacement notes such as "Changing this forces a new resource to be created.", and deprecations.
+
+For example: "The IP family to use. Possible values are `IPv4` and `IPv6`. Defaults to `IPv4`." A sentence that explains a value, such as "`0` disables the cool down.", can stay next to the restriction it explains.
 
 ## Pull request review: Ship / Show / Ask
 

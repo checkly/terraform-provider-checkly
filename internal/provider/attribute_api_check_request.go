@@ -77,14 +77,14 @@ func apiCheckRequestAttributeSchema(opts apiCheckRequestAttributeSchemaOptions) 
 				Optional:    true,
 				Computed:    true,
 				Default:     stringdefault.StaticString("GET"),
-				Description: "The HTTP method to use for this API check. Possible values are `GET`, `POST`, `PUT`, `HEAD`, `DELETE`, `PATCH`. (Default `GET`).",
+				Description: "The HTTP method to use for this API check. Possible values are `GET`, `POST`, `PUT`, `HEAD`, `DELETE` and `PATCH`. Defaults to `GET`.",
 				Validators: []validator.String{
 					stringvalidator.OneOf("GET", "POST", "PUT", "HEAD", "DELETE", "PATCH"),
 				},
 			},
 			"url": schema.StringAttribute{
 				Required:    true,
-				Description: "The URL to call (1 to 2048 characters).",
+				Description: "The URL to call. Must be between `1` and `2048` characters.",
 				Validators: []validator.String{
 					utf16LengthBetween(1, 2048),
 				},
@@ -93,13 +93,13 @@ func apiCheckRequestAttributeSchema(opts apiCheckRequestAttributeSchemaOptions) 
 				Optional:    true,
 				Computed:    true,
 				Default:     booldefault.StaticBool(false),
-				Description: "Whether to follow HTTP redirects. (Default `false`).",
+				Description: "Whether to follow HTTP redirects. Defaults to `false`.",
 			},
 			"skip_ssl": schema.BoolAttribute{
 				Optional:    true,
 				Computed:    true,
 				Default:     booldefault.StaticBool(false),
-				Description: "Whether to skip TLS certificate validation of the request. (Default `false`).",
+				Description: "Whether to skip TLS certificate validation of the request. Defaults to `false`.",
 			},
 			"headers": schema.MapAttribute{
 				Optional:    true,
@@ -125,7 +125,7 @@ func apiCheckRequestAttributeSchema(opts apiCheckRequestAttributeSchemaOptions) 
 				Optional:    true,
 				Computed:    true,
 				Default:     stringdefault.StaticString("NONE"),
-				Description: "The `Content-Type` header of the request. Possible values `NONE`, `JSON`, `FORM`, `RAW`, and `GRAPHQL`. (Default `NONE`).",
+				Description: "The `Content-Type` header of the request. Possible values are `NONE`, `JSON`, `FORM`, `RAW` and `GRAPHQL`. Defaults to `NONE`.",
 				Validators: []validator.String{
 					stringvalidator.OneOf("NONE", "JSON", "FORM", "RAW", "GRAPHQL"),
 				},
@@ -147,7 +147,7 @@ func apiCheckRequestAttributeSchema(opts apiCheckRequestAttributeSchemaOptions) 
 					Attributes: map[string]schema.Attribute{
 						"source": schema.StringAttribute{
 							Required:    true,
-							Description: "The source of the asserted value. Possible values `STATUS_CODE`, `JSON_BODY`, `HEADERS`, `TEXT_BODY`, and `RESPONSE_TIME`.",
+							Description: "The source of the asserted value. Possible values are `STATUS_CODE`, `JSON_BODY`, `HEADERS`, `TEXT_BODY` and `RESPONSE_TIME`.",
 						},
 						"property": schema.StringAttribute{
 							Optional:    true,
@@ -156,7 +156,7 @@ func apiCheckRequestAttributeSchema(opts apiCheckRequestAttributeSchemaOptions) 
 						},
 						"comparison": schema.StringAttribute{
 							Required:    true,
-							Description: "The type of comparison to be executed between expected and actual value of the assertion. Possible values `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL`, and `NOT_NULL`.",
+							Description: "The type of comparison to be executed between expected and actual value of the assertion. Possible values are `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL` and `NOT_NULL`.",
 						},
 						"target": schema.StringAttribute{
 							Optional:    true,
@@ -185,7 +185,7 @@ func apiCheckRequestAttributeSchema(opts apiCheckRequestAttributeSchemaOptions) 
 				Optional:    true,
 				Computed:    true,
 				Default:     stringdefault.StaticString("IPv4"),
-				Description: "IP Family to be used when executing the api check. The value can be either IPv4 or IPv6. (Default `IPv4`).",
+				Description: "IP Family to be used when executing the api check. Possible values are `IPv4` and `IPv6`. Defaults to `IPv4`.",
 				Validators: []validator.String{
 					stringvalidator.OneOf("IPv4", "IPv6"),
 				},

@@ -121,7 +121,7 @@ func (r *URLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 				Optional:    true,
 				Computed:    true,
 				Default:     int64default.StaticInt64(3000),
-				Description: "The response time in milliseconds where the monitor should be considered degraded. Possible values are between `0` and `30000`, or up to `45000` if extended limits have been approved for your account. (Default `3000`).",
+				Description: "The response time in milliseconds where the monitor should be considered degraded. Possible values are between `0` and `30000`, or up to `45000` if extended limits have been approved for your account. Defaults to `3000`.",
 				Validators: []validator.Int64{
 					int64validator.Between(0, extendedResponseTimeLimit),
 				},
@@ -130,7 +130,7 @@ func (r *URLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 				Optional:    true,
 				Computed:    true,
 				Default:     int64default.StaticInt64(5000),
-				Description: "The response time in milliseconds where the monitor should be considered failing. Possible values are between `0` and `30000`, or up to `45000` if extended limits have been approved for your account. (Default `5000`).",
+				Description: "The response time in milliseconds where the monitor should be considered failing. Possible values are between `0` and `30000`, or up to `45000` if extended limits have been approved for your account. Defaults to `5000`.",
 				Validators: []validator.Int64{
 					int64validator.Between(0, extendedResponseTimeLimit),
 				},
@@ -148,7 +148,7 @@ func (r *URLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 				Attributes: map[string]schema.Attribute{
 					"url": schema.StringAttribute{
 						Required:    true,
-						Description: "The URL to monitor (1 to 2048 characters). Must be a valid HTTP or HTTPS URL.",
+						Description: "The URL to monitor. Must be between `1` and `2048` characters. Must be a valid HTTP or HTTPS URL.",
 						Validators: []validator.String{
 							utf16LengthBetween(1, 2048),
 						},
@@ -157,19 +157,19 @@ func (r *URLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 						Optional:    true,
 						Computed:    true,
 						Default:     booldefault.StaticBool(true),
-						Description: "Whether to follow HTTP redirects automatically. (Default `true`).",
+						Description: "Whether to follow HTTP redirects automatically. Defaults to `true`.",
 					},
 					"skip_ssl": schema.BoolAttribute{
 						Optional:    true,
 						Computed:    true,
 						Default:     booldefault.StaticBool(false),
-						Description: "Whether to skip SSL certificate verification. (Default `false`).",
+						Description: "Whether to skip SSL certificate verification. Defaults to `false`.",
 					},
 					"ip_family": schema.StringAttribute{
 						Optional:    true,
 						Computed:    true,
 						Default:     stringdefault.StaticString("IPv4"),
-						Description: "IP family version to use for the connection. The value can be either `IPv4` or `IPv6`. (Default `IPv4`).",
+						Description: "IP family version to use for the connection. Possible values are `IPv4` and `IPv6`. Defaults to `IPv4`.",
 						Validators: []validator.String{
 							stringvalidator.OneOf("IPv4", "IPv6"),
 						},
@@ -193,7 +193,7 @@ func (r *URLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 							Attributes: map[string]schema.Attribute{
 								"source": schema.StringAttribute{
 									Required:    true,
-									Description: "The source of the asserted value. The only allowed value is `STATUS_CODE`.",
+									Description: "The source of the asserted value. The only possible value is `STATUS_CODE`.",
 									Validators: []validator.String{
 										stringvalidator.OneOf("STATUS_CODE"),
 									},

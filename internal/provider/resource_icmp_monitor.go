@@ -116,7 +116,7 @@ func (r *ICMPMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 				Optional:    true,
 				Computed:    true,
 				Default:     int64default.StaticInt64(10),
-				Description: "The packet loss percentage where the monitor should be considered degraded. Possible values are between `1` and `100`. (Default `10`).",
+				Description: "The packet loss percentage where the monitor should be considered degraded. Possible values are between `1` and `100`. Defaults to `10`.",
 				// The API rejects an explicit 0 even though its public schema
 				// documents it as valid.
 				Validators: []validator.Int64{
@@ -127,7 +127,7 @@ func (r *ICMPMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 				Optional:    true,
 				Computed:    true,
 				Default:     int64default.StaticInt64(20),
-				Description: "The packet loss percentage where the monitor should be considered failing. Possible values are between `1` and `100`, and the value must be greater than or equal to `degraded_packet_loss_threshold`. (Default `20`).",
+				Description: "The packet loss percentage where the monitor should be considered failing. Possible values are between `1` and `100`, and the value must be greater than or equal to `degraded_packet_loss_threshold`. Defaults to `20`.",
 				// The API rejects an explicit 0 even though its public schema
 				// documents it as valid.
 				Validators: []validator.Int64{
@@ -145,7 +145,7 @@ func (r *ICMPMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 				Attributes: map[string]schema.Attribute{
 					"hostname": schema.StringAttribute{
 						Required:    true,
-						Description: "The hostname to ping (1 to 2048 characters), without a scheme or a port.",
+						Description: "The hostname to ping, without a scheme or a port. Must be between `1` and `2048` characters.",
 						Validators: []validator.String{
 							utf16LengthBetween(1, 2048),
 							hostWithoutSchemeOrPortValidator{noPortAttribute: true},
@@ -155,7 +155,7 @@ func (r *ICMPMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 						Optional:    true,
 						Computed:    true,
 						Default:     stringdefault.StaticString("IPv4"),
-						Description: "The IP family to use. Possible values are `IPv4` and `IPv6`. (Default `IPv4`).",
+						Description: "The IP family to use. Possible values are `IPv4` and `IPv6`. Defaults to `IPv4`.",
 						Validators: []validator.String{
 							stringvalidator.OneOf("IPv4", "IPv6"),
 						},
@@ -164,7 +164,7 @@ func (r *ICMPMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 						Optional:    true,
 						Computed:    true,
 						Default:     int64default.StaticInt64(10),
-						Description: "The number of ping packets to send. (Default `10`).",
+						Description: "The number of ping packets to send. Defaults to `10`.",
 						Validators: []validator.Int64{
 							int64validator.Between(1, 50),
 						},

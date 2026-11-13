@@ -187,7 +187,7 @@ const (
 
 // environmentVariableValueDescription states the API's limits on an
 // environment variable value, for attribute descriptions.
-var environmentVariableValueDescription = fmt.Sprintf("At most %d bytes in UTF-8, or %d bytes for a secret or locked variable. A secret value must have at least %d characters.", maxEnvironmentVariableValueBytes, maxSecretEnvironmentVariableValueBytes, minSecretEnvironmentVariableValueCharacters)
+var environmentVariableValueDescription = fmt.Sprintf("Must be at most `%d` bytes in UTF-8, or `%d` bytes for a secret or locked variable. A secret value must be at least `%d` characters.", maxEnvironmentVariableValueBytes, maxSecretEnvironmentVariableValueBytes, minSecretEnvironmentVariableValueCharacters)
 
 // environmentVariableValueValidator rejects an environment variable value
 // longer than the API accepts. The sibling secret and locked attributes pick

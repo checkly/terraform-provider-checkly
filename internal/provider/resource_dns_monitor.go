@@ -130,7 +130,7 @@ func (r *DNSMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 				Optional:    true,
 				Computed:    true,
 				Default:     int64default.StaticInt64(500),
-				Description: "The response time in milliseconds where the monitor should be considered degraded. Possible values are between `0` and `5000`. (Default `500`).",
+				Description: "The response time in milliseconds where the monitor should be considered degraded. Possible values are between `0` and `5000`. Defaults to `500`.",
 				Validators: []validator.Int64{
 					int64validator.Between(0, 5000),
 				},
@@ -139,7 +139,7 @@ func (r *DNSMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 				Optional:    true,
 				Computed:    true,
 				Default:     int64default.StaticInt64(1000),
-				Description: "The response time in milliseconds where the monitor should be considered failing. Possible values are between `0` and `5000`. (Default `1000`).",
+				Description: "The response time in milliseconds where the monitor should be considered failing. Possible values are between `0` and `5000`. Defaults to `1000`.",
 				Validators: []validator.Int64{
 					int64validator.Between(0, 5000),
 				},
@@ -162,7 +162,7 @@ func (r *DNSMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 					},
 					"query": schema.StringAttribute{
 						Required:    true,
-						Description: "The DNS record to query (1 to 100 characters).",
+						Description: "The DNS record to query. Must be between `1` and `100` characters.",
 						Validators: []validator.String{
 							utf16LengthBetween(1, 100),
 						},
@@ -171,7 +171,7 @@ func (r *DNSMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 						Optional:    true,
 						Computed:    true,
 						Default:     stringdefault.StaticString("UDP"),
-						Description: "The protocol used to communicate with the name server. Possible values are `UDP` and `TCP`. (Default `UDP`).",
+						Description: "The protocol used to communicate with the name server. Possible values are `UDP` and `TCP`. Defaults to `UDP`.",
 						Validators: []validator.String{
 							stringvalidator.OneOf("UDP", "TCP"),
 						},
@@ -185,7 +185,7 @@ func (r *DNSMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 						Attributes: map[string]schema.Attribute{
 							"host": schema.StringAttribute{
 								Optional:    true,
-								Description: "The name server host (1 to 100 characters).",
+								Description: "The name server host. Must be between `1` and `100` characters.",
 								Validators: []validator.String{
 									utf16LengthBetween(1, 100),
 									stringvalidator.AlsoRequires(
@@ -195,7 +195,7 @@ func (r *DNSMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 							},
 							"port": schema.Int64Attribute{
 								Optional:    true,
-								Description: "The name server port. Possible values are between 1 and 65535.",
+								Description: "The name server port. Possible values are between `1` and `65535`.",
 								Validators: []validator.Int64{
 									int64validator.Between(1, 65535),
 									int64validator.AlsoRequires(

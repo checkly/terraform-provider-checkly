@@ -107,7 +107,7 @@ func (r *APICheckResource) Schema(ctx context.Context, req resource.SchemaReques
 				Validators: []validator.Int64{
 					int64validator.Between(0, extendedResponseTimeLimit),
 				},
-				Description: "The response time in milliseconds where the check should be considered degraded. Possible values are between `0` and `30000`, or up to `45000` if extended limits have been approved for your account. (Default `5000`).",
+				Description: "The response time in milliseconds where the check should be considered degraded. Possible values are between `0` and `30000`, or up to `45000` if extended limits have been approved for your account. Defaults to `5000`.",
 			},
 			"max_response_time": schema.Int64Attribute{
 				Optional: true,
@@ -117,10 +117,10 @@ func (r *APICheckResource) Schema(ctx context.Context, req resource.SchemaReques
 				Validators: []validator.Int64{
 					int64validator.Between(0, extendedResponseTimeLimit),
 				},
-				Description: "The response time in milliseconds where the check should be considered failing. Possible values are between `0` and `30000`, or up to `45000` if extended limits have been approved for your account. (Default `20000`).",
+				Description: "The response time in milliseconds where the check should be considered failing. Possible values are between `0` and `30000`, or up to `45000` if extended limits have been approved for your account. Defaults to `20000`.",
 			},
-			"setup_snippet_id":    snippetIDAttributeSchema("The ID of the snippet to run in the setup phase of the API check (at least `1`). When unset, no setup snippet runs."),
-			"teardown_snippet_id": snippetIDAttributeSchema("The ID of the snippet to run in the teardown phase of the API check (at least `1`). When unset, no teardown snippet runs."),
+			"setup_snippet_id":    snippetIDAttributeSchema("The ID of the snippet to run in the setup phase of the API check. Must be at least `1`. If not set, no setup snippet runs."),
+			"teardown_snippet_id": snippetIDAttributeSchema("The ID of the snippet to run in the teardown phase of the API check. Must be at least `1`. If not set, no teardown snippet runs."),
 			"local_setup_script": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,

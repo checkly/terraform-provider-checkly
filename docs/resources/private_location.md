@@ -39,11 +39,11 @@ resource "checkly_private_location" "location-with-proxy" {
 ### Required
 
 - `name` (String) The private location name.
-- `slug_name` (String) The slug name of the private location: 1 to 30 letters, digits and dashes, not starting with the ID of a public location such as `eu-central-1`. Checks and monitors refer to the location by it. The slug can't be changed after creation: a plan that changes it fails, also with `terraform apply -replace` or `replace_triggered_by`. To use a different slug, add a new `checkly_private_location` resource block with it, move your checks and agents to the new location, then remove the old block.
+- `slug_name` (String) The slug name of the private location, which checks and monitors refer to the location by. Must be between `1` and `30` characters. Must contain only letters, digits and dashes, and must not start with the ID of a public location such as `eu-central-1`. The slug can't be changed after creation: a plan that changes it fails, also with `terraform apply -replace` or `replace_triggered_by`. To use a different slug, add a new `checkly_private_location` resource block with it, move your checks and agents to the new location, then remove the old block.
 
 ### Optional
 
-- `icon` (String) Icon assigned to the private location. (Default `location`).
+- `icon` (String) Icon assigned to the private location. Defaults to `location`.
 - `proxy_url` (String, Sensitive) The proxy that API checks running in the private location send their HTTP requests through, such as `https://user:password@proxy.example.com:3128`. It can hold credentials.
 
 ### Read-Only

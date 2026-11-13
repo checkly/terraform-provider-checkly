@@ -203,7 +203,7 @@ func sslMonitorBaselineSeverityAttribute(defaultSeverity checkly.SSLBaselineSeve
 		Optional:    true,
 		Computed:    true,
 		Default:     stringdefault.StaticString(string(defaultSeverity)),
-		Description: fmt.Sprintf("What happens when the rule is violated: `fail` fails the monitor, `degrade` marks it degraded, `ignore` disables the rule. (Default `%s`).", defaultSeverity),
+		Description: fmt.Sprintf("What happens when the rule is violated. Possible values are `fail` (fails the monitor), `degrade` (marks it degraded) and `ignore` (disables the rule). Defaults to `%s`.", defaultSeverity),
 		Validators: []validator.String{
 			stringvalidator.OneOf("fail", "degrade", "ignore"),
 		},
@@ -226,7 +226,7 @@ func sslMonitorBaselineTLSRuleAttribute(def *checkly.SSLBaselineTLSRule, descrip
 				Optional:    true,
 				Computed:    true,
 				Default:     stringdefault.StaticString(string(def.Value)),
-				Description: fmt.Sprintf("The TLS version. Possible values are `TLS1.2` and `TLS1.3`. (Default `%s`).", def.Value),
+				Description: fmt.Sprintf("The TLS version. Possible values are `TLS1.2` and `TLS1.3`. Defaults to `%s`.", def.Value),
 				Validators: []validator.String{
 					stringvalidator.OneOf("TLS1.2", "TLS1.3"),
 				},
@@ -247,7 +247,7 @@ func sslMonitorBaselineKeySizeRuleAttribute(def *checkly.SSLBaselineKeySizeRule,
 				Optional:    true,
 				Computed:    true,
 				Default:     int64default.StaticInt64(int64(def.Value)),
-				Description: fmt.Sprintf("The key size in bits. Possible values are between 1024 and 16384. (Default `%d`).", def.Value),
+				Description: fmt.Sprintf("The key size in bits. Possible values are between `1024` and `16384`. Defaults to `%d`.", def.Value),
 				Validators: []validator.Int64{
 					int64validator.Between(1024, 16384),
 				},
@@ -310,7 +310,7 @@ func (r *SSLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 				Optional:    true,
 				Computed:    true,
 				Default:     int64default.StaticInt64(10000),
-				Description: "The handshake time in milliseconds above which the monitor is considered degraded. Possible values are between 1 and 30000. (Default `10000`).",
+				Description: "The handshake time in milliseconds above which the monitor is considered degraded. Possible values are between `1` and `30000`. Defaults to `10000`.",
 				Validators: []validator.Int64{
 					int64validator.Between(1, 30000),
 				},
@@ -319,7 +319,7 @@ func (r *SSLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 				Optional:    true,
 				Computed:    true,
 				Default:     int64default.StaticInt64(20000),
-				Description: "The handshake time in milliseconds above which the monitor is considered failing. Must be greater than or equal to `degraded_response_time`. Possible values are between 1 and 30000. (Default `20000`).",
+				Description: "The handshake time in milliseconds above which the monitor is considered failing. Possible values are between `1` and `30000`, and the value must be greater than or equal to `degraded_response_time`. Defaults to `20000`.",
 				Validators: []validator.Int64{
 					int64validator.Between(1, 30000),
 				},
@@ -337,7 +337,7 @@ func (r *SSLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 				Attributes: map[string]schema.Attribute{
 					"hostname": schema.StringAttribute{
 						Required:    true,
-						Description: "The hostname (1 to 2048 characters) to connect to and validate the TLS certificate of. Do not include a scheme or a port in this value.",
+						Description: "The hostname to connect to and validate the TLS certificate of. Must be between `1` and `2048` characters. Do not include a scheme or a port in this value.",
 						Validators: []validator.String{
 							utf16LengthBetween(1, 2048),
 							noControlCharacters(),
@@ -348,7 +348,7 @@ func (r *SSLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 						Optional:    true,
 						Computed:    true,
 						Default:     int64default.StaticInt64(443),
-						Description: "The port number to connect to. Possible values are between 1 and 65535. (Default `443`).",
+						Description: "The port number to connect to. Possible values are between `1` and `65535`. Defaults to `443`.",
 						Validators: []validator.Int64{
 							int64validator.Between(1, 65535),
 						},
@@ -357,7 +357,7 @@ func (r *SSLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 						Optional:    true,
 						Computed:    true,
 						Default:     stringdefault.StaticString(""),
-						Description: "An optional SNI server name to send in the TLS handshake (at most 2048 characters). Defaults to `hostname` when unset.",
+						Description: "An optional SNI server name to send in the TLS handshake. Must be at most `2048` characters. If not set, the value of `hostname` is used.",
 						Validators: []validator.String{
 							utf16LengthBetween(0, 2048),
 							noControlCharacters(),
@@ -367,7 +367,7 @@ func (r *SSLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 						Optional:    true,
 						Computed:    true,
 						Default:     stringdefault.StaticString("IPv4"),
-						Description: "The IP family to use when executing the check. The value can be either `IPv4` or `IPv6`. (Default `IPv4`).",
+						Description: "The IP family to use when executing the check. Possible values are `IPv4` and `IPv6`. Defaults to `IPv4`.",
 						Validators: []validator.String{
 							stringvalidator.OneOf("IPv4", "IPv6"),
 						},
@@ -376,13 +376,13 @@ func (r *SSLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 						Optional:    true,
 						Computed:    true,
 						Default:     booldefault.StaticBool(false),
-						Description: "When true, the certificate chain is not validated against trusted roots (the certificate is still inspected for expiry and the security baseline). (Default `false`).",
+						Description: "When true, the certificate chain is not validated against trusted roots (the certificate is still inspected for expiry and the security baseline). Defaults to `false`.",
 					},
 					"handshake_timeout_ms": schema.Int64Attribute{
 						Optional:    true,
 						Computed:    true,
 						Default:     int64default.StaticInt64(10000),
-						Description: "The number of milliseconds to wait for the TLS handshake to complete before timing out. Possible values are between 1000 and 30000. (Default `10000`).",
+						Description: "The number of milliseconds to wait for the TLS handshake to complete before timing out. Possible values are between `1000` and `30000`. Defaults to `10000`.",
 						Validators: []validator.Int64{
 							int64validator.Between(1000, 30000),
 						},
@@ -391,7 +391,7 @@ func (r *SSLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 						Optional:    true,
 						Computed:    true,
 						Default:     int64default.StaticInt64(20),
-						Description: "Raise an alert when the certificate is within this many days of expiry. Possible values are between 1 and 365. (Default `20`).",
+						Description: "Raise an alert when the certificate is within this many days of expiry. Possible values are between `1` and `365`. Defaults to `20`.",
 						Validators: []validator.Int64{
 							int64validator.Between(1, 365),
 						},
@@ -416,7 +416,7 @@ func (r *SSLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 								Optional:    true,
 								Computed:    true,
 								Default:     stringdefault.StaticString("account_default"),
-								Description: "The mutual-TLS client-certificate mode. `account_default` inherits the account setting (no certificate sent), `auto` lets Checkly select a stored certificate, `explicit` uses the certificate referenced by `client_certificate_id`. (Default `account_default`).",
+								Description: "The mutual-TLS client-certificate mode. Possible values are `account_default` (inherits the account setting, no certificate sent), `auto` (lets Checkly select a stored certificate) and `explicit` (uses the certificate referenced by `client_certificate_id`). Defaults to `account_default`.",
 								Validators: []validator.String{
 									stringvalidator.OneOf("account_default", "auto", "explicit"),
 								},
@@ -440,7 +440,7 @@ func (r *SSLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 								Optional:    true,
 								Computed:    true,
 								Default:     booldefault.StaticBool(*sslMonitorDefaultSecurityBaseline.Enabled),
-								Description: "Whether the security baseline is enforced. (Default `true`).",
+								Description: "Whether the security baseline is enforced. Defaults to `true`.",
 							},
 							"min_tls_version":            sslMonitorBaselineTLSRuleAttribute(sslMonitorDefaultSecurityBaseline.MinTLSVersion, "Enforceable rule: the minimum TLS version the server must accept."),
 							"min_key_size_bits":          sslMonitorBaselineKeySizeRuleAttribute(sslMonitorDefaultSecurityBaseline.MinKeySizeBits, "Enforceable rule: the minimum public key size in bits."),
@@ -479,7 +479,7 @@ func (r *SSLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 							Attributes: map[string]schema.Attribute{
 								"source": schema.StringAttribute{
 									Required:    true,
-									Description: "The source of the asserted value. Possible values are `CERTIFICATE`, `CONNECTION`, `RESPONSE_TIME`, `JSON_RESPONSE`, and `TEXT_RESPONSE`.",
+									Description: "The source of the asserted value. Possible values are `CERTIFICATE`, `CONNECTION`, `RESPONSE_TIME`, `JSON_RESPONSE` and `TEXT_RESPONSE`.",
 									Validators: []validator.String{
 										stringvalidator.OneOf("CERTIFICATE", "CONNECTION", "RESPONSE_TIME", "JSON_RESPONSE", "TEXT_RESPONSE"),
 									},
@@ -487,11 +487,11 @@ func (r *SSLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 								"property": schema.StringAttribute{
 									Optional:    true,
 									Computed:    true,
-									Description: "The property selecting the asserted value within the source. For `CERTIFICATE`: `daysUntilExpiry`, `keySizeBits`, `subjectCN`, `issuerCN`, `serialNumber`, `fingerprintSha256`, `issuerFingerprintSha256`, `keyAlgorithm`, `signatureAlgorithm`, `sans`, `selfSigned`, or `isCA`. For `CONNECTION`: `tlsVersion`, `cipherSuite`, `hostnameVerified`, `chainTrusted`, `ocspStapled`, `ocspStatus`, or `resolvedIp`. For `JSON_RESPONSE`: a JSONPath expression. For `TEXT_RESPONSE`: a regular expression applied to the serialized response.",
+									Description: "The property selecting the asserted value within the source. For `CERTIFICATE`, possible values are `daysUntilExpiry`, `keySizeBits`, `subjectCN`, `issuerCN`, `serialNumber`, `fingerprintSha256`, `issuerFingerprintSha256`, `keyAlgorithm`, `signatureAlgorithm`, `sans`, `selfSigned` and `isCA`. For `CONNECTION`, possible values are `tlsVersion`, `cipherSuite`, `hostnameVerified`, `chainTrusted`, `ocspStapled`, `ocspStatus` and `resolvedIp`. For `JSON_RESPONSE`, a JSONPath expression. For `TEXT_RESPONSE`, a regular expression applied to the serialized response.",
 								},
 								"comparison": schema.StringAttribute{
 									Required:    true,
-									Description: "The type of comparison to be executed between expected and actual value of the assertion. Possible values are `EQUALS`, `NOT_EQUALS`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL`, and `NOT_NULL`. The allowed set depends on the asserted `source` and `property`; for example, boolean properties such as `chainTrusted` only allow `EQUALS`.",
+									Description: "The type of comparison to be executed between expected and actual value of the assertion. Possible values are `EQUALS`, `NOT_EQUALS`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL` and `NOT_NULL`. The allowed set depends on the asserted `source` and `property`; for example, boolean properties such as `chainTrusted` only allow `EQUALS`.",
 								},
 								"target": schema.StringAttribute{
 									Optional:    true,

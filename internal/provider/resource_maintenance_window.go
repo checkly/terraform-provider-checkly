@@ -81,7 +81,7 @@ func (r *MaintenanceWindowResource) Schema(ctx context.Context, req resource.Sch
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
-				Description: "The maintenance window name (1 to 200 characters).",
+				Description: "The maintenance window name. Must be between `1` and `200` characters.",
 				Validators: []validator.String{
 					utf16LengthBetween(1, 200),
 				},
@@ -104,7 +104,7 @@ func (r *MaintenanceWindowResource) Schema(ctx context.Context, req resource.Sch
 			},
 			"repeat_unit": schema.StringAttribute{
 				Optional:    true,
-				Description: "The repeat cadence for the maintenance window. Possible values `DAY`, `WEEK` and `MONTH`.",
+				Description: "The repeat cadence for the maintenance window. Possible values are `DAY`, `WEEK` and `MONTH`.",
 				Validators: []validator.String{
 					stringvalidator.OneOf("DAY", "WEEK", "MONTH"),
 				},
@@ -112,15 +112,15 @@ func (r *MaintenanceWindowResource) Schema(ctx context.Context, req resource.Sch
 			"repeat_interval": schema.Int64Attribute{
 				Optional: true,
 				Description: "How many `repeat_unit`s apart the occurrences of the maintenance window are, counted from the first " +
-					"occurrence: 1 to 365. `0`, like leaving it out, means the window does not repeat. A value of 1 or more " +
-					"requires `repeat_unit`.",
+					"occurrence. Possible values are between `0` and `365`. `0`, like leaving it out, means the window does not repeat. " +
+					"A value of `1` or more requires `repeat_unit`.",
 				Validators: []validator.Int64{
 					int64validator.Between(0, 365),
 				},
 			},
 			"repeat_ends_at": schema.StringAttribute{
 				Optional: true,
-				Description: "The last calendar date, in `timezone` (UTC when unset), on which an occurrence may start. Use a date such as " +
+				Description: "The last calendar date, in `timezone` (UTC if not set), on which an occurrence may start. Use a date such as " +
 					"`2099-12-31`. An RFC 3339 date-time is accepted too and counts as its UTC date: `2099-06-01T23:00:00-05:00` " +
 					"means `2099-06-02`. Requires a `repeat_interval` of 1 or more. An empty string, like leaving it out, means " +
 					"the window repeats indefinitely.",
@@ -168,7 +168,7 @@ func (r *MaintenanceWindowResource) Schema(ctx context.Context, req resource.Sch
 			},
 			"description": schema.StringAttribute{
 				Optional:    true,
-				Description: "A description of the maintenance window (at most 2000 characters). When the window is visible on status pages, the description is shown there too.",
+				Description: "A description of the maintenance window. Must be at most `2000` characters. When the window is visible on status pages, the description is shown there too.",
 				Validators: []validator.String{
 					utf16LengthBetween(0, 2000),
 				},

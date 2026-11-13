@@ -131,7 +131,7 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 				Optional:    true,
 				Computed:    true,
 				Default:     int64default.StaticInt64(10000),
-				Description: "The response time in milliseconds where the monitor should be considered degraded. Possible values are between `1` and `30000`. (Default `10000`).",
+				Description: "The response time in milliseconds where the monitor should be considered degraded. Possible values are between `1` and `30000`. Defaults to `10000`.",
 				Validators: []validator.Int64{
 					int64validator.Between(1, 30000),
 				},
@@ -140,7 +140,7 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 				Optional:    true,
 				Computed:    true,
 				Default:     int64default.StaticInt64(20000),
-				Description: "The response time in milliseconds where the monitor should be considered failing. Possible values are between `0` and `30000`. `0` means the monitor never fails on response time; any other value must be greater than or equal to `degraded_response_time`. (Default `20000`).",
+				Description: "The response time in milliseconds where the monitor should be considered failing. Possible values are between `0` and `30000`. `0` means the monitor never fails on response time; any other value must be greater than or equal to `degraded_response_time`. Defaults to `20000`.",
 				Validators: []validator.Int64{
 					int64validator.Between(0, 30000),
 				},
@@ -158,7 +158,7 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 				Attributes: map[string]schema.Attribute{
 					"url": schema.StringAttribute{
 						Required:    true,
-						Description: "The host to trace the network path to (1 to 2048 characters). Do not include a scheme or a port in this value.",
+						Description: "The host to trace the network path to. Must be between `1` and `2048` characters. Do not include a scheme or a port in this value.",
 						Validators: []validator.String{
 							utf16LengthBetween(1, 2048),
 							noControlCharacters(),
@@ -169,7 +169,7 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 						Optional:    true,
 						Computed:    true,
 						Default:     stringdefault.StaticString("TCP"),
-						Description: "The probe protocol. `TCP` sends SYN probes (default), `UDP` sends datagrams to a high port, `ICMP` sends Echo Requests, `SCTP` sends INIT chunks. (Default `TCP`).",
+						Description: "The probe protocol. Possible values are `TCP` (sends SYN probes), `UDP` (sends datagrams to a high port), `ICMP` (sends Echo Requests) and `SCTP` (sends INIT chunks). Defaults to `TCP`.",
 						Validators: []validator.String{
 							stringvalidator.OneOf("TCP", "ICMP", "UDP", "SCTP"),
 						},
@@ -181,7 +181,7 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 					"port": schema.Int64Attribute{
 						Optional:    true,
 						Computed:    true,
-						Description: "The destination port for TCP/UDP/SCTP probes. Possible values are between 1 and 65535. Must not be set when `protocol = \"ICMP\"`, which has no port. The default depends on the protocol: `443` for `TCP`, `33434` for `UDP` and `SCTP`.",
+						Description: "The destination port for TCP/UDP/SCTP probes. Possible values are between `1` and `65535`. The default depends on the protocol: `443` for `TCP`, `33434` for `UDP` and `SCTP`. Must not be set when `protocol = \"ICMP\"`, which has no port.",
 						Validators: []validator.Int64{
 							int64validator.Between(1, 65535),
 						},
@@ -190,7 +190,7 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 						Optional:    true,
 						Computed:    true,
 						Default:     stringdefault.StaticString("IPv4"),
-						Description: "The IP family to use when executing the traceroute. The value can be either `IPv4` or `IPv6`. (Default `IPv4`).",
+						Description: "The IP family to use when executing the traceroute. Possible values are `IPv4` and `IPv6`. Defaults to `IPv4`.",
 						Validators: []validator.String{
 							stringvalidator.OneOf("IPv4", "IPv6"),
 						},
@@ -199,7 +199,7 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 						Optional:    true,
 						Computed:    true,
 						Default:     int64default.StaticInt64(30),
-						Description: "The maximum number of network hops to probe before stopping. Possible values are between 1 and 64. (Default `30`).",
+						Description: "The maximum number of network hops to probe before stopping. Possible values are between `1` and `64`. Defaults to `30`.",
 						Validators: []validator.Int64{
 							int64validator.Between(1, 64),
 						},
@@ -207,7 +207,7 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 					"max_unknown_hops": schema.Int64Attribute{
 						Optional:    true,
 						Computed:    true,
-						Description: "The maximum number of consecutive unresponsive hops to tolerate before stopping the trace. Possible values are between 1 and 30, and the value must not exceed `max_hops`. (Default `min(15, max_hops)`).",
+						Description: "The maximum number of consecutive unresponsive hops to tolerate before stopping the trace. Possible values are between `1` and `30`, and the value must not exceed `max_hops`. If not set, the smaller of `15` and `max_hops` is used.",
 						Validators: []validator.Int64{
 							int64validator.Between(1, 30),
 						},
@@ -216,7 +216,7 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 						Optional:    true,
 						Computed:    true,
 						Default:     booldefault.StaticBool(true),
-						Description: "Whether to perform reverse-DNS (PTR) lookups on each hop's IP address. (Default `true`).",
+						Description: "Whether to perform reverse-DNS (PTR) lookups on each hop's IP address. Defaults to `true`.",
 					},
 					// timeout has the API's default rather than keeping
 					// its prior state value: the update endpoint keeps the
@@ -227,7 +227,7 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 						Optional:    true,
 						Computed:    true,
 						Default:     int64default.StaticInt64(10),
-						Description: "The number of seconds to wait for the traceroute to complete before timing out. Possible values are between 1 and 30. (Default `10`).",
+						Description: "The number of seconds to wait for the traceroute to complete before timing out. Possible values are between `1` and `30`. Defaults to `10`.",
 						Validators: []validator.Int64{
 							int64validator.Between(1, 30),
 						},
@@ -261,7 +261,7 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 							Attributes: map[string]schema.Attribute{
 								"source": schema.StringAttribute{
 									Required:    true,
-									Description: "The source of the asserted value. Possible values are `RESPONSE_TIME`, `HOP_COUNT`, and `PACKET_LOSS`.",
+									Description: "The source of the asserted value. Possible values are `RESPONSE_TIME`, `HOP_COUNT` and `PACKET_LOSS`.",
 									Validators: []validator.String{
 										stringvalidator.OneOf("RESPONSE_TIME", "HOP_COUNT", "PACKET_LOSS"),
 									},
@@ -269,16 +269,16 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 								"property": schema.StringAttribute{
 									Optional:    true,
 									Computed:    true,
-									Description: "The statistic to assert on. Required for `RESPONSE_TIME`, where possible values are `avg`, `min`, `max`, and `stdDev`. Not used for `HOP_COUNT` and `PACKET_LOSS`.",
+									Description: "The statistic to assert on. Required for `RESPONSE_TIME`, where possible values are `avg`, `min`, `max` and `stdDev`. Not used for `HOP_COUNT` and `PACKET_LOSS`.",
 								},
 								"comparison": schema.StringAttribute{
 									Required:    true,
-									Description: "The type of comparison to be executed between expected and actual value of the assertion. For `RESPONSE_TIME`, possible values are `EQUALS`, `NOT_EQUALS`, `GREATER_THAN`, and `LESS_THAN`. For `HOP_COUNT` and `PACKET_LOSS`, possible values are `EQUALS`, `GREATER_THAN`, and `LESS_THAN`.",
+									Description: "The type of comparison to be executed between expected and actual value of the assertion. For `RESPONSE_TIME`, possible values are `EQUALS`, `NOT_EQUALS`, `GREATER_THAN` and `LESS_THAN`. For `HOP_COUNT` and `PACKET_LOSS`, possible values are `EQUALS`, `GREATER_THAN` and `LESS_THAN`.",
 								},
 								"target": schema.StringAttribute{
 									Optional:    true,
 									Computed:    true,
-									Description: "The value to compare against. Required, and must be numeric without surrounding whitespace: a non-negative number of milliseconds for `RESPONSE_TIME`, a non-negative integer for `HOP_COUNT`, or a number between 0 and 100 for `PACKET_LOSS`.",
+									Description: "The value to compare against. Required, and must be numeric without surrounding whitespace: a non-negative number of milliseconds for `RESPONSE_TIME`, a non-negative integer for `HOP_COUNT` or a number between `0` and `100` for `PACKET_LOSS`.",
 								},
 							},
 						},

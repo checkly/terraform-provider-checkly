@@ -89,15 +89,15 @@ func (r *EnvironmentVariableResource) Schema(ctx context.Context, req resource.S
 				Optional:    true,
 				Computed:    true,
 				Default:     booldefault.StaticBool(false),
-				Description: "If true, the value is hidden in the Checkly UI by default, but it can be revealed. (Default `false`).",
+				Description: "If true, the value is hidden in the Checkly UI by default, but it can be revealed. Defaults to `false`.",
 			},
 			"secret": schema.BoolAttribute{
 				Optional: true,
 				Computed: true,
 				Default:  booldefault.StaticBool(false),
-				Description: "If true, the value can never be revealed after creation, and the API never returns it; see `value`. " +
+				Description: "If true, the value can never be revealed after creation, and the API never returns it; see `value`. Defaults to `false`. " +
 					"The API can't turn a secret variable back into a regular one, so changing `secret` from `true` to `false` " +
-					"forces the environment variable to be replaced. (Default `false`).",
+					"forces the environment variable to be replaced.",
 				PlanModifiers: []planmodifier.Bool{
 					boolplanmodifier.RequiresReplaceIf(
 						func(ctx context.Context, req planmodifier.BoolRequest, resp *boolplanmodifier.RequiresReplaceIfFuncResponse) {

@@ -58,11 +58,11 @@ moved {
 
 ### Optional
 
-- `activated` (Boolean) Determines whether the monitor runs on its schedule. (Default `true`).
+- `activated` (Boolean) Determines whether the monitor runs on its schedule. Defaults to `true`.
 - `alert_channel_subscriptions` (Attributes Set) A set of channel IDs and whether they're activated or not. If you don't set at least one alert channel subscription for your monitor, we won't be able to alert you even if it starts failing. (see [below for nested schema](#nestedatt--alert_channel_subscriptions))
 - `alert_settings` (Attributes) Determines the alert escalation policy for the monitor. (see [below for nested schema](#nestedatt--alert_settings))
 - `description` (String) A description of the monitor.
-- `muted` (Boolean) Determines whether notifications are sent when the monitor fails or recovers. (Default `false`).
+- `muted` (Boolean) Determines whether notifications are sent when the monitor fails or recovers. Defaults to `false`.
 - `tags` (Set of String) Tags for organizing and filtering checks and monitors.
 - `trigger_incident` (Attributes) Create and resolve an incident based on the alert configuration. Useful for status page automation. (see [below for nested schema](#nestedatt--trigger_incident))
 - `use_global_alert_settings` (Boolean) When true, the account level alert settings are used instead of the `alert_settings` of this monitor. Defaults to `true` when `alert_settings` is not set, and to `false` when it is.
@@ -77,13 +77,13 @@ moved {
 Required:
 
 - `grace` (Number) How long Checkly should wait before triggering any alerts when a ping does not arrive within the set period. Must be at least `0`, and the combination of `grace` and `grace_unit` must be at most 365 days.
-- `grace_unit` (String) The unit of `grace`. Possible values `seconds`, `minutes`, `hours` and `days`.
+- `grace_unit` (String) The unit of `grace`. Possible values are `seconds`, `minutes`, `hours` and `days`.
 - `period` (Number) How often you expect a ping to the ping URL. The combination of `period` and `period_unit` must be between 30 seconds and 365 days.
-- `period_unit` (String) The unit of `period`. Possible values `seconds`, `minutes`, `hours` and `days`.
+- `period_unit` (String) The unit of `period`. Possible values are `seconds`, `minutes`, `hours` and `days`.
 
 Optional:
 
-- `ping_token` (String, Sensitive) A custom lowercase UUID with hyphens to generate your ping URL from, such as `22868839-8450-4010-9241-1ea83a2e425f`. Checkly will expect a ping to `https://ping.checklyhq.com/[PING_TOKEN]`. When not set, Checkly generates one.
+- `ping_token` (String, Sensitive) A custom lowercase UUID with hyphens to generate your ping URL from, such as `22868839-8450-4010-9241-1ea83a2e425f`. Checkly will expect a ping to `https://ping.checklyhq.com/[PING_TOKEN]`. If not set, Checkly generates one.
 
 
 <a id="nestedatt--alert_channel_subscriptions"></a>
@@ -100,7 +100,7 @@ Required:
 
 Optional:
 
-- `escalation_type` (String) Determines the type of escalation to use. Possible values are `RUN_BASED` and `TIME_BASED`. (Default `RUN_BASED`).
+- `escalation_type` (String) Determines the type of escalation to use. Possible values are `RUN_BASED` and `TIME_BASED`. Defaults to `RUN_BASED`.
 - `parallel_run_failure_threshold` (Attributes) Configuration for parallel run failure threshold. (see [below for nested schema](#nestedatt--alert_settings--parallel_run_failure_threshold))
 - `reminders` (Attributes) Defines how often to send reminder notifications after the initial alert. (see [below for nested schema](#nestedatt--alert_settings--reminders))
 - `run_based_escalation` (Attributes) Configuration for run-based escalation. (see [below for nested schema](#nestedatt--alert_settings--run_based_escalation))
@@ -111,8 +111,8 @@ Optional:
 
 Optional:
 
-- `enabled` (Boolean) Whether parallel run failure threshold is enabled. Only applies if the monitor is scheduled for multiple locations in parallel. (Default `false`).
-- `percentage` (Number) Percentage of runs that must fail to trigger alert. Possible values are `10`, `20`, `30`, `40`, `50`, `60`, `70`, `80`, `90`, and `100`. (Default `10`).
+- `enabled` (Boolean) Whether parallel run failure threshold is enabled. Only applies if the monitor is scheduled for multiple locations in parallel. Defaults to `false`.
+- `percentage` (Number) Percentage of runs that must fail to trigger alert. Possible values are `10`, `20`, `30`, `40`, `50`, `60`, `70`, `80`, `90` and `100`. Defaults to `10`.
 
 
 <a id="nestedatt--alert_settings--reminders"></a>
@@ -120,8 +120,8 @@ Optional:
 
 Optional:
 
-- `amount` (Number) Number of reminder notifications to send. Possible values are `0`, `1`, `2`, `3`, `4`, `5`, and `100000` (`0` to disable, `100000` for unlimited). (Default `0`).
-- `interval` (Number) Interval between reminder notifications in minutes. Possible values are `5`, `10`, `15`, and `30`. (Default `5`).
+- `amount` (Number) Number of reminder notifications to send. Possible values are `0`, `1`, `2`, `3`, `4`, `5` and `100000` (`0` to disable, `100000` for unlimited). Defaults to `0`.
+- `interval` (Number) Interval between reminder notifications in minutes. Possible values are `5`, `10`, `15` and `30`. Defaults to `5`.
 
 
 <a id="nestedatt--alert_settings--run_based_escalation"></a>
@@ -129,7 +129,7 @@ Optional:
 
 Optional:
 
-- `failed_run_threshold` (Number) Send an alert notification after the given number of consecutive monitor runs have failed. Possible values are between `1` and `5`. (Default `1`).
+- `failed_run_threshold` (Number) Send an alert notification after the given number of consecutive monitor runs have failed. Possible values are between `1` and `5`. Defaults to `1`.
 
 
 <a id="nestedatt--alert_settings--time_based_escalation"></a>
@@ -137,7 +137,7 @@ Optional:
 
 Optional:
 
-- `minutes_failing_threshold` (Number) Send an alert notification after the monitor has been failing for the given amount of time (in minutes). Possible values are `5`, `10`, `15`, and `30`. (Default `5`).
+- `minutes_failing_threshold` (Number) Send an alert notification after the monitor has been failing for the given amount of time (in minutes). Possible values are `5`, `10`, `15` and `30`. Defaults to `5`.
 
 
 
@@ -150,7 +150,7 @@ Required:
 - `name` (String) The name of the incident.
 - `notify_subscribers` (Boolean) Whether to notify subscribers when the incident is triggered.
 - `service_id` (String) The status page service that this incident will be associated with.
-- `severity` (String) The severity level of the incident. Possible values are `MINOR`, `MEDIUM`, `MAJOR`, and `CRITICAL`.
+- `severity` (String) The severity level of the incident. Possible values are `MINOR`, `MEDIUM`, `MAJOR` and `CRITICAL`.
 
 ## Import
 

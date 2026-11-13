@@ -99,7 +99,7 @@ func makeFrequencyAttributeSchema(options FrequencyAttributeSchemaOptions) schem
 		Optional:    true,
 		Computed:    true,
 		Default:     int64default.StaticInt64(defaultFrequency),
-		Description: fmt.Sprintf("Controls how often the %s should run. Defined in minutes. %s (Default `%d`).", options.Subject, allow.String(), defaultFrequency),
+		Description: fmt.Sprintf("Controls how often the %s should run. Defined in minutes. %s Defaults to `%d`.", options.Subject, allow.String(), defaultFrequency),
 		Validators: []validator.Int64{
 			int64validator.OneOf(allow.Values()...),
 		},

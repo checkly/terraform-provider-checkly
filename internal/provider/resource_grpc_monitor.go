@@ -165,7 +165,7 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 				Optional:    true,
 				Computed:    true,
 				Default:     int64default.StaticInt64(10000),
-				Description: "The response time in milliseconds where the monitor should be considered degraded. Possible values are between `1` and `180000`. (Default `10000`).",
+				Description: "The response time in milliseconds where the monitor should be considered degraded. Possible values are between `1` and `180000`. Defaults to `10000`.",
 				Validators: []validator.Int64{
 					int64validator.Between(1, 180000),
 				},
@@ -174,7 +174,7 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 				Optional:    true,
 				Computed:    true,
 				Default:     int64default.StaticInt64(20000),
-				Description: "The response time in milliseconds where the monitor should be considered failing. Possible values are between `1` and `180000`. (Default `20000`).",
+				Description: "The response time in milliseconds where the monitor should be considered failing. Possible values are between `1` and `180000`. Defaults to `20000`.",
 				Validators: []validator.Int64{
 					int64validator.Between(1, 180000),
 				},
@@ -192,7 +192,7 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 				Attributes: map[string]schema.Attribute{
 					"host": schema.StringAttribute{
 						Required:    true,
-						Description: "The host to connect to (1 to 2048 characters). Do not include a scheme or a port in this value.",
+						Description: "The host to connect to. Must be between `1` and `2048` characters. Do not include a scheme or a port in this value.",
 						Validators: []validator.String{
 							utf16LengthBetween(1, 2048),
 							noControlCharacters(),
@@ -201,7 +201,7 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 					},
 					"port": schema.Int64Attribute{
 						Required:    true,
-						Description: "The port number to connect to. Possible values are between 1 and 65535.",
+						Description: "The port number to connect to. Possible values are between `1` and `65535`.",
 						Validators: []validator.Int64{
 							int64validator.Between(1, 65535),
 						},
@@ -210,7 +210,7 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 						Optional:    true,
 						Computed:    true,
 						Default:     stringdefault.StaticString("IPv4"),
-						Description: "The IP family to use when executing the gRPC check. The value can be either `IPv4` or `IPv6`. (Default `IPv4`).",
+						Description: "The IP family to use when executing the gRPC check. Possible values are `IPv4` and `IPv6`. Defaults to `IPv4`.",
 						Validators: []validator.String{
 							stringvalidator.OneOf("IPv4", "IPv6"),
 						},
@@ -219,7 +219,7 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 						Optional:    true,
 						Computed:    true,
 						Default:     stringdefault.StaticString("BEHAVIOR"),
-						Description: "The gRPC monitoring mode. `BEHAVIOR` invokes a unary method (requires `method`); `HEALTH` queries the standard gRPC health-check service (allows `service`). (Default `BEHAVIOR`).",
+						Description: "The gRPC monitoring mode. Possible values are `BEHAVIOR` (invokes a unary method, requires `method`) and `HEALTH` (queries the standard gRPC health-check service, allows `service`). Defaults to `BEHAVIOR`.",
 						Validators: []validator.String{
 							stringvalidator.OneOf("BEHAVIOR", "HEALTH"),
 						},
@@ -228,13 +228,13 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 						Optional:    true,
 						Computed:    true,
 						Default:     booldefault.StaticBool(true),
-						Description: "Whether to use a TLS-encrypted connection to the gRPC server. (Default `true`).",
+						Description: "Whether to use a TLS-encrypted connection to the gRPC server. Defaults to `true`.",
 					},
 					"skip_ssl": schema.BoolAttribute{
 						Optional:    true,
 						Computed:    true,
 						Default:     booldefault.StaticBool(false),
-						Description: "Whether to skip SSL certificate validation when `tls` is enabled. (Default `false`).",
+						Description: "Whether to skip SSL certificate validation when `tls` is enabled. Defaults to `false`.",
 					},
 					// timeout has the API's default rather than keeping
 					// its prior state value: the update endpoint keeps the
@@ -245,7 +245,7 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 						Optional:    true,
 						Computed:    true,
 						Default:     int64default.StaticInt64(60),
-						Description: "The number of seconds to wait for the gRPC call to complete before timing out. Possible values are between 1 and 180. (Default `60`).",
+						Description: "The number of seconds to wait for the gRPC call to complete before timing out. Possible values are between `1` and `180`. Defaults to `60`.",
 						Validators: []validator.Int64{
 							int64validator.Between(1, 180),
 						},
@@ -266,7 +266,7 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 						Optional:    true,
 						Computed:    true,
 						Default:     stringdefault.StaticString("PROTOBUF"),
-						Description: "The wire encoding used in `BEHAVIOR` mode. Possible values are `PROTOBUF` and `FLATBUFFERS`. (Default `PROTOBUF`).",
+						Description: "The wire encoding used in `BEHAVIOR` mode. Possible values are `PROTOBUF` and `FLATBUFFERS`. Defaults to `PROTOBUF`.",
 						Validators: []validator.String{
 							stringvalidator.OneOf("PROTOBUF", "FLATBUFFERS"),
 						},
@@ -275,7 +275,7 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 						Optional:    true,
 						Computed:    true,
 						Default:     stringdefault.StaticString("REFLECTION"),
-						Description: "How the service definition is resolved in `BEHAVIOR` mode: `REFLECTION` uses server reflection; `PROTO_FILE` uses the inline `proto_content`, which it requires. Must not be set when `encoding = \"FLATBUFFERS\"`, and must not be `PROTO_FILE` in `HEALTH` mode. (Default `REFLECTION`).",
+						Description: "How the service definition is resolved in `BEHAVIOR` mode. Possible values are `REFLECTION` (uses server reflection) and `PROTO_FILE` (uses the inline `proto_content`, which it requires). Defaults to `REFLECTION`. Must not be set when `encoding = \"FLATBUFFERS\"`, and must not be `PROTO_FILE` in `HEALTH` mode.",
 						Validators: []validator.String{
 							stringvalidator.OneOf("REFLECTION", "PROTO_FILE"),
 						},
@@ -284,7 +284,7 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 						Optional:    true,
 						Computed:    true,
 						Default:     stringdefault.StaticString(""),
-						Description: "The inline `.proto` file source (at most 102400 characters) used when `service_definition = \"PROTO_FILE\"` in `BEHAVIOR` mode, where it is required. Must not be set in `HEALTH` mode or when `encoding = \"FLATBUFFERS\"`.",
+						Description: "The inline `.proto` file source used when `service_definition = \"PROTO_FILE\"` in `BEHAVIOR` mode, where it is required. Must be at most `102400` characters. Must not be set in `HEALTH` mode or when `encoding = \"FLATBUFFERS\"`.",
 						Validators: []validator.String{
 							utf16LengthBetween(0, 102400),
 							noNULCharacterValidator{},
@@ -294,7 +294,7 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 						Optional:    true,
 						Computed:    true,
 						Default:     stringdefault.StaticString(""),
-						Description: "A base64-encoded binary FlatBuffers schema (`.bfbs`), at most 100 KiB once encoded. Required when `encoding = \"FLATBUFFERS\"` and forbidden otherwise. Generate it with `flatc -b --schema --bfbs-builtins schema.fbs` and load it with Terraform's `filebase64()` function.",
+						Description: "A base64-encoded binary FlatBuffers schema (`.bfbs`). Must be at most `100` KiB once encoded. Required when `encoding = \"FLATBUFFERS\"` and forbidden otherwise. Generate it with `flatc -b --schema --bfbs-builtins schema.fbs` and load it with Terraform's `filebase64()` function.",
 						Validators: []validator.String{
 							grpcMonitorBfbsContentValidator{},
 						},
@@ -309,7 +309,7 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 						Optional:    true,
 						Computed:    true,
 						Default:     stringdefault.StaticString(""),
-						Description: "The JSON request message (at most 65536 characters) sent as the gRPC call payload in `BEHAVIOR` mode. Must not be set in `HEALTH` mode.",
+						Description: "The JSON request message sent as the gRPC call payload in `BEHAVIOR` mode. Must be at most `65536` characters. Must not be set in `HEALTH` mode.",
 						Validators: []validator.String{
 							utf16LengthBetween(0, 65536),
 							noNULCharacterValidator{},
@@ -319,7 +319,7 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 						Optional:    true,
 						Computed:    true,
 						Default:     emptySetDefault(types.ObjectType{AttrTypes: grpcMonitorMetadataAttrTypes}),
-						Description: "gRPC metadata (request headers) sent with the call. At most 50 elements.",
+						Description: "gRPC metadata (request headers) sent with the call. Must contain at most `50` elements.",
 						Validators: []validator.Set{
 							setvalidator.SizeAtMost(50),
 							grpcMetadataUniqueKeysValidator{},
@@ -338,7 +338,7 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 							Attributes: map[string]schema.Attribute{
 								"key": schema.StringAttribute{
 									Required:    true,
-									Description: "The gRPC metadata (header) key (1 to 256 characters).",
+									Description: "The gRPC metadata (header) key. Must be between `1` and `256` characters.",
 									Validators: []validator.String{
 										utf16LengthBetween(1, 256),
 										noNULCharacterValidator{},
@@ -347,7 +347,7 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 								"value": schema.StringAttribute{
 									Optional:    true,
 									Computed:    true,
-									Description: "The gRPC metadata (header) value (at most 8192 characters). The value is not sensitive and shows in plan output. To keep a credential out of plan output, take it from a variable declared with `sensitive = true` or wrap it in `sensitive(...)`.",
+									Description: "The gRPC metadata (header) value. Must be at most `8192` characters. The value is not sensitive and shows in plan output. To keep a credential out of plan output, take it from a variable declared with `sensitive = true` or wrap it in `sensitive(...)`.",
 									Validators: []validator.String{
 										utf16LengthBetween(0, 8192),
 										noNULCharacterValidator{},
@@ -379,7 +379,7 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 							Attributes: map[string]schema.Attribute{
 								"source": schema.StringAttribute{
 									Required:    true,
-									Description: "The source of the asserted value. Possible values are `RESPONSE_TIME`, `GRPC_RESPONSE`, `TEXT_BODY`, `GRPC_METADATA`, `GRPC_HEALTHCHECK_STATUS`, and `GRPC_STATUS_CODE`.",
+									Description: "The source of the asserted value. Possible values are `RESPONSE_TIME`, `GRPC_RESPONSE`, `TEXT_BODY`, `GRPC_METADATA`, `GRPC_HEALTHCHECK_STATUS` and `GRPC_STATUS_CODE`.",
 									Validators: []validator.String{
 										stringvalidator.OneOf("RESPONSE_TIME", "GRPC_RESPONSE", "TEXT_BODY", "GRPC_METADATA", "GRPC_HEALTHCHECK_STATUS", "GRPC_STATUS_CODE"),
 									},
@@ -391,12 +391,12 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 								},
 								"comparison": schema.StringAttribute{
 									Required:    true,
-									Description: "The type of comparison to be executed between expected and actual value of the assertion. For `GRPC_RESPONSE`, `TEXT_BODY` and `GRPC_METADATA`, possible values are `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL`, and `NOT_NULL`. For `RESPONSE_TIME` and `GRPC_STATUS_CODE`, possible values are `EQUALS`, `NOT_EQUALS`, `GREATER_THAN`, and `LESS_THAN`. For `GRPC_HEALTHCHECK_STATUS`, possible values are `EQUALS` and `NOT_EQUALS`.",
+									Description: "The type of comparison to be executed between expected and actual value of the assertion. For `GRPC_RESPONSE`, `TEXT_BODY` and `GRPC_METADATA`, possible values are `EQUALS`, `NOT_EQUALS`, `HAS_KEY`, `NOT_HAS_KEY`, `HAS_VALUE`, `NOT_HAS_VALUE`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL` and `NOT_NULL`. For `RESPONSE_TIME` and `GRPC_STATUS_CODE`, possible values are `EQUALS`, `NOT_EQUALS`, `GREATER_THAN` and `LESS_THAN`. For `GRPC_HEALTHCHECK_STATUS`, possible values are `EQUALS` and `NOT_EQUALS`.",
 								},
 								"target": schema.StringAttribute{
 									Optional:    true,
 									Computed:    true,
-									Description: "The value to compare against. Required, and must be numeric without surrounding whitespace, for `RESPONSE_TIME` (milliseconds), `GRPC_STATUS_CODE` (0-16), and `GRPC_HEALTHCHECK_STATUS` (0-3, where 0=UNKNOWN, 1=SERVING, 2=NOT_SERVING, 3=SERVICE_UNKNOWN).",
+									Description: "The value to compare against. Required, and must be numeric without surrounding whitespace, for `RESPONSE_TIME`, `GRPC_STATUS_CODE` and `GRPC_HEALTHCHECK_STATUS`. For `RESPONSE_TIME`, a number of milliseconds. For `GRPC_STATUS_CODE`, possible values are between `0` and `16`. For `GRPC_HEALTHCHECK_STATUS`, possible values are between `0` and `3`, where `0` is `UNKNOWN`, `1` is `SERVING`, `2` is `NOT_SERVING` and `3` is `SERVICE_UNKNOWN`.",
 								},
 							},
 						},

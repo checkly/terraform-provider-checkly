@@ -53,12 +53,12 @@ resource "checkly_status_page" "example" {
 
 - `cards` (Attributes List) A list of cards to include on the status page. (see [below for nested schema](#nestedatt--cards))
 - `name` (String) The name of the status page.
-- `url` (String) The unique subdomain of the status page: lowercase alphanumeric characters and dashes, no leading or trailing dash, at most 63 characters.
+- `url` (String) The unique subdomain of the status page. Must be at most `63` characters. Must contain only lowercase alphanumeric characters and dashes, with no leading or trailing dash.
 
 ### Optional
 
 - `custom_domain` (String) A custom user domain, e.g. "status.mycompany.com": a lowercase hostname without a scheme. Domains under example.com, example.net and example.org are not supported. See the docs on updating your DNS and SSL usage.
-- `default_theme` (String) The color theme the status page is shown in. `AUTO` follows the visitor's system preference. Possible values are `AUTO`, `DARK`, and `LIGHT`. (Default `AUTO`).
+- `default_theme` (String) The color theme the status page is shown in. `AUTO` follows the visitor's system preference. Possible values are `AUTO`, `DARK` and `LIGHT`. Defaults to `AUTO`.
 - `favicon` (String) An http or https URL to an image file to use as the favicon of the status page.
 - `logo` (String) An http or https URL to an image file to use as the logo for the status page.
 - `redirect_to` (String) The http or https URL the user should be redirected to when clicking the logo.

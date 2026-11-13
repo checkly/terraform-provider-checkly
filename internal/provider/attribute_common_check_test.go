@@ -176,16 +176,16 @@ func TestCommonCheckMutedWording(t *testing.T) {
 	}{
 		"check": {
 			CommonCheckAttributeSchemaOptions{Subject: subjectCheck},
-			"Determines whether notifications are sent when the check fails, degrades or recovers. (Default `false`).",
+			"Determines whether notifications are sent when the check fails, degrades or recovers. Defaults to `false`.",
 		},
 		"no degraded state": {
 			CommonCheckAttributeSchemaOptions{Subject: subjectMonitor, NoDegradedState: true},
-			"Determines whether notifications are sent when the monitor fails or recovers. (Default `false`).",
+			"Determines whether notifications are sent when the monitor fails or recovers. Defaults to `false`.",
 		},
 		"check group": {
 			CommonCheckAttributeSchemaOptions{Subject: subjectCheckGroup},
 			"Determines whether notifications are sent when a check or monitor in the group fails or recovers. " +
-				"Muting the group mutes all of them, regardless of their own `muted`. (Default `false`).",
+				"Muting the group mutes all of them, regardless of their own `muted`. Defaults to `false`.",
 		},
 	}
 
@@ -205,7 +205,7 @@ func TestCommonCheckRuntimeIDWording(t *testing.T) {
 	}{
 		"check": {
 			CommonCheckAttributeSchemaOptions{Subject: subjectCheck, RuntimeID: true, RuntimeIDNote: "The runtime must support multi-step checks."},
-			"The ID of the runtime to use for the check. When unset, the account's default runtime is used. The runtime must support multi-step checks.",
+			"The ID of the runtime to use for the check. If not set, the account's default runtime is used. The runtime must support multi-step checks.",
 		},
 		"monitor": {
 			CommonCheckAttributeSchemaOptions{Subject: subjectMonitor, RuntimeID: true},
@@ -213,7 +213,7 @@ func TestCommonCheckRuntimeIDWording(t *testing.T) {
 		},
 		"check group": {
 			CommonCheckAttributeSchemaOptions{Subject: subjectCheckGroup, RuntimeID: true},
-			"The ID of the runtime to use for the checks in the group. When unset, the account's default runtime is used.",
+			"The ID of the runtime to use for the checks in the group. If not set, the account's default runtime is used.",
 		},
 	}
 
