@@ -143,8 +143,8 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 			"degraded_response_time": schema.Int64Attribute{
 				Optional:    true,
 				Computed:    true,
-				Default:     int64default.StaticInt64(10000),
-				Description: "The response time in milliseconds where the monitor should be considered degraded. Possible values are between `1` and `30000`. Defaults to `10000`.",
+				Default:     int64default.StaticInt64(500),
+				Description: "The response time in milliseconds where the monitor should be considered degraded. Possible values are between `1` and `30000`. Defaults to `500`.",
 				Validators: []validator.Int64{
 					int64validator.Between(1, 30000),
 				},
@@ -152,8 +152,8 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 			"max_response_time": schema.Int64Attribute{
 				Optional:    true,
 				Computed:    true,
-				Default:     int64default.StaticInt64(20000),
-				Description: "The response time in milliseconds where the monitor should be considered failing. Possible values are between `0` and `30000`. `0` means the monitor never fails on response time; any other value must be greater than or equal to `degraded_response_time`. Defaults to `20000`.",
+				Default:     int64default.StaticInt64(1000),
+				Description: "The response time in milliseconds where the monitor should be considered failing. Possible values are between `0` and `30000`. `0` means the monitor never fails on response time; any other value must be greater than or equal to `degraded_response_time`. Defaults to `1000`.",
 				Validators: []validator.Int64{
 					int64validator.Between(0, 30000),
 				},
@@ -312,9 +312,9 @@ func (r *TracerouteMonitorResource) ConfigValidators(ctx context.Context) []reso
 		// degraded_response_time is within it.
 		orderedThresholdsConfigValidator{
 			lower:              path.Root("degraded_response_time"),
-			lowerDefault:       types.Int64Value(10000),
+			lowerDefault:       types.Int64Value(500),
 			upper:              path.Root("max_response_time"),
-			upperDefault:       types.Int64Value(20000),
+			upperDefault:       types.Int64Value(1000),
 			zeroUpperUnbounded: true,
 		},
 		// An unset max_unknown_hops is derived from max_hops, within it.
