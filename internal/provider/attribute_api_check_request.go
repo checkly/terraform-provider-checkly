@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -80,6 +81,10 @@ type apiCheckRequestAttributeSchemaOptions struct {
 	Description string
 	// Required makes the request attribute mandatory.
 	Required bool
+	// DefaultFollowRedirects is the default of follow_redirects. checkly_api_check
+	// follows redirects by default, as the web app and the CLI do; the
+	// deprecated checkly_check keeps its v1.x default of not following them.
+	DefaultFollowRedirects bool
 }
 
 // apiCheckRequestAttributeSchema returns the schema for the request
@@ -109,8 +114,8 @@ func apiCheckRequestAttributeSchema(opts apiCheckRequestAttributeSchemaOptions) 
 			"follow_redirects": schema.BoolAttribute{
 				Optional:    true,
 				Computed:    true,
-				Default:     booldefault.StaticBool(false),
-				Description: "Whether to follow HTTP redirects. Defaults to `false`.",
+				Default:     booldefault.StaticBool(opts.DefaultFollowRedirects),
+				Description: fmt.Sprintf("Whether to follow HTTP redirects. Defaults to `%t`.", opts.DefaultFollowRedirects),
 			},
 			"skip_ssl": schema.BoolAttribute{
 				Optional:    true,

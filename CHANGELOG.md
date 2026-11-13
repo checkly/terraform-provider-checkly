@@ -87,7 +87,7 @@ need changes. Follow the [upgrade guide](docs/guides/upgrading-to-v2.md).
 - `degraded_response_time` and `max_response_time` of `checkly_tcp_monitor`, `checkly_tcp_check`, `checkly_url_monitor`, `checkly_api_check` and `checkly_check` accept values up to `45000` if extended limits have been approved for your account; `checkly_check` used to accept up to `30000`. On other accounts, a value above `5000` on TCP monitors, or above `30000` on URL monitors and API checks, fails the plan.
 
 ### Added
-- `checkly_api_check`, `checkly_browser_check` and `checkly_multistep_check`, which replace `checkly_check`.
+- `checkly_api_check`, `checkly_browser_check` and `checkly_multistep_check`, which replace `checkly_check`. `checkly_api_check` follows redirects unless `request.follow_redirects = false`, as the web app and the Checkly CLI do; `checkly_check` still defaults to `false`.
 - `checkly_maintenance_window`, which replaces `checkly_maintenance_windows`.
 - `component_configs` on `status_page_visibility` of `checkly_maintenance_window` and `checkly_maintenance_windows`, which shows a maintenance window on v3 status pages with the affected components. Leaving it out removes the window's component links, including ones set in the web app; see the upgrade guide.
 - `intent` and `ai_auto_repair_enabled` on `checkly_check`, `checkly_api_check`, `checkly_browser_check`, `checkly_multistep_check` and `checkly_playwright_check_suite`. A `moved` block from `checkly_check` to a per-type resource keeps them. A value set outside Terraform and absent from the configuration is removed by the next apply, and `ignore_changes` leaves it to the web app.

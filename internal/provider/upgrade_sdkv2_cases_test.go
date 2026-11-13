@@ -3208,6 +3208,7 @@ resource "checkly_api_check" "test" {
   locations              = ["eu-central-1"]
 
   request = {
+    follow_redirects = false
     url = "https://api.checklyhq.com/public-stats"
     assertions = [{
       source     = "STATUS_CODE"

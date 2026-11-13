@@ -141,8 +141,9 @@ func (r *APICheckResource) Schema(ctx context.Context, req resource.SchemaReques
 				SupportsOnlyOnNetworkError: true,
 			}),
 			"request": apiCheckRequestAttributeSchema(apiCheckRequestAttributeSchemaOptions{
-				Description: "The parameters of the HTTP request.",
-				Required:    true,
+				Description:            "The parameters of the HTTP request.",
+				Required:               true,
+				DefaultFollowRedirects: true,
 			}),
 			alertChannelSubscriptionAttributeName: makeAlertChannelSubscriptionSchema(AlertChannelSubscriptionAttributeSchemaOptions{Subject: subjectCheck}),
 		}, CommonCheckAttributeSchemaOptions{Subject: subjectCheck, ShouldFail: true, RunParallel: true, Locations: true, GroupMembership: true, RuntimeID: true, ShouldFailNote: shouldFailErrorStatusNote}),
