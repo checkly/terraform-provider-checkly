@@ -531,7 +531,10 @@ func TestAccTracerouteMonitorNoMaxResponseTime(t *testing.T) {
 	accTestCase(t, []resource.TestStep{
 		{
 			Config: config(""),
-			Check:  resource.TestCheckResourceAttr("checkly_traceroute_monitor.test", "max_response_time", "20000"),
+			Check: resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr("checkly_traceroute_monitor.test", "degraded_response_time", "500"),
+				resource.TestCheckResourceAttr("checkly_traceroute_monitor.test", "max_response_time", "1000"),
+			),
 		},
 		{
 			Config: config(noMax),
