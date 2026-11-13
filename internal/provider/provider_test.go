@@ -7,7 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/checkly/checkly-go-sdk/v2"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -357,10 +356,14 @@ func TestConfigureBuildsTheClientFromEnvironment(t *testing.T) {
 				t.Fatal(resp.Diagnostics)
 			}
 
-			client, ok := resp.ResourceData.(checkly.Client)
+			data, ok := resp.ResourceData.(*providerData)
 			if !ok {
 				t.Fatalf("resource data is a %T", resp.ResourceData)
 			}
+			if resp.DataSourceData != resp.ResourceData {
+				t.Errorf("data source data %v differs from resource data %v", resp.DataSourceData, resp.ResourceData)
+			}
+			client := data.client
 			if _, err := client.GetEnvironmentVariable(ctx, "MISSING"); !isNotFoundError(err) {
 				t.Fatalf("GetEnvironmentVariable error = %v, want a 404 from the test server", err)
 			}

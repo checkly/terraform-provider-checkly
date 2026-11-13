@@ -73,25 +73,49 @@ func contextWithAPITimeout(ctx context.Context) (context.Context, context.Cancel
 	return context.WithTimeout(ctx, apiCallTimeout())
 }
 
-// clientFromProviderData extracts the Checkly API client that the provider
-// stores in ResourceData/DataSourceData during Configure. It returns nil
-// (without diagnostics) when providerData is nil, which happens when
-// Terraform has not configured the provider yet.
-func clientFromProviderData(providerData any, diags *diag.Diagnostics) checkly.Client {
-	if providerData == nil {
+// providerData is what the provider hands to resources and data sources in
+// Configure: the API client, and the account it acts on, read only when a
+// resource needs it.
+type providerData struct {
+	client  checkly.Client
+	account *accountLookup
+}
+
+func newProviderData(client checkly.Client) *providerData {
+	return &providerData{client: client, account: &accountLookup{client: client}}
+}
+
+// accountFromProviderData returns the account lookup of the provider data,
+// or nil when Terraform has not configured the provider yet.
+// clientFromProviderData reports provider data of an unexpected type.
+func accountFromProviderData(data any) *accountLookup {
+	d, ok := data.(*providerData)
+	if !ok {
 		return nil
 	}
 
-	client, ok := providerData.(checkly.Client)
+	return d.account
+}
+
+// clientFromProviderData extracts the Checkly API client from the provider
+// data that the provider stores in ResourceData/DataSourceData during
+// Configure. It returns nil (without diagnostics) when data is nil, which
+// happens when Terraform has not configured the provider yet.
+func clientFromProviderData(data any, diags *diag.Diagnostics) checkly.Client {
+	if data == nil {
+		return nil
+	}
+
+	d, ok := data.(*providerData)
 	if !ok {
 		diags.AddError(
 			"Unexpected Provider Data Type",
-			fmt.Sprintf("Expected checkly.Client, got: %T. Please report this issue to the provider developers.", providerData),
+			fmt.Sprintf("Expected *providerData, got: %T. Please report this issue to the provider developers.", data),
 		)
 		return nil
 	}
 
-	return client
+	return d.client
 }
 
 // isNotFoundError reports whether an error returned by the Checkly API

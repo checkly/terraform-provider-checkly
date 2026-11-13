@@ -39,7 +39,8 @@ func NewCheckResource() resource.Resource {
 
 // CheckResource implements the checkly_check resource.
 type CheckResource struct {
-	client checkly.Client
+	client  checkly.Client
+	account *accountLookup
 }
 
 // CheckResourceModel describes the resource data model.
@@ -148,9 +149,9 @@ func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 				Default:  int64default.StaticInt64(15000),
 				// https://checklyhq.com/docs/api-checks/limits/
 				Validators: []validator.Int64{
-					int64validator.Between(0, 30000),
+					int64validator.Between(0, extendedResponseTimeLimit),
 				},
-				Description: "The response time in milliseconds where the check should be considered degraded. Possible values are between `0` and `30000`. Only relevant when `type` is `API`. (Default `15000`).",
+				Description: "The response time in milliseconds where the check should be considered degraded. Possible values are between `0` and `30000`, or up to `45000` if extended limits have been approved for your account. Only relevant when `type` is `API`. (Default `15000`).",
 			},
 			"max_response_time": schema.Int64Attribute{
 				Optional: true,
@@ -158,9 +159,9 @@ func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 				Default:  int64default.StaticInt64(30000),
 				// https://checklyhq.com/docs/api-checks/limits/
 				Validators: []validator.Int64{
-					int64validator.Between(0, 30000),
+					int64validator.Between(0, extendedResponseTimeLimit),
 				},
-				Description: "The response time in milliseconds where the check should be considered failing. Possible values are between `0` and `30000`. Only relevant when `type` is `API`. (Default `30000`).",
+				Description: "The response time in milliseconds where the check should be considered failing. Possible values are between `0` and `30000`, or up to `45000` if extended limits have been approved for your account. Only relevant when `type` is `API`. (Default `30000`).",
 			},
 			"ssl_check_domain": schema.StringAttribute{
 				Optional:    true,
@@ -340,6 +341,7 @@ func (r *CheckResource) UpgradeState(ctx context.Context) map[int64]resource.Sta
 
 func (r *CheckResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	r.client = clientFromProviderData(req.ProviderData, &resp.Diagnostics)
+	r.account = accountFromProviderData(req.ProviderData)
 }
 
 // ModifyPlan applies default values to the optional+computed attributes of
@@ -348,16 +350,25 @@ func (r *CheckResource) Configure(ctx context.Context, req resource.ConfigureReq
 // adjusted here instead. Substituting static values keeps every set element
 // fully known and stable across plans, which set element correlation
 // requires.
+//
+// For API checks, it also checks the response time limits against the
+// account, which needs the configured provider and so can't be done in
+// ValidateConfig. Browser and multi-step checks don't use them.
 func (r *CheckResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
 	planNestedDefaults(ctx, req, resp, path.Root("request"), objectWithSetDefaults("assertions", assertionsWithPropertyAndTargetDefaults))
 
-	// An empty script is reported in the plan when it is known there.
-	// Create and Update check again for a script known only at apply time.
 	var checkType types.String
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("type"), &checkType)...)
-	if resp.Diagnostics.HasError() || checkType.IsNull() || checkType.IsUnknown() || checkType.ValueString() == string(checkly.CheckTypeAPI) {
+	if resp.Diagnostics.HasError() || checkType.IsNull() || checkType.IsUnknown() {
 		return
 	}
+	if checkType.ValueString() == string(checkly.CheckTypeAPI) {
+		r.account.validateResponseTimeLimits(ctx, req.Plan, httpStandardResponseTimeLimit, &resp.Diagnostics)
+		return
+	}
+
+	// An empty script is reported in the plan when it is known there.
+	// Create and Update check again for a script known only at apply time.
 	validatePlannedCheckScript(ctx, req, resp, checkType.ValueString())
 }
 

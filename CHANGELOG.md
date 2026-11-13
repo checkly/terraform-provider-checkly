@@ -79,7 +79,7 @@ need changes. Follow the [upgrade guide](docs/guides/upgrading-to-v2.md).
   - `request.name_server.host` of `checkly_dns_monitor` must not be empty, and `request.name_server.port` must be between 1 and 65535.
   - `heartbeat.ping_token` of `checkly_heartbeat_monitor` and `checkly_heartbeat` must be a lowercase UUID with hyphens, such as `22868839-8450-4010-9241-1ea83a2e425f`, and `heartbeat.grace` must be at least `0`.
 - **Breaking:** `max_response_time = 0` on `checkly_traceroute_monitor` means the monitor never fails on response time. v1.x did not send the `0`, so the monitor kept its default of `20000` or the previous value. See [Expected one-time changes](docs/guides/upgrading-to-v2.md#expected-one-time-changes) in the upgrade guide.
-- `degraded_response_time` and `max_response_time` of `checkly_tcp_monitor`, `checkly_tcp_check` and `checkly_url_monitor` accept values up to `45000`, as the API does. Values above `5000` on TCP monitors and above `30000` on URL monitors only take effect on accounts with extended response time limits; on other accounts the monitor times out after 5 or 30 seconds.
+- `degraded_response_time` and `max_response_time` of `checkly_tcp_monitor`, `checkly_tcp_check`, `checkly_url_monitor`, `checkly_api_check` and `checkly_check` accept values up to `45000` if extended limits have been approved for your account; `checkly_check` used to accept up to `30000`. On other accounts, a value above `5000` on TCP monitors, or above `30000` on URL monitors and API checks, fails the plan.
 
 ### Added
 - `checkly_api_check`, `checkly_browser_check` and `checkly_multistep_check`, which replace `checkly_check`.

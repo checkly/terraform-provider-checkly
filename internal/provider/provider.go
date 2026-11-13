@@ -182,8 +182,9 @@ func (p *ChecklyProvider) Configure(ctx context.Context, req provider.ConfigureR
 		return
 	}
 
-	resp.DataSourceData = client
-	resp.ResourceData = client
+	data := newProviderData(client)
+	resp.DataSourceData = data
+	resp.ResourceData = data
 }
 
 // configuredOrEnv returns the configured value, or the environment variable
