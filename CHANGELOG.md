@@ -8,7 +8,7 @@ Releases from v1.6.7 through v1.32.0 are described in their
 [GitHub release notes](https://github.com/checkly/terraform-provider-checkly/releases)
 instead of this file.
 
-## [v2.0.0] - Unreleased
+## [v2.0.0](https://github.com/checkly/terraform-provider-checkly/releases/tag/v2.0.0) - 2026-11-13
 
 The provider moves from the Terraform Plugin SDK v2 to the Terraform Plugin
 Framework. State written by v1.x is upgraded automatically; configurations
@@ -75,6 +75,7 @@ need changes. Follow the [upgrade guide](docs/guides/upgrading-to-v2.md).
   - The target of a `LATENCY` assertion of `checkly_icmp_monitor`, of a `RESPONSE_TIME` assertion of `checkly_tcp_monitor` and `checkly_tcp_check`, and of a `RESPONSE_TIME` assertion of `checkly_dns_monitor` with `EQUALS`, `NOT_EQUALS`, `GREATER_THAN` or `LESS_THAN`, must be a non-negative number of milliseconds without leading or trailing whitespace. Any other target failed the assertion, or made a `NOT_EQUALS` assertion always pass.
   - Assertions of `checkly_tcp_monitor`, `checkly_tcp_check`, `checkly_icmp_monitor`, `checkly_grpc_monitor` and `checkly_traceroute_monitor` must use a source, comparison and property that the API accepts for the source. The numeric targets of traceroute and gRPC assertions must not have leading or trailing whitespace, which the API removed.
   - `max_response_time` must be at least `degraded_response_time` on `checkly_ssl_monitor`, and on `checkly_traceroute_monitor` unless it is `0`, and `max_packet_loss_threshold` at least `degraded_packet_loss_threshold` on `checkly_icmp_monitor`, counting an unset attribute as its default. `request.max_unknown_hops` of `checkly_traceroute_monitor` must not exceed `request.max_hops`.
+  - `degraded_packet_loss_threshold` and `max_packet_loss_threshold` of `checkly_icmp_monitor` must be between `1` and `100`. The API rejected a `0`.
   - `request.client_certificate.mode = "explicit"` of `checkly_ssl_monitor` requires `request.client_certificate.client_certificate_id`.
   - `request.name_server.host` of `checkly_dns_monitor` must not be empty, and `request.name_server.port` must be between 1 and 65535.
   - `heartbeat.ping_token` of `checkly_heartbeat_monitor` and `checkly_heartbeat` must be a lowercase UUID with hyphens, such as `22868839-8450-4010-9241-1ea83a2e425f`, and `heartbeat.grace` must be at least `0`.
