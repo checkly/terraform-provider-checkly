@@ -8,6 +8,16 @@ Releases from v1.6.7 through v1.32.0 are described in their
 [GitHub release notes](https://github.com/checkly/terraform-provider-checkly/releases)
 instead of this file.
 
+## [v2.0.1](https://github.com/checkly/terraform-provider-checkly/releases/tag/v2.0.1) - 2026-11-16
+
+### Fixed
+
+- The Go module path is now `github.com/checkly/terraform-provider-checkly/v2`,
+  as Go requires for a v2 release, so other Go modules can depend on the
+  provider. Import it as
+  `github.com/checkly/terraform-provider-checkly/v2/provider`. Terraform
+  configurations are not affected.
+
 ## [v2.0.0](https://github.com/checkly/terraform-provider-checkly/releases/tag/v2.0.0) - 2026-11-13
 
 The provider moves from the Terraform Plugin SDK v2 to the Terraform Plugin
