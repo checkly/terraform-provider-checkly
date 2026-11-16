@@ -134,7 +134,7 @@ func (r *URLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 				Default:     int64default.StaticInt64(3000),
 				Description: "The response time in milliseconds where the monitor should be considered degraded. Possible values are between `0` and `30000`, or up to `45000` if extended limits have been approved for your account. Defaults to `3000`.",
 				Validators: []validator.Int64{
-					int64validator.Between(0, extendedResponseTimeLimit),
+					safeInt64(int64validator.Between(0, extendedResponseTimeLimit)),
 				},
 			},
 			"max_response_time": schema.Int64Attribute{
@@ -143,7 +143,7 @@ func (r *URLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 				Default:     int64default.StaticInt64(5000),
 				Description: "The response time in milliseconds where the monitor should be considered failing. Possible values are between `0` and `30000`, or up to `45000` if extended limits have been approved for your account. Defaults to `5000`.",
 				Validators: []validator.Int64{
-					int64validator.Between(0, extendedResponseTimeLimit),
+					safeInt64(int64validator.Between(0, extendedResponseTimeLimit)),
 				},
 			},
 			triggerIncidentAttributeName: makeTriggerIncidentSchema(),
@@ -182,7 +182,7 @@ func (r *URLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 						Default:     stringdefault.StaticString("IPv4"),
 						Description: "IP family version to use for the connection. " + ipFamilyValues.String() + " Defaults to `IPv4`.",
 						Validators: []validator.String{
-							stringvalidator.OneOf(ipFamilyValues.Values()...),
+							safeString(stringvalidator.OneOf(ipFamilyValues.Values()...)),
 						},
 					},
 					"assertions": schema.SetNestedAttribute{
@@ -206,7 +206,7 @@ func (r *URLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 									Required:    true,
 									Description: "The source of the asserted value. " + urlMonitorAssertionSourceValues.String(),
 									Validators: []validator.String{
-										stringvalidator.OneOf(urlMonitorAssertionSourceValues.Values()...),
+										safeString(stringvalidator.OneOf(urlMonitorAssertionSourceValues.Values()...)),
 									},
 								},
 								"property": schema.StringAttribute{
@@ -218,7 +218,7 @@ func (r *URLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 									Required:    true,
 									Description: "The type of comparison to be executed between expected and actual value of the assertion. " + urlMonitorAssertionComparisonValues.String(),
 									Validators: []validator.String{
-										stringvalidator.OneOf(urlMonitorAssertionComparisonValues.Values()...),
+										safeString(stringvalidator.OneOf(urlMonitorAssertionComparisonValues.Values()...)),
 									},
 								},
 								"target": schema.StringAttribute{

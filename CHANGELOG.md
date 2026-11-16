@@ -8,6 +8,18 @@ Releases from v1.6.7 through v1.32.0 are described in their
 [GitHub release notes](https://github.com/checkly/terraform-provider-checkly/releases)
 instead of this file.
 
+## Unreleased
+
+### Fixed
+
+- The provider's validation errors for attributes inside a set, such as
+  `request.metadata` of `checkly_grpc_monitor` and the `assertions` of
+  monitors, show the set element as `[*]` (`request.metadata[*].value`)
+  instead of printing all of its values, which could include credentials.
+  Errors reported by the Terraform Plugin Framework that the provider is
+  built on, such as a missing required attribute in a set element, still
+  print the whole element.
+
 ## [v2.0.1](https://github.com/checkly/terraform-provider-checkly/releases/tag/v2.0.1) - 2026-11-16
 
 ### Fixed

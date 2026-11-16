@@ -129,7 +129,7 @@ func (v predicateStringValidator) ValidateString(ctx context.Context, req valida
 		resp.Diagnostics.AddAttributeError(
 			req.Path,
 			"Invalid Attribute Value",
-			fmt.Sprintf(v.message, req.Path.String(), value),
+			fmt.Sprintf(v.message, displayPath(req.Path), value),
 		)
 	}
 }
@@ -284,7 +284,7 @@ func (r *StatusPageV3Resource) Schema(ctx context.Context, req resource.SchemaRe
 				Default:     stringdefault.StaticString("AUTO"),
 				Description: "The default theme of the status page. " + statusPageThemeValues.String() + " Defaults to `AUTO`.",
 				Validators: []validator.String{
-					stringvalidator.OneOf(statusPageThemeValues.Values()...),
+					safeString(stringvalidator.OneOf(statusPageThemeValues.Values()...)),
 				},
 			},
 			"privacy_policy_link": statusPageV3OptionalString("An http or https link to your privacy policy, shown in the page footer. Must be at most `255` characters.",
@@ -304,7 +304,7 @@ func (r *StatusPageV3Resource) Schema(ctx context.Context, req resource.SchemaRe
 			),
 			"google_analytics_tag": statusPageV3OptionalString("A Google Analytics tag ID (e.g. \"G-XXXXXXXXXX\") to embed on the public page. "+
 				"Must be at most `255` characters. Must contain only letters, digits and dashes.",
-				stringvalidator.RegexMatches(statusPageV3GoogleAnalyticsTagRegex, "must contain only letters, digits and dashes"),
+				safeString(stringvalidator.RegexMatches(statusPageV3GoogleAnalyticsTagRegex, "must contain only letters, digits and dashes")),
 				utf16LengthBetween(0, 255),
 			),
 			"allow_indexing": schema.BoolAttribute{

@@ -257,7 +257,7 @@ func (r *PlaywrightCheckSuiteResource) Schema(ctx context.Context, req resource.
 										// The API stores an empty command as no command, so
 										// an empty one would show as a change in every plan.
 										Validators: []validator.String{
-											stringvalidator.LengthAtLeast(1),
+											safeString(stringvalidator.LengthAtLeast(1)),
 										},
 									},
 								},
@@ -276,7 +276,7 @@ func (r *PlaywrightCheckSuiteResource) Schema(ctx context.Context, req resource.
 										// An empty command is not sent, so the API applies its
 										// default command, which differs from the planned value.
 										Validators: []validator.String{
-											stringvalidator.LengthAtLeast(1),
+											safeString(stringvalidator.LengthAtLeast(1)),
 										},
 									},
 								},
@@ -308,7 +308,7 @@ func (r *PlaywrightCheckSuiteResource) Schema(ctx context.Context, req resource.
 								// a request without devices. Validating the configuration
 								// rejects it even while the code bundle metadata is unknown.
 								Validators: []validator.Set{
-									setvalidator.SizeAtLeast(1),
+									safeSet(setvalidator.SizeAtLeast(1)),
 								},
 								NestedObject: schema.NestedAttributeObject{
 									Attributes: map[string]schema.Attribute{
@@ -321,7 +321,7 @@ func (r *PlaywrightCheckSuiteResource) Schema(ctx context.Context, req resource.
 											// accepts any name, and a check with another one fails
 											// every run when its browsers are installed.
 											Validators: []validator.String{
-												stringvalidator.OneOf(playwrightCheckSuiteDeviceTypes...),
+												safeString(stringvalidator.OneOf(playwrightCheckSuiteDeviceTypes...)),
 											},
 										},
 									},
@@ -345,7 +345,7 @@ func (r *PlaywrightCheckSuiteResource) Schema(ctx context.Context, req resource.
 								Required:    true,
 								Description: "The engine name. " + playwrightCheckSuiteEngineNameValues.String(),
 								Validators: []validator.String{
-									stringvalidator.OneOf(playwrightCheckSuiteEngineNameValues.Values()...),
+									safeString(stringvalidator.OneOf(playwrightCheckSuiteEngineNameValues.Values()...)),
 								},
 							},
 							"version": schema.StringAttribute{

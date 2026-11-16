@@ -43,7 +43,7 @@ func (v hostWithoutSchemeOrPortValidator) ValidateString(ctx context.Context, re
 	}
 
 	if problem := hostSchemeOrPort(req.ConfigValue.ValueString()); problem != "" {
-		detail := fmt.Sprintf("%s must be a host name or IP address without a scheme or a port, but it has %s: %q.", req.Path, problem, req.ConfigValue.ValueString())
+		detail := fmt.Sprintf("%s must be a host name or IP address without a scheme or a port, but it has %s: %q.", displayPath(req.Path), problem, req.ConfigValue.ValueString())
 		if !v.noPortAttribute {
 			detail += " Set the port with the port attribute."
 		}
@@ -237,7 +237,7 @@ type orderedThresholdsConfigValidator struct {
 var _ resource.ConfigValidator = orderedThresholdsConfigValidator{}
 
 func (v orderedThresholdsConfigValidator) Description(ctx context.Context) string {
-	return fmt.Sprintf("%s must be greater than or equal to %s", v.upper, v.lower)
+	return fmt.Sprintf("%s must be greater than or equal to %s", displayPath(v.upper), displayPath(v.lower))
 }
 
 func (v orderedThresholdsConfigValidator) MarkdownDescription(ctx context.Context) string {
@@ -269,7 +269,7 @@ func (v orderedThresholdsConfigValidator) ValidateResource(ctx context.Context, 
 		resp.Diagnostics.AddAttributeError(
 			v.upper,
 			"Invalid Attribute Combination",
-			fmt.Sprintf("%s (%s) must be greater than or equal to %s (%s).", v.upper, upperDescription, v.lower, lowerDescription),
+			fmt.Sprintf("%s (%s) must be greater than or equal to %s (%s).", displayPath(v.upper), upperDescription, displayPath(v.lower), lowerDescription),
 		)
 	}
 }
@@ -319,7 +319,7 @@ func (v uuidValidator) ValidateString(ctx context.Context, req validator.StringR
 		resp.Diagnostics.AddAttributeError(
 			req.Path,
 			"Invalid Attribute Value",
-			fmt.Sprintf("%s must be a lowercase UUID with hyphens, such as 22868839-8450-4010-9241-1ea83a2e425f.", req.Path),
+			fmt.Sprintf("%s must be a lowercase UUID with hyphens, such as 22868839-8450-4010-9241-1ea83a2e425f.", displayPath(req.Path)),
 		)
 	}
 }

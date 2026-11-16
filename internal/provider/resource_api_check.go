@@ -105,7 +105,7 @@ func (r *APICheckResource) Schema(ctx context.Context, req resource.SchemaReques
 				Default:  int64default.StaticInt64(5000),
 				// https://checklyhq.com/docs/api-checks/limits/
 				Validators: []validator.Int64{
-					int64validator.Between(0, extendedResponseTimeLimit),
+					safeInt64(int64validator.Between(0, extendedResponseTimeLimit)),
 				},
 				Description: "The response time in milliseconds where the check should be considered degraded. Possible values are between `0` and `30000`, or up to `45000` if extended limits have been approved for your account. Defaults to `5000`.",
 			},
@@ -115,7 +115,7 @@ func (r *APICheckResource) Schema(ctx context.Context, req resource.SchemaReques
 				Default:  int64default.StaticInt64(20000),
 				// https://checklyhq.com/docs/api-checks/limits/
 				Validators: []validator.Int64{
-					int64validator.Between(0, extendedResponseTimeLimit),
+					safeInt64(int64validator.Between(0, extendedResponseTimeLimit)),
 				},
 				Description: "The response time in milliseconds where the check should be considered failing. Possible values are between `0` and `30000`, or up to `45000` if extended limits have been approved for your account. Defaults to `20000`.",
 			},
@@ -466,7 +466,7 @@ func snippetIDAttributeSchema(description string) schema.Int64Attribute {
 	return schema.Int64Attribute{
 		Optional: true,
 		Validators: []validator.Int64{
-			int64validator.AtLeast(1),
+			safeInt64(int64validator.AtLeast(1)),
 		},
 		Description: description,
 	}

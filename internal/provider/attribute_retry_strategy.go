@@ -99,7 +99,7 @@ func makeRetryStrategyAttributeSchema(options RetryStrategyAttributeSchemaOption
 			Required:    true,
 			Description: "Determines which type of retry strategy to use. " + retryStrategyTypeValues.String(),
 			Validators: []validator.String{
-				stringvalidator.OneOf(retryStrategyTypeValues.Values()...),
+				safeString(stringvalidator.OneOf(retryStrategyTypeValues.Values()...)),
 			},
 		},
 		"base_backoff_seconds": schema.Int64Attribute{
@@ -111,7 +111,7 @@ func makeRetryStrategyAttributeSchema(options RetryStrategyAttributeSchemaOption
 			// negative time: the queue that delays retries on public
 			// locations rejects it, so the retry is never scheduled.
 			Validators: []validator.Int64{
-				int64validator.AtLeast(0),
+				safeInt64(int64validator.AtLeast(0)),
 			},
 		},
 		"max_retries": schema.Int64Attribute{
@@ -120,7 +120,7 @@ func makeRetryStrategyAttributeSchema(options RetryStrategyAttributeSchemaOption
 			Default:     int64default.StaticInt64(2),
 			Description: "The maximum number of times to retry the check/monitor. Possible values are between `1` and `10`. Defaults to `2`. Available when `type` is `FIXED`, `LINEAR` or `EXPONENTIAL`.",
 			Validators: []validator.Int64{
-				int64validator.Between(1, 10),
+				safeInt64(int64validator.Between(1, 10)),
 			},
 		},
 		"max_duration_seconds": schema.Int64Attribute{
@@ -129,7 +129,7 @@ func makeRetryStrategyAttributeSchema(options RetryStrategyAttributeSchemaOption
 			Default:     int64default.StaticInt64(600),
 			Description: "The total amount of time to continue retrying the check/monitor, in seconds. Possible values are between `0` and `600`. Defaults to `600`. Available when `type` is `FIXED`, `LINEAR` or `EXPONENTIAL`.",
 			Validators: []validator.Int64{
-				int64validator.Between(0, 600),
+				safeInt64(int64validator.Between(0, 600)),
 			},
 		},
 		"same_region": schema.BoolAttribute{

@@ -103,7 +103,7 @@ func TestAccTracerouteMonitorInvalidAssertionSource(t *testing.T) {
 				  }
 				}
 			`,
-			ExpectError: regexp.MustCompile(`(?s)request\.assertions\[.*\]\.source\s+value\s+must\s+be\s+one\s+of`),
+			ExpectError: regexp.MustCompile(`(?s)request\.assertions\[\*\]\.source\s+value\s+must\s+be\s+one\s+of`),
 		},
 	})
 }

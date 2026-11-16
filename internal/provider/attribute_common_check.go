@@ -246,7 +246,7 @@ func groupIDAttributeSchema(subject CheckSubject) schema.Int64Attribute {
 	return schema.Int64Attribute{
 		Optional: true,
 		Validators: []validator.Int64{
-			int64validator.AtLeast(1),
+			safeInt64(int64validator.AtLeast(1)),
 		},
 		Description: fmt.Sprintf("The ID of the check group the %[1]s is part of. Must be at least `1`. If not set, "+
 			"the %[1]s is not part of a group.", subject),
@@ -260,7 +260,7 @@ func groupOrderAttributeSchema(subject CheckSubject) schema.Int64Attribute {
 	return schema.Int64Attribute{
 		Optional: true,
 		Validators: []validator.Int64{
-			int64validator.AtLeast(0),
+			safeInt64(int64validator.AtLeast(0)),
 		},
 		Description: fmt.Sprintf("The position of the %s in its check group, which sets the "+
 			"order in which the checks and monitors of the group run when the group is triggered from the API "+

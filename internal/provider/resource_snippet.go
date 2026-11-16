@@ -60,14 +60,14 @@ func (r *SnippetResource) Schema(ctx context.Context, req resource.SchemaRequest
 				Required:    true,
 				Description: "The name of the snippet.",
 				Validators: []validator.String{
-					stringvalidator.LengthAtLeast(1),
+					safeString(stringvalidator.LengthAtLeast(1)),
 				},
 			},
 			"script": schema.StringAttribute{
 				Required:    true,
 				Description: "Your Node.js code that interacts with the API check lifecycle, or functions as a partial for browser checks.",
 				Validators: []validator.String{
-					stringvalidator.LengthAtLeast(1),
+					safeString(stringvalidator.LengthAtLeast(1)),
 				},
 			},
 		},

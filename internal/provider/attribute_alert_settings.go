@@ -166,7 +166,7 @@ func makeAlertSettingsAttributeSchema(options AlertSettingsAttributeSchemaOption
 				Default:     stringdefault.StaticString("RUN_BASED"),
 				Description: "Determines the type of escalation to use. " + alertSettingsEscalationTypeValues.String() + " Defaults to `RUN_BASED`.",
 				Validators: []validator.String{
-					stringvalidator.OneOf(alertSettingsEscalationTypeValues.Values()...),
+					safeString(stringvalidator.OneOf(alertSettingsEscalationTypeValues.Values()...)),
 				},
 			},
 			"run_based_escalation": schema.SingleNestedAttribute{
@@ -184,7 +184,7 @@ func makeAlertSettingsAttributeSchema(options AlertSettingsAttributeSchemaOption
 						Default:     int64default.StaticInt64(1),
 						Description: failedRunThreshold + " Possible values are between `1` and `5`. Defaults to `1`.",
 						Validators: []validator.Int64{
-							int64validator.Between(1, 5),
+							safeInt64(int64validator.Between(1, 5)),
 						},
 					},
 				},
@@ -204,7 +204,7 @@ func makeAlertSettingsAttributeSchema(options AlertSettingsAttributeSchemaOption
 						Default:     int64default.StaticInt64(5),
 						Description: minutesFailingThreshold + " " + alertSettingsMinutesFailingThresholdValues.String() + " Defaults to `5`.",
 						Validators: []validator.Int64{
-							int64validator.OneOf(alertSettingsMinutesFailingThresholdValues.Values()...),
+							safeInt64(int64validator.OneOf(alertSettingsMinutesFailingThresholdValues.Values()...)),
 						},
 					},
 				},
@@ -227,7 +227,7 @@ func makeAlertSettingsAttributeSchema(options AlertSettingsAttributeSchemaOption
 						Default:     int64default.StaticInt64(0),
 						Description: "Number of reminder notifications to send. " + alertSettingsReminderAmountValues.String() + " Defaults to `0`.",
 						Validators: []validator.Int64{
-							int64validator.OneOf(alertSettingsReminderAmountValues.Values()...),
+							safeInt64(int64validator.OneOf(alertSettingsReminderAmountValues.Values()...)),
 						},
 					},
 					"interval": schema.Int64Attribute{
@@ -236,7 +236,7 @@ func makeAlertSettingsAttributeSchema(options AlertSettingsAttributeSchemaOption
 						Default:     int64default.StaticInt64(5),
 						Description: "Interval between reminder notifications in minutes. " + alertSettingsReminderIntervalValues.String() + " Defaults to `5`.",
 						Validators: []validator.Int64{
-							int64validator.OneOf(alertSettingsReminderIntervalValues.Values()...),
+							safeInt64(int64validator.OneOf(alertSettingsReminderIntervalValues.Values()...)),
 						},
 					},
 				},
@@ -265,7 +265,7 @@ func makeAlertSettingsAttributeSchema(options AlertSettingsAttributeSchemaOption
 						Default:     int64default.StaticInt64(10),
 						Description: "Percentage of runs that must fail to trigger alert. " + alertSettingsParallelRunFailurePercentageValues.String() + " Defaults to `10`.",
 						Validators: []validator.Int64{
-							int64validator.OneOf(alertSettingsParallelRunFailurePercentageValues.Values()...),
+							safeInt64(int64validator.OneOf(alertSettingsParallelRunFailurePercentageValues.Values()...)),
 						},
 					},
 				},

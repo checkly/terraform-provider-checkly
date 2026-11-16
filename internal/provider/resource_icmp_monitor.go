@@ -125,7 +125,7 @@ func (r *ICMPMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 				// The API rejects an explicit 0 even though its public schema
 				// documents it as valid.
 				Validators: []validator.Int64{
-					int64validator.Between(1, 100),
+					safeInt64(int64validator.Between(1, 100)),
 				},
 			},
 			"max_packet_loss_threshold": schema.Int64Attribute{
@@ -136,7 +136,7 @@ func (r *ICMPMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 				// The API rejects an explicit 0 even though its public schema
 				// documents it as valid.
 				Validators: []validator.Int64{
-					int64validator.Between(1, 100),
+					safeInt64(int64validator.Between(1, 100)),
 				},
 			},
 			triggerIncidentAttributeName: makeTriggerIncidentSchema(),
@@ -162,7 +162,7 @@ func (r *ICMPMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 						Default:     stringdefault.StaticString("IPv4"),
 						Description: "The IP family to use. " + ipFamilyValues.String() + " Defaults to `IPv4`.",
 						Validators: []validator.String{
-							stringvalidator.OneOf(ipFamilyValues.Values()...),
+							safeString(stringvalidator.OneOf(ipFamilyValues.Values()...)),
 						},
 					},
 					"ping_count": schema.Int64Attribute{
@@ -171,7 +171,7 @@ func (r *ICMPMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 						Default:     int64default.StaticInt64(10),
 						Description: "The number of ping packets to send. Defaults to `10`.",
 						Validators: []validator.Int64{
-							int64validator.Between(1, 50),
+							safeInt64(int64validator.Between(1, 50)),
 						},
 					},
 					"assertions": schema.SetNestedAttribute{
@@ -198,7 +198,7 @@ func (r *ICMPMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 									Required:    true,
 									Description: "The source of the asserted value. " + icmpMonitorAssertionSourceValues.String(),
 									Validators: []validator.String{
-										stringvalidator.OneOf(icmpMonitorAssertionSourceValues.Values()...),
+										safeString(stringvalidator.OneOf(icmpMonitorAssertionSourceValues.Values()...)),
 									},
 								},
 								"property": schema.StringAttribute{
@@ -210,7 +210,7 @@ func (r *ICMPMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 									Required:    true,
 									Description: "The type of comparison to be executed between expected and actual value of the assertion. For `LATENCY`, possible values are `EQUALS`, `NOT_EQUALS`, `GREATER_THAN` and `LESS_THAN`. For `JSON_RESPONSE`, possible values are `EQUALS`, `NOT_EQUALS`, `IS_EMPTY`, `NOT_EMPTY`, `GREATER_THAN`, `LESS_THAN`, `CONTAINS`, `NOT_CONTAINS`, `IS_NULL` and `NOT_NULL`.",
 									Validators: []validator.String{
-										stringvalidator.OneOf("EQUALS", "NOT_EQUALS", "IS_EMPTY", "NOT_EMPTY", "GREATER_THAN", "LESS_THAN", "CONTAINS", "NOT_CONTAINS", "IS_NULL", "NOT_NULL"),
+										safeString(stringvalidator.OneOf("EQUALS", "NOT_EQUALS", "IS_EMPTY", "NOT_EMPTY", "GREATER_THAN", "LESS_THAN", "CONTAINS", "NOT_CONTAINS", "IS_NULL", "NOT_NULL")),
 									},
 								},
 								"target": schema.StringAttribute{

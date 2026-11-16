@@ -130,7 +130,7 @@ func (r *CheckGroupV2Resource) Schema(ctx context.Context, req resource.SchemaRe
 			Optional:    true,
 			Description: "The ID of a code snippet. Code snippets are not available for new plans.",
 			Validators: []validator.Int64{
-				int64validator.AtLeast(1),
+				safeInt64(int64validator.AtLeast(1)),
 			},
 		},
 		"inline_script": schema.StringAttribute{

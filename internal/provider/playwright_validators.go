@@ -40,7 +40,7 @@ func (v playwrightFileExistsValidator) ValidateString(ctx context.Context, req v
 		resp.Diagnostics.AddAttributeError(
 			req.Path,
 			"Invalid Attribute Value",
-			fmt.Sprintf("Attribute %s refers to a non-existing file %q: %s", req.Path, value, err),
+			fmt.Sprintf("Attribute %s refers to a non-existing file %q: %s", displayPath(req.Path), value, err),
 		)
 	}
 }
@@ -77,7 +77,7 @@ func (v playwrightGzipArchiveValidator) ValidateString(ctx context.Context, req 
 		resp.Diagnostics.AddAttributeError(
 			req.Path,
 			"Invalid Attribute Value",
-			fmt.Sprintf("Attribute %s could not be read: %s", req.Path, err),
+			fmt.Sprintf("Attribute %s could not be read: %s", displayPath(req.Path), err),
 		)
 		return
 	}
@@ -86,7 +86,7 @@ func (v playwrightGzipArchiveValidator) ValidateString(ctx context.Context, req 
 		resp.Diagnostics.AddAttributeError(
 			req.Path,
 			"Invalid Attribute Value",
-			fmt.Sprintf("Attribute %s appears to be a .zip archive, but a .tar.gz archive is required", req.Path),
+			fmt.Sprintf("Attribute %s appears to be a .zip archive, but a .tar.gz archive is required", displayPath(req.Path)),
 		)
 		return
 	}
@@ -95,7 +95,7 @@ func (v playwrightGzipArchiveValidator) ValidateString(ctx context.Context, req 
 		resp.Diagnostics.AddAttributeError(
 			req.Path,
 			"Invalid Attribute Value",
-			fmt.Sprintf("Attribute %s is not a valid .tar.gz archive", req.Path),
+			fmt.Sprintf("Attribute %s is not a valid .tar.gz archive", displayPath(req.Path)),
 		)
 	}
 }
@@ -125,7 +125,7 @@ func (v playwrightVersionFormatValidator) ValidateString(ctx context.Context, re
 		resp.Diagnostics.AddAttributeError(
 			req.Path,
 			"Invalid Attribute Value",
-			fmt.Sprintf("Attribute %s must be a version number (e.g. \"22\", \"24\", \"1.3\"), got: %s", req.Path, value),
+			fmt.Sprintf("Attribute %s must be a version number (e.g. \"22\", \"24\", \"1.3\"), got: %s", displayPath(req.Path), value),
 		)
 	}
 }
@@ -151,7 +151,7 @@ func (v playwrightWorkingDirValidator) ValidateString(ctx context.Context, req v
 		resp.Diagnostics.AddAttributeError(
 			req.Path,
 			"Invalid Attribute Value",
-			fmt.Sprintf("Attribute %s must not be empty; use \".\" for the root directory", req.Path),
+			fmt.Sprintf("Attribute %s must not be empty; use \".\" for the root directory", displayPath(req.Path)),
 		)
 	}
 }

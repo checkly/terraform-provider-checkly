@@ -191,7 +191,7 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 				Default:     int64default.StaticInt64(10000),
 				Description: "The response time in milliseconds where the monitor should be considered degraded. Possible values are between `1` and `180000`. Defaults to `10000`.",
 				Validators: []validator.Int64{
-					int64validator.Between(1, 180000),
+					safeInt64(int64validator.Between(1, 180000)),
 				},
 			},
 			"max_response_time": schema.Int64Attribute{
@@ -200,7 +200,7 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 				Default:     int64default.StaticInt64(20000),
 				Description: "The response time in milliseconds where the monitor should be considered failing. Possible values are between `1` and `180000`. Defaults to `20000`.",
 				Validators: []validator.Int64{
-					int64validator.Between(1, 180000),
+					safeInt64(int64validator.Between(1, 180000)),
 				},
 			},
 			triggerIncidentAttributeName: makeTriggerIncidentSchema(),
@@ -227,7 +227,7 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 						Required:    true,
 						Description: "The port number to connect to. Possible values are between `1` and `65535`.",
 						Validators: []validator.Int64{
-							int64validator.Between(1, 65535),
+							safeInt64(int64validator.Between(1, 65535)),
 						},
 					},
 					"ip_family": schema.StringAttribute{
@@ -236,7 +236,7 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 						Default:     stringdefault.StaticString("IPv4"),
 						Description: "The IP family to use when executing the gRPC check. " + ipFamilyValues.String() + " Defaults to `IPv4`.",
 						Validators: []validator.String{
-							stringvalidator.OneOf(ipFamilyValues.Values()...),
+							safeString(stringvalidator.OneOf(ipFamilyValues.Values()...)),
 						},
 					},
 					"grpc_mode": schema.StringAttribute{
@@ -245,7 +245,7 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 						Default:     stringdefault.StaticString("BEHAVIOR"),
 						Description: "The gRPC monitoring mode. " + grpcMonitorModeValues.String() + " Defaults to `BEHAVIOR`.",
 						Validators: []validator.String{
-							stringvalidator.OneOf(grpcMonitorModeValues.Values()...),
+							safeString(stringvalidator.OneOf(grpcMonitorModeValues.Values()...)),
 						},
 					},
 					"tls": schema.BoolAttribute{
@@ -271,7 +271,7 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 						Default:     int64default.StaticInt64(60),
 						Description: "The number of seconds to wait for the gRPC call to complete before timing out. Possible values are between `1` and `180`. Defaults to `60`.",
 						Validators: []validator.Int64{
-							int64validator.Between(1, 180),
+							safeInt64(int64validator.Between(1, 180)),
 						},
 					},
 					"service": schema.StringAttribute{
@@ -292,7 +292,7 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 						Default:     stringdefault.StaticString("PROTOBUF"),
 						Description: "The wire encoding used in `BEHAVIOR` mode. " + grpcMonitorEncodingValues.String() + " Defaults to `PROTOBUF`.",
 						Validators: []validator.String{
-							stringvalidator.OneOf(grpcMonitorEncodingValues.Values()...),
+							safeString(stringvalidator.OneOf(grpcMonitorEncodingValues.Values()...)),
 						},
 					},
 					"service_definition": schema.StringAttribute{
@@ -301,7 +301,7 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 						Default:     stringdefault.StaticString("REFLECTION"),
 						Description: "How the service definition is resolved in `BEHAVIOR` mode. " + grpcMonitorServiceDefinitionValues.String() + " Defaults to `REFLECTION`. Must not be set when `encoding = \"FLATBUFFERS\"`, and must not be `PROTO_FILE` in `HEALTH` mode.",
 						Validators: []validator.String{
-							stringvalidator.OneOf(grpcMonitorServiceDefinitionValues.Values()...),
+							safeString(stringvalidator.OneOf(grpcMonitorServiceDefinitionValues.Values()...)),
 						},
 					},
 					"proto_content": schema.StringAttribute{
@@ -345,7 +345,7 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 						Default:     emptySetDefault(types.ObjectType{AttrTypes: grpcMonitorMetadataAttrTypes}),
 						Description: "gRPC metadata (request headers) sent with the call. Must contain at most `50` elements.",
 						Validators: []validator.Set{
-							setvalidator.SizeAtMost(50),
+							safeSet(setvalidator.SizeAtMost(50)),
 							grpcMetadataUniqueKeysValidator{},
 						},
 						NestedObject: schema.NestedAttributeObject{
@@ -405,7 +405,7 @@ func (r *GRPCMonitorResource) Schema(ctx context.Context, req resource.SchemaReq
 									Required:    true,
 									Description: "The source of the asserted value. " + grpcMonitorAssertionSourceValues.String(),
 									Validators: []validator.String{
-										stringvalidator.OneOf(grpcMonitorAssertionSourceValues.Values()...),
+										safeString(stringvalidator.OneOf(grpcMonitorAssertionSourceValues.Values()...)),
 									},
 								},
 								"property": schema.StringAttribute{
@@ -682,9 +682,9 @@ func (v grpcMetadataUniqueKeysValidator) ValidateSet(ctx context.Context, req va
 			continue
 		}
 
-		detail := fmt.Sprintf("%s has the keys %q and %q, which differ only in case. gRPC metadata keys are case-insensitive, and the API requires each key to be unique ignoring case.", req.Path, first, key.ValueString())
+		detail := fmt.Sprintf("%s has the keys %q and %q, which differ only in case. gRPC metadata keys are case-insensitive, and the API requires each key to be unique ignoring case.", displayPath(req.Path), first, key.ValueString())
 		if first == key.ValueString() {
-			detail = fmt.Sprintf("%s has more than one element with the key %q. The API requires each metadata key to be unique, ignoring case.", req.Path, first)
+			detail = fmt.Sprintf("%s has more than one element with the key %q. The API requires each metadata key to be unique, ignoring case.", displayPath(req.Path), first)
 		}
 		resp.Diagnostics.AddAttributeError(req.Path, "Duplicate gRPC Metadata Key", detail)
 	}
@@ -719,7 +719,7 @@ func (v grpcMonitorBfbsContentValidator) ValidateString(ctx context.Context, req
 		resp.Diagnostics.AddAttributeError(
 			req.Path,
 			"Invalid FlatBuffers Schema",
-			fmt.Sprintf("Attribute %s must be a base64 string: %s", req.Path, err),
+			fmt.Sprintf("Attribute %s must be a base64 string: %s", displayPath(req.Path), err),
 		)
 		return
 	}
@@ -728,7 +728,7 @@ func (v grpcMonitorBfbsContentValidator) ValidateString(ctx context.Context, req
 		resp.Diagnostics.AddAttributeError(
 			req.Path,
 			"Invalid FlatBuffers Schema",
-			fmt.Sprintf("Attribute %s must be at most %d characters long once encoded, got %d.", req.Path, maxGRPCSchemaContentLength, len(value)),
+			fmt.Sprintf("Attribute %s must be at most %d characters long once encoded, got %d.", displayPath(req.Path), maxGRPCSchemaContentLength, len(value)),
 		)
 	}
 }

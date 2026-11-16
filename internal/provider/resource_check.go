@@ -134,7 +134,7 @@ func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 				Required:    true,
 				Description: "The type of the check. " + checkTypeValues.String(),
 				Validators: []validator.String{
-					stringvalidator.OneOf(checkTypeValues.Values()...),
+					safeString(stringvalidator.OneOf(checkTypeValues.Values()...)),
 				},
 			},
 			frequencyAttributeName: makeFrequencyAttributeSchema(FrequencyAttributeSchemaOptions{
@@ -157,7 +157,7 @@ func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 				Default:  int64default.StaticInt64(15000),
 				// https://checklyhq.com/docs/api-checks/limits/
 				Validators: []validator.Int64{
-					int64validator.Between(0, extendedResponseTimeLimit),
+					safeInt64(int64validator.Between(0, extendedResponseTimeLimit)),
 				},
 				Description: "The response time in milliseconds where the check should be considered degraded. Possible values are between `0` and `30000`, or up to `45000` if extended limits have been approved for your account. Defaults to `15000`. Only relevant when `type` is `API`.",
 			},
@@ -167,7 +167,7 @@ func (r *CheckResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 				Default:  int64default.StaticInt64(30000),
 				// https://checklyhq.com/docs/api-checks/limits/
 				Validators: []validator.Int64{
-					int64validator.Between(0, extendedResponseTimeLimit),
+					safeInt64(int64validator.Between(0, extendedResponseTimeLimit)),
 				},
 				Description: "The response time in milliseconds where the check should be considered failing. Possible values are between `0` and `30000`, or up to `45000` if extended limits have been approved for your account. Defaults to `30000`. Only relevant when `type` is `API`.",
 			},

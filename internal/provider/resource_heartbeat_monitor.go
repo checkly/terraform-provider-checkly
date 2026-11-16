@@ -123,21 +123,21 @@ func (r *HeartbeatMonitorResource) Schema(ctx context.Context, req resource.Sche
 						Required:    true,
 						Description: "The unit of `period`. " + heartbeatMonitorTimeUnitValues.String(),
 						Validators: []validator.String{
-							stringvalidator.OneOf(heartbeatMonitorTimeUnitValues.Values()...),
+							safeString(stringvalidator.OneOf(heartbeatMonitorTimeUnitValues.Values()...)),
 						},
 					},
 					"grace": schema.Int64Attribute{
 						Required:    true,
 						Description: "How long Checkly should wait before triggering any alerts when a ping does not arrive within the set period. Must be at least `0`, and the combination of `grace` and `grace_unit` must be at most 365 days.",
 						Validators: []validator.Int64{
-							int64validator.AtLeast(0),
+							safeInt64(int64validator.AtLeast(0)),
 						},
 					},
 					"grace_unit": schema.StringAttribute{
 						Required:    true,
 						Description: "The unit of `grace`. " + heartbeatMonitorTimeUnitValues.String(),
 						Validators: []validator.String{
-							stringvalidator.OneOf(heartbeatMonitorTimeUnitValues.Values()...),
+							safeString(stringvalidator.OneOf(heartbeatMonitorTimeUnitValues.Values()...)),
 						},
 					},
 					"ping_token": schema.StringAttribute{

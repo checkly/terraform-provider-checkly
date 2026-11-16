@@ -87,7 +87,7 @@ func (v urlValidator) ValidateString(ctx context.Context, req validator.StringRe
 		resp.Diagnostics.AddAttributeError(
 			req.Path,
 			"Invalid URL",
-			fmt.Sprintf("%s must be an absolute %s URL: %s.", req.Path, v.schemeList(), problem),
+			fmt.Sprintf("%s must be an absolute %s URL: %s.", displayPath(req.Path), v.schemeList(), problem),
 		)
 	}
 }

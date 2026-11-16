@@ -119,14 +119,14 @@ func (r *StatusPageV3AutomationRuleResource) Schema(ctx context.Context, req res
 				Required:    true,
 				Description: "Body of the status update that opens the incident. Must not be empty.",
 				Validators: []validator.String{
-					stringvalidator.LengthAtLeast(1),
+					safeString(stringvalidator.LengthAtLeast(1)),
 				},
 			},
 			"last_update": schema.StringAttribute{
 				Required:    true,
 				Description: "Body of the status update that resolves the incident. Must not be empty.",
 				Validators: []validator.String{
-					stringvalidator.LengthAtLeast(1),
+					safeString(stringvalidator.LengthAtLeast(1)),
 				},
 			},
 			"notify_subscribers": schema.BoolAttribute{
@@ -141,7 +141,7 @@ func (r *StatusPageV3AutomationRuleResource) Schema(ctx context.Context, req res
 				Default:     int64default.StaticInt64(5),
 				Description: "Minimum minutes after an automated incident before this rule may open the next one. `0` disables the cool down. Defaults to `5`.",
 				Validators: []validator.Int64{
-					int64validator.Between(0, 1440),
+					safeInt64(int64validator.Between(0, 1440)),
 				},
 			},
 			"tags": schema.SetAttribute{
@@ -149,8 +149,8 @@ func (r *StatusPageV3AutomationRuleResource) Schema(ctx context.Context, req res
 				Required:    true,
 				Description: "A failing check matches this rule when it, or its group, carries ANY of these tags. At least one tag is required, and tags must not be empty.",
 				Validators: []validator.Set{
-					setvalidator.SizeAtLeast(1),
-					setvalidator.ValueStringsAre(stringvalidator.LengthAtLeast(1)),
+					safeSet(setvalidator.SizeAtLeast(1)),
+					safeSet(setvalidator.ValueStringsAre(stringvalidator.LengthAtLeast(1))),
 				},
 			},
 			"components": schema.SetNestedAttribute{
@@ -168,7 +168,7 @@ func (r *StatusPageV3AutomationRuleResource) Schema(ctx context.Context, req res
 							Required:    true,
 							Description: "The impact set on the component while the incident is open. " + statusPageV3TargetImpactValues.String(),
 							Validators: []validator.String{
-								stringvalidator.OneOf(statusPageV3TargetImpactValues.Values()...),
+								safeString(stringvalidator.OneOf(statusPageV3TargetImpactValues.Values()...)),
 							},
 						},
 					},

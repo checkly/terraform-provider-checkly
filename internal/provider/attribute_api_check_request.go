@@ -101,7 +101,7 @@ func apiCheckRequestAttributeSchema(opts apiCheckRequestAttributeSchemaOptions) 
 				Default:     stringdefault.StaticString("GET"),
 				Description: "The HTTP method to use for this API check. " + apiCheckRequestMethodValues.String() + " Defaults to `GET`.",
 				Validators: []validator.String{
-					stringvalidator.OneOf(apiCheckRequestMethodValues.Values()...),
+					safeString(stringvalidator.OneOf(apiCheckRequestMethodValues.Values()...)),
 				},
 			},
 			"url": schema.StringAttribute{
@@ -149,7 +149,7 @@ func apiCheckRequestAttributeSchema(opts apiCheckRequestAttributeSchemaOptions) 
 				Default:     stringdefault.StaticString("NONE"),
 				Description: "The `Content-Type` header of the request. " + apiCheckRequestBodyTypeValues.String() + " Defaults to `NONE`.",
 				Validators: []validator.String{
-					stringvalidator.OneOf(apiCheckRequestBodyTypeValues.Values()...),
+					safeString(stringvalidator.OneOf(apiCheckRequestBodyTypeValues.Values()...)),
 				},
 			},
 			"assertions": schema.SetNestedAttribute{
@@ -209,7 +209,7 @@ func apiCheckRequestAttributeSchema(opts apiCheckRequestAttributeSchemaOptions) 
 				Default:     stringdefault.StaticString("IPv4"),
 				Description: "IP Family to be used when executing the api check. " + ipFamilyValues.String() + " Defaults to `IPv4`.",
 				Validators: []validator.String{
-					stringvalidator.OneOf(ipFamilyValues.Values()...),
+					safeString(stringvalidator.OneOf(ipFamilyValues.Values()...)),
 				},
 			},
 		},

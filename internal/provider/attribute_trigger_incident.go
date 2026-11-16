@@ -56,7 +56,7 @@ func makeTriggerIncidentSchema() schema.SingleNestedAttribute {
 				Required:    true,
 				Description: "The severity level of the incident. " + incidentSeverityValues.String(),
 				Validators: []validator.String{
-					stringvalidator.OneOf(incidentSeverityValues.Values()...),
+					safeString(stringvalidator.OneOf(incidentSeverityValues.Values()...)),
 				},
 			},
 			"name": schema.StringAttribute{

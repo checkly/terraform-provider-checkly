@@ -155,7 +155,7 @@ func (r *DNSMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 				Default:     int64default.StaticInt64(500),
 				Description: "The response time in milliseconds where the monitor should be considered degraded. Possible values are between `0` and `5000`. Defaults to `500`.",
 				Validators: []validator.Int64{
-					int64validator.Between(0, 5000),
+					safeInt64(int64validator.Between(0, 5000)),
 				},
 			},
 			"max_response_time": schema.Int64Attribute{
@@ -164,7 +164,7 @@ func (r *DNSMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 				Default:     int64default.StaticInt64(1000),
 				Description: "The response time in milliseconds where the monitor should be considered failing. Possible values are between `0` and `5000`. Defaults to `1000`.",
 				Validators: []validator.Int64{
-					int64validator.Between(0, 5000),
+					safeInt64(int64validator.Between(0, 5000)),
 				},
 			},
 			triggerIncidentAttributeName: makeTriggerIncidentSchema(),
@@ -180,7 +180,7 @@ func (r *DNSMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 						Required:    true,
 						Description: "The DNS record type. " + dnsMonitorRecordTypeValues.String(),
 						Validators: []validator.String{
-							stringvalidator.OneOf(dnsMonitorRecordTypeValues.Values()...),
+							safeString(stringvalidator.OneOf(dnsMonitorRecordTypeValues.Values()...)),
 						},
 					},
 					"query": schema.StringAttribute{
@@ -196,7 +196,7 @@ func (r *DNSMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 						Default:     stringdefault.StaticString("UDP"),
 						Description: "The protocol used to communicate with the name server. " + dnsMonitorProtocolValues.String() + " Defaults to `UDP`.",
 						Validators: []validator.String{
-							stringvalidator.OneOf(dnsMonitorProtocolValues.Values()...),
+							safeString(stringvalidator.OneOf(dnsMonitorProtocolValues.Values()...)),
 						},
 					},
 					"name_server": schema.SingleNestedAttribute{
@@ -211,19 +211,19 @@ func (r *DNSMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 								Description: "The name server host. Must be between `1` and `100` characters.",
 								Validators: []validator.String{
 									utf16LengthBetween(1, 100),
-									stringvalidator.AlsoRequires(
+									safeString(stringvalidator.AlsoRequires(
 										path.MatchRelative().AtParent().AtName("port"),
-									),
+									)),
 								},
 							},
 							"port": schema.Int64Attribute{
 								Optional:    true,
 								Description: "The name server port. Possible values are between `1` and `65535`.",
 								Validators: []validator.Int64{
-									int64validator.Between(1, 65535),
-									int64validator.AlsoRequires(
+									safeInt64(int64validator.Between(1, 65535)),
+									safeInt64(int64validator.AlsoRequires(
 										path.MatchRelative().AtParent().AtName("host"),
-									),
+									)),
 								},
 							},
 						},
@@ -250,7 +250,7 @@ func (r *DNSMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 									Required:    true,
 									Description: "The source of the asserted value. " + dnsMonitorAssertionSourceValues.String(),
 									Validators: []validator.String{
-										stringvalidator.OneOf(dnsMonitorAssertionSourceValues.Values()...),
+										safeString(stringvalidator.OneOf(dnsMonitorAssertionSourceValues.Values()...)),
 									},
 								},
 								"property": schema.StringAttribute{
@@ -262,7 +262,7 @@ func (r *DNSMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 									Required:    true,
 									Description: "The type of comparison to be executed between expected and actual value of the assertion. " + assertionComparisonValues.String(),
 									Validators: []validator.String{
-										stringvalidator.OneOf(assertionComparisonValues.Values()...),
+										safeString(stringvalidator.OneOf(assertionComparisonValues.Values()...)),
 									},
 								},
 								"target": schema.StringAttribute{

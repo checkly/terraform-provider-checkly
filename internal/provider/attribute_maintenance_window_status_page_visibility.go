@@ -114,7 +114,7 @@ func maintenanceWindowStatusPageVisibilitySchema() schema.SingleNestedAttribute 
 				Optional:    true,
 				Description: "The severity shown on the status page. " + incidentSeverityValues.String(),
 				Validators: []validator.String{
-					stringvalidator.OneOf(incidentSeverityValues.Values()...),
+					safeString(stringvalidator.OneOf(incidentSeverityValues.Values()...)),
 				},
 			},
 			"affect_all_services": schema.BoolAttribute{
@@ -148,8 +148,8 @@ func maintenanceWindowStatusPageVisibilitySchema() schema.SingleNestedAttribute 
 				ElementType: types.Int64Type,
 				Description: "Up to three reminders, in minutes before the maintenance starts, sent to status page subscribers. Possible values are between `60` and `10080`.",
 				Validators: []validator.Set{
-					setvalidator.SizeAtMost(3),
-					setvalidator.ValueInt64sAre(int64validator.Between(60, 10080)),
+					safeSet(setvalidator.SizeAtMost(3)),
+					safeSet(setvalidator.ValueInt64sAre(int64validator.Between(60, 10080))),
 				},
 			},
 			"auto_start": schema.BoolAttribute{
@@ -221,7 +221,7 @@ func maintenanceWindowStatusPageVisibilitySchema() schema.SingleNestedAttribute 
 										Computed:    true,
 										Description: "The status the component shows while the maintenance is in progress. " + maintenanceWindowComponentStatusValues.String() + " Defaults to `UNDER_MAINTENANCE`.",
 										Validators: []validator.String{
-											stringvalidator.OneOf(maintenanceWindowComponentStatusValues.Values()...),
+											safeString(stringvalidator.OneOf(maintenanceWindowComponentStatusValues.Values()...)),
 										},
 									},
 								},

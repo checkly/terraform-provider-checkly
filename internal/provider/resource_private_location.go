@@ -68,7 +68,7 @@ func (r *PrivateLocationResource) Schema(ctx context.Context, req resource.Schem
 				Required:    true,
 				Description: "The private location name.",
 				Validators: []validator.String{
-					stringvalidator.LengthAtLeast(1),
+					safeString(stringvalidator.LengthAtLeast(1)),
 				},
 			},
 			"slug_name": schema.StringAttribute{
@@ -87,7 +87,7 @@ func (r *PrivateLocationResource) Schema(ctx context.Context, req resource.Schem
 				Default:     stringdefault.StaticString("location"),
 				Description: "Icon assigned to the private location. Defaults to `location`.",
 				Validators: []validator.String{
-					stringvalidator.LengthAtLeast(1),
+					safeString(stringvalidator.LengthAtLeast(1)),
 				},
 			},
 			"keys": schema.SetAttribute{

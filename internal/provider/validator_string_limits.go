@@ -58,7 +58,7 @@ func (v utf16LengthValidator) ValidateString(ctx context.Context, req validator.
 		resp.Diagnostics.AddAttributeError(
 			req.Path,
 			"Invalid Attribute Value Length",
-			fmt.Sprintf("%s must be %d to %d UTF-16 code units long, got: %d. Most characters count as one; emoji and other characters outside the Basic Multilingual Plane count as two.", req.Path, v.min, v.max, n),
+			fmt.Sprintf("%s must be %d to %d UTF-16 code units long, got: %d. Most characters count as one; emoji and other characters outside the Basic Multilingual Plane count as two.", displayPath(req.Path), v.min, v.max, n),
 		)
 	}
 }
@@ -100,7 +100,7 @@ func (v trimmedStringValidator) ValidateString(ctx context.Context, req validato
 		resp.Diagnostics.AddAttributeError(
 			req.Path,
 			"Invalid Attribute Value",
-			fmt.Sprintf("%s must not have leading or trailing whitespace, which the API removes. Use trimspace() to remove it, for example on a heredoc.", req.Path),
+			fmt.Sprintf("%s must not have leading or trailing whitespace, which the API removes. Use trimspace() to remove it, for example on a heredoc.", displayPath(req.Path)),
 		)
 	}
 }
@@ -113,15 +113,14 @@ var noControlCharactersRegex = regexp.MustCompile(`^[^\x00-\x1f\x7f]*$`)
 // noControlCharacters returns a validator that rejects strings with
 // characters that noControlCharactersRegex excludes.
 func noControlCharacters() validator.String {
-	return stringvalidator.RegexMatches(noControlCharactersRegex, "must not contain control characters")
+	return safeString(stringvalidator.RegexMatches(noControlCharactersRegex, "must not contain control characters"))
 }
 
 // noNULCharacterValidator rejects strings that contain U+0000 (NUL), which
 // the API rejects in some free-text fields where other control characters,
 // such as tabs and newlines, are valid. The error doesn't repeat the value,
 // which can be long, such as the source of a .proto file, or secret, such as
-// a metadata value. Nor does it name the path: the path of an attribute in a
-// set element includes the whole element, values included.
+// a metadata value.
 type noNULCharacterValidator struct{}
 
 var _ validator.String = noNULCharacterValidator{}
@@ -143,7 +142,7 @@ func (v noNULCharacterValidator) ValidateString(ctx context.Context, req validat
 		resp.Diagnostics.AddAttributeError(
 			req.Path,
 			"Invalid Attribute Value",
-			"The value must not contain a NUL character (U+0000), which the API rejects.",
+			fmt.Sprintf("%s must not contain a NUL character (U+0000), which the API rejects.", displayPath(req.Path)),
 		)
 	}
 }
@@ -160,7 +159,7 @@ var (
 // privateLocationSlugValidators reject slugs the API doesn't accept for a
 // private location.
 var privateLocationSlugValidators = []validator.String{
-	stringvalidator.RegexMatches(privateLocationSlugRegex, "must be 1 to 30 letters, digits and dashes"),
+	safeString(stringvalidator.RegexMatches(privateLocationSlugRegex, "must be 1 to 30 letters, digits and dashes")),
 	predicateStringValidator{
 		check:       func(value string) bool { return !privateLocationPublicLocationIDRegex.MatchString(value) },
 		message:     "%q must not start with the ID of a public location, such as \"eu-central-1\", got: %s",
@@ -230,7 +229,7 @@ func (v environmentVariableValueValidator) ValidateString(ctx context.Context, r
 		resp.Diagnostics.AddAttributeError(
 			req.Path,
 			"Environment Variable Value Too Long",
-			fmt.Sprintf("%s is %d bytes long in UTF-8, but the API accepts at most %d bytes for the value of %s.", req.Path, n, limit, kind),
+			fmt.Sprintf("%s is %d bytes long in UTF-8, but the API accepts at most %d bytes for the value of %s.", displayPath(req.Path), n, limit, kind),
 		)
 	}
 }
@@ -250,7 +249,7 @@ func checkSecretEnvironmentVariableValue(diags *diag.Diagnostics, p path.Path, v
 	}
 
 	const summary = "Secret Environment Variable Value Too Short"
-	reason := fmt.Sprintf("%s is %d characters long, but the API requires at least %d characters for the value of a secret environment variable, because runners mask every occurrence of a secret value in the check output.", p, n, minSecretEnvironmentVariableValueCharacters)
+	reason := fmt.Sprintf("%s is %d characters long, but the API requires at least %d characters for the value of a secret environment variable, because runners mask every occurrence of a secret value in the check output.", displayPath(p), n, minSecretEnvironmentVariableValueCharacters)
 	if sent {
 		diags.AddAttributeError(p, summary, reason)
 		return

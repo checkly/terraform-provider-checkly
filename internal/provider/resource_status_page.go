@@ -157,14 +157,14 @@ func (r *StatusPageResource) Schema(ctx context.Context, req resource.SchemaRequ
 				Default:     stringdefault.StaticString("AUTO"),
 				Description: "The color theme the status page is shown in. `AUTO` follows the visitor's system preference. " + statusPageThemeValues.String() + " Defaults to `AUTO`.",
 				Validators: []validator.String{
-					stringvalidator.OneOf(statusPageThemeValues.Values()...),
+					safeString(stringvalidator.OneOf(statusPageThemeValues.Values()...)),
 				},
 			},
 			"cards": schema.ListNestedAttribute{
 				Required:    true,
 				Description: "A list of cards to include on the status page.",
 				Validators: []validator.List{
-					listvalidator.SizeAtLeast(1),
+					safeList(listvalidator.SizeAtLeast(1)),
 				},
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
@@ -176,7 +176,7 @@ func (r *StatusPageResource) Schema(ctx context.Context, req resource.SchemaRequ
 							Required:    true,
 							Description: "A list of services to attach to the card.",
 							Validators: []validator.List{
-								listvalidator.SizeAtLeast(1),
+								safeList(listvalidator.SizeAtLeast(1)),
 							},
 							NestedObject: schema.NestedAttributeObject{
 								Attributes: map[string]schema.Attribute{

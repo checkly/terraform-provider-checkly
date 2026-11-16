@@ -66,7 +66,7 @@ func (r *EnvironmentVariableResource) Schema(ctx context.Context, req resource.S
 				Required:    true,
 				Description: "The name of the environment variable. Changing the name forces the environment variable to be replaced.",
 				Validators: []validator.String{
-					stringvalidator.LengthAtLeast(1),
+					safeString(stringvalidator.LengthAtLeast(1)),
 				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -81,7 +81,7 @@ func (r *EnvironmentVariableResource) Schema(ctx context.Context, req resource.S
 					"An imported secret variable has a null value, so the first plan after the import shows an update, " +
 					"and applying it overwrites the value in Checkly with the configured one.",
 				Validators: []validator.String{
-					stringvalidator.LengthAtLeast(1),
+					safeString(stringvalidator.LengthAtLeast(1)),
 					environmentVariableValueValidator{},
 				},
 			},

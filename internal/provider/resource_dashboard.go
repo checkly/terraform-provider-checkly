@@ -172,7 +172,7 @@ func (r *DashboardResource) Schema(ctx context.Context, req resource.SchemaReque
 				Default:     stringdefault.StaticString("FULL"),
 				Description: "Determines whether to use the full screen or focus in the center. " + dashboardWidthValues.String() + " Defaults to `FULL`.",
 				Validators: []validator.String{
-					stringvalidator.OneOf(dashboardWidthValues.Values()...),
+					safeString(stringvalidator.OneOf(dashboardWidthValues.Values()...)),
 				},
 			},
 			"refresh_rate": schema.Int64Attribute{
@@ -181,7 +181,7 @@ func (r *DashboardResource) Schema(ctx context.Context, req resource.SchemaReque
 				Default:     int64default.StaticInt64(60),
 				Description: "How often to refresh the dashboard in seconds. " + dashboardRefreshRateValues.String() + " Defaults to `60`.",
 				Validators: []validator.Int64{
-					int64validator.OneOf(dashboardRefreshRateValues.Values()...),
+					safeInt64(int64validator.OneOf(dashboardRefreshRateValues.Values()...)),
 				},
 			},
 			"paginate": schema.BoolAttribute{
@@ -196,7 +196,7 @@ func (r *DashboardResource) Schema(ctx context.Context, req resource.SchemaReque
 				Default:     int64default.StaticInt64(15),
 				Description: "Determines how many checks to show per page. Possible values are between `1` and `20`. Defaults to `15`.",
 				Validators: []validator.Int64{
-					int64validator.Between(1, 20),
+					safeInt64(int64validator.Between(1, 20)),
 				},
 			},
 			"pagination_rate": schema.Int64Attribute{
@@ -205,7 +205,7 @@ func (r *DashboardResource) Schema(ctx context.Context, req resource.SchemaReque
 				Default:     int64default.StaticInt64(60),
 				Description: "How often to trigger pagination in seconds. " + dashboardPaginationRateValues.String() + " Defaults to `60`.",
 				Validators: []validator.Int64{
-					int64validator.OneOf(dashboardPaginationRateValues.Values()...),
+					safeInt64(int64validator.OneOf(dashboardPaginationRateValues.Values()...)),
 				},
 			},
 			"sort_by_status": schema.BoolAttribute{

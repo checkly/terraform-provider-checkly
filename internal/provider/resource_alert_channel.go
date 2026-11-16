@@ -239,7 +239,7 @@ func (r *AlertChannelResource) Schema(ctx context.Context, req resource.SchemaRe
 				Default:     int64default.StaticInt64(30),
 				Description: "How many days before an SSL certificate expires to start sending alerts, when `ssl_expiry` is enabled. Possible values are between `1` and `30`. Defaults to `30`.",
 				Validators: []validator.Int64{
-					int64validator.Between(1, 30),
+					safeInt64(int64validator.Between(1, 30)),
 				},
 			},
 			"auto_subscribe": schema.BoolAttribute{
@@ -256,7 +256,7 @@ func (r *AlertChannelResource) Schema(ctx context.Context, req resource.SchemaRe
 						Required:    true,
 						Description: "The email address of this email alert channel.",
 						Validators: []validator.String{
-							stringvalidator.LengthAtLeast(1),
+							safeString(stringvalidator.LengthAtLeast(1)),
 						},
 					},
 				},
@@ -286,11 +286,11 @@ func (r *AlertChannelResource) Schema(ctx context.Context, req resource.SchemaRe
 						ElementType: types.StringType,
 						Description: "The Slack channels or users to notify, e.g. `[\"#ops\", \"@John\", \"C0123456789\"]`. Each element starts with `#` for a channel or `@` for a user, or is a Slack channel ID, such as `C0123456789`, and has no trailing whitespace. A private channel can be given by its ID.",
 						Validators: []validator.List{
-							listvalidator.SizeAtLeast(1),
-							listvalidator.ValueStringsAre(
+							safeList(listvalidator.SizeAtLeast(1)),
+							safeList(listvalidator.ValueStringsAre(
 								stringvalidator.RegexMatches(alertChannelSlackDestinationRegex, "must start with # for a channel, such as #operations, or @ for a user, such as @john, or be a channel ID, such as C0123456789"),
 								trimmedStringValidator{},
-							),
+							)),
 						},
 					},
 				},
@@ -331,7 +331,7 @@ func (r *AlertChannelResource) Schema(ctx context.Context, req resource.SchemaRe
 						Required:    true,
 						Description: "The name of this alert channel.",
 						Validators: []validator.String{
-							stringvalidator.LengthAtLeast(1),
+							safeString(stringvalidator.LengthAtLeast(1)),
 						},
 					},
 					"method": schema.StringAttribute{
@@ -344,7 +344,7 @@ func (r *AlertChannelResource) Schema(ctx context.Context, req resource.SchemaRe
 							// webhook sender passes it on, so only an empty
 							// one is rejected: the API would store POST
 							// instead.
-							stringvalidator.LengthAtLeast(1),
+							safeString(stringvalidator.LengthAtLeast(1)),
 						},
 					},
 					"headers": schema.MapAttribute{
@@ -370,7 +370,7 @@ func (r *AlertChannelResource) Schema(ctx context.Context, req resource.SchemaRe
 						Sensitive:   true,
 						Description: "The URL to send the webhook request to.",
 						Validators: []validator.String{
-							stringvalidator.LengthAtLeast(1),
+							safeString(stringvalidator.LengthAtLeast(1)),
 						},
 					},
 					"webhook_secret": schema.StringAttribute{
@@ -382,7 +382,7 @@ func (r *AlertChannelResource) Schema(ctx context.Context, req resource.SchemaRe
 						Optional:    true,
 						Description: "Type of the webhook. " + alertChannelWebhookTypes.String(),
 						Validators: []validator.String{
-							stringvalidator.OneOf(alertChannelWebhookTypes.Values()...),
+							safeString(stringvalidator.OneOf(alertChannelWebhookTypes.Values()...)),
 						},
 					},
 				},
@@ -395,7 +395,7 @@ func (r *AlertChannelResource) Schema(ctx context.Context, req resource.SchemaRe
 						Required:    true,
 						Description: "The name of this alert channel.",
 						Validators: []validator.String{
-							stringvalidator.LengthAtLeast(1),
+							safeString(stringvalidator.LengthAtLeast(1)),
 						},
 					},
 					"api_key": schema.StringAttribute{
@@ -403,21 +403,21 @@ func (r *AlertChannelResource) Schema(ctx context.Context, req resource.SchemaRe
 						Sensitive:   true,
 						Description: "The API key of the Opsgenie integration to create alerts with.",
 						Validators: []validator.String{
-							stringvalidator.LengthAtLeast(1),
+							safeString(stringvalidator.LengthAtLeast(1)),
 						},
 					},
 					"region": schema.StringAttribute{
 						Required:    true,
 						Description: "The region of the Opsgenie account, which selects the Opsgenie API to call. " + alertChannelOpsgenieRegions.String(),
 						Validators: []validator.String{
-							stringvalidator.OneOf(alertChannelOpsgenieRegions.Values()...),
+							safeString(stringvalidator.OneOf(alertChannelOpsgenieRegions.Values()...)),
 						},
 					},
 					"priority": schema.StringAttribute{
 						Required:    true,
 						Description: "The priority of the alerts created in Opsgenie. " + alertChannelOpsgeniePriorities.String(),
 						Validators: []validator.String{
-							stringvalidator.OneOf(alertChannelOpsgeniePriorities.Values()...),
+							safeString(stringvalidator.OneOf(alertChannelOpsgeniePriorities.Values()...)),
 						},
 					},
 				},
@@ -431,7 +431,7 @@ func (r *AlertChannelResource) Schema(ctx context.Context, req resource.SchemaRe
 						Sensitive:   true,
 						Description: "The integration key of the PagerDuty service to send alerts to.",
 						Validators: []validator.String{
-							stringvalidator.LengthAtLeast(1),
+							safeString(stringvalidator.LengthAtLeast(1)),
 						},
 					},
 					"service_name": schema.StringAttribute{
@@ -452,7 +452,7 @@ func (r *AlertChannelResource) Schema(ctx context.Context, req resource.SchemaRe
 // Checkly API stores a single channel configuration per alert channel.
 func (r *AlertChannelResource) ConfigValidators(ctx context.Context) []resource.ConfigValidator {
 	return []resource.ConfigValidator{
-		resourcevalidator.ExactlyOneOf(
+		safeResourceConfig(resourcevalidator.ExactlyOneOf(
 			path.MatchRoot("email"),
 			path.MatchRoot("slack"),
 			path.MatchRoot("slack_app"),
@@ -461,7 +461,7 @@ func (r *AlertChannelResource) ConfigValidators(ctx context.Context) []resource.
 			path.MatchRoot("webhook"),
 			path.MatchRoot("opsgenie"),
 			path.MatchRoot("pagerduty"),
-		),
+		)),
 	}
 }
 

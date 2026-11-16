@@ -25,7 +25,7 @@ func doubleCheckAttributeSchema() schema.BoolAttribute {
 		Description:        "Setting this to `true` will trigger a retry when a check fails from the failing region and another, randomly selected region before marking the check as failed. Defaults to `false`.",
 		DeprecationMessage: "The property `double_check` is deprecated and will be removed in a future version. To enable retries for failed check runs, use the `retry_strategy` property instead.",
 		Validators: []validator.Bool{
-			boolvalidator.ConflictsWith(path.MatchRoot(retryStrategyAttributeName)),
+			safeBool(boolvalidator.ConflictsWith(path.MatchRoot(retryStrategyAttributeName))),
 		},
 	}
 }

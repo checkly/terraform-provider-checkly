@@ -107,7 +107,7 @@ func (r *StatusPageV3ComponentResource) Schema(ctx context.Context, req resource
 				Default:     stringdefault.StaticString("SERVICE"),
 				Description: "The type of the component. " + statusPageV3ComponentTypeValues.String() + " Defaults to `SERVICE`.",
 				Validators: []validator.String{
-					stringvalidator.OneOf(statusPageV3ComponentTypeValues.Values()...),
+					safeString(stringvalidator.OneOf(statusPageV3ComponentTypeValues.Values()...)),
 				},
 			},
 			"name": schema.StringAttribute{

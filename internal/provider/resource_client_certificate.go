@@ -88,7 +88,7 @@ func (r *ClientCertificateResource) Schema(ctx context.Context, req resource.Sch
 				Required:    true,
 				Description: "The host domain that the certificate should be used for. Wildcards are supported, e.g. `*.acme.com`. Must be at most `255` characters.",
 				Validators: []validator.String{
-					stringvalidator.UTF8LengthAtMost(255),
+					safeString(stringvalidator.UTF8LengthAtMost(255)),
 				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -128,7 +128,7 @@ func (r *ClientCertificateResource) Schema(ctx context.Context, req resource.Sch
 				Required:    true,
 				Description: "The client certificate in PEM format.",
 				Validators: []validator.String{
-					stringvalidator.LengthAtLeast(1),
+					safeString(stringvalidator.LengthAtLeast(1)),
 				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -144,7 +144,7 @@ func (r *ClientCertificateResource) Schema(ctx context.Context, req resource.Sch
 					"example with `terraform apply -replace`.",
 				// An empty key would create a certificate without one.
 				Validators: []validator.String{
-					stringvalidator.LengthAtLeast(1),
+					safeString(stringvalidator.LengthAtLeast(1)),
 				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplaceIf(
@@ -161,7 +161,7 @@ func (r *ClientCertificateResource) Schema(ctx context.Context, req resource.Sch
 				Sensitive:   true,
 				Description: "Passphrase for the private key. Must be at most `95` bytes.",
 				Validators: []validator.String{
-					stringvalidator.LengthAtMost(95),
+					safeString(stringvalidator.LengthAtMost(95)),
 				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplaceIf(
@@ -238,7 +238,7 @@ func (v clientCertificatePathValidator) ValidateString(ctx context.Context, req 
 		resp.Diagnostics.AddAttributeError(
 			req.Path,
 			"Invalid Client Certificate Path",
-			fmt.Sprintf("%s %s, got: %q", req.Path, problem, req.ConfigValue.ValueString()),
+			fmt.Sprintf("%s %s, got: %q", displayPath(req.Path), problem, req.ConfigValue.ValueString()),
 		)
 	}
 }

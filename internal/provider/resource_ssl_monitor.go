@@ -230,7 +230,7 @@ func sslMonitorBaselineSeverityAttribute(defaultSeverity checkly.SSLBaselineSeve
 		Default:     stringdefault.StaticString(string(defaultSeverity)),
 		Description: fmt.Sprintf("What happens when the rule is violated. %s Defaults to `%s`.", sslMonitorBaselineSeverityValues.String(), defaultSeverity),
 		Validators: []validator.String{
-			stringvalidator.OneOf(sslMonitorBaselineSeverityValues.Values()...),
+			safeString(stringvalidator.OneOf(sslMonitorBaselineSeverityValues.Values()...)),
 		},
 	}
 }
@@ -253,7 +253,7 @@ func sslMonitorBaselineTLSRuleAttribute(def *checkly.SSLBaselineTLSRule, descrip
 				Default:     stringdefault.StaticString(string(def.Value)),
 				Description: fmt.Sprintf("The TLS version. %s Defaults to `%s`.", sslMonitorTLSVersionValues.String(), def.Value),
 				Validators: []validator.String{
-					stringvalidator.OneOf(sslMonitorTLSVersionValues.Values()...),
+					safeString(stringvalidator.OneOf(sslMonitorTLSVersionValues.Values()...)),
 				},
 			},
 			"severity": sslMonitorBaselineSeverityAttribute(def.Severity),
@@ -274,7 +274,7 @@ func sslMonitorBaselineKeySizeRuleAttribute(def *checkly.SSLBaselineKeySizeRule,
 				Default:     int64default.StaticInt64(int64(def.Value)),
 				Description: fmt.Sprintf("The key size in bits. Possible values are between `1024` and `16384`. Defaults to `%d`.", def.Value),
 				Validators: []validator.Int64{
-					int64validator.Between(1024, 16384),
+					safeInt64(int64validator.Between(1024, 16384)),
 				},
 			},
 			"severity": sslMonitorBaselineSeverityAttribute(def.Severity),
@@ -337,7 +337,7 @@ func (r *SSLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 				Default:     int64default.StaticInt64(3000),
 				Description: "The handshake time in milliseconds above which the monitor is considered degraded. Possible values are between `1` and `30000`. Defaults to `3000`.",
 				Validators: []validator.Int64{
-					int64validator.Between(1, 30000),
+					safeInt64(int64validator.Between(1, 30000)),
 				},
 			},
 			"max_response_time": schema.Int64Attribute{
@@ -346,7 +346,7 @@ func (r *SSLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 				Default:     int64default.StaticInt64(10000),
 				Description: "The handshake time in milliseconds above which the monitor is considered failing. Possible values are between `1` and `30000`, and the value must be greater than or equal to `degraded_response_time`. Defaults to `10000`.",
 				Validators: []validator.Int64{
-					int64validator.Between(1, 30000),
+					safeInt64(int64validator.Between(1, 30000)),
 				},
 			},
 			triggerIncidentAttributeName: makeTriggerIncidentSchema(),
@@ -375,7 +375,7 @@ func (r *SSLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 						Default:     int64default.StaticInt64(443),
 						Description: "The port number to connect to. Possible values are between `1` and `65535`. Defaults to `443`.",
 						Validators: []validator.Int64{
-							int64validator.Between(1, 65535),
+							safeInt64(int64validator.Between(1, 65535)),
 						},
 					},
 					"server_name": schema.StringAttribute{
@@ -394,7 +394,7 @@ func (r *SSLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 						Default:     stringdefault.StaticString("IPv4"),
 						Description: "The IP family to use when executing the check. " + ipFamilyValues.String() + " Defaults to `IPv4`.",
 						Validators: []validator.String{
-							stringvalidator.OneOf(ipFamilyValues.Values()...),
+							safeString(stringvalidator.OneOf(ipFamilyValues.Values()...)),
 						},
 					},
 					"skip_chain_validation": schema.BoolAttribute{
@@ -409,7 +409,7 @@ func (r *SSLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 						Default:     int64default.StaticInt64(10000),
 						Description: "The number of milliseconds to wait for the TLS handshake to complete before timing out. Possible values are between `1000` and `30000`. Defaults to `10000`.",
 						Validators: []validator.Int64{
-							int64validator.Between(1000, 30000),
+							safeInt64(int64validator.Between(1000, 30000)),
 						},
 					},
 					"alert_days_before_expiry": schema.Int64Attribute{
@@ -418,7 +418,7 @@ func (r *SSLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 						Default:     int64default.StaticInt64(20),
 						Description: "Raise an alert when the certificate is within this many days of expiry. Possible values are between `1` and `365`. Defaults to `20`.",
 						Validators: []validator.Int64{
-							int64validator.Between(1, 365),
+							safeInt64(int64validator.Between(1, 365)),
 						},
 					},
 					// The server always reports a client certificate mode,
@@ -443,7 +443,7 @@ func (r *SSLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 								Default:     stringdefault.StaticString("account_default"),
 								Description: "The mutual-TLS client-certificate mode. " + sslMonitorClientCertificateModeValues.String() + " Defaults to `account_default`.",
 								Validators: []validator.String{
-									stringvalidator.OneOf(sslMonitorClientCertificateModeValues.Values()...),
+									safeString(stringvalidator.OneOf(sslMonitorClientCertificateModeValues.Values()...)),
 								},
 							},
 							"client_certificate_id": schema.StringAttribute{
@@ -506,7 +506,7 @@ func (r *SSLMonitorResource) Schema(ctx context.Context, req resource.SchemaRequ
 									Required:    true,
 									Description: "The source of the asserted value. " + sslMonitorAssertionSourceValues.String(),
 									Validators: []validator.String{
-										stringvalidator.OneOf(sslMonitorAssertionSourceValues.Values()...),
+										safeString(stringvalidator.OneOf(sslMonitorAssertionSourceValues.Values()...)),
 									},
 								},
 								"property": schema.StringAttribute{

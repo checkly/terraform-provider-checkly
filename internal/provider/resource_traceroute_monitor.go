@@ -146,7 +146,7 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 				Default:     int64default.StaticInt64(500),
 				Description: "The response time in milliseconds where the monitor should be considered degraded. Possible values are between `1` and `30000`. Defaults to `500`.",
 				Validators: []validator.Int64{
-					int64validator.Between(1, 30000),
+					safeInt64(int64validator.Between(1, 30000)),
 				},
 			},
 			"max_response_time": schema.Int64Attribute{
@@ -155,7 +155,7 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 				Default:     int64default.StaticInt64(1000),
 				Description: "The response time in milliseconds where the monitor should be considered failing. Possible values are between `0` and `30000`. `0` means the monitor never fails on response time; any other value must be greater than or equal to `degraded_response_time`. Defaults to `1000`.",
 				Validators: []validator.Int64{
-					int64validator.Between(0, 30000),
+					safeInt64(int64validator.Between(0, 30000)),
 				},
 			},
 			triggerIncidentAttributeName: makeTriggerIncidentSchema(),
@@ -184,7 +184,7 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 						Default:     stringdefault.StaticString("TCP"),
 						Description: "The probe protocol. " + tracerouteMonitorProtocolValues.String() + " Defaults to `TCP`.",
 						Validators: []validator.String{
-							stringvalidator.OneOf(tracerouteMonitorProtocolValues.Values()...),
+							safeString(stringvalidator.OneOf(tracerouteMonitorProtocolValues.Values()...)),
 						},
 					},
 					// port and max_unknown_hops are derived by the server
@@ -196,7 +196,7 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 						Computed:    true,
 						Description: "The destination port for TCP/UDP/SCTP probes. Possible values are between `1` and `65535`. The default depends on the protocol: `443` for `TCP`, `33434` for `UDP` and `SCTP`. Must not be set when `protocol = \"ICMP\"`, which has no port.",
 						Validators: []validator.Int64{
-							int64validator.Between(1, 65535),
+							safeInt64(int64validator.Between(1, 65535)),
 						},
 					},
 					"ip_family": schema.StringAttribute{
@@ -205,7 +205,7 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 						Default:     stringdefault.StaticString("IPv4"),
 						Description: "The IP family to use when executing the traceroute. " + ipFamilyValues.String() + " Defaults to `IPv4`.",
 						Validators: []validator.String{
-							stringvalidator.OneOf(ipFamilyValues.Values()...),
+							safeString(stringvalidator.OneOf(ipFamilyValues.Values()...)),
 						},
 					},
 					"max_hops": schema.Int64Attribute{
@@ -214,7 +214,7 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 						Default:     int64default.StaticInt64(30),
 						Description: "The maximum number of network hops to probe before stopping. Possible values are between `1` and `64`. Defaults to `30`.",
 						Validators: []validator.Int64{
-							int64validator.Between(1, 64),
+							safeInt64(int64validator.Between(1, 64)),
 						},
 					},
 					"max_unknown_hops": schema.Int64Attribute{
@@ -222,7 +222,7 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 						Computed:    true,
 						Description: "The maximum number of consecutive unresponsive hops to tolerate before stopping the trace. Possible values are between `1` and `30`, and the value must not exceed `max_hops`. If not set, the smaller of `15` and `max_hops` is used.",
 						Validators: []validator.Int64{
-							int64validator.Between(1, 30),
+							safeInt64(int64validator.Between(1, 30)),
 						},
 					},
 					"ptr_lookup": schema.BoolAttribute{
@@ -242,7 +242,7 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 						Default:     int64default.StaticInt64(10),
 						Description: "The number of seconds to wait for the traceroute to complete before timing out. Possible values are between `1` and `30`. Defaults to `10`.",
 						Validators: []validator.Int64{
-							int64validator.Between(1, 30),
+							safeInt64(int64validator.Between(1, 30)),
 						},
 					},
 					// The full per-source assertion rules (allowed
@@ -276,7 +276,7 @@ func (r *TracerouteMonitorResource) Schema(ctx context.Context, req resource.Sch
 									Required:    true,
 									Description: "The source of the asserted value. " + tracerouteMonitorAssertionSourceValues.String(),
 									Validators: []validator.String{
-										stringvalidator.OneOf(tracerouteMonitorAssertionSourceValues.Values()...),
+										safeString(stringvalidator.OneOf(tracerouteMonitorAssertionSourceValues.Values()...)),
 									},
 								},
 								"property": schema.StringAttribute{

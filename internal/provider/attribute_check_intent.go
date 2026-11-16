@@ -41,12 +41,12 @@ func makeCheckIntentStatementsSchema(description string) schema.ListAttribute {
 		ElementType: types.StringType,
 		Description: description,
 		Validators: []validator.List{
-			listvalidator.SizeAtMost(20),
-			listvalidator.NoNullValues(),
-			listvalidator.ValueStringsAre(
+			safeList(listvalidator.SizeAtMost(20)),
+			safeList(listvalidator.NoNullValues()),
+			safeList(listvalidator.ValueStringsAre(
 				utf16LengthBetween(1, 1000),
 				trimmedStringValidator{},
-			),
+			)),
 		},
 	}
 }

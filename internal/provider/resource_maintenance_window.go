@@ -112,7 +112,7 @@ func (r *MaintenanceWindowResource) Schema(ctx context.Context, req resource.Sch
 				Optional:    true,
 				Description: "The repeat cadence for the maintenance window. " + maintenanceWindowRepeatUnitValues.String(),
 				Validators: []validator.String{
-					stringvalidator.OneOf(maintenanceWindowRepeatUnitValues.Values()...),
+					safeString(stringvalidator.OneOf(maintenanceWindowRepeatUnitValues.Values()...)),
 				},
 			},
 			"repeat_interval": schema.Int64Attribute{
@@ -121,7 +121,7 @@ func (r *MaintenanceWindowResource) Schema(ctx context.Context, req resource.Sch
 					"occurrence. Possible values are between `0` and `365`. `0`, like leaving it out, means the window does not repeat. " +
 					"A value of `1` or more requires `repeat_unit`.",
 				Validators: []validator.Int64{
-					int64validator.Between(0, 365),
+					safeInt64(int64validator.Between(0, 365)),
 				},
 			},
 			"repeat_ends_at": schema.StringAttribute{
@@ -585,7 +585,7 @@ func (v maintenanceWindowTimezoneValidator) ValidateString(ctx context.Context, 
 		resp.Diagnostics.AddAttributeError(
 			req.Path,
 			"Invalid Time Zone",
-			fmt.Sprintf("%s must be a named IANA time zone such as \"America/New_York\", got %q; UTC offsets are not supported", req.Path, value),
+			fmt.Sprintf("%s must be a named IANA time zone such as \"America/New_York\", got %q; UTC offsets are not supported", displayPath(req.Path), value),
 		)
 	}
 }

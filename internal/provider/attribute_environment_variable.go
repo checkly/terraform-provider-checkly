@@ -56,7 +56,7 @@ func makeEnvironmentVariableSchema(options EnvironmentVariableAttributeSchemaOpt
 		Default:     emptyListDefault(types.ObjectType{AttrTypes: environmentVariableAttrTypes}),
 		Description: fmt.Sprintf("%s Must contain at most `%d` variables.", options.Description, maxEnvironmentVariables),
 		Validators: []validator.List{
-			listvalidator.SizeAtMost(maxEnvironmentVariables),
+			safeList(listvalidator.SizeAtMost(maxEnvironmentVariables)),
 		},
 		PlanModifiers: []planmodifier.List{
 			secretEnvironmentVariableValues{},

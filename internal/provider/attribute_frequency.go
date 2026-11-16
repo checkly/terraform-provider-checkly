@@ -101,7 +101,7 @@ func makeFrequencyAttributeSchema(options FrequencyAttributeSchemaOptions) schem
 		Default:     int64default.StaticInt64(defaultFrequency),
 		Description: fmt.Sprintf("Controls how often the %s should run. Defined in minutes. %s Defaults to `%d`.", options.Subject, allow.String(), defaultFrequency),
 		Validators: []validator.Int64{
-			int64validator.OneOf(allow.Values()...),
+			safeInt64(int64validator.OneOf(allow.Values()...)),
 		},
 	}
 }
@@ -147,7 +147,7 @@ func makeFrequencyOffsetAttributeSchema(options FrequencyOffsetAttributeSchemaOp
 		Optional:    true,
 		Description: disclaimer + fmt.Sprintf("When `frequency` is `0` (high frequency), `frequency_offset` is required and it alone controls how often the %s should run. Defined in seconds. %s", options.Subject, allow.String()),
 		Validators: []validator.Int64{
-			int64validator.OneOf(allow.Values()...),
+			safeInt64(int64validator.OneOf(allow.Values()...)),
 		},
 	}
 }
