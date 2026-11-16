@@ -6,7 +6,7 @@ package provider
 import (
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 
-	internalprovider "github.com/checkly/terraform-provider-checkly/internal/provider"
+	internalprovider "github.com/checkly/terraform-provider-checkly/v2/internal/provider"
 )
 
 // New returns a factory for the Checkly provider, reporting the given

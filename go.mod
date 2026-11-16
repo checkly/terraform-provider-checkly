@@ -1,4 +1,4 @@
-module github.com/checkly/terraform-provider-checkly
+module github.com/checkly/terraform-provider-checkly/v2
 
 go 1.26.0
 
